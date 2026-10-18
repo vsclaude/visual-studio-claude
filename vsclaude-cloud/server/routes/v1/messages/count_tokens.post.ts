@@ -9,6 +9,7 @@ import {
   upstreamHeaders,
 } from "../../../utils/anthropic.ts"
 import { authenticate } from "../../../utils/auth.ts"
+import { noteRequest } from "../../../utils/log.ts"
 
 /**
  * `POST /v1/messages/count_tokens` — how big a prompt is, which the CLI asks
@@ -33,14 +34,18 @@ export default defineHandler(async (event) => {
   }
   const models = listOf(config.allowedModels)
   if (!allowedModel(body, models)) {
+    noteRequest(event, { refused: "model not allowed" })
     return anthropicError(
-      403,
-      "permission_error",
-      `The free AI runs ${models.join(", ")} only.`
+      400,
+      "invalid_request_error",
+      `The Hobby plan runs ${models.join(", ")} only.`
     )
   }
 
-  const url = new URL(event.url.pathname + event.url.search, config.anthropicBaseUrl)
+  const url = new URL(
+    event.url.pathname + event.url.search,
+    config.anthropicBaseUrl
+  )
   try {
     const upstream = await fetch(url, {
       method: "POST",
@@ -48,12 +53,28 @@ export default defineHandler(async (event) => {
       body: text,
       signal: event.req.signal,
     })
-    return new Response(await upstream.text(), {
+    const answer = await upstream.text()
+    if (!upstream.ok) {
+      noteRequest(event, { upstream_error: answer.slice(0, 300) })
+    }
+    // As in `index.post.ts`: Anthropic refusing this server's key is the
+    // server's fault, and a 401 would have the CLI retry for minutes.
+    if (upstream.status === 401 || upstream.status === 403) {
+      return anthropicError(
+        500,
+        "api_error",
+        "The free AI's server is misconfigured: Anthropic refused its API key."
+      )
+    }
+    return new Response(answer, {
       status: upstream.status,
       headers: downstreamHeaders(upstream.headers),
     })
   } catch (error) {
-    console.error("Anthropic could not be reached", error)
+    noteRequest(event, {
+      refused: "Anthropic unreachable",
+      error: String(error),
+    })
     return anthropicError(502, "api_error", "Anthropic could not be reached.")
   }
 })

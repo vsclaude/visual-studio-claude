@@ -5,6 +5,7 @@ import path from "node:path"
 import { DEFAULT_CHAT_OPTIONS, type ClaudeAccount } from "../src/shared/api"
 import {
   apiKeyHelperCommand,
+  FREE_AI_MAX_PROMPT,
   FREE_AI_MODEL,
   FREE_PROFILE_ID,
   forFreeAi,
@@ -107,6 +108,11 @@ check(
 check(
   "the helper is re-run inside the token's hour",
   Number(env.CLAUDE_CODE_API_KEY_HELPER_TTL_MS) < 60 * 60_000,
+  env
+)
+check(
+  "compacted before the server's ceiling",
+  env.CLAUDE_CODE_AUTO_COMPACT_WINDOW === String(FREE_AI_MAX_PROMPT),
   env
 )
 

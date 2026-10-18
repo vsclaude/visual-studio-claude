@@ -17,21 +17,26 @@ function keyOf(uid: string, now: Date): string {
   return `${dayKey(now)}:${uid}`
 }
 
-export async function spentToday(uid: string, now = new Date()): Promise<number> {
+export async function spentToday(
+  uid: string,
+  now = new Date()
+): Promise<number> {
   const value = await useStorage("quota").getItem<number>(keyOf(uid, now))
   return typeof value === "number" ? value : 0
 }
 
+/** Adds `amount` to the user's day and answers with the new total. */
 export async function addSpend(
   uid: string,
   amount: number,
   now = new Date()
-): Promise<void> {
-  if (amount <= 0) return
+): Promise<number> {
   const storage = useStorage("quota")
   const key = keyOf(uid, now)
   const before = await storage.getItem<number>(key)
-  await storage.setItem(key, (typeof before === "number" ? before : 0) + amount)
+  const total = (typeof before === "number" ? before : 0) + Math.max(0, amount)
+  if (amount > 0) await storage.setItem(key, total)
+  return total
 }
 
 /** Seconds until the budget resets, for `retry-after`. */

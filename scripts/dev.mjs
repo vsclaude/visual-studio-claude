@@ -21,6 +21,16 @@ const bin = (name) => path.join(root, "node_modules", ".bin", name)
 /** Matches the URL Vite prints once it is listening. */
 const VITE_URL = /(https?:\/\/(?:localhost|127\.0\.0\.1):\d+\/?)/
 
+// The repository's `.env`, if there is one, for the variables main reads at
+// launch (`VSCLAUDE_AI_URL`, say) — so they need not be typed in a shell's own
+// syntax every run. Development only: a packaged app never reads it. What the
+// shell already set wins, since `loadEnvFile` does not override.
+try {
+  process.loadEnvFile(path.join(root, ".env"))
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error
+}
+
 /** Read by `server.hmr` in `vite.config.ts`. */
 const hmr = !process.argv.slice(2).includes("--hmr=false")
 

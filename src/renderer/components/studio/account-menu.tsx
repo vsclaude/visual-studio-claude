@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { UserRound } from "lucide-react"
+import { Coins, Sparkles, UserRound } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -11,7 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAccount, watchAccount } from "@/lib/account"
+import { usePlansDialog } from "@/lib/plans"
 import { IconButton } from "./icon-button"
+import { PlanBadge } from "./plans-dialog"
 
 /**
  * Who is signed in, at the foot of the window's rail under Settings.
@@ -28,6 +30,7 @@ export function AccountMenu() {
   const signIn = useAccount((state) => state.signIn)
   const cancelSignIn = useAccount((state) => state.cancelSignIn)
   const signOut = useAccount((state) => state.signOut)
+  const showPlans = usePlansDialog((state) => state.show)
 
   useEffect(watchAccount, [])
 
@@ -71,7 +74,17 @@ export function AccountMenu() {
                     {account.email}
                   </span>
                 )}
+                <PlanBadge className="mt-1" />
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => showPlans()}>
+                <Sparkles className="text-violet-500" />
+                Upgrade plan
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => showPlans("credits")}>
+                <Coins className="text-amber-500" />
+                Buy credits
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={busy} onClick={() => void signOut()}>
                 Sign out

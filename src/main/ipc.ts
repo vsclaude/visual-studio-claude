@@ -241,7 +241,7 @@ export function createIpc(host: Host): {
     const stored = await store.listClaudeProfiles()
     const dir = freeAiDir()
     return dir
-      ? [...stored, { id: FREE_PROFILE_ID, name: "Free", configDir: dir }]
+      ? [...stored, { id: FREE_PROFILE_ID, name: "Hobby", configDir: dir }]
       : stored
   }
 
@@ -1096,7 +1096,9 @@ export function createIpc(host: Host): {
       // picked, and a sentence rather than the CLI's own login error.
       const free = profileId === FREE_PROFILE_ID
       if (free && !freeAiReady()) {
-        return { error: "Sign in to Visual Studio Claude to use the free AI." }
+        return {
+          error: "Sign in to Visual Studio Claude to use the Hobby plan.",
+        }
       }
 
       const controller = new AbortController()

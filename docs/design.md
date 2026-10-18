@@ -599,11 +599,12 @@ only for somebody whose own `claude` is signed out and who has no profiles —
 somebody already spending their own plan is not moved onto Haiku. The server is
 `FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
 whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
-machine.
+machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
+loads, so it need not be typed in each shell's own syntax.
 
 **What the server is sent is the user's Firebase ID token**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(`firebase-admin`'s `verifyIdToken`), refuses any model but `FREE_AI_MODEL`, and
+(against Google's public keys), refuses any model but `FREE_AI_MODEL`, and
 forwards to Anthropic with a key of its own — so the free tier is this app's
 API spend, metered per uid by the server, and no user credential is ever
 forwarded.
@@ -634,6 +635,15 @@ A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
 key exported there would win over the helper and be sent to this app's server.
 Measured too: with one exported, the server saw the Firebase token alone.
 
+**No prompt goes past 100K tokens**, where Haiku 5.5 charges every token of
+the request fivefold. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
+`FREE_AI_MAX_PROMPT` (100K, also the least the CLI accepts), so a long chat
+compacts at the CLI's own threshold; the server refuses anything longer anyway,
+as `prompt is too long: N tokens > 100000 maximum` — Anthropic's own wording,
+which the CLI matches and answers by compacting. Measured against the real CLI:
+it read both numbers out of the refusal, and a single message too long to
+compact is reported as such rather than retried.
+
 Every place that starts a `claude` on a profile asks `accountEnv` (in
 `main/free-ai.ts`) by directory rather than building `{ CLAUDE_CONFIG_DIR }`
 itself, which is how the free directory brings its server with it. The usage
@@ -644,6 +654,26 @@ the CLI's "Please run /login", which names the wrong login.
 The `Gateway` profile that came before this — a URL and a token typed into
 Settings per profile — was never shipped and is not here: a server of the
 app's own, reached by whoever is signed in, is the thing it was a stand-in for.
+
+### Plans: Hobby and the ones above it
+
+The free AI is sold as a **plan**, and the free one is called **Hobby** — the
+composer's account button says `Hobby`, its row draws a plan badge, and the
+account menu offers `Upgrade plan` and `Buy credits`. The point is that the
+studio is a way to use Claude Code **without** a $20 subscription: a free
+Haiku plan, cheaper monthly plans above it (`Starter`, `Plus` with Sonnet,
+`Pro` with Opus), and credit packs that top any of them up and never expire,
+for somebody who would rather pay for what they use than a fixed month.
+
+`shared/plans.ts` is the one table of plans and packs, and `plans-dialog.tsx`
+draws it. **Nothing enforces it yet**: the server still holds every signed-in
+user to one model list and one daily budget, and nothing takes a payment, so
+everybody is on `CURRENT_PLAN` (`hobby`) and every other button says it is
+coming. The id stays `FREE_PROFILE_ID` (`vsclaude-free`) and the directory
+`claude-free`, because both are already on users' disks; only the words moved.
+What enforcing it takes is the server knowing a user's plan — written by a
+payment provider's webhook, never claimed by the client — and a model list,
+budget and `freeAiEnv` pinning per plan.
 
 ## Plugins
 

@@ -12,6 +12,7 @@ import { useChats } from "@/lib/chat/store"
 import { IconButton } from "./icon-button"
 import { HAS_TRAFFIC_LIGHTS } from "./title-bar"
 import { ChatPane } from "./chat/chat-pane"
+import { PlansDialog } from "./plans-dialog"
 
 /**
  * One chat in a window of its own — what `?chat=<id>` on the renderer's URL
@@ -40,7 +41,7 @@ export function ChatWindow({ chatId }: { chatId: string }) {
     void useStudio.getState().init()
     void useSettings.getState().restore()
     void useClaudeProfiles.getState().refresh()
-    // For the composer's free AI row, which the studio window learns of through
+    // For the composer's Hobby row, which the studio window learns of through
     // its rail's account menu — a window this one has none of.
     watchAccount()
     void Promise.all([
@@ -125,6 +126,8 @@ export function ChatWindow({ chatId }: { chatId: string }) {
           </div>
         )}
       </div>
+      {/* The composer's Hobby row opens it, here as in the studio. */}
+      <PlansDialog />
     </div>
   )
 }

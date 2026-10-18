@@ -1,18 +1,21 @@
 import { describe, expect, test } from "bun:test"
-import {
-  createLocalJWKSet,
-  exportJWK,
-  generateKeyPair,
-  SignJWT,
-} from "jose"
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose"
 
 import {
   allowedModel,
+  countBodyOf,
   listOf,
+  mayExceed,
+  promptTooLong,
   upstreamHeaders,
 } from "../server/utils/anthropic.ts"
 import { tokenOf, verifyIdToken } from "../server/utils/firebase.ts"
-import { dayKey, StreamUsage, usageOf, weighted } from "../server/utils/usage.ts"
+import {
+  dayKey,
+  StreamUsage,
+  usageOf,
+  weighted,
+} from "../server/utils/usage.ts"
 
 /**
  * The parts of the server that decide who gets through and what they are
@@ -38,14 +41,50 @@ function idToken(claims: Record<string, unknown> = {}, project = PROJECT) {
 
 describe("verifyIdToken", () => {
   test("a live token of this project is its user", async () => {
-    const user = await verifyIdToken(await idToken(), PROJECT, keys)
-    expect(user).toEqual({ uid: "uid-1", email: "a@example.com" })
+    const verified = await verifyIdToken(await idToken(), PROJECT, keys)
+    expect(verified).toEqual({
+      ok: true,
+      user: { uid: "uid-1", email: "a@example.com" },
+    })
   })
 
   test("another project's token is nobody", async () => {
     expect(
       await verifyIdToken(await idToken({}, "other-app"), PROJECT, keys)
-    ).toBeNull()
+    ).toEqual({
+      ok: false,
+      reason: "the token is for another Firebase project",
+    })
+  })
+
+  test("a token from the future blames this server's clock", async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const ahead = await new SignJWT({ auth_time: now + 7 * 3600 })
+      .setProtectedHeader({ alg: "RS256", kid: "test" })
+      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
+      .setAudience(PROJECT)
+      .setSubject("uid-1")
+      .setIssuedAt(now + 7 * 3600)
+      .setExpirationTime(now + 8 * 3600)
+      .sign(privateKey)
+    const verified = await verifyIdToken(ahead, PROJECT, keys)
+    expect(verified.ok).toBe(false)
+    expect(!verified.ok && verified.reason).toContain(
+      "420 minutes in the future"
+    )
+  })
+
+  test("a token a minute past its expiry still passes", async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const lapsed = await new SignJWT({})
+      .setProtectedHeader({ alg: "RS256", kid: "test" })
+      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
+      .setAudience(PROJECT)
+      .setSubject("uid-1")
+      .setIssuedAt(now - 3660)
+      .setExpirationTime(now - 60)
+      .sign(privateKey)
+    expect((await verifyIdToken(lapsed, PROJECT, keys)).ok).toBe(true)
   })
 
   test("an expired token is nobody", async () => {
@@ -57,7 +96,10 @@ describe("verifyIdToken", () => {
       .setIssuedAt(Math.floor(Date.now() / 1000) - 7200)
       .setExpirationTime(Math.floor(Date.now() / 1000) - 3600)
       .sign(privateKey)
-    expect(await verifyIdToken(expired, PROJECT, keys)).toBeNull()
+    expect(await verifyIdToken(expired, PROJECT, keys)).toEqual({
+      ok: false,
+      reason: "the token has expired",
+    })
   })
 
   test("a token signed by another key is nobody", async () => {
@@ -69,11 +111,17 @@ describe("verifyIdToken", () => {
       .setSubject("uid-1")
       .setExpirationTime("1h")
       .sign(stranger.privateKey)
-    expect(await verifyIdToken(forged, PROJECT, keys)).toBeNull()
+    expect(await verifyIdToken(forged, PROJECT, keys)).toEqual({
+      ok: false,
+      reason: "the token is not signed by Firebase",
+    })
   })
 
   test("not a JWT is nobody", async () => {
-    expect(await verifyIdToken("sk-ant-something", PROJECT, keys)).toBeNull()
+    expect(await verifyIdToken("sk-ant-something", PROJECT, keys)).toEqual({
+      ok: false,
+      reason: "the token is not a Firebase ID token",
+    })
   })
 })
 
@@ -120,6 +168,48 @@ describe("upstreamHeaders", () => {
   })
 })
 
+describe("the prompt ceiling", () => {
+  test("only a body longer in bytes than the ceiling needs a count", () => {
+    expect(mayExceed("x".repeat(100), 100)).toBe(false)
+    expect(mayExceed("x".repeat(101), 100)).toBe(true)
+    // Bytes, not characters: three bytes each in UTF-8.
+    expect(mayExceed("ă".repeat(40), 100)).toBe(false)
+    expect(mayExceed("世".repeat(40), 100)).toBe(true)
+  })
+
+  test("count_tokens is sent only the fields it takes", () => {
+    const body = JSON.parse(
+      countBodyOf({
+        model: "claude-haiku-5-5",
+        messages: [],
+        system: "s",
+        tools: [],
+        max_tokens: 32000,
+        stream: true,
+        metadata: { user_id: "u" },
+      })
+    )
+    expect(Object.keys(body).sort()).toEqual(
+      ["messages", "model", "system", "tools"].sort()
+    )
+  })
+
+  test("refused in the words the CLI compacts on", async () => {
+    const answer = promptTooLong(123_456, 100_000)
+    expect(answer.status).toBe(400)
+    const { error } = (await answer.json()) as {
+      error: { type: string; message: string }
+    }
+    expect(error.type).toBe("invalid_request_error")
+    expect(answer.headers.get("x-should-retry")).toBe("false")
+    // The CLI's own pattern, copied out of its bundle.
+    const match = error.message.match(
+      /prompt is too long[^0-9]*(\d+)\s*tokens?\s*>\s*(\d+)/i
+    )
+    expect(match?.slice(1)).toEqual(["123456", "100000"])
+  })
+})
+
 describe("usage", () => {
   test("weighted by price", () => {
     expect(
@@ -130,6 +220,17 @@ describe("usage", () => {
         output_tokens: 10,
       })
     ).toBe(100 + 125 + 100 + 50)
+  })
+
+  test("a prompt past 100K is charged fivefold, as Anthropic charges it", () => {
+    const usage = {
+      input_tokens: 10,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 100_000,
+      output_tokens: 100,
+    }
+    expect(weighted(usage)).toBe((10 + 10_000 + 500) * 5)
+    expect(weighted({ ...usage, input_tokens: 0 })).toBe(10_000 + 500)
   })
 
   test("a non-streamed answer's usage", () => {

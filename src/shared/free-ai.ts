@@ -32,6 +32,9 @@ export const FREE_AI_URL = ""
  * because it is also what every alias is pinned to — see `freeAiEnv`. */
 export const FREE_AI_MODEL = "claude-haiku-5-5"
 
+/** The largest prompt the server forwards — `maxPromptTokens` there. */
+export const FREE_AI_MAX_PROMPT = 100_000
+
 /**
  * A chat's options as a free chat runs them: Haiku, at the CLI's own effort.
  *
@@ -87,6 +90,11 @@ export function normalizeAiUrl(input: string): string | null {
  *
  * The helper is re-run every five minutes, well inside the hour a Firebase ID
  * token lives, so a session open all afternoon keeps sending a live one.
+ *
+ * **The conversation is compacted before 100K**, where Haiku's price goes up
+ * fivefold: the server refuses a longer prompt (in words the CLI compacts on),
+ * but compacting at the CLI's own threshold costs one summary instead of a
+ * refused request first. 100K is also the least the CLI accepts here.
  */
 export function freeAiEnv(url: string): Record<string, string> {
   return {
@@ -100,6 +108,7 @@ export function freeAiEnv(url: string): Record<string, string> {
     ANTHROPIC_DEFAULT_SONNET_MODEL: FREE_AI_MODEL,
     ANTHROPIC_DEFAULT_HAIKU_MODEL: FREE_AI_MODEL,
     CLAUDE_CODE_SUBAGENT_MODEL: FREE_AI_MODEL,
+    CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(FREE_AI_MAX_PROMPT),
   }
 }
 

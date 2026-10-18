@@ -24,12 +24,24 @@ export const NO_USAGE: Usage = {
   cache_read_input_tokens: 0,
 }
 
+/**
+ * Haiku 5.5 charges every token of a request fivefold once its prompt passes
+ * 100K. The route refuses such prompts, but a count that could not be had lets
+ * one through, and the budget should then be spent at what it really cost.
+ */
+export const LONG_PROMPT = 100_000
+
 export function weighted(usage: Usage): number {
-  return Math.ceil(
+  const prompt =
     usage.input_tokens +
+    usage.cache_creation_input_tokens +
+    usage.cache_read_input_tokens
+  return Math.ceil(
+    (usage.input_tokens +
       usage.cache_creation_input_tokens * 1.25 +
       usage.cache_read_input_tokens * 0.1 +
-      usage.output_tokens * 5
+      usage.output_tokens * 5) *
+      (prompt > LONG_PROMPT ? 5 : 1)
   )
 }
 

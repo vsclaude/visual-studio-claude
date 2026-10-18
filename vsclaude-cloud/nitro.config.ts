@@ -24,6 +24,9 @@ export default defineConfig({
     /** NITRO_DAILY_BUDGET — per user per UTC day, in input-token equivalents
      * (`server/utils/usage.ts`). 0 turns the budget off. */
     dailyBudget: 2_000_000,
+    /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded. 100K is where
+     * Haiku 5.5's price goes up fivefold; 0 turns the check off. */
+    maxPromptTokens: 100_000,
   },
 
   /*

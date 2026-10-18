@@ -111,7 +111,12 @@ import {
 import { installedShells } from "./shells"
 import { TerminalManager } from "./terminal"
 import { TsServers } from "./tsserver"
-import { checkForUpdate, downloadUpdate, startInstaller } from "./updater"
+import {
+  checkForUpdate,
+  downloadUpdate,
+  startInstaller,
+  WINDOWS_INSTALLER_ARGS,
+} from "./updater"
 import { DirectoryWatchers, RootWatchers } from "./watch"
 import {
   addWorktree,
@@ -1635,13 +1640,14 @@ export function createIpc(host: Host): {
   )
 
   handle(IPC.installUpdate, async (_event, version: string) => {
-    if (process.platform !== "darwin") {
+    const platform = process.platform
+    if (platform !== "darwin" && platform !== "win32") {
       throw new Error(
-        "install.sh is a macOS script — open the release page instead."
+        "There is no in-app installer for this platform — open the release page instead."
       )
     }
     const script = host.installerScript
-    if (!script) {
+    if (platform === "darwin" && !script) {
       throw new Error(
         "This build updates from its checkout — pull and restart instead."
       )
@@ -1655,8 +1661,9 @@ export function createIpc(host: Host): {
     // Downloaded here rather than by the script, so the wait has a percentage
     // on it: this is the long phase and the only one with a window left to draw
     // in. A failure throws, and the renderer is still there to show it.
-    const dmg = await downloadUpdate({
+    const installer = await downloadUpdate({
       version,
+      platform,
       arch: process.arch,
       onProgress: (received, total) =>
         send(IPC.updateProgress, {
@@ -1667,11 +1674,17 @@ export function createIpc(host: Host): {
         }),
     })
     send(IPC.updateProgress, { stage: "installing", version })
+    if (platform === "win32") {
+      // The app quits itself and the installer starts after — see
+      // `WINDOWS_INSTALLER_ARGS` for why in that order.
+      host.quitAndRun(installer, WINDOWS_INSTALLER_ARGS)
+      return
+    }
     await startInstaller({
-      script,
+      script: script!,
       version,
       appPath: APP_DIR,
-      dmg,
+      dmg: installer,
     })
   })
 

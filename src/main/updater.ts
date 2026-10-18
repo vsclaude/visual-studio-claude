@@ -154,7 +154,7 @@ export async function checkForUpdate(
     current,
     notes: release.notes,
     url: release.url,
-    installable: platform === "darwin",
+    installable: platform === "darwin" || platform === "win32",
   }
 }
 
@@ -169,15 +169,32 @@ const PROGRESS_INTERVAL_MS = 100
 
 type Asset = { url: string; name: string; size: number }
 
+/** What this platform's installer is called at the end — the `.dmg` on macOS,
+ * the NSIS `.exe` on Windows — or null where there is none to run. */
+function installerSuffix(
+  platform: NodeJS.Platform,
+  arch: string
+): string | null {
+  if (platform === "darwin") return `-${arch}.dmg`
+  if (platform === "win32") return `-${arch}.exe`
+  return null
+}
+
 /**
- * The `.dmg` for one architecture among a release's assets.
+ * The installer for one platform and architecture among a release's assets.
  *
  * Found by the suffix of the asset's *own* name, which is how `install.sh`
  * finds it too — never by building a filename out of a version and a template,
  * so a release whose files are named something else fails as "no arm64 build
  * here" rather than as a 404 on a URL this app invented.
  */
-export function dmgAsset(release: unknown, arch: string): Asset | null {
+export function installerAsset(
+  release: unknown,
+  platform: NodeJS.Platform,
+  arch: string
+): Asset | null {
+  const suffix = installerSuffix(platform, arch)
+  if (!suffix) return null
   if (typeof release !== "object" || release === null) return null
   const assets = (release as Record<string, unknown>).assets
   if (!Array.isArray(assets)) return null
@@ -187,7 +204,7 @@ export function dmgAsset(release: unknown, arch: string): Asset | null {
     const name = record.name
     const url = record.browser_download_url
     if (typeof name !== "string" || typeof url !== "string") continue
-    if (!name.endsWith(`-${arch}.dmg`)) continue
+    if (!name.endsWith(suffix)) continue
     // An absent or nonsense size reads as zero, which is "total unknown" — the
     // bar draws that as indeterminate rather than as a percentage of nothing.
     const size =
@@ -225,26 +242,33 @@ async function releaseByTag(version: string): Promise<unknown> {
 }
 
 /**
- * Downloads a release's `.dmg`, reporting how far it has got.
+ * Downloads a release's installer, reporting how far it has got.
  *
  * Ahead of `install.sh` rather than inside it: the script's own `curl` writes a
  * progress bar to a log file nobody is reading, and this is the only phase of
  * an install that can be drawn in the window — everything after it happens with
  * the app already quit.
  *
- * Answers with the file's path, which is handed straight to the script.
+ * Answers with the file's path, which is handed straight to the installer.
  */
 export async function downloadUpdate(input: {
   version: string
-  /** `process.arch` — matches the `-arm64.dmg` / `-x64.dmg` suffix. */
+  platform: NodeJS.Platform
+  /** `process.arch` — matches the `-arm64.dmg` / `-x64.exe` suffix. */
   arch: string
   /** Called at most every `PROGRESS_INTERVAL_MS`, and once more at the end.
    * `total` is 0 when the release does not say how large the asset is. */
   onProgress: (received: number, total: number) => void
 }): Promise<string> {
-  const asset = dmgAsset(await releaseByTag(input.version), input.arch)
+  const asset = installerAsset(
+    await releaseByTag(input.version),
+    input.platform,
+    input.arch
+  )
   if (!asset) {
-    throw new Error(`No ${input.arch} .dmg in ${input.version}.`)
+    throw new Error(
+      `No ${input.platform} ${input.arch} installer in ${input.version}.`
+    )
   }
 
   const dir = path.join(dataDir(), "updates")
@@ -345,3 +369,30 @@ export async function startInstaller(input: {
   closeSync(log)
   child.unref()
 }
+
+/**
+ * What the NSIS installer is run with — the flags electron-updater itself
+ * passes to an installer this template built.
+ *
+ * It is started by `quitAndRun` in `electron-ipc.ts` at `will-quit`, so the
+ * app's own quit has already happened: `before-quit` ended the terminals and
+ * the chats the way any other quit does. Not from a PowerShell wrapper waiting
+ * on this process — a PowerShell spawned `detached` has no console and exits
+ * at once, having run nothing — and not before the quit, which would leave the
+ * installer's `taskkill` racing the cleanup.
+ *
+ * - `/S` — silent: no wizard to click through, since the window that asked for
+ *   the update is gone by the time it would appear.
+ * - `--updated` — the running-app check closes whatever copy of the executable
+ *   is still about without asking (`taskkill`, then `/F`): the pty daemon, which
+ *   runs as the same executable and idles for a minute before it exits, and any
+ *   copy of the app opened from somewhere else. The old version's files are
+ *   moved aside rather than deleted, so a failed copy can put them back.
+ * - `--force-run` — a silent one-click install launches the app afterwards only
+ *   when asked to; without it the update would end with nothing on screen.
+ *
+ * The `.exe` is left in `updates/`, which the next `downloadUpdate` empties: by
+ * the time it could be deleted nothing of this app is running to do it. Nor is
+ * there a log — NSIS writes none, and the app reopening is the answer.
+ */
+export const WINDOWS_INSTALLER_ARGS = ["/S", "--updated", "--force-run"]

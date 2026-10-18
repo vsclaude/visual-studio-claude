@@ -712,7 +712,7 @@ function UpdatesSection() {
             ) : update.installable ? (
               "Restarts the app; terminal sessions end."
             ) : (
-              "In-app install is macOS only."
+              "In-app install is macOS and Windows only."
             )
           }
         >

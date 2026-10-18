@@ -1057,7 +1057,18 @@ A pill in the status bar when GitHub has a newer release. **Not
 downloads the `.dmg` itself with a progress bar, and runs the bundled
 `install.sh` **detached**, since the script quits the app. `isNewer` is numeric
 and strictly newer (`test/updates.ts`). Nothing pops up; skipping is per
-version. Off macOS it links to the release page.
+version.
+
+On **Windows** the same button downloads the NSIS `.exe`, quits the app the
+ordinary way, and starts the installer at `will-quit` with `/S --updated
+--force-run` (`WINDOWS_INSTALLER_ARGS`): silent, closing any copy of the
+executable still running — the pty daemon, a copy opened from elsewhere —
+without asking, and reopening the app afterwards. It exists because a
+hand-run installer left the old version on screen often enough to be asked
+about: a prompt cancelled, a shortcut pointing elsewhere. A PowerShell wrapper
+waiting on the app's pid was tried first and does not work: spawned `detached`
+it has no console and exits having run nothing. On Linux it links to the release
+page.
 
 ## The name
 

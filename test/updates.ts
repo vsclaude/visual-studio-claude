@@ -9,7 +9,12 @@
  * prerelease is newer than the release it precedes and the same thing happens
  * to whoever is running one.
  */
-import { dmgAsset, isNewer, versionParts } from "../src/main/updater"
+import {
+  installerAsset,
+  isNewer,
+  versionParts,
+  WINDOWS_INSTALLER_ARGS,
+} from "../src/main/updater"
 import { downloadPercent, installLabel } from "../src/renderer/lib/updates"
 import { check, finish, section } from "./harness"
 
@@ -48,7 +53,7 @@ check(
 )
 check("and the other way round", isNewer("1.0.1", "1.0"))
 
-section("dmgAsset")
+section("installerAsset")
 
 const release = {
   assets: [
@@ -67,27 +72,77 @@ const release = {
       browser_download_url: "zip",
       size: 90,
     },
+    {
+      name: "Visual-Studio-Claude-1.0.24-x64.exe",
+      browser_download_url: "exe",
+      size: 110,
+    },
+    {
+      name: "Visual-Studio-Claude-1.0.24-x64.exe.blockmap",
+      browser_download_url: "blockmap",
+      size: 1,
+    },
   ],
 }
 
-check("picks this arch's dmg", dmgAsset(release, "arm64")?.url === "arm")
-check("and the other one", dmgAsset(release, "x64")?.url === "x64")
+check(
+  "picks this arch's dmg",
+  installerAsset(release, "darwin", "arm64")?.url === "arm"
+)
+check(
+  "and the other one",
+  installerAsset(release, "darwin", "x64")?.url === "x64"
+)
+check(
+  "Windows gets the .exe, not a .dmg of the same arch",
+  installerAsset(release, "win32", "x64")?.url === "exe"
+)
+check(
+  "a blockmap beside the .exe is not the installer",
+  installerAsset({ assets: [release.assets[4]] }, "win32", "x64") === null
+)
+check(
+  "Linux has no installer to run",
+  installerAsset(release, "linux", "x64") === null
+)
 check(
   "a .zip of the right arch is not a .dmg",
-  dmgAsset({ assets: [release.assets[2]] }, "arm64") === null
+  installerAsset({ assets: [release.assets[2]] }, "darwin", "arm64") === null
 )
 check(
   "an arch with no build is null, not the first asset going",
-  dmgAsset(release, "riscv") === null
+  installerAsset(release, "darwin", "riscv") === null
 )
-check("a release with no assets", dmgAsset({ assets: [] }, "arm64") === null)
-check("and one that is not a release at all", dmgAsset(null, "arm64") === null)
+check(
+  "a release with no assets",
+  installerAsset({ assets: [] }, "darwin", "arm64") === null
+)
+check(
+  "and one that is not a release at all",
+  installerAsset(null, "darwin", "arm64") === null
+)
 check(
   "a missing size reads as unknown rather than throwing",
-  dmgAsset(
+  installerAsset(
     { assets: [{ name: "a-arm64.dmg", browser_download_url: "u" }] },
+    "darwin",
     "arm64"
   )?.size === 0
+)
+
+section("WINDOWS_INSTALLER_ARGS")
+
+check(
+  "silent, since the window that asked is gone",
+  WINDOWS_INSTALLER_ARGS.includes("/S")
+)
+check(
+  "closes every running copy without a prompt",
+  WINDOWS_INSTALLER_ARGS.includes("--updated")
+)
+check(
+  "and reopens the app, which a silent install otherwise does not",
+  WINDOWS_INSTALLER_ARGS.includes("--force-run")
 )
 
 section("downloadPercent")

@@ -151,7 +151,9 @@ imports may reach `electron`.
   `install.sh` (carried in the bundle as an `extraResources` entry) to install
   it. **Not `electron-updater`**: Squirrel.Mac will not replace an unsigned
   bundle and these builds are unsigned. The installer is spawned **detached**,
-  because the script's own second act is quitting this app. Free of `electron` —
+  because the script's own second act is quitting this app. On Windows it is the
+  NSIS `.exe` instead, run silently by `host.quitAndRun` at `will-quit` — after
+  the app's own cleanup — and it closes any copy still running. Free of `electron` —
   the version and the script's path are arguments — so `test/updates.ts` can
   import `isNewer`. `docs/design.md` § Updating has the rest.
 - **`tsserver.ts`** — one per Explorer root, using _that root's own_

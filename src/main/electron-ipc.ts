@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process"
 import { writeFile } from "node:fs/promises"
 import path from "node:path"
 
@@ -198,6 +199,19 @@ export function registerIpc(
     },
     openExternal(url) {
       void shell.openExternal(url)
+    },
+    quitAndRun(file, args) {
+      // `will-quit` rather than now: `before-quit` defers the quit until the
+      // terminals and chats are ended, and this is the first moment after that.
+      app.once("will-quit", () => {
+        spawn(file, args, {
+          detached: true,
+          stdio: "ignore",
+          // Not the install directory, which this is about to replace.
+          cwd: path.dirname(file),
+        }).unref()
+      })
+      app.quit()
     },
     version: app.getVersion(),
     installerScript: installerScript(),

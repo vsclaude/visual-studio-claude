@@ -64,6 +64,10 @@ export type Host = {
    * launcher's count on Linux. Zero clears it. */
   setBadgeCount: (count: number) => void
 
+  /** Quits the app the ordinary way, `before-quit` and all, and starts `file`
+   * detached once that cleanup is done — the Windows update's installer. */
+  quitAndRun: (file: string, args: string[]) => void
+
   /** This build's version, for the update check. */
   version: string
   /** `install.sh`, or null where this host cannot run it — see

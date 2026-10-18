@@ -65,18 +65,25 @@ export function UpdatePill() {
               Update to Visual Studio Claude {update.version}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {update.installable ? (
+              {!update.installable ? (
+                <>
+                  Installing from inside the app is macOS and Windows only. The
+                  release page has the build for this machine.
+                </>
+              ) : window.desktop.platform === "win32" ? (
+                <>
+                  Visual Studio Claude will quit, run the {update.version}{" "}
+                  installer and reopen. Every running copy of the app is closed
+                  first, so the old version cannot stay behind. Terminal
+                  sessions and anything running in the dock end with it.
+                </>
+              ) : (
                 <>
                   Visual Studio Claude will quit, install {update.version} into{" "}
                   <code className="font-mono">/Applications</code> and reopen —
                   the same <code className="font-mono">install.sh</code> the
                   README hands you, run from inside the app. Terminal sessions
                   and anything running in the dock end with it.
-                </>
-              ) : (
-                <>
-                  Installing from inside the app is macOS only. The release page
-                  has the build for this machine.
                 </>
               )}
             </AlertDialogDescription>

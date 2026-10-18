@@ -2918,9 +2918,9 @@ export type UpdateCheck =
       /** The release's page, for the "What's new" link. */
       url: string
       /**
-       * Whether `installUpdate` can do anything here. `install.sh` is a macOS
-       * script — it mounts a `.dmg` and `ditto`s a bundle — so everywhere else
-       * the only honest button is the one that opens the release page.
+       * Whether `installUpdate` can do anything here: `install.sh` on macOS,
+       * the NSIS installer run silently on Windows. On Linux the only honest
+       * button is the one that opens the release page.
        */
       installable: boolean
     }

@@ -27,6 +27,12 @@ export default [
       "release/**",
       "src/renderer/public/**",
       /*
+       * `vsclaude-cloud/` is a Nitro server with its own `.gitignore`, and
+       * `nitro build` writes a bundled copy of it into `.output/`. Linting that
+       * bundle reports the bundler's own shims (`URL`, `Headers`), not our code.
+       */
+      "vsclaude-cloud/.output/**",
+      /*
        * The VS Code extension in `vscode-notes/` is a package of its own — its
        * own `package.json`, its own `tsconfig`, its own dependencies, and a
        * different runtime on both sides of it (an extension host, and a webview

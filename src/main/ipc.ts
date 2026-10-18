@@ -46,8 +46,10 @@ import {
   freeAiDir,
   freeAiReady,
   freeAiUrl,
+  openServerPage,
   setFreeAiDir,
   setFreeAiToken,
+  studioAccount,
 } from "./free-ai"
 import * as files from "./files"
 import { MAX_INDEXED_FILES } from "./files"
@@ -555,6 +557,24 @@ export function createIpc(host: Host): {
 
   handle(IPC.setFreeAiToken, (_event, token: unknown) =>
     setFreeAiToken(typeof token === "string" && token ? token : null)
+  )
+
+  handle(IPC.studioAccount, () => studioAccount())
+
+  // The item is the server's to check against what it sells; main only passes
+  // a string on, to the side that takes that way of paying.
+  handle(IPC.buyPlanItem, (_event, item: unknown, method: unknown) =>
+    typeof item === "string"
+      ? openServerPage(
+          method === "card" ? "/api/checkout" : "/api/orders",
+          { item },
+          (url) => host.openExternal(url)
+        )
+      : { ok: false, error: "Nothing to buy." }
+  )
+
+  handle(IPC.managePlan, () =>
+    openServerPage("/api/portal", {}, (url) => host.openExternal(url))
   )
 
   /*

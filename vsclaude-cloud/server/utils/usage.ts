@@ -6,8 +6,9 @@
  * so one number covers a request that is mostly cache reads and one that is
  * mostly output: each kind is weighted by its price relative to an uncached
  * input token (Anthropic's ratios — cache writes 1.25×, cache reads 0.1×,
- * output 5×). A budget of 2,000,000 is then "what two million fresh input
- * tokens would cost", whatever the mix.
+ * output 5×). A budget of 2,000,000 is then "what two million fresh Haiku
+ * input tokens would cost", whatever the mix — and whatever the model, since
+ * Sonnet and Opus are counted at their own price (`MODEL_PRICES`).
  */
 
 export type Usage = {
@@ -31,7 +32,32 @@ export const NO_USAGE: Usage = {
  */
 export const LONG_PROMPT = 100_000
 
-export function weighted(usage: Usage): number {
+/**
+ * What a model's tokens cost against Haiku's, the unit the budget is counted
+ * in: Sonnet 5.5's input is $2/MTok and Opus 5.5's $4 against Haiku's $0.10.
+ * A paid plan's Opus turn has to spend its allowance at Opus's price, or the
+ * allowance is a promise of forty times what it says.
+ *
+ * Their cache reads are 0.05× input rather than Haiku's 0.1×, and neither has
+ * Haiku's long-prompt surcharge — the full context is one price.
+ * (platform.claude.com/docs/en/about-claude/pricing, read 2026-10-18.)
+ */
+type ModelPrice = { factor: number; cacheRead: number; longPrompt: boolean }
+
+const HAIKU: ModelPrice = { factor: 1, cacheRead: 0.1, longPrompt: true }
+const SONNET: ModelPrice = { factor: 20, cacheRead: 0.05, longPrompt: false }
+const OPUS: ModelPrice = { factor: 40, cacheRead: 0.05, longPrompt: false }
+
+/** By family, and an unknown model at the dearest price: a model added to a
+ * plan before this table learns it is overcharged rather than given away. */
+function priceOf(model: string): ModelPrice {
+  if (/haiku/i.test(model)) return HAIKU
+  if (/sonnet/i.test(model)) return SONNET
+  return OPUS
+}
+
+export function weighted(usage: Usage, model = "claude-haiku-5-5"): number {
+  const price = priceOf(model)
   const prompt =
     usage.input_tokens +
     usage.cache_creation_input_tokens +
@@ -39,9 +65,10 @@ export function weighted(usage: Usage): number {
   return Math.ceil(
     (usage.input_tokens +
       usage.cache_creation_input_tokens * 1.25 +
-      usage.cache_read_input_tokens * 0.1 +
+      usage.cache_read_input_tokens * price.cacheRead +
       usage.output_tokens * 5) *
-      (prompt > LONG_PROMPT ? 5 : 1)
+      price.factor *
+      (price.longPrompt && prompt > LONG_PROMPT ? 5 : 1)
   )
 }
 

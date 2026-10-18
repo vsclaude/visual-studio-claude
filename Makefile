@@ -25,7 +25,7 @@ else
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev build icon dmg dmg-arm64 dmg-x64 dmg-universal dmg-all app open-release clean clean-release lint typecheck test
+.PHONY: help install dev build icon dmg dmg-arm64 dmg-x64 dmg-universal dmg-all app open-release clean clean-release lint typecheck format format-check unit test
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -76,11 +76,20 @@ open-release: ## Reveal the built artifacts in Finder
 lint: ## Lint the app
 	bun run lint
 
-typecheck: ## Typecheck the app
+typecheck: ## Typecheck the app (main, renderer and tests)
 	bun run typecheck
 
-test: ## Run the tests
+format: ## Format the whole repo in place with prettier
+	bun run format
+
+format-check: ## Check formatting without changing anything (what CI runs)
+	bun run format:check
+
+unit: ## Run the test scripts under test/ only
 	bun run test
+
+# Everything CI would gate on, in the order that fails fastest first.
+test: lint typecheck format-check unit ## Run lint, typecheck, format check and tests
 
 clean-release: ## Remove built installers
 	rm -rf $(RELEASE)

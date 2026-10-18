@@ -1,0 +1,95 @@
+import { defineHandler } from "nitro"
+
+import {
+  claimTransfer,
+  getAccount,
+  getOrder,
+  saveAccount,
+  saveOrder,
+} from "../../utils/accounts.ts"
+import { noteRequest } from "../../utils/log.ts"
+import {
+  applyTransfer,
+  orderCodeOf,
+  transferOf,
+  webhookAuthentic,
+} from "../../utils/sepay-billing.ts"
+import { sepayConfig } from "../../utils/sepay.ts"
+
+/**
+ * `POST /api/webhooks/sepay` — a transfer SePay saw arrive in the account,
+ * applied to the order its content names (`sepay-billing.ts`).
+ *
+ * SePay counts a delivery as done only on a 200 whose body is **exactly**
+ * `{"success": true}`; anything else is retried up to seven times over half an
+ * hour. So every transfer that is not ours — another payment into the same
+ * account, money going out, a code nobody issued — is acknowledged that way
+ * too, and logged: retrying will not make it ours. Only a failure on this
+ * side's storage is left unacknowledged, so SePay tries again.
+ */
+const DONE = () => Response.json({ success: true })
+
+export default defineHandler(async (event) => {
+  const sepay = sepayConfig()
+  const body = await event.req.text()
+  if (
+    !webhookAuthentic(body, event.req.headers, {
+      secret: sepay.webhookSecret,
+      apiKey: sepay.apiKey,
+    })
+  ) {
+    noteRequest(event, { refused: "not authenticated as SePay" })
+    return new Response("Unauthorized", { status: 401 })
+  }
+
+  let payload: unknown
+  try {
+    payload = JSON.parse(body)
+  } catch {
+    noteRequest(event, { refused: "body is not JSON" })
+    return new Response("Not JSON", { status: 400 })
+  }
+
+  const transfer = transferOf(payload)
+  if (!transfer) {
+    noteRequest(event, { ignored: "not a transaction" })
+    return DONE()
+  }
+  const code = orderCodeOf(transfer, sepay.prefix)
+  noteRequest(event, {
+    sepay: transfer.id,
+    amount: transfer.transferAmount,
+    order: code ?? undefined,
+  })
+  if (!code) {
+    noteRequest(event, { ignored: "no order code in the content" })
+    return DONE()
+  }
+  const order = await getOrder(code)
+  if (!order) {
+    noteRequest(event, { ignored: "no such order" })
+    return DONE()
+  }
+  if (!(await claimTransfer(transfer.id))) {
+    noteRequest(event, { ignored: "transfer already applied" })
+    return DONE()
+  }
+
+  const paid = applyTransfer(order, await getAccount(order.uid), transfer)
+  noteRequest(event, { uid: order.uid, applied: paid.kind })
+  if (paid.kind === "ignored") {
+    noteRequest(event, { ignored: paid.reason })
+    return DONE()
+  }
+  await saveOrder(paid.order)
+  if (paid.kind === "short") {
+    noteRequest(event, { short_of: paid.order.amount })
+    return DONE()
+  }
+  await saveAccount(order.uid, paid.account)
+  noteRequest(event, {
+    until: paid.kind === "plan" ? paid.until : undefined,
+    credits_added: paid.kind === "credits" ? paid.added : undefined,
+  })
+  return DONE()
+})

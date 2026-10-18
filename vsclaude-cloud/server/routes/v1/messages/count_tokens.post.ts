@@ -5,10 +5,10 @@ import {
   allowedModel,
   anthropicError,
   downstreamHeaders,
-  listOf,
   upstreamHeaders,
 } from "../../../utils/anthropic.ts"
 import { authenticate } from "../../../utils/auth.ts"
+import { limitsOf, planName } from "../../../utils/limits.ts"
 import { noteRequest } from "../../../utils/log.ts"
 
 /**
@@ -32,13 +32,13 @@ export default defineHandler(async (event) => {
   } catch {
     return anthropicError(400, "invalid_request_error", "The body is not JSON.")
   }
-  const models = listOf(config.allowedModels)
+  const { plan, models } = await limitsOf(user.uid)
   if (!allowedModel(body, models)) {
     noteRequest(event, { refused: "model not allowed" })
     return anthropicError(
       400,
       "invalid_request_error",
-      `The Hobby plan runs ${models.join(", ")} only.`
+      `The ${planName(plan)} plan runs ${models.join(", ")} only.`
     )
   }
 

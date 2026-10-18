@@ -28,13 +28,14 @@ import {
   freeAiEnv,
   normalizeAiUrl,
 } from "../shared/free-ai"
+import type { PurchaseResult, StudioAccount } from "../shared/plans"
 
 const TOKEN_FILE = "vsclaude-token"
 
 let freeDir: string | null = null
-/** Whether this run has been handed a token — a file left by an earlier run
- * is not one, since nobody has said that user is still signed in. */
-let signedIn = false
+/** The token this run was handed — a file left by an earlier run is not one,
+ * since nobody has said that user is still signed in. */
+let token: string | null = null
 
 /** Called once by `ipc.ts`, with the workspace's own directory for it. */
 export function setFreeAiDir(dir: string): void {
@@ -52,7 +53,7 @@ export function freeAiUrl(): string | null {
 
 /** Whether a turn on the free AI can run right now. */
 export function freeAiReady(): boolean {
-  return signedIn && freeAiUrl() !== null && freeDir !== null
+  return token !== null && freeAiUrl() !== null && freeDir !== null
 }
 
 /**
@@ -61,19 +62,19 @@ export function freeAiReady(): boolean {
  * `settings.json` is merged rather than written whole: the CLI keeps its own
  * keys in the same file, and this only owns `apiKeyHelper`.
  */
-export async function setFreeAiToken(token: string | null): Promise<boolean> {
+export async function setFreeAiToken(next: string | null): Promise<boolean> {
   const dir = freeDir
   if (!dir) return false
   const file = path.join(dir, TOKEN_FILE)
 
-  if (!token) {
-    signedIn = false
+  if (!next) {
+    token = null
     await rm(file, { force: true })
     return false
   }
 
   await mkdir(dir, { recursive: true })
-  await writeFile(file, token, { encoding: "utf8", mode: 0o600 })
+  await writeFile(file, next, { encoding: "utf8", mode: 0o600 })
 
   const settingsFile = path.join(dir, "settings.json")
   let settings: Record<string, unknown> = {}
@@ -94,8 +95,94 @@ export async function setFreeAiToken(token: string | null): Promise<boolean> {
     )
   }
 
-  signedIn = true
+  token = next
   return freeAiReady()
+}
+
+/**
+ * A call to the free AI's server as the signed-in user, answered as its JSON —
+ * or why not, in words the Upgrade dialog can show. Main makes these rather
+ * than the renderer because main is what knows the server (`VSCLAUDE_AI_URL`
+ * is its environment's) and already holds the token.
+ */
+async function serverCall(
+  method: "GET" | "POST",
+  route: string,
+  body?: unknown
+): Promise<{ ok: true; json: unknown } | { ok: false; error: string }> {
+  const url = freeAiUrl()
+  if (!url || !token) {
+    return { ok: false, error: "Sign in to Visual Studio Claude first." }
+  }
+  let response: Response
+  try {
+    response = await fetch(`${url}${route}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch {
+    return { ok: false, error: "The studio's server could not be reached." }
+  }
+  const json: unknown = await response.json().catch(() => null)
+  if (!response.ok) {
+    // The server's own `{ error }`, or Anthropic's shape for a sign-in refusal.
+    const fields = json as {
+      error?: string | { message?: string }
+    } | null
+    const error =
+      typeof fields?.error === "string"
+        ? fields.error
+        : (fields?.error?.message ?? `The server answered ${response.status}.`)
+    return { ok: false, error }
+  }
+  return { ok: true, json }
+}
+
+/** The user's plan, day and credits, or null when there is none to ask. */
+export async function studioAccount(): Promise<StudioAccount | null> {
+  const answer = await serverCall("GET", "/api/usage")
+  if (!answer.ok || !answer.json || typeof answer.json !== "object") {
+    return null
+  }
+  return answer.json as StudioAccount
+}
+
+/**
+ * A checkout's or a portal's page from the server, handed to `open` — the
+ * browser. Only an `https:` page is opened: it is a link the server chose,
+ * and nothing else from there should reach `shell.openExternal`.
+ */
+export async function openServerPage(
+  route: "/api/checkout" | "/api/orders" | "/api/portal",
+  body: unknown,
+  open: (url: string) => void
+): Promise<PurchaseResult> {
+  const answer = await serverCall("POST", route, body)
+  if (!answer.ok) return answer
+  const page = (answer.json as { url?: unknown } | null)?.url
+  if (typeof page !== "string" || !isWebPage(page)) {
+    return { ok: false, error: "The server answered without a page to open." }
+  }
+  open(page)
+  return { ok: true }
+}
+
+function isWebPage(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return (
+      parsed.protocol === "https:" ||
+      (parsed.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname))
+    )
+  } catch {
+    return false
+  }
 }
 
 /**

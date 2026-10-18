@@ -666,14 +666,28 @@ Haiku plan, cheaper monthly plans above it (`Starter`, `Plus` with Sonnet,
 for somebody who would rather pay for what they use than a fixed month.
 
 `shared/plans.ts` is the one table of plans and packs, and `plans-dialog.tsx`
-draws it. **Nothing enforces it yet**: the server still holds every signed-in
-user to one model list and one daily budget, and nothing takes a payment, so
-everybody is on `CURRENT_PLAN` (`hobby`) and every other button says it is
-coming. The id stays `FREE_PROFILE_ID` (`vsclaude-free`) and the directory
-`claude-free`, because both are already on users' disks; only the words moved.
-What enforcing it takes is the server knowing a user's plan — written by a
-payment provider's webhook, never claimed by the client — and a model list,
-budget and `freeAiEnv` pinning per plan.
+draws it — the copy, not the rules. **The server enforces them**:
+`vsclaude-cloud` learns a user's plan and credits from its payment providers'
+webhooks (never from the client) and holds each request to the plan's models
+and daily budget, then to credits (its README § Plans and credits).
+
+**Two ways to pay, chosen in the dialog** (`PaymentMethod`). A **Vietnamese
+bank transfer** by VietQR, through SePay: no card and next to no fee, but
+nothing renews, so a plan is bought for 1, 3 or 12 months up front and bought
+again to extend. A **card** through Paddle, for anybody outside Vietnam: a
+monthly subscription Paddle renews and its portal changes. Paddle alone was
+the first answer, and its fee is why there is a second — about $0.50 a
+transaction plus 5%, which kept a third of a 49.000 ₫ plan. Lemon Squeezy was
+tried before Paddle and replaced before anything was sold. A buy button asks
+main (`buyPlanItem`), which asks the server for the page — `/pay/<code>` or
+Paddle's checkout — and opens it in the browser; the plan shown is re-read
+when the window takes focus back from that tab.
+
+**`freeAiEnv` still pins every model to Haiku**, so a Plus or Pro plan the
+server would honour cannot reach Sonnet or Opus from the studio until the app
+pins per plan. The id stays `FREE_PROFILE_ID` (`vsclaude-free`) and the
+directory `claude-free`, because both are already on users' disks; only the
+words moved.
 
 ## Plugins
 

@@ -174,6 +174,10 @@ const api: DesktopApi = {
   cancelSignInWithGoogle: () => ipcRenderer.invoke(IPC.cancelSignInWithGoogle),
   freeAiAvailable: () => ipcRenderer.invoke(IPC.freeAiAvailable),
   setFreeAiToken: (token) => ipcRenderer.invoke(IPC.setFreeAiToken, token),
+  studioAccount: () => ipcRenderer.invoke(IPC.studioAccount),
+  buyPlanItem: (item, method) =>
+    ipcRenderer.invoke(IPC.buyPlanItem, item, method),
+  managePlan: () => ipcRenderer.invoke(IPC.managePlan),
   searchWorkspace: (query, options, filter) =>
     ipcRenderer.invoke(IPC.searchWorkspace, query, options, filter),
   replaceInFiles: (query, options, replacement, paths) =>

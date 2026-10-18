@@ -6,12 +6,14 @@ import {
   anthropicError,
   countTokens,
   downstreamHeaders,
-  listOf,
   mayExceed,
   promptTooLong,
   upstreamHeaders,
 } from "../../../utils/anthropic.ts"
+import { chargeCredits } from "../../../utils/accounts.ts"
 import { authenticate } from "../../../utils/auth.ts"
+import { creditCharge } from "../../../utils/billing.ts"
+import { limitsOf, planName } from "../../../utils/limits.ts"
 import { logLine, noteRequest } from "../../../utils/log.ts"
 import { addSpend, secondsToReset, spentToday } from "../../../utils/quota.ts"
 import {
@@ -23,7 +25,8 @@ import {
 
 /**
  * `POST /v1/messages` — the one call a chat makes, passed through to Anthropic
- * for a signed-in user, on an allowed model, within the day's budget.
+ * for a signed-in user, on a model their plan allows, within the plan's day
+ * and then their credits (`limits.ts`, `billing.ts`).
  *
  * The body goes on **as the bytes that arrived**: it is parsed only to read the
  * model, and re-serialising it could reorder what the CLI wrote and spoil the
@@ -58,26 +61,28 @@ export default defineHandler(async (event) => {
     model: typeof model === "string" ? model : undefined,
     bytes: text.length,
   })
-  const models = listOf(config.allowedModels)
-  if (!allowedModel(body, models)) {
+  const { plan, models, budget, account } = await limitsOf(user.uid)
+  noteRequest(event, { plan })
+  const allowed = allowedModel(body, models)
+  if (!allowed) {
     noteRequest(event, { refused: "model not allowed" })
     // 400 rather than 403 for the reason `authenticate` gives: the CLI retries
     // a 403 for minutes.
     return anthropicError(
       400,
       "invalid_request_error",
-      `The Hobby plan runs ${models.join(", ")} only.`
+      `The ${planName(plan)} plan runs ${models.join(", ")} only.`
     )
   }
 
-  const budget = Number(config.dailyBudget)
+  // Past the day's budget, a request runs on credits while there are any.
   const spent = await spentToday(user.uid)
-  if (budget > 0 && spent >= budget) {
+  if (budget > 0 && spent >= budget && account.credits <= 0) {
     noteRequest(event, { refused: "daily budget spent", spent, budget })
     return anthropicError(
       429,
       "rate_limit_error",
-      "You have used today's Hobby allowance. It resets at 00:00 UTC — or upgrade your plan from the account menu.",
+      `You have used today's ${planName(plan)} allowance. It resets at 00:00 UTC — or upgrade or buy credits from the account menu.`,
       { "retry-after": String(secondsToReset()) }
     )
   }
@@ -128,9 +133,12 @@ export default defineHandler(async (event) => {
   // What a request cost, once it is known: on the request's own line when the
   // answer was read whole, on a line of its own when it streamed.
   const spend = async (usage: Usage, ended?: string) => {
-    const amount = weighted(usage)
+    const amount = weighted(usage, allowed)
     const total = await addSpend(user.uid, amount)
+    const credits = creditCharge(total - amount, total, budget)
+    await chargeCredits(user.uid, credits)
     return {
+      credits_charged: credits || undefined,
       in: usage.input_tokens,
       out: usage.output_tokens,
       cache_read: usage.cache_read_input_tokens,

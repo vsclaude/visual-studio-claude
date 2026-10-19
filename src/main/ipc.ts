@@ -1125,7 +1125,7 @@ export function createIpc(host: Host): {
       const free = profileId === FREE_PROFILE_ID
       if (free && !freeAiReady()) {
         return {
-          error: "Sign in to Visual Studio Claude to pay with credits.",
+          error: "Sign in to VS Claude to pay with credits.",
         }
       }
 

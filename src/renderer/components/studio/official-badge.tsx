@@ -21,16 +21,14 @@ export function OfficialBadge({ className }: { className?: string }) {
       <TooltipTrigger
         render={
           <span
-            aria-label="Official — ships with Visual Studio Claude"
+            aria-label="Official — ships with VS Claude"
             className={cn("inline-flex shrink-0 text-primary", className)}
           >
             <BadgeCheck className="size-3.5" />
           </span>
         }
       />
-      <TooltipContent>
-        Official — ships with Visual Studio Claude
-      </TooltipContent>
+      <TooltipContent>Official — ships with VS Claude</TooltipContent>
     </Tooltip>
   )
 }

@@ -28,7 +28,7 @@ export default defineHandler(() => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Visual Studio Claude — Checkout</title>
+  <title>VS Claude — Checkout</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center;
       font: 15px/1.5 system-ui, sans-serif; background: #0b0b0f; color: #e8e8ee; }
@@ -57,7 +57,7 @@ export default defineHandler(() => {
         token: settings.token,
         eventCallback(event) {
           if (event.name === "checkout.completed") {
-            say("Thank you!", "Your purchase is done. You can close this tab and go back to Visual Studio Claude.")
+            say("Thank you!", "Your purchase is done. You can close this tab and go back to VS Claude.")
           } else if (event.name === "checkout.closed") {
             say("Checkout closed", "Nothing was charged. You can close this tab.")
           }

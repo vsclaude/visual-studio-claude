@@ -47,7 +47,7 @@ export default defineHandler(async (event) => {
 
   if (!order) {
     return html(
-      `<h1>Không tìm thấy đơn hàng</h1><p>Hãy bắt đầu lại từ menu tài khoản trong Visual Studio Claude.</p>`
+      `<h1>Không tìm thấy đơn hàng</h1><p>Hãy bắt đầu lại từ menu tài khoản trong VS Claude.</p>`
     )
   }
 
@@ -82,7 +82,7 @@ export default defineHandler(async (event) => {
         try {
           const answer = await (await fetch("/api/orders/" + code)).json()
           if (answer.paid) {
-            status.textContent = "Đã nhận thanh toán. Quay lại Visual Studio Claude — credits đã được cộng vào tài khoản."
+            status.textContent = "Đã nhận thanh toán. Quay lại VS Claude — credits đã được cộng vào tài khoản."
             status.classList.add("done")
             return
           }
@@ -103,7 +103,7 @@ function page(body: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Thanh toán — Visual Studio Claude</title>
+  <title>Thanh toán — VS Claude</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center;
       font: 15px/1.5 system-ui, sans-serif; background: #0b0b0f; color: #e8e8ee; }

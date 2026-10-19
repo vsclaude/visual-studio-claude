@@ -1,9 +1,8 @@
 // Renders resources/icon.png from the app's mark in resources/logo.svg.
 //
 // electron-builder does not letterbox: it resizes whatever PNG it is handed to
-// a square 1024. And the mark is wider than it is tall and sits inside a
-// square viewBox with margin of its own, so drawn as-is it would sit small and
-// off-grid inside its own tile next to every other icon in the Dock.
+// a square 1024. A plate drawn edge to edge of its viewBox would fill that
+// square and sit larger than every other icon in the Dock, which keep a margin.
 //
 // So: find what is actually drawn, render it again at the size that fits the
 // macOS icon grid, and centre it. Rendered twice rather than rendered once and
@@ -23,8 +22,7 @@ const CANVAS = 1024
 
 // Apple's macOS icon grid: the artwork lives in a 824×824 area centred in a
 // 1024 tile, and the surrounding margin is what keeps icons optically the same
-// size in the Dock whatever their silhouette. A freeform mark like this one
-// fills the box rather than sitting in a rounded-rect plate.
+// size in the Dock whatever their silhouette. The mark's plate fills that box.
 const CONTENT = 824
 
 const buildDir = path.join(

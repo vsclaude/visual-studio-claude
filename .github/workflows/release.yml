@@ -119,6 +119,6 @@ jobs:
           ls -lh installers
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Visual Studio Claude ${GITHUB_REF_NAME#v}" \
+            --title "VS Claude ${GITHUB_REF_NAME#v}" \
             --generate-notes \
             installers/*

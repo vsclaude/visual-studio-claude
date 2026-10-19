@@ -1,5 +1,5 @@
 name: Feature request
-description: Something Visual Studio Claude should do and doesn't
+description: Something VS Claude should do and doesn't
 labels: [enhancement]
 body:
   - type: textarea
@@ -23,7 +23,7 @@ body:
     attributes:
       label: What you do instead today
       description: >
-        The other application you switch to, or the workaround. Visual Studio Claude exists to
+        The other application you switch to, or the workaround. VS Claude exists to
         remove those switches, so this is the most useful box on the form.
 
   - type: checkboxes

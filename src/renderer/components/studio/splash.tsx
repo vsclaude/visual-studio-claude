@@ -1,5 +1,6 @@
 import { type CSSProperties } from "react"
 import { cn } from "@/lib/utils"
+import { Wordmark } from "./wordmark"
 
 /**
  * The screen the app opens on, and the only one shown before the workbench.
@@ -108,12 +109,11 @@ export function Splash({
         <div className="flex flex-col items-center gap-1.5">
           {/* The gradient is barely there in either theme; it is what keeps
               the wordmark from reading as one more line of body text. */}
-          <span
+          <Wordmark
             style={step(300)}
-            className="animate-rise bg-gradient-to-b from-foreground to-foreground/55 bg-clip-text font-heading text-lg font-medium tracking-tight text-transparent"
-          >
-            Visual Studio Claude
-          </span>
+            className="animate-rise font-heading text-lg font-medium tracking-tight"
+            textClassName="bg-gradient-to-b from-foreground to-foreground/55 bg-clip-text text-transparent"
+          />
           <p
             style={step(420)}
             className="animate-rise text-xs text-muted-foreground"

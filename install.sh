@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs Visual Studio Claude into /Applications from a GitHub release.
+# Installs VS Claude into /Applications from a GitHub release.
 #
 #   ./install.sh            the latest release
 #   ./install.sh 0.1.0      that release
@@ -32,7 +32,7 @@ esac
 # launch with nothing that says why.
 MACOS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
 if [ "$MACOS_MAJOR" -lt 12 ]; then
-  echo "Visual Studio Claude needs macOS 12 (Monterey) or newer." >&2
+  echo "VS Claude needs macOS 12 (Monterey) or newer." >&2
   echo "This machine runs $(sw_vers -productVersion)." >&2
   exit 1
 fi

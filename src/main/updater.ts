@@ -10,7 +10,7 @@ import type { UpdateCheck } from "../shared/api"
 import { dataDir } from "./data-dir"
 
 /**
- * Whether there is a newer Visual Studio Claude, and installing it.
+ * Whether there is a newer VS Claude, and installing it.
  *
  * **Not `electron-updater`, and deliberately.** Squirrel.Mac will not replace a
  * bundle that carries no Developer ID, and these builds carry none — signing

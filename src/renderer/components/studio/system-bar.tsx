@@ -146,7 +146,7 @@ function memoryTitle(usage: SystemUsage): string {
 
 function appTitle(usage: SystemUsage): string {
   return [
-    `Visual Studio Claude across ${usage.appProcesses} ${
+    `VS Claude across ${usage.appProcesses} ${
       usage.appProcesses === 1 ? "process" : "processes"
     }`,
     `CPU ${formatPercent(usage.appCpuPercent)} of the machine — ${formatPercent(

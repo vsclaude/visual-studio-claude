@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/banner.svg" alt="Visual Studio Claude: Claude Code and your editor, in one app — chats, editor, diff &amp; commit, terminal" width="900">
+<img src="docs/banner.svg" alt="VS Claude: Claude Code and your editor, in one app — chats, editor, diff &amp; commit, terminal" width="900">
 
-# Visual Studio Claude
+# VS Claude
 
 **Claude Code and your editor, in one app.**
 
@@ -14,7 +14,7 @@
 
 ---
 
-Claude Code in a terminal, an editor beside it to read what it changed — Visual Studio Claude puts both in one window. Chats, files, diffs, a terminal and the commit are all tabs over the folders you already work in.
+Claude Code in a terminal, an editor beside it to read what it changed — VS Claude puts both in one window. Chats, files, diffs, a terminal and the commit are all tabs over the folders you already work in.
 
 https://github.com/user-attachments/assets/11e690e6-e3a0-4d2a-893c-ec053ba308d7
 
@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/vsclaude/visual-studio-claude/main/
 
 [`install.sh`](install.sh) picks the build for your architecture and copies it into `/Applications`. Run it again to update, or `| bash -s 1.0.0` to pin a version.
 
-Use `curl` rather than a browser: macOS quarantines a download and Gatekeeper then calls the app _"damaged"_, which only ever means unsigned. A `.dmg` from [Releases][releases] works too, after `xattr -dr com.apple.quarantine "/Applications/Visual Studio Claude.app"` — which skips the check rather than passing it.
+Use `curl` rather than a browser: macOS quarantines a download and Gatekeeper then calls the app _"damaged"_, which only ever means unsigned. A `.dmg` from [Releases][releases] works too, after `xattr -dr com.apple.quarantine "/Applications/VS Claude.app"` — which skips the check rather than passing it.
 
 ### Linux
 
@@ -51,7 +51,7 @@ x64. The `.exe` from [Releases][releases] is an NSIS installer. SmartScreen stop
 
 [releases]: https://github.com/vsclaude/visual-studio-claude/releases
 
-Visual Studio Claude is developed and used day to day on macOS; the Linux and Windows builds come out of the same workflow and the tests run on Linux, but assume rough edges. `claude` is needed only for agent sessions and the AI features — not to start the app.
+VS Claude is developed and used day to day on macOS; the Linux and Windows builds come out of the same workflow and the tests run on Linux, but assume rough edges. `claude` is needed only for agent sessions and the AI features — not to start the app.
 
 ## From source
 

@@ -112,7 +112,7 @@ async function serverCall(
 ): Promise<{ ok: true; json: unknown } | { ok: false; error: string }> {
   const url = freeAiUrl()
   if (!url || !token) {
-    return { ok: false, error: "Sign in to Visual Studio Claude first." }
+    return { ok: false, error: "Sign in to VS Claude first." }
   }
   let response: Response
   try {

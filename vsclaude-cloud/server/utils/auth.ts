@@ -30,7 +30,7 @@ export async function authenticate(
     return anthropicError(
       400,
       "authentication_error",
-      "Sign in to Visual Studio Claude to use the free AI."
+      "Sign in to VS Claude to use the free AI."
     )
   }
   const config = useRuntimeConfig()
@@ -44,7 +44,7 @@ export async function authenticate(
     return anthropicError(
       400,
       "authentication_error",
-      `Visual Studio Claude could not verify your sign-in: ${verified.reason}. Sign out and in again if it persists.`
+      `VS Claude could not verify your sign-in: ${verified.reason}. Sign out and in again if it persists.`
     )
   }
   noteRequest(event, { uid: verified.user.uid })

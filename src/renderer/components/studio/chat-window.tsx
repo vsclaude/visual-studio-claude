@@ -71,9 +71,7 @@ export function ChatWindow({ chatId }: { chatId: string }) {
 
   // The chat's name in the OS's own title too, for the window switcher.
   useEffect(() => {
-    document.title = chat
-      ? `${chat.title} — Visual Studio Claude`
-      : "Visual Studio Claude"
+    document.title = chat ? `${chat.title} — VS Claude` : "VS Claude"
   }, [chat])
 
   const togglePin = () => {

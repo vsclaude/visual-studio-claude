@@ -1,4 +1,4 @@
-# Visual Studio Claude — design
+# VS Claude — design
 
 An Electron studio for running several `claude` conversations against a project
 at once and reading what they did. A workspace points at real directories on
@@ -1160,6 +1160,13 @@ absolute paths point — re-points profile directories, and renames Electron's
 `userData`. Old `yasuo/untitled-…` branches still count as untitled. An update
 from a build still called Yasuo installs beside it and has to be opened by hand
 once.
+
+It is now written **VS Claude**, with the VS drawn rather than typed
+(`resources/vs-mark.svg`: the mark's bracket turned point-down as the V, the S
+run through its arm). Only the words changed: `productName`, `app.setName` and
+the `/Applications` path are still "Visual Studio Claude", because renaming the
+bundle is the Yasuo move again — an update that installs beside the old app,
+and Electron's `userData` in a new directory unless it is migrated.
 
 ## The launch screen
 

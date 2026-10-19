@@ -677,8 +677,8 @@ function UpdatesSection() {
           !check
             ? "Checking…"
             : check.status === "current"
-              ? `Visual Studio Claude ${check.current} — the latest release.`
-              : `Visual Studio Claude ${check.current}.`
+              ? `VS Claude ${check.current} — the latest release.`
+              : `VS Claude ${check.current}.`
         }
       >
         <Button
@@ -708,7 +708,7 @@ function UpdatesSection() {
 
       {update ? (
         <Row
-          title={`Visual Studio Claude ${update.version} is available`}
+          title={`VS Claude ${update.version} is available`}
           description={
             installing ? (
               // The bar takes the description's place rather than sitting under

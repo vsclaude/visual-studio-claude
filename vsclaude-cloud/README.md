@@ -1,6 +1,6 @@
 # vsclaude-cloud
 
-The server behind Visual Studio Claude's **free AI**: anybody signed in to the
+The server behind VS Claude's **free AI**: anybody signed in to the
 studio can chat on Haiku, Sonnet or Opus without a Claude account of their
 own, paid for with credits they buy — there is no free allowance. The studio's
 `claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends the user's Firebase ID
@@ -18,6 +18,7 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 
 | Route                            | What                                                                       |
 | -------------------------------- | -------------------------------------------------------------------------- |
+| `GET /`                          | The home page, in English; `?lang=vi` for Vietnamese.                      |
 | `POST /v1/messages`              | Passed through, streamed; charged to the user's credits.                   |
 | `POST /v1/messages/count_tokens` | Passed through; not counted (free at Anthropic).                           |
 | `GET /v1/models`                 | The models served, in Anthropic's list shape.                              |

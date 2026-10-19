@@ -13,7 +13,7 @@ area's behaviour. When the two disagree, `design.md` is the fuller account.
 
 ## What this is
 
-**Visual Studio Claude**: an Electron studio for running several `claude` conversations
+**VS Claude**: an Electron studio for running several `claude` conversations
 against a project at once and reading what they did — its folders, its chats,
 its diffs and the chats that made them, in one tab strip.
 

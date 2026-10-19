@@ -27,6 +27,10 @@ check(
     "signed-out"
 )
 check(
+  "the refusal under the app's current name",
+  creditsRefusalOf("Sign in to VS Claude to pay with credits.") === "signed-out"
+)
+check(
   "the same refusal written before the rename",
   creditsRefusalOf("Sign in to Visual Studio Claude to use the Studio AI.") ===
     "signed-out"

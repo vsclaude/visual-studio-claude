@@ -82,7 +82,7 @@ export default defineHandler(async (event) => {
     return anthropicError(
       400,
       "invalid_request_error",
-      "You have no credits left. Buy credits from the account menu in Visual Studio Claude to keep going."
+      "You have no credits left. Buy credits from the account menu in VS Claude to keep going."
     )
   }
 

@@ -5,7 +5,7 @@ import type { UpdateCheck, UpdateProgress } from "@shared/api"
 import { recall, remember } from "./tab-memory"
 
 /**
- * Whether there is a newer Visual Studio Claude, and the one button that installs it.
+ * Whether there is a newer VS Claude, and the one button that installs it.
  *
  * The check itself is `main/updater.ts`; what is here is when it is asked and
  * what the answer is allowed to do to the window. Both of those are deliberate:

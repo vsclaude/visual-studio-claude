@@ -10,7 +10,7 @@ import { isNonce, signInPage } from "../../utils/signin.ts"
 export default defineHandler((event) => {
   const nonce = String(event.context.params?.nonce ?? "")
   if (!isNonce(nonce)) {
-    return new Response("Start signing in from Visual Studio Claude.", {
+    return new Response("Start signing in from VS Claude.", {
       status: 404,
       headers: { "content-type": "text/plain; charset=utf-8" },
     })

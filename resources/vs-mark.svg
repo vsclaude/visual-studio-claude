@@ -1,0 +1,27 @@
+<svg viewBox="8.85 -0.05 64.5 60.1" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!--
+  The "VS" of the wordmark — VS Claude is written as this, then "Claude" in
+  the surrounding type. The V is the app mark's bracket turned point-down and
+  the S runs through its right arm, so the two letters lock into one glyph
+  instead of sitting side by side. The stroke is heavier than the bracket's:
+  at a 15px nav it has to hold its own beside semibold type. Slanted 12°,
+  one gradient across both — the mark's violet to amber.
+
+  Drawn as strokes rather than set in a font, so it is the same on every
+  machine. Copied, path for path, into src/renderer/components/studio/
+  wordmark.tsx, vsclaude-cloud/server/utils/brand.ts and docs/banner.svg.
+  The box is measured, not guessed: the glyph's own ink, stroke caps
+  included.
+-->
+<defs>
+  <linearGradient id="vs-ink" gradientUnits="userSpaceOnUse" x1="5" y1="5" x2="66" y2="55">
+    <stop offset="0" stop-color="#8B5CF6"/>
+    <stop offset="0.55" stop-color="#C76BC4"/>
+    <stop offset="1" stop-color="#FCC63A"/>
+  </linearGradient>
+</defs>
+<g transform="skewX(-12) translate(10 0)" stroke="url(#vs-ink)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="5,5 20,55 35,5"/>
+  <path d="M61 13C57 6 49 4.5 44 6C36 8.5 36 19 43 24C48 27.5 56 30 60 35C66 43 60 55 49 55C43 55 38 52.5 35 47"/>
+</g>
+</svg>

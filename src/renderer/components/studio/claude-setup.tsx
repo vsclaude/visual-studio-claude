@@ -25,6 +25,7 @@ import {
 } from "@/lib/chat/claude-setup"
 import { ClaudeLoginDialog } from "./claude-login-dialog"
 import { StudioMark } from "./splash"
+import { Wordmark } from "./wordmark"
 
 const SETUP_DOCS = "https://docs.claude.com/en/docs/claude-code/setup"
 
@@ -160,9 +161,10 @@ export function ClaudeSetup({
       <div className="relative flex w-[32rem] max-w-[calc(100vw-3rem)] flex-col items-center">
         <div className="flex animate-rise items-center gap-2.5">
           <img src="/favicon.svg" alt="" className="size-7" />
-          <span className="bg-gradient-to-b from-foreground to-foreground/55 bg-clip-text font-heading text-sm font-medium tracking-tight text-transparent">
-            Visual Studio Claude
-          </span>
+          <Wordmark
+            className="font-heading text-sm font-medium tracking-tight"
+            textClassName="bg-gradient-to-b from-foreground to-foreground/55 bg-clip-text text-transparent"
+          />
         </div>
 
         <Stepper pages={pages} page={page} />
@@ -576,7 +578,7 @@ function WelcomeStep() {
         id="claude-setup-title"
         className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-center font-heading text-2xl font-medium tracking-tight text-transparent"
       >
-        Welcome to Visual Studio Claude
+        Welcome to VS Claude
       </h2>
       <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
         You are all set. A short tour of the window comes next.

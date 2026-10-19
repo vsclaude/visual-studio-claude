@@ -46,7 +46,7 @@ export function UpdatePill() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title={`Visual Studio Claude ${update.version} is available. You are on ${update.current}.`}
+        title={`VS Claude ${update.version} is available. You are on ${update.current}.`}
         className="flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[0.6875rem] font-medium text-primary outline-none hover:bg-primary/20 focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <ArrowUpCircle className="size-3 shrink-0" />
@@ -62,7 +62,7 @@ export function UpdatePill() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Update to Visual Studio Claude {update.version}?
+              Update to VS Claude {update.version}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               {!update.installable ? (
@@ -72,14 +72,14 @@ export function UpdatePill() {
                 </>
               ) : window.desktop.platform === "win32" ? (
                 <>
-                  Visual Studio Claude will quit, run the {update.version}{" "}
-                  installer and reopen. Every running copy of the app is closed
-                  first, so the old version cannot stay behind. Terminal
-                  sessions and anything running in the dock end with it.
+                  VS Claude will quit, run the {update.version} installer and
+                  reopen. Every running copy of the app is closed first, so the
+                  old version cannot stay behind. Terminal sessions and anything
+                  running in the dock end with it.
                 </>
               ) : (
                 <>
-                  Visual Studio Claude will quit, install {update.version} into{" "}
+                  VS Claude will quit, install {update.version} into{" "}
                   <code className="font-mono">/Applications</code> and reopen —
                   the same <code className="font-mono">install.sh</code> the
                   README hands you, run from inside the app. Terminal sessions
@@ -108,8 +108,8 @@ export function UpdatePill() {
               <UpdateProgressBar progress={progress} />
               <p className="text-xs text-muted-foreground">
                 {progress?.stage === "installing"
-                  ? "Visual Studio Claude is quitting to replace itself, and reopens when it is done."
-                  : `Downloading Visual Studio Claude ${update.version}. Nothing has been replaced yet.`}
+                  ? "VS Claude is quitting to replace itself, and reopens when it is done."
+                  : `Downloading VS Claude ${update.version}. Nothing has been replaced yet.`}
               </p>
             </div>
           )}

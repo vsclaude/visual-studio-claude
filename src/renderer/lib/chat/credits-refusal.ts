@@ -17,9 +17,12 @@ export type CreditsRefusal = "no-credits" | "signed-out"
 
 export function creditsRefusalOf(text: string): CreditsRefusal | null {
   if (/no credits left/i.test(text)) return "no-credits"
-  // The second wording is what a transcript written before the rename holds.
+  // Every name and wording the refusal has had stays matched, because a
+  // transcript keeps the sentence it was written with: "Visual Studio Claude"
+  // before the app was VS Claude, and "the Studio AI" before credits had
+  // that name.
   if (
-    /sign in to visual studio claude to (pay with credits|use the studio ai)/i.test(
+    /sign in to (vs|visual studio) claude to (pay with credits|use the studio ai)/i.test(
       text
     )
   ) {

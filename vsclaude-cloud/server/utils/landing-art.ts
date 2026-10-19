@@ -226,26 +226,30 @@ function handoff(): string {
     <rect class="a-type" style="--d:3.1s" x="22" y="121" width="120" height="5" rx="2.5" fill="${INK}"/>`)
 }
 
-/** The windows used and the credits left, where the next message is typed. */
-function meter(): string {
-  const rows: [string, number, string, string][] = [
-    ["5h", 0.82, AMBER, "82%"],
-    ["7d", 0.4, VIOLET, "40%"],
-    ["Credits", 0.72, "url(#meter-g)", "3.3M"],
-  ]
-  const body = rows
-    .map(([label, share, fill, figure], i) => {
-      const y = 34 + i * 34
-      return `<text x="28" y="${y + 4}" font-size="10.5" ${MONO} fill="${INK}">${label}</text>
-        <rect x="96" y="${y - 3}" width="160" height="8" rx="4" fill="rgb(255 255 255 / 0.08)"/>
-        <rect class="a-type" style="--d:${(i * 0.25).toFixed(2)}s" x="96" y="${y - 3}" width="${(160 * share).toFixed(1)}" height="8" rx="4" fill="${fill}"/>
-        <text x="292" y="${y + 4}" text-anchor="end" font-size="10.5" ${MONO} fill="#e4e4e7">${figure}</text>`
-    })
-    .join("")
-  return svg(
-    `<rect x="12" y="8" width="296" height="124" rx="10" fill="${PANEL}" stroke="${LINE}"/>${body}`,
-    `<linearGradient id="meter-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${VIOLET}"/><stop offset="1" stop-color="${AMBER}"/></linearGradient>`
-  )
+/** One query over every file and every chat, the matches lit where they are. */
+function search(): string {
+  const label = (y: number, text: string) =>
+    `<text x="24" y="${y}" font-size="8" letter-spacing="1.2" ${MONO} fill="${FAINT}">${text}</text>`
+  // A result: its name, a line of its text with the match lit, and a count.
+  const row = (y: number, name: string, mark: number, count: string, d: number) =>
+    `<g class="a-slide" style="--d:${d}s">
+      <text x="24" y="${y + 4}" font-size="10" ${SANS} fill="#e4e4e7">${name}</text>
+      <rect x="132" y="${y - 2}" width="130" height="5" rx="2.5" fill="${INK}" fill-opacity="0.6"/>
+      <rect class="a-pop" style="--d:${d + 0.25}s" x="${mark}" y="${y - 5}" width="34" height="11" rx="3" fill="rgb(167 139 250 / 0.35)" stroke="${LILAC}" stroke-opacity="0.6"/>
+      <text x="294" y="${y + 4}" text-anchor="end" font-size="9" ${MONO} fill="${FAINT}">${count}</text>
+    </g>`
+  return svg(`
+    <rect x="12" y="8" width="296" height="124" rx="10" fill="${PANEL}" stroke="${LINE}"/>
+    <rect x="20" y="15" width="280" height="22" rx="6" fill="rgb(0 0 0 / 0.25)" stroke="${LINE}"/>
+    <circle cx="32" cy="25.5" r="4" stroke="${INK}" stroke-width="1.6"/><path d="M35 28.5l3 3" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>
+    <clipPath id="search-clip"><rect class="a-typein" x="44" y="18" width="56" height="16"/></clipPath>
+    <text x="44" y="30" font-size="10.5" ${MONO} fill="#e4e4e7" clip-path="url(#search-clip)">webhook</text>
+    <text x="292" y="29.5" text-anchor="end" font-size="9" ${MONO} fill="${FAINT}">Aa  ab  .*</text>
+    ${label(52, "FILES")}
+    ${row(64, "sepay.post.ts", 150, "3", 1.1)}
+    ${row(82, "orders.ts", 196, "1", 1.3)}
+    ${label(104, "CHATS")}
+    ${row(116, "Add VietQR webhook", 168, "2", 1.5)}`)
 }
 
 export const FEATURE_ART = {
@@ -257,7 +261,7 @@ export const FEATURE_ART = {
   accounts,
   profiles,
   handoff,
-  meter,
+  search,
 } as const
 
 export type FeatureArt = keyof typeof FEATURE_ART

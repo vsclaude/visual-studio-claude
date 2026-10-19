@@ -1162,8 +1162,10 @@ from a build still called Yasuo installs beside it and has to be opened by hand
 once.
 
 It is now written **VS Claude**, with the VS drawn rather than typed
-(`resources/vs-mark.svg`: the mark's bracket turned point-down as the V, the S
-run through its arm). Only the words changed: `productName`, `app.setName` and
+(`resources/vs-mark.svg`: the S run through the V's right arm). The app icon
+is that glyph in white on the plate, where code brackets around a spark used to
+be — an icon saying one thing beside a name written as another was two brands.
+Only the words changed: `productName`, `app.setName` and
 the `/Applications` path are still "Visual Studio Claude", because renaming the
 bundle is the Yasuo move again — an update that installs beside the old app,
 and Electron's `userData` in a new directory unless it is migrated.

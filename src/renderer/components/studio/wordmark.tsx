@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils"
 /**
  * "VS Claude" as the brand writes it: the VS lettermark, then "Claude" in the
  * surrounding type. The lettermark is `resources/vs-mark.svg`, path for path —
- * the V is the app mark's bracket turned point-down and the S runs through its
- * arm, so the two read as one glyph.
+ * the S runs through the V's right arm, so the two read as one glyph, the same
+ * one the app icon draws in white.
  *
  * Sized in `em` and sat on the baseline, so it is the cap height of whatever
  * text it is set in and needs no size of its own. The gradient id is per

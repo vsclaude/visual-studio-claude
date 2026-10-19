@@ -4,6 +4,14 @@ export default defineConfig({
   preset: "cloudflare_module",
   serverDir: "./server",
 
+  // Nitro's dev entry imports unstorage's `fs` driver for `server/assets`, and
+  // that module calls `randomUUID()` at its top level — workerd refuses that
+  // outside a handler, so the whole dev entry fails to load ("Disallowed
+  // operation called within global scope"). Nothing here mounts an fs driver:
+  // there are no server assets, and `accounts` is KV. The memory driver stands
+  // in for it so the import no longer runs that code.
+  alias: { "unstorage/drivers/fs": "unstorage/drivers/memory" },
+
   // The `accounts` mount below reads this namespace. Created with
   // `wrangler kv namespace create ACCOUNTS`; the generated wrangler config is
   // rewritten on every build, so the binding has to live here.

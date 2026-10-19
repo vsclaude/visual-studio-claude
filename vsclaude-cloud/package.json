@@ -15,11 +15,11 @@
   "devDependencies": {
     "@types/bun": "^1.4.3",
     "@types/node": "latest",
-    "miniflare": "^4",
     "nitro": "latest",
     "typescript": "latest"
   },
   "dependencies": {
-    "jose": "^6.2.12"
+    "jose": "^6.2.12",
+    "miniflare": "^4.20260730.0"
   }
 }

@@ -20,17 +20,17 @@ export const APP_MARK = `<svg width="100" height="100" viewBox="0 0 100 100" fil
 </defs>
 <rect width="100" height="100" rx="22.5" fill="url(#vsc-plate)"/>
 <rect width="100" height="100" rx="22.5" fill="url(#vsc-sheen)"/>
-<polyline points="31,31 16,50 31,69" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polyline points="69,31 84,50 69,69" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path fill="#FFFFFF" d="M50 35Q52.4 47.6 65 50Q52.4 52.4 50 65Q47.6 52.4 35 50Q47.6 47.6 50 35Z"/>
+<svg x="21" y="23" width="58" height="54" viewBox="8.85 -0.05 64.5 60.1">
+<g transform="skewX(-12) translate(10 0)" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,5 20,55 35,5"/><path d="M61 13C57 6 49 4.5 44 6C36 8.5 36 19 43 24C48 27.5 56 30 60 35C66 43 60 55 49 55C43 55 38 52.5 35 47"/></g>
+</svg>
 </svg>`
 
 /** The same mark as a `data:` URL, for a page's favicon. */
 export const APP_MARK_URL = `data:image/svg+xml,${encodeURIComponent(APP_MARK)}`
 
 /**
- * The "VS" of the wordmark — a copy of the app's `resources/vs-mark.svg`: the
- * V is the mark's bracket turned point-down, the S runs through its arm.
+ * The "VS" of the wordmark — a copy of the app's `resources/vs-mark.svg`, and
+ * the glyph `APP_MARK` draws in white: the S runs through the V's right arm.
  * Strokes rather than a font, so it is the same on every machine.
  */
 export const VS_MARK = `<svg class="vs" viewBox="8.85 -0.05 64.5 60.1" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

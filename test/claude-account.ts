@@ -1,3 +1,4 @@
+import path from "node:path"
 import { readAuthStatus } from "../src/main/claude-auth"
 import { profileDir, withConfigDirs } from "../src/main/claude-profiles"
 import {
@@ -139,19 +140,20 @@ const root = "/Users/hung/.vsclaude/claude-profiles"
 
 check(
   "a profile's directory is named after it",
-  profileDir(root, "Work", []) === `${root}/work`,
+  profileDir(root, "Work", []) === path.join(root, "work"),
   profileDir(root, "Work", [])
 )
 check(
   "spaces and case become one slug, not a path with a space in it",
-  profileDir(root, "My Second Account", []) === `${root}/my-second-account`,
+  profileDir(root, "My Second Account", []) ===
+    path.join(root, "my-second-account"),
   profileDir(root, "My Second Account", [])
 )
 // A name is free text, so it can be entirely punctuation, and a directory named
 // "" would be the profiles root itself — every such profile the same account.
 check(
   "a name with nothing usable in it still lands somewhere of its own",
-  profileDir(root, "!!!", []) === `${root}/profile`,
+  profileDir(root, "!!!", []) === path.join(root, "profile"),
   profileDir(root, "!!!", [])
 )
 
@@ -160,17 +162,20 @@ check(
 // silently draw the first one's account.
 check(
   "a directory already taken is not handed out twice",
-  profileDir(root, "Work", [`${root}/work`]) === `${root}/work-2`
+  profileDir(root, "Work", [path.join(root, "work")]) ===
+    path.join(root, "work-2")
 )
 check(
   "and it keeps counting",
-  profileDir(root, "Work", [`${root}/work`, `${root}/work-2`]) ===
-    `${root}/work-3`
+  profileDir(root, "Work", [
+    path.join(root, "work"),
+    path.join(root, "work-2"),
+  ]) === path.join(root, "work-3")
 )
 
 section("withConfigDirs: filling in what the renderer does not name")
 
-const named = [{ id: "a", name: "Work", configDir: `${root}/work` }]
+const named = [{ id: "a", name: "Work", configDir: path.join(root, "work") }]
 check(
   "profiles that all have a directory are returned as they are",
   withConfigDirs(named, root) === named
@@ -178,7 +183,7 @@ check(
 
 const filled = withConfigDirs(
   [
-    { id: "a", name: "Work", configDir: `${root}/work` },
+    { id: "a", name: "Work", configDir: path.join(root, "work") },
     { id: "b", name: "Work", configDir: "" },
     { id: "c", name: "Work", configDir: "   " },
   ],
@@ -186,17 +191,17 @@ const filled = withConfigDirs(
 )
 check(
   "an existing path is left exactly alone",
-  filled[0]?.configDir === `${root}/work`,
+  filled[0]?.configDir === path.join(root, "work"),
   filled
 )
 check(
   "a new profile clears the one already there",
-  filled[1]?.configDir === `${root}/work-2`,
+  filled[1]?.configDir === path.join(root, "work-2"),
   filled
 )
 check(
   "and clears the one filled in beside it",
-  filled[2]?.configDir === `${root}/work-3`,
+  filled[2]?.configDir === path.join(root, "work-3"),
   filled
 )
 
@@ -217,7 +222,7 @@ check(
 )
 check(
   "and the profile beside it still gets one",
-  legacy[1]?.configDir === `${root}/personal`,
+  legacy[1]?.configDir === path.join(root, "personal"),
   legacy
 )
 

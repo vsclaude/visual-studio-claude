@@ -87,29 +87,51 @@ const ui = (d: string) =>
   `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`
 
 const UI = {
-  chat: ui('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+  chat: ui(
+    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+  ),
   search: ui('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
   chart: ui('<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-3"/>'),
-  terminal: ui('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 15 3-3-3-3M12 15h5"/>'),
-  settings: ui('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>'),
+  terminal: ui(
+    '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 15 3-3-3-3M12 15h5"/>'
+  ),
+  settings: ui(
+    '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>'
+  ),
   plus: ui('<path d="M12 5v14M5 12h14"/>'),
-  folder: ui('<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/>'),
+  folder: ui(
+    '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/>'
+  ),
   close: ui('<path d="M18 6 6 18M6 6l12 12"/>'),
   outline: ui('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>'),
-  popout: ui('<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'),
-  pen: ui('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  popout: ui(
+    '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+  ),
+  pen: ui(
+    '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+  ),
   plug: ui('<path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 0 1-12 0V8z"/>'),
   send: ui('<path d="M12 19V5M5 12l7-7 7 7"/>'),
   right: ui('<path d="m9 18 6-6-6-6"/>'),
   down: ui('<path d="m6 9 6 6 6-6"/>'),
   up: ui('<path d="m18 15-6-6-6 6"/>'),
   refresh: ui('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>'),
-  panel: ui('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>'),
-  branch: ui('<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M18 9c0 5-7 4-11 8"/>'),
+  panel: ui(
+    '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>'
+  ),
+  branch: ui(
+    '<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M18 9c0 5-7 4-11 8"/>'
+  ),
   /** Claude's own asterisk, in its orange — the composer's model picker. */
-  claude: ui('<path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>'),
-  user: ui('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'),
-  alert: ui('<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
+  claude: ui(
+    '<path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>'
+  ),
+  user: ui(
+    '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'
+  ),
+  alert: ui(
+    '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'
+  ),
 }
 
 /** What the demo's two messages say — typed into the composer, then sent. */

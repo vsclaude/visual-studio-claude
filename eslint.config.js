@@ -41,6 +41,12 @@ export default [
        * be judging code it has no `languageOptions` for.
        */
       "vscode-notes/**",
+      /*
+       * `*.local.*` is gitignored scratch (repros, one-off experiments) that
+       * may not even run. `make test` lints the working tree, so a stray one
+       * on this machine would fail the gate for code nobody ships.
+       */
+      "**/*.local.*",
     ],
   },
 

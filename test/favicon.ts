@@ -24,7 +24,8 @@ async function found(files: Record<string, number>): Promise<string | null> {
   const root = await project(files)
   try {
     const hit = await findFavicon(root)
-    return hit && path.relative(root, hit)
+    // Written with `/` in every expectation below; Windows would answer `\`.
+    return hit && path.relative(root, hit).split(path.sep).join("/")
   } finally {
     await rm(root, { recursive: true, force: true })
   }

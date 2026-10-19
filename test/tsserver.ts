@@ -20,7 +20,9 @@ import { check, finish, section } from "./harness"
  * answer, and the reason this process exists.
  */
 
-const root = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "")
+// `path.resolve` drops the trailing separator `fileURLToPath` leaves on Windows
+// (`C:\…\repo\`), which the project lookup then does not match.
+const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)))
 
 /** A file's text and the 1-based line a marker sits on. */
 async function locate(

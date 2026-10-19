@@ -50,16 +50,18 @@ function attempt(): Promise<{
   nonce: string
   outcome: Promise<string>
 }> {
-  return new Promise((resolve) => {
-    const outcome = signInWithGoogle(
-      base,
-      (url) => resolve({ url, nonce: url.split("/").pop()!, outcome }),
-      { pollMs: POLL_MS }
-    )
-    // Swallowed here and read through `settled`; an unhandled rejection
-    // would end the run.
-    outcome.catch(() => {})
-  })
+  // `openUrl` runs synchronously inside `signInWithGoogle`, before its return
+  // value exists, so the page is handed out through a promise and the outcome
+  // is attached after the call. Closing over `outcome` in the callback would
+  // read a `const` still in its temporal dead zone, and the attempt would
+  // never be handed back.
+  let opened!: (url: string) => void
+  const page = new Promise<string>((resolve) => (opened = resolve))
+  const outcome = signInWithGoogle(base, opened, { pollMs: POLL_MS })
+  // Swallowed here and read through `settled`; an unhandled rejection
+  // would end the run.
+  outcome.catch(() => {})
+  return page.then((url) => ({ url, nonce: url.split("/").pop()!, outcome }))
 }
 
 /** The attempt's answer as a plain value, whichever way it went. */

@@ -231,7 +231,13 @@ function search(): string {
   const label = (y: number, text: string) =>
     `<text x="24" y="${y}" font-size="8" letter-spacing="1.2" ${MONO} fill="${FAINT}">${text}</text>`
   // A result: its name, a line of its text with the match lit, and a count.
-  const row = (y: number, name: string, mark: number, count: string, d: number) =>
+  const row = (
+    y: number,
+    name: string,
+    mark: number,
+    count: string,
+    d: number
+  ) =>
     `<g class="a-slide" style="--d:${d}s">
       <text x="24" y="${y + 4}" font-size="10" ${SANS} fill="#e4e4e7">${name}</text>
       <rect x="132" y="${y - 2}" width="130" height="5" rx="2.5" fill="${INK}" fill-opacity="0.6"/>

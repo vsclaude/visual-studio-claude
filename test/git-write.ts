@@ -62,6 +62,9 @@ async function repository(): Promise<string> {
   await git(root, "init", "--initial-branch", "main")
   await git(root, "config", "user.email", "test@example.com")
   await git(root, "config", "user.name", "Test")
+  // Windows' system gitconfig turns on autocrlf, and a restore would then write
+  // CRLF where the test commits and expects LF.
+  await git(root, "config", "core.autocrlf", "false")
   return root
 }
 

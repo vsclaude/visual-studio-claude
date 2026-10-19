@@ -1,3 +1,5 @@
+import path from "node:path"
+
 import { mergeShellEnv, parseEnv, pickWindowsHit } from "../src/main/shell-env"
 import { check, finish, section } from "./harness"
 
@@ -26,10 +28,14 @@ check("the trailing empty entry is no key", Object.keys(parsed).length === 3)
 section("merging it under what was inherited")
 
 const merged = mergeShellEnv(
-  { HOME: "/Users/me", PATH: "/usr/bin:/bin:/plugin/bin", LANG: "ja_JP.UTF-8" },
+  {
+    HOME: "/Users/me",
+    PATH: ["/usr/bin", "/bin", "/plugin/bin"].join(path.delimiter),
+    LANG: "ja_JP.UTF-8",
+  },
   {
     HOME: "/somewhere/else",
-    PATH: "/opt/homebrew/bin:/usr/bin:/bin",
+    PATH: ["/opt/homebrew/bin", "/usr/bin", "/bin"].join(path.delimiter),
     FIGMA_TOKEN: "t",
     LANG: "en_US.UTF-8",
     SHLVL: "2",
@@ -49,7 +55,10 @@ check(
 )
 check(
   "PATH is merged, the shell's first and nothing twice",
-  merged.PATH === "/opt/homebrew/bin:/usr/bin:/bin:/plugin/bin"
+  merged.PATH ===
+    ["/opt/homebrew/bin", "/usr/bin", "/bin", "/plugin/bin"].join(
+      path.delimiter
+    )
 )
 check(
   "the probe shell's own variables are not passed on",

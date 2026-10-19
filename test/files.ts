@@ -305,7 +305,13 @@ async function main() {
     await mkdir(path.join(root, "src"))
     await writeFile(path.join(root, "README.md"), "# hi\n")
     await writeFile(path.join(root, ".env.example"), "KEY=\n")
-    await symlink(path.join(root, "src"), path.join(root, "link-to-src"))
+    // A junction is a folder link on Windows that needs neither Developer Mode
+    // nor admin; elsewhere `junction` is ignored and it is an ordinary symlink.
+    await symlink(
+      path.join(root, "src"),
+      path.join(root, "link-to-src"),
+      "junction"
+    )
 
     const listing = await listDirectory(root)
     check(
@@ -560,7 +566,18 @@ async function main() {
     await writeFile(path.join(outside, "a.txt"), "dropped")
     await mkdir(path.join(outside, "pkg.d", "src"), { recursive: true })
     await writeFile(path.join(outside, "pkg.d", "src", "x.ts"), "x")
-    await symlink("src/x.ts", path.join(outside, "pkg.d", "link"))
+    // Windows makes a file link only with Developer Mode or admin, and there is
+    // no unprivileged form of it. Where it cannot be made, only the check that
+    // reads it back is skipped.
+    const linked = await symlink(
+      "src/x.ts",
+      path.join(outside, "pkg.d", "link")
+    )
+      .then(() => true)
+      .catch((error: NodeJS.ErrnoException) => {
+        if (process.platform === "win32" && error.code === "EPERM") return false
+        throw error
+      })
     await writeFile(path.join(into, "a.txt"), "mine")
 
     const copied = await copyInto(into, [
@@ -579,10 +596,11 @@ async function main() {
         await readTextFile(path.join(into, "pkg.d", "src", "x.ts"))
       ) === JSON.stringify({ kind: "text", text: "x" })
     )
-    check(
-      "a relative link inside a copied folder stays relative",
-      (await readlink(path.join(into, "pkg.d", "link"))) === "src/x.ts"
-    )
+    if (linked)
+      check(
+        "a relative link inside a copied folder stays relative",
+        (await readlink(path.join(into, "pkg.d", "link"))) === "src/x.ts"
+      )
 
     const again = await copyInto(into, [path.join(outside, "pkg.d")])
     check(

@@ -27,6 +27,11 @@ export type CreditPack = {
   credits: number
   /** A bonus over the base rate, in percent — drawn as a badge. */
   bonus?: number
+  /**
+   * The pack the dialog steers toward — raised, ringed and given the filled
+   * button. One at most: two highlights are no highlight.
+   */
+  popular?: boolean
 }
 
 /**
@@ -45,6 +50,7 @@ export const CREDIT_PACKS: CreditPack[] = [
     price: 60_000,
     credits: 3_300_000,
     bonus: 10,
+    popular: true,
   },
   {
     id: "credits-100k",

@@ -15,6 +15,8 @@ import type { Order } from "./sepay-billing.ts"
  * - `sepay:<id>` — each SePay transaction already applied. SePay retries a
  *   webhook up to seven times and a replay keeps the id, so this is what makes
  *   a transfer count once.
+ * - `signin:<nonce>` — a Google sign-in's answer waiting for the studio to
+ *   collect it, for minutes at most (`server/utils/signin.ts`).
  *
  * This is money somebody paid: the mount must outlive a
  * redeploy, and more than one instance needs a shared driver for it. Writes are

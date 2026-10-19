@@ -19,6 +19,7 @@ import {
   File,
   Folder,
   KeyRound,
+  UserRound,
   Map,
   MessageCircleQuestion,
   Paperclip,
@@ -29,12 +30,15 @@ import {
   SignalHigh,
   SignalLow,
   SignalMedium,
+  ChevronRight,
   Coins,
   Square,
+  Sparkle,
   Star,
   TextSelect,
   X,
   Check as CheckIcon,
+  type LucideIcon,
 } from "lucide-react"
 
 import {
@@ -54,7 +58,9 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuSub,
@@ -1451,6 +1457,7 @@ export function ProfileMenu({
   // Every Studio AI request is paid for out of credits, so none left is said
   // here, before a send the server would refuse.
   const broke = freeReady && credits !== undefined && credits <= 0
+  const stuck = !freeReady || broke
 
   return (
     <DropdownMenu
@@ -1465,109 +1472,157 @@ export function ProfileMenu({
       <DropdownMenuTrigger
         render={
           <ToolbarButton
-            icon={<KeyRound />}
-            label={free ? "Studio AI" : (chosen?.name ?? "Account")}
+            icon={
+              free ? (
+                // The paid row's own badge, the menu's tile in small: a grey
+                // glyph among grey glyphs is the one thing this must not be.
+                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-sm shadow-violet-500/30">
+                  <Sparkle className="size-2.5! fill-current" />
+                </span>
+              ) : profileId === null ? (
+                <UserRound />
+              ) : (
+                <KeyRound />
+              )
+            }
+            label={free ? "Credits" : (chosen?.name ?? "Account")}
             title="Which CLAUDE_CONFIG_DIR this chat's turns run under"
             on={profileId !== null}
           />
         }
       />
-      <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuItem
-          onClick={() => onPick(null)}
-          className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
-        >
-          <div className="flex size-4 shrink-0 items-center justify-center">
-            {profileId === null && (
-              <CheckIcon className="size-3.5 text-foreground" />
-            )}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-xs font-normal">This account</span>
-            <AccountLine
-              account={accounts[""]}
-              busy={checking.includes("")}
-              fallback="Whichever your own `claude` is already signed into"
-            />
-          </div>
-        </DropdownMenuItem>
-        {/* Kept on a chat already on it after a sign-out, so the menu still
-            says where the chat stands — `send` refuses it until sign-in. */}
-        {(freeReady || free) && (
-          <DropdownMenuItem
-            onClick={() => onPick(FREE_PROFILE_ID)}
-            className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
-          >
-            <div className="flex size-4 shrink-0 items-center justify-center">
-              {free && <CheckIcon className="size-3.5 text-foreground" />}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-xs font-normal">Studio AI</span>
-              <span
-                className={cn(
-                  "truncate text-[0.625rem]",
-                  freeReady && !broke
-                    ? "text-muted-foreground"
-                    : "text-destructive"
-                )}
-              >
-                {!freeReady
-                  ? "Signed out"
-                  : broke
-                    ? "No credits — buy some to use it"
-                    : credits !== undefined
-                      ? `Every model · ${formatCredits(credits)} credits left`
-                      : "Every model, paid with credits"}
-              </span>
-            </div>
-          </DropdownMenuItem>
-        )}
-        {freeReady && (
-          <DropdownMenuItem
-            onClick={() => useCreditsDialog.getState().show()}
-            className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
-          >
-            <div className="flex size-4 shrink-0 items-center justify-center">
-              <Coins className="size-3.5 text-amber-500" />
-            </div>
-            <span className="truncate text-xs">Buy credits</span>
-          </DropdownMenuItem>
-        )}
-        {profiles.length > 0 && <DropdownMenuSeparator />}
-        {profiles.map((profile) => (
-          <DropdownMenuItem
-            key={profile.id}
-            onClick={() => onPick(profile.id)}
-            className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
-          >
-            <div className="flex size-4 shrink-0 items-center justify-center">
-              {profileId === profile.id && (
-                <CheckIcon className="size-3.5 text-foreground" />
-              )}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-xs font-normal">
-                {profile.name}
-              </span>
-              {/* A profile with no directory yet would otherwise be drawn as
-                  the default account, since that is what an empty
-                  `CLAUDE_CONFIG_DIR` resolves to — the one thing this row must
-                  not claim to be. */}
-              {profile.configDir.trim() ? (
-                <AccountLine
-                  account={accounts[profile.configDir.trim()]}
-                  busy={checking.includes(profile.configDir.trim())}
-                />
-              ) : (
-                <span className="truncate text-[0.625rem] text-muted-foreground">
-                  No directory set
+      <DropdownMenuContent align="start" className="w-72 p-1.5">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2 pt-1 pb-1.5 text-[0.625rem] font-medium tracking-wider text-muted-foreground uppercase">
+            Account for this chat
+          </DropdownMenuLabel>
+          <PickerRow
+            onSelect={() => onPick(null)}
+            icon={UserRound}
+            tileClass="bg-muted text-muted-foreground"
+            title="This account"
+            detail={
+              <AccountLine
+                account={accounts[""]}
+                busy={checking.includes("")}
+                fallback="Whichever your own `claude` is already signed into"
+              />
+            }
+            selected={profileId === null}
+          />
+          {/* Kept on a chat already on it after a sign-out, so the menu still
+              says where the chat stands — `send` refuses it until sign-in. */}
+          {(freeReady || free) && (
+            <PickerRow
+              onSelect={() => onPick(FREE_PROFILE_ID)}
+              icon={Sparkle}
+              iconClass="fill-current"
+              tileClass="bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-sm shadow-violet-500/25"
+              title="Pay with credits"
+              detail={
+                <span className={stuck ? "text-destructive" : undefined}>
+                  {!freeReady
+                    ? "Signed out"
+                    : broke
+                      ? "No credits left · top up to keep going"
+                      : credits !== undefined
+                        ? `Every model · ${formatCredits(credits)} credits left`
+                        : "Every model, paid with credits"}
                 </span>
-              )}
-            </div>
-          </DropdownMenuItem>
-        ))}
+              }
+              selected={free}
+            />
+          )}
+          {freeReady && (
+            <PickerRow
+              onSelect={() => useCreditsDialog.getState().show()}
+              icon={Coins}
+              tileClass="bg-amber-500/15 text-amber-500"
+              title="Buy credits"
+              detail="Pay as you go · no monthly fee"
+              trailing={
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              }
+            />
+          )}
+        </DropdownMenuGroup>
+        {profiles.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuGroup>
+          {profiles.map((profile) => (
+            <PickerRow
+              key={profile.id}
+              onSelect={() => onPick(profile.id)}
+              icon={KeyRound}
+              tileClass="bg-muted text-muted-foreground"
+              title={profile.name}
+              // A profile with no directory yet would otherwise be drawn as
+              // the default account, since that is what an empty
+              // `CLAUDE_CONFIG_DIR` resolves to — the one thing this row must
+              // not claim to be.
+              detail={
+                profile.configDir.trim() ? (
+                  <AccountLine
+                    account={accounts[profile.configDir.trim()]}
+                    busy={checking.includes(profile.configDir.trim())}
+                  />
+                ) : (
+                  "No directory set"
+                )
+              }
+              selected={profileId === profile.id}
+            />
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+/**
+ * One row of the picker: a tile saying what kind of thing it is, the name and
+ * what it is or costs underneath, and a check for the one in use. The colour
+ * of the tile is the only thing that tells the paid row from the accounts, so
+ * it is the one place that differs.
+ */
+function PickerRow({
+  onSelect,
+  icon: Icon,
+  tileClass,
+  iconClass,
+  title,
+  detail,
+  selected = false,
+  trailing,
+}: {
+  onSelect: () => void
+  icon: LucideIcon
+  tileClass: string
+  iconClass?: string
+  title: string
+  detail: ReactNode
+  selected?: boolean
+  trailing?: ReactNode
+}) {
+  return (
+    <DropdownMenuItem
+      onClick={onSelect}
+      className="cursor-pointer items-center gap-3 px-2 py-2"
+    >
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg",
+          tileClass
+        )}
+      >
+        <Icon className={cn("size-4", iconClass)} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-medium">{title}</span>
+        <span className="truncate text-xs text-muted-foreground">{detail}</span>
+      </span>
+      {selected && <CheckIcon className="size-4 shrink-0 text-foreground" />}
+      {trailing}
+    </DropdownMenuItem>
   )
 }
 
@@ -1596,7 +1651,7 @@ function AccountLine({
   return (
     <span
       className={cn(
-        "truncate text-[0.625rem]",
+        "truncate",
         tone === "bad" && !busy ? "text-destructive" : "text-muted-foreground"
       )}
     >

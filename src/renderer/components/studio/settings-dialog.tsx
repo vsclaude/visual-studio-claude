@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 import {
   ArrowUpCircle,
   Bell,
+  Coins,
   Columns2,
   ExternalLink,
   KeyRound,
@@ -29,7 +30,9 @@ import {
   Plus,
   Puzzle,
   RefreshCw,
+  Sparkle,
   Trash2,
+  UserRound,
   type LucideIcon,
 } from "lucide-react"
 
@@ -56,6 +59,11 @@ import {
   useClaudeProfiles,
 } from "@/lib/chat/claude-profiles"
 import { useAgentModels } from "@/lib/chat/models"
+import { useAccount } from "@/lib/account"
+import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
+import { useFreeAi } from "@/lib/free-ai"
+import { formatCredits } from "@shared/credits"
+import { FREE_PROFILE_ID } from "@shared/free-ai"
 import { ClaudeLoginDialog } from "./claude-login-dialog"
 import { IconButton } from "./icon-button"
 import { OfficialBadge } from "./official-badge"
@@ -192,8 +200,8 @@ const SECTIONS: {
   {
     id: "claude",
     label: "Claude",
-    blurb: "Accounts a chat can run under.",
-    icon: KeyRound,
+    blurb: "Credits and the accounts a chat can run under.",
+    icon: UserRound,
   },
   {
     id: "plugins",
@@ -816,6 +824,7 @@ function ClaudeSection() {
   }, [check])
 
   const models = useAgentModels()
+  const freeReady = useFreeAi((state) => state.ready)
   const reviewModel = useSettings((state) => state.reviewModel)
   const reviewEffort = useSettings((state) => state.reviewEffort)
   const reviewProfileId = useSettings((state) => state.reviewProfileId)
@@ -823,108 +832,227 @@ function ClaudeSection() {
   const setReviewProfileId = useSettings((state) => state.setReviewProfileId)
 
   return (
-    <div className="space-y-4">
-      <Card>
-        {/* The one turn in the app with no toolbar of its own — a drafted
-            commit message runs on whatever is picked here rather than on
-            something asked per turn, since it is not a conversation somebody
-            sits in front of. See
-            `main/one-turn-agent.ts`; the `review*` field names are what is
-            already on disk. */}
-        <Row
-          title="Commit message drafts"
-          description="Model and account the Git tab's Draft button runs on."
-        >
-          <div className="flex items-center gap-1.5">
-            <ModelMenu
-              models={models}
-              model={reviewModel}
-              effort={reviewEffort}
-              onPick={setReviewModel}
-            />
-            {profiles.length > 0 && (
-              <ProfileMenu
-                profiles={profiles}
-                profileId={reviewProfileId}
-                onPick={setReviewProfileId}
-              />
-            )}
-          </div>
-        </Row>
-      </Card>
+    <div className="space-y-6">
+      {/* First, and on its own: it is the one way to run a chat here that
+          needs no `claude` login at all, and Settings was the one screen in
+          the app that never mentioned it. */}
+      <section className="space-y-2">
+        <SectionHeading title="Credits" />
+        <CreditsCard />
+      </section>
 
-      <Card>
-        <AccountRow configDir="" name="Default" />
-      </Card>
-
-      <Card>
-        {profiles.length === 0 ? (
-          <p className="p-4 text-xs text-muted-foreground">No profiles yet.</p>
-        ) : (
-          profiles.map((profile) => (
-            <div key={profile.id} className="space-y-2 p-4">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={profile.name}
-                  onChange={(event) => rename(profile.id, event.target.value)}
-                  placeholder="Name"
-                  aria-label="Profile name"
-                  className="h-7 w-48 shrink-0 text-xs md:text-xs"
-                />
-                <IconButton
-                  label="Remove profile"
-                  className="ml-auto hover:text-destructive"
-                  onClick={() => remove(profile.id)}
-                >
-                  <Trash2 />
-                </IconButton>
+      <section className="space-y-2">
+        <SectionHeading
+          title="Your accounts"
+          description="The Claude logins a chat can run under — each chat picks one from its Account menu."
+        />
+        <Card>
+          <AccountRow />
+          {profiles.map((profile) => (
+            <div key={profile.id} className="flex gap-3 p-4">
+              <AccountTile icon={KeyRound} />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={profile.name}
+                    onChange={(event) => rename(profile.id, event.target.value)}
+                    placeholder="Name"
+                    aria-label="Profile name"
+                    className="h-7 w-48 shrink-0 text-xs md:text-xs"
+                  />
+                  <IconButton
+                    label="Remove account"
+                    className="ml-auto hover:text-destructive"
+                    onClick={() => remove(profile.id)}
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </div>
+                {/* A profile has a directory as soon as main has answered the
+                    save that created it — one round trip, and this is the
+                    frame in between. It is not skipped for tidiness: an empty
+                    `CLAUDE_CONFIG_DIR` is what `claudeAccount` answers for the
+                    *default* login, so a row drawn before the answer arrives
+                    would show somebody else's account as its own. */}
+                {profile.configDir.trim() ? (
+                  <AccountStatus
+                    configDir={profile.configDir}
+                    name={profile.name || "Profile"}
+                  />
+                ) : (
+                  <p className="text-[0.7rem] text-muted-foreground">
+                    Setting up its directory…
+                  </p>
+                )}
               </div>
-              {/* A profile has a directory as soon as main has answered the
-                  save that created it — one round trip, and this is the frame
-                  in between. It is not skipped for tidiness: an empty
-                  `CLAUDE_CONFIG_DIR` is what `claudeAccount` answers for the
-                  *default* login, so a row drawn before the answer arrives
-                  would show somebody else's account as its own. */}
-              {profile.configDir.trim() ? (
-                <AccountStatus
-                  configDir={profile.configDir}
-                  name={profile.name || "Profile"}
+            </div>
+          ))}
+          {/* The add button lives in the list it adds to, with the sentence
+              saying why anyone would — "No profiles yet." said neither. */}
+          <div className="flex items-center gap-3 p-4">
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {profiles.length === 0
+                ? "Add another login to keep work and personal accounts apart."
+                : "Each one signs into its own Claude account."}
+            </p>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => create(nextProfileName(profiles.length))}
+            >
+              <Plus data-icon="inline-start" />
+              Add account
+            </Button>
+          </div>
+        </Card>
+      </section>
+
+      <section className="space-y-2">
+        <SectionHeading title="Helpers" />
+        <Card>
+          {/* The one turn in the app with no toolbar of its own — a drafted
+              commit message runs on whatever is picked here rather than on
+              something asked per turn, since it is not a conversation somebody
+              sits in front of. See `main/one-turn-agent.ts`; the `review*`
+              field names are what is already on disk. */}
+          <Row
+            title="Commit message drafts"
+            description="Model and account the Git tab's Draft button runs on."
+          >
+            <div className="flex items-center gap-1.5">
+              <ModelMenu
+                models={models}
+                model={reviewModel}
+                effort={reviewEffort}
+                onPick={setReviewModel}
+              />
+              {/* The composer's own condition: credits are a choice even for
+                  somebody with no profile of their own. */}
+              {(profiles.length > 0 ||
+                freeReady ||
+                reviewProfileId === FREE_PROFILE_ID) && (
+                <ProfileMenu
+                  profiles={profiles}
+                  profileId={reviewProfileId}
+                  onPick={setReviewProfileId}
                 />
-              ) : (
-                <p className="text-[0.7rem] text-muted-foreground">
-                  Setting up its directory…
-                </p>
               )}
             </div>
-          ))
-        )}
-      </Card>
-
-      <Button
-        size="xs"
-        variant="outline"
-        onClick={() => create(nextProfileName(profiles.length))}
-      >
-        <Plus data-icon="inline-start" />
-        Profile
-      </Button>
+          </Row>
+        </Card>
+      </section>
     </div>
   )
 }
 
-/** The default login as a row of its own: a name this app chose, and the same
- * status line every profile gets. Its directory is `~/.claude` and there is
- * nothing to edit about it, so there are no inputs. */
-function AccountRow({ configDir, name }: { configDir: string; name: string }) {
+/** A group's name over its card, and what the group is for when the name
+ * alone does not say. */
+function SectionHeading({
+  title,
+  description,
+}: {
+  title: string
+  description?: string
+}) {
   return (
-    <div className="space-y-2 p-4">
-      <p className="flex items-center gap-2 text-sm leading-none font-medium">
-        <span className="truncate">{name}</span>
-        <span className="truncate font-mono text-[0.7rem] font-normal text-muted-foreground">
-          ~/.claude
-        </span>
-      </p>
-      <AccountStatus configDir={configDir} name={name} />
+    <div className="space-y-0.5 px-0.5">
+      <h3 className="text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
+        {title}
+      </h3>
+      {description && (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The balance and the way to more of it, or the way in for somebody signed
+ * out. Drawn in the paid row's colours — the composer's badge and the buy
+ * dialog's — so the three read as one thing wherever they turn up.
+ */
+function CreditsCard() {
+  const ready = useFreeAi((state) => state.ready)
+  const credits = useStudioAccount((state) => state.account?.credits)
+  const showCredits = useCreditsDialog((state) => state.show)
+  const busy = useAccount((state) => state.busy)
+  const signIn = useAccount((state) => state.signIn)
+  const broke = ready && credits !== undefined && credits <= 0
+
+  return (
+    <div className="flex items-center gap-4 rounded-lg border border-violet-500/25 bg-linear-to-br from-violet-500/10 via-transparent to-amber-400/10 p-4">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-md shadow-violet-500/25">
+        <Sparkle className="size-5 fill-current" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm leading-none font-medium">Pay with credits</p>
+        <p
+          className={cn(
+            "text-xs",
+            broke ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {!ready ? (
+            "Sign in to run any chat on every model, paid as you go — never a monthly fee."
+          ) : broke ? (
+            "No credits left — top up to keep going."
+          ) : credits !== undefined ? (
+            <>
+              <span className="font-medium text-foreground tabular-nums">
+                {formatCredits(credits)}
+              </span>{" "}
+              credits left · every model, never a monthly fee
+            </>
+          ) : (
+            "Every model, paid as you go — never a monthly fee."
+          )}
+        </p>
+      </div>
+      {ready ? (
+        <Button size="sm" onClick={showCredits}>
+          <Coins data-icon="inline-start" />
+          Buy credits
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void signIn()}
+        >
+          {busy ? "Signing in…" : "Sign in with Google"}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** The square an account row leads with — the composer menu's tile, so a
+ * login looks the same in both places. */
+function AccountTile({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      <Icon className="size-4" />
+    </span>
+  )
+}
+
+/** The default login as a row of its own, named as the composer's menu names
+ * it, and the same status line every profile gets. Its directory is
+ * `~/.claude` and there is nothing to edit about it, so there are no inputs. */
+function AccountRow() {
+  return (
+    <div className="flex gap-3 p-4">
+      <AccountTile icon={UserRound} />
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="flex h-7 items-center gap-2 text-sm leading-none font-medium">
+          <span className="truncate">This account</span>
+          <span className="truncate font-mono text-[0.7rem] font-normal text-muted-foreground">
+            ~/.claude
+          </span>
+        </p>
+        <AccountStatus configDir="" name="This account" />
+      </div>
     </div>
   )
 }

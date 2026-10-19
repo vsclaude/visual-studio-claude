@@ -8,6 +8,7 @@ import {
   clipboard,
   dialog,
   ipcMain,
+  net,
   Notification,
   shell,
   type IpcMainInvokeEvent,
@@ -200,6 +201,7 @@ export function registerIpc(
     openExternal(url) {
       void shell.openExternal(url)
     },
+    fetch: (url, init) => net.fetch(url, init),
     quitAndRun(file, args) {
       // `will-quit` rather than now: `before-quit` defers the quit until the
       // terminals and chats are ended, and this is the first moment after that.

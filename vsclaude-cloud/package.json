@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "build": "nitro build",
+    "deploy": "bunx wrangler deploy --config .output/server/wrangler.json",
     "dev": "nitro dev",
     "preview": "nitro preview",
     "test": "bun test",

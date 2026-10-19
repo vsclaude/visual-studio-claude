@@ -657,6 +657,44 @@ The `Gateway` profile that came before this — a URL and a token typed into
 Settings per profile — was never shipped and is not here: a server of the
 app's own, reached by whoever is signed in, is the thing it was a stand-in for.
 
+### Signing in
+
+Google will not run its sign-in in an embedded browser, and Firebase's popup
+will not open on `app://studio`, which is not an authorized domain. So signing
+in happens in the user's own browser, on **the free AI's server**:
+`main/google-sign-in.ts` draws a 24-byte nonce, opens `<server>/signin/<nonce>`,
+and asks `GET <server>/api/signin/<nonce>` every second and a half — through
+`net.fetch` (`host.fetch`), Chromium's network stack, so the asking goes the way
+the browser's page went: through the same system proxy and VPN, to the same
+Cloudflare location. With Node's `fetch` it did not, and the answer arrived
+late, after the page had long said "You're signed in". The page
+runs Firebase's popup and posts the Google ID token to
+`POST /api/signin/<nonce>`; the server keeps it in KV (`signin:<nonce>`, five
+minutes at most) and hands it out once. The renderer exchanges it with
+Firebase (`signInWithCredential`) as before. The server's domain has to be on
+the Firebase project's **authorized domains** for the popup to open there;
+`localhost` is on it by default, which is what keeps a server on this machine
+(`VSCLAUDE_AI_URL`) working.
+
+The studio's own session needs none of this after the first time: Firebase
+keeps it in `app://studio`'s IndexedDB, so a relaunch is still signed in, and
+the page is only reached after a sign-out. There, the popup goes **without
+`prompt: select_account`**, so somebody signed in to Google with one account
+who has consented before gets a popup that closes by itself — one click. It
+used to force the account picker every time; `Use a different account` under
+the button is that picker now, asked for on purpose.
+
+**It was a server of the app's own on `localhost`**, one per attempt, on a
+random port, which the page posted back to — with a Host check against DNS
+rebinding and the nonce as its path. That is removed: it opened a port on the
+user's machine for every sign-in, and the page was inside the app, so changing
+a word of it was a release. The cost is that the token now passes through the
+server for the second or so between the page's post and the studio's next ask,
+and that a build with no server cannot sign in at all — which, with sign-in
+being for the free AI and its credits, is a build with nothing to sign in for.
+KV is eventually consistent, so "once" means the studio stops asking at its
+first answer; the five-minute TTL is what bounds a token nobody collected.
+
 ### Credits
 
 Studio AI runs on **credits alone**: nothing is free, and somebody with none

@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Coins, UserRound } from "lucide-react"
+import { Coins, Loader2, UserRound } from "lucide-react"
 
 import { formatCredits } from "@shared/credits"
 import {
@@ -36,17 +36,27 @@ export function AccountMenu() {
   useEffect(watchAccount, [])
 
   const name = account ? (account.name ?? account.email ?? "Signed in") : null
+  // Until Firebase has answered, the empty silhouette would say "signed out"
+  // about somebody who is about to be signed in. A sign-in waiting on the
+  // browser spins too, since the avatar is all there is to look at meanwhile.
+  const loading = !ready || (busy && !account)
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <IconButton
-            label={name ?? "Sign in with Google"}
+            label={
+              !ready
+                ? "Checking your sign-in…"
+                : (name ?? (busy ? "Signing in…" : "Sign in with Google"))
+            }
             side="right"
             className="size-8"
           >
-            {account?.photo ? (
+            {loading ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : account?.photo ? (
               <img
                 src={account.photo}
                 alt=""

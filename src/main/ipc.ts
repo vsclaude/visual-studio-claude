@@ -248,7 +248,7 @@ export function createIpc(host: Host): {
     const stored = await store.listClaudeProfiles()
     const dir = freeAiDir()
     return dir
-      ? [...stored, { id: FREE_PROFILE_ID, name: "Studio AI", configDir: dir }]
+      ? [...stored, { id: FREE_PROFILE_ID, name: "Credits", configDir: dir }]
       : stored
   }
 
@@ -553,9 +553,16 @@ export function createIpc(host: Host): {
     host.setBadgeCount(count)
   })
 
-  handle(IPC.signInWithGoogle, () =>
-    signInWithGoogle((url) => host.openExternal(url))
-  )
+  handle(IPC.signInWithGoogle, () => {
+    // The sign-in page is the server's: a build with none cannot sign in.
+    const server = freeAiUrl()
+    if (!server) {
+      throw new Error("This build has no server to sign in through.")
+    }
+    return signInWithGoogle(server, (url) => host.openExternal(url), {
+      fetch: host.fetch,
+    })
+  })
   handle(IPC.cancelSignInWithGoogle, () => cancelSignInWithGoogle())
 
   handle(IPC.freeAiAvailable, () => freeAiUrl() !== null)
@@ -1118,7 +1125,7 @@ export function createIpc(host: Host): {
       const free = profileId === FREE_PROFILE_ID
       if (free && !freeAiReady()) {
         return {
-          error: "Sign in to Visual Studio Claude to use the Studio AI.",
+          error: "Sign in to Visual Studio Claude to pay with credits.",
         }
       }
 

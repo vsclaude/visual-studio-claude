@@ -57,8 +57,17 @@ export type Host = {
   isAlwaysOnTop: (caller: unknown) => boolean
 
   /** Opens a URL in the user's browser. Only for a URL this app built itself —
-   * a sign-in page on localhost — since the caller is not reviewing it. */
+   * the free AI server's sign-in page — since the caller is not reviewing it. */
   openExternal: (url: string) => void
+
+  /**
+   * `fetch` through Chromium's network stack (`net.fetch`) rather than Node's:
+   * the system proxy, a VPN's routes and the OS's certificates, exactly as the
+   * browser that just signed in reaches the same server. Node's `fetch` honours
+   * none of them, so behind a proxy the sign-in page answered and main never
+   * heard.
+   */
+  fetch: (url: string, init?: RequestInit) => Promise<Response>
 
   /** The number on the app's own icon — the dock's red badge on macOS, the
    * launcher's count on Linux. Zero clears it. */

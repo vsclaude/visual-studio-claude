@@ -30,8 +30,11 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 | `POST /api/webhooks/paddle`      | Paddle's webhook; signed, no token.                                        |
 | `GET /checkout`                  | The page Paddle's default payment link points at: Paddle.js, nothing else. |
 | `HEAD/GET /api/hello`            | The reachability probe Claude Code sends to a custom base URL.             |
+| `GET /signin/<nonce>`            | The Google sign-in page the studio opens in the browser.                   |
+| `POST /api/signin/<nonce>`       | The page's answer (`{ idToken }` or `{ error }`), kept a few minutes.      |
+| `GET /api/signin/<nonce>`        | The studio collects that answer: `204` until there is one, then it once.   |
 
-Every route but `/api/hello`, the webhooks, `/checkout`, `/pay` and `/api/orders/<code>` needs the token, as `Authorization: Bearer …` or
+Every route but `/api/hello`, the webhooks, `/checkout`, `/pay`, `/api/orders/<code>` and the sign-in routes needs the token, as `Authorization: Bearer …` or
 `x-api-key` (the CLI sends both). Errors are Anthropic's own shape, so the CLI
 shows them as it would Anthropic's — but **never 401 or 403**, and always with
 `x-should-retry: false`. Measured against the CLI: a 401/403 is read as a

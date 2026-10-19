@@ -858,7 +858,7 @@ export class Chats {
     // missing token is "Not logged in · Please run /login" — the wrong login.
     if (options.profileId === FREE_PROFILE_ID && !freeAiReady()) {
       this.setBusy(id, false)
-      this.endTurn(id, "Sign in to Visual Studio Claude to use the Studio AI.")
+      this.endTurn(id, "Sign in to Visual Studio Claude to pay with credits.")
       return
     }
 

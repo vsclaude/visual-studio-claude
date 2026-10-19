@@ -2615,10 +2615,11 @@ export type DesktopApi = {
    */
   setBadgeCount: (count: number) => Promise<void>
   /**
-   * Signs in with Google, in the user's browser — see `main/google-sign-in.ts`
-   * for why it is not a window of this app. Resolves with the Google ID token,
-   * which the renderer exchanges with Firebase; rejects when the browser is
-   * closed without an answer or after five minutes.
+   * Signs in with Google, in the user's browser, on the free AI's server's
+   * `/signin` page — see `main/google-sign-in.ts` for why it is not a window
+   * of this app. Resolves with the Google ID token, which the renderer
+   * exchanges with Firebase; rejects with no server configured, when the page
+   * reports a failure, or after five minutes.
    */
   signInWithGoogle: () => Promise<string>
   /** Ends a sign-in that is waiting on the browser, as cancelled. For a tab

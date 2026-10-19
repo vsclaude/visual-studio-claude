@@ -73,8 +73,7 @@ function BuyDialog() {
             Buy credits
           </DialogTitle>
           <DialogDescription className="max-w-lg">
-            Studio AI runs on credits — every model, paid for as you use it,
-            never a monthly fee.
+            Credits pay for every model as you use it — never a monthly fee.
           </DialogDescription>
         </DialogHeader>
 
@@ -96,27 +95,48 @@ function BuyDialog() {
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 pt-1 sm:grid-cols-3">
           {CREDIT_PACKS.map((pack) => (
             <div
               key={pack.id}
-              className="relative flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center"
+              className={cn(
+                "relative flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center",
+                // Taller than its neighbours rather than scaled, so it cannot
+                // spill past the dialog's scroll box sideways.
+                pack.popular &&
+                  "border-violet-500/60 bg-linear-to-b from-violet-500/10 to-card shadow-lg ring-1 shadow-violet-500/15 ring-violet-500/40 sm:-my-2 sm:py-7"
+              )}
             >
-              {pack.bonus && (
-                <span className="absolute -top-2.5 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2 py-0.5 text-[0.625rem] font-semibold text-white">
-                  +{pack.bonus}% bonus
+              {pack.popular && (
+                <span className="absolute -top-2.5 inline-flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2.5 py-0.5 text-[0.625rem] font-semibold text-white shadow-sm">
+                  <Sparkle className="size-2.5 fill-current" />
+                  Most popular
                 </span>
               )}
-              <Coins className="size-6 text-amber-500" />
+              <Coins
+                className={cn(
+                  "size-6 text-amber-500",
+                  pack.popular && "size-7"
+                )}
+              />
               <span className="text-2xl font-semibold tabular-nums">
                 {formatPrice(pack.price)}
               </span>
               <span className="text-xs text-muted-foreground">
                 {formatCredits(pack.credits)} credits
               </span>
+              {pack.bonus && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400">
+                  +{pack.bonus}% bonus
+                </span>
+              )}
               <Button
-                variant="outline"
-                className="mt-2 w-full"
+                variant={pack.popular ? "default" : "outline"}
+                className={cn(
+                  "mt-auto w-full",
+                  pack.popular &&
+                    "bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90"
+                )}
                 disabled={!ready || pending !== null}
                 onClick={() => void buy(pack.id, method)}
               >

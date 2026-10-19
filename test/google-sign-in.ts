@@ -1,64 +1,64 @@
 /**
- * The loopback half of Google sign-in, run against a real socket.
+ * The studio's half of Google sign-in, run against a real socket.
  *
- * The browser is stood in for by the test: it takes the URL the flow would open
- * and posts to it the way the sign-in page does. What matters is what the
- * server does with each request — a token is accepted only on the nonce's path,
- * only from localhost, and only once — since any local page can reach the port.
+ * The server is stood in for by the test, with the routes `vsclaude-cloud`
+ * answers (`server/api/signin/`): `204` until the page has answered, then the
+ * answer once. The browser is stood in for too: it takes the URL the flow
+ * would open and leaves an answer under its nonce. What matters is what the
+ * attempt does with each — and that it stops asking once it has one.
  */
-import { request } from "node:http"
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 
 import {
   cancelSignInWithGoogle,
   parseAnswer,
   signInWithGoogle,
 } from "../src/main/google-sign-in"
-import {
-  FIREBASE_CONFIG,
-  FIREBASE_SDK_VERSION,
-  SIGN_IN_CANCELLED,
-} from "../src/shared/firebase"
+import { SIGN_IN_CANCELLED } from "../src/shared/firebase"
 import { check, finish, section } from "./harness"
 
-type Reply = { status: number; body: string }
+/** What the page left, by nonce, and how often each nonce was asked about. */
+const answers = new Map<string, string>()
+const asked = new Map<string, number>()
 
-/** A request sent to 127.0.0.1 under `host`, so the Host header can be chosen
- * the way a browser or a rebinding page would choose it. */
-function send(
-  url: string,
-  options: { method?: string; host?: string; body?: string } = {}
-): Promise<Reply> {
-  const target = new URL(url)
-  return new Promise((resolve, reject) => {
-    const req = request(
-      {
-        host: "127.0.0.1",
-        port: target.port,
-        path: target.pathname,
-        method: options.method ?? "GET",
-        headers: { host: options.host ?? target.host },
-      },
-      (response) => {
-        let body = ""
-        response.setEncoding("utf8")
-        response.on("data", (chunk: string) => (body += chunk))
-        response.on("end", () =>
-          resolve({ status: response.statusCode ?? 0, body })
-        )
-      }
+const server = createServer((request, response) => {
+  const match = /^\/api\/signin\/([^/]+)$/.exec(request.url ?? "")
+  if (request.method !== "GET" || !match) {
+    response.writeHead(404).end()
+    return
+  }
+  const nonce = match[1]!
+  asked.set(nonce, (asked.get(nonce) ?? 0) + 1)
+  const answer = answers.get(nonce)
+  if (answer === undefined) {
+    response.writeHead(204).end()
+    return
+  }
+  answers.delete(nonce)
+  response.writeHead(200, { "content-type": "application/json" }).end(answer)
+})
+await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+
+const POLL_MS = 10
+
+/** Starts an attempt and hands back the page URL the browser would be sent
+ * to, and its nonce. */
+function attempt(): Promise<{
+  url: string
+  nonce: string
+  outcome: Promise<string>
+}> {
+  return new Promise((resolve) => {
+    const outcome = signInWithGoogle(
+      base,
+      (url) => resolve({ url, nonce: url.split("/").pop()!, outcome }),
+      { pollMs: POLL_MS }
     )
-    req.on("error", reject)
-    req.end(options.body)
-  })
-}
-
-/** Starts an attempt and hands back the URL the browser would be sent to. */
-function attempt(): Promise<{ url: string; outcome: Promise<string> }> {
-  return new Promise((resolve, reject) => {
-    const outcome = signInWithGoogle((url) => resolve({ url, outcome }))
-    // A server that cannot listen fails the attempt before any URL exists;
-    // without this the test would wait for a URL that never comes.
-    outcome.catch(reject)
+    // Swallowed here and read through `settled`; an unhandled rejection
+    // would end the run.
+    outcome.catch(() => {})
   })
 }
 
@@ -70,86 +70,75 @@ function settled(outcome: Promise<string>): Promise<string> {
   )
 }
 
-const post = (url: string, answer: unknown) =>
-  send(url, {
-    method: "POST",
-    body: typeof answer === "string" ? answer : JSON.stringify(answer),
-  })
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-section("the sign-in page")
+section("the page")
 
 const first = await attempt()
-const page = await send(first.url)
-check("serves the page on its own path", page.status === 200, page.status)
 check(
-  "loads the Firebase SDK at the version the package resolves",
-  page.body.includes(`firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`)
+  "opens the server's sign-in page",
+  first.url.startsWith(`${base}/signin/`),
+  first.url
 )
 check(
-  "initialises Firebase with the project's config",
-  page.body.includes(FIREBASE_CONFIG.apiKey)
+  "under a nonce of 24 random bytes",
+  /^[A-Za-z0-9_-]{32}$/.test(first.nonce),
+  first.nonce
 )
-const wrongPath = await send(new URL(first.url).origin + "/not-the-nonce")
-check("answers nothing on any other path", wrongPath.status === 404)
 
 section("the token")
 
-const rebound = await send(first.url + "/token", {
-  method: "POST",
-  host: "evil.example",
-  body: JSON.stringify({ idToken: "forged" }),
-})
+await wait(POLL_MS * 5)
 check(
-  "refuses a request whose Host is not localhost",
-  rebound.status === 403,
-  rebound.status
+  "asks while there is no answer yet",
+  (asked.get(first.nonce) ?? 0) >= 2,
+  asked.get(first.nonce)
 )
-
-const notFromPage = await post(first.url + "/token", "not json")
-check("refuses a body that is not JSON", notFromPage.status === 400)
-
-const accepted = await post(first.url + "/token", { idToken: "abc.def" })
-check("accepts the token on the attempt's own path", accepted.status === 204)
+answers.set(first.nonce, JSON.stringify({ idToken: "abc.def" }))
 check(
-  "resolves the attempt with that token",
+  "resolves with the token the page left",
   (await settled(first.outcome)) === "resolved:abc.def"
 )
-
-// The server is closed once the attempt has its answer, so a replay finds
-// nothing listening rather than getting a reply.
-const replayed = await post(first.url + "/token", { idToken: "again" }).then(
-  (reply) => `answered:${reply.status}`,
-  () => "closed"
-)
+const askedAtAnswer = asked.get(first.nonce)
+await wait(POLL_MS * 5)
 check(
-  "a second token for a finished attempt goes nowhere",
-  replayed === "closed",
-  replayed
+  "stops asking once it has the answer",
+  asked.get(first.nonce) === askedAtAnswer,
+  `${askedAtAnswer} → ${asked.get(first.nonce)}`
 )
 
 section("a failed answer")
 
 const failing = await attempt()
-const refused = await post(failing.url + "/token", {
-  error: "The popup was closed.",
-})
-check("the page's error is received", refused.status === 204)
+answers.set(failing.nonce, JSON.stringify({ error: "The popup was closed." }))
 check(
-  "the attempt rejects with the page's reason",
+  "rejects with the page's reason",
   (await settled(failing.outcome)) === "rejected:The popup was closed."
+)
+
+section("an answer that is not one")
+
+const garbled = await attempt()
+answers.set(garbled.nonce, "not json")
+await wait(POLL_MS * 5)
+answers.set(garbled.nonce, JSON.stringify({ idToken: "after" }))
+check(
+  "is passed over, and the next ask still finds the real one",
+  (await settled(garbled.outcome)) === "resolved:after"
 )
 
 section("a second press of the button")
 
 const older = await attempt()
 const newer = await attempt()
+check("each attempt draws its own nonce", older.nonce !== newer.nonce)
 check(
   "the older attempt is ended with a reason",
   (await settled(older.outcome)).startsWith(
     "rejected:Sign-in was started again"
   )
 )
-await post(newer.url + "/token", { idToken: "newer" })
+answers.set(newer.nonce, JSON.stringify({ idToken: "newer" }))
 check(
   "the newer attempt still takes its token",
   (await settled(newer.outcome)) === "resolved:newer"
@@ -165,13 +154,9 @@ check(
   "the attempt ends at once with the shared cancel reason",
   (await settled(abandoned.outcome)) === `rejected:${SIGN_IN_CANCELLED}`
 )
-check(
-  "the port is released — nothing answers the cancelled URL",
-  (await send(abandoned.url).then(
-    () => "answered",
-    () => "closed"
-  )) === "closed"
-)
+const askedAtCancel = asked.get(abandoned.nonce) ?? 0
+await wait(POLL_MS * 5)
+check("and stops asking", (asked.get(abandoned.nonce) ?? 0) === askedAtCancel)
 
 section("what counts as an answer")
 
@@ -197,4 +182,5 @@ check(
 )
 check("an empty token is refused", parseAnswer('{"idToken":""}') === null)
 
+server.close()
 finish()

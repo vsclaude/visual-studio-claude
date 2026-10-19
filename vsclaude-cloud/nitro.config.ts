@@ -1,6 +1,7 @@
 import { defineConfig } from "nitro"
 
 export default defineConfig({
+  preset: "cloudflare_module",
   serverDir: "./server",
 
   /*
@@ -65,6 +66,9 @@ export default defineConfig({
     // survive a redeploy, so on a platform whose disk does not, this needs a
     // persistent driver before payments are switched on — and more than one
     // instance needs a shared one (`redis`, say).
-    accounts: { driver: "fs", base: "./.data/accounts" },
+    // On Workers there is no filesystem, and the `fs` driver would also drag
+    // chokidar/fsevents into the bundle. The KV namespace is bound in
+    // wrangler.jsonc under the same name.
+    accounts: { driver: "cloudflare-kv-binding", binding: "ACCOUNTS" },
   },
 })

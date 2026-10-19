@@ -1,5 +1,6 @@
 import {
   creditsArrived,
+  creditsLeft,
   formatCredits,
   type StudioAccount,
 } from "../src/shared/credits"
@@ -42,5 +43,33 @@ section("formatCredits")
 check("millions, one decimal", formatCredits(3_300_000) === "3.3M")
 check("a whole million, no decimal", formatCredits(1_000_000) === "1M")
 check("under a million, grouped", formatCredits(250_000) === "250,000")
+
+section("creditsLeft")
+const spent = (credits: number, creditsUsed: number): StudioAccount => ({
+  ...account(credits),
+  creditsUsed,
+})
+check(
+  "the share left of everything bought",
+  creditsLeft(spent(750, 250)).share === 0.75
+)
+check("plenty is not low", !creditsLeft(spent(750, 250)).low)
+check("a tenth left is low", creditsLeft(spent(100, 900)).low)
+check(
+  "nothing left is low, and empty",
+  creditsLeft(spent(0, 1000)).low && creditsLeft(spent(0, 1000)).share === 0
+)
+check(
+  "an account that never had any is empty rather than NaN",
+  creditsLeft(spent(0, 0)).share === 0
+)
+check(
+  "a server too old to count spending reads as full",
+  creditsLeft(spent(500, 0)).share === 1
+)
+check(
+  "an overdraft below zero is still empty, not negative",
+  creditsLeft(spent(-20, 1020)).share === 0
+)
 
 finish()

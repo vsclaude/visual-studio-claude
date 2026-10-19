@@ -20,6 +20,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
 import { cn } from "@/lib/utils"
+import { CreditsBadge } from "./credits-badge"
 
 const METHODS: { id: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { id: "bank", label: "Vietnamese bank · VietQR", icon: Landmark },
@@ -66,9 +67,7 @@ function BuyDialog() {
     >
       <DialogContent className="max-h-[calc(100svh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-3xl">
         <DialogHeader className="items-center text-center">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-lg shadow-violet-500/25">
-            <Coins className="size-5" />
-          </span>
+          <CreditsBadge size="md" icon={Coins} />
           <DialogTitle className="text-xl font-semibold">
             Buy credits
           </DialogTitle>

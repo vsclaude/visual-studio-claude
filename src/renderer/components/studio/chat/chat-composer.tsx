@@ -33,7 +33,6 @@ import {
   ChevronRight,
   Coins,
   Square,
-  Sparkle,
   Star,
   TextSelect,
   X,
@@ -130,6 +129,8 @@ import { IconButton } from "../icon-button"
 import { ImageThumb } from "./chat-images"
 import { McpMenu } from "./chat-mcp"
 import { PlanUsageMeter } from "./chat-plan-usage"
+import { CreditsBadge } from "../credits-badge"
+import { CreditsMeter } from "./chat-credits-meter"
 
 /**
  * A chat's composer, with two menus: `@` over the checkout's folders and files,
@@ -993,12 +994,17 @@ export function ChatComposer({
               that nobody has asked the CLI yet — and the answer would be ~19k of
               system prompt, tools and memory files rather than nothing. */}
           {contextWindow && <WindowMeter of={contextWindow} />}
-          {onOptions && (
-            <PlanUsageMeter
-              profileId={options.profileId ?? null}
-              sending={sending}
-            />
-          )}
+          {/* A chat paying with credits has no plan windows to show, so the
+              slot shows what it does have: the balance it is spending. */}
+          {onOptions &&
+            (options.profileId === FREE_PROFILE_ID ? (
+              <CreditsMeter sending={sending} />
+            ) : (
+              <PlanUsageMeter
+                profileId={options.profileId ?? null}
+                sending={sending}
+              />
+            ))}
 
           <div className="ml-auto flex items-center gap-1">
             <DropdownMenu>
@@ -1476,9 +1482,7 @@ export function ProfileMenu({
               free ? (
                 // The paid row's own badge, the menu's tile in small: a grey
                 // glyph among grey glyphs is the one thing this must not be.
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-sm shadow-violet-500/30">
-                  <Sparkle className="size-2.5! fill-current" />
-                </span>
+                <CreditsBadge size="xs" />
               ) : profileId === null ? (
                 <UserRound />
               ) : (
@@ -1498,8 +1502,7 @@ export function ProfileMenu({
           </DropdownMenuLabel>
           <PickerRow
             onSelect={() => onPick(null)}
-            icon={UserRound}
-            tileClass="bg-muted text-muted-foreground"
+            tile={<PickerTile icon={UserRound} />}
             title="This account"
             detail={
               <AccountLine
@@ -1515,9 +1518,7 @@ export function ProfileMenu({
           {(freeReady || free) && (
             <PickerRow
               onSelect={() => onPick(FREE_PROFILE_ID)}
-              icon={Sparkle}
-              iconClass="fill-current"
-              tileClass="bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-sm shadow-violet-500/25"
+              tile={<CreditsBadge size="sm" />}
               title="Pay with credits"
               detail={
                 <span className={stuck ? "text-destructive" : undefined}>
@@ -1536,8 +1537,12 @@ export function ProfileMenu({
           {freeReady && (
             <PickerRow
               onSelect={() => useCreditsDialog.getState().show()}
-              icon={Coins}
-              tileClass="bg-amber-500/15 text-amber-500"
+              tile={
+                <PickerTile
+                  icon={Coins}
+                  className="bg-amber-500/15 text-amber-500"
+                />
+              }
               title="Buy credits"
               detail="Pay as you go · no monthly fee"
               trailing={
@@ -1552,8 +1557,7 @@ export function ProfileMenu({
             <PickerRow
               key={profile.id}
               onSelect={() => onPick(profile.id)}
-              icon={KeyRound}
-              tileClass="bg-muted text-muted-foreground"
+              tile={<PickerTile icon={KeyRound} />}
               title={profile.name}
               // A profile with no directory yet would otherwise be drawn as
               // the default account, since that is what an empty
@@ -1580,24 +1584,20 @@ export function ProfileMenu({
 
 /**
  * One row of the picker: a tile saying what kind of thing it is, the name and
- * what it is or costs underneath, and a check for the one in use. The colour
- * of the tile is the only thing that tells the paid row from the accounts, so
- * it is the one place that differs.
+ * what it is or costs underneath, and a check for the one in use. The tile is
+ * the only thing that tells the paid row from the accounts — `CreditsBadge`
+ * there, `PickerTile` everywhere else — so it is the one place that differs.
  */
 function PickerRow({
   onSelect,
-  icon: Icon,
-  tileClass,
-  iconClass,
+  tile,
   title,
   detail,
   selected = false,
   trailing,
 }: {
   onSelect: () => void
-  icon: LucideIcon
-  tileClass: string
-  iconClass?: string
+  tile: ReactNode
   title: string
   detail: ReactNode
   selected?: boolean
@@ -1608,14 +1608,7 @@ function PickerRow({
       onClick={onSelect}
       className="cursor-pointer items-center gap-3 px-2 py-2"
     >
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-lg",
-          tileClass
-        )}
-      >
-        <Icon className={cn("size-4", iconClass)} />
-      </span>
+      {tile}
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{title}</span>
         <span className="truncate text-xs text-muted-foreground">{detail}</span>
@@ -1623,6 +1616,26 @@ function PickerRow({
       {selected && <CheckIcon className="size-4 shrink-0 text-foreground" />}
       {trailing}
     </DropdownMenuItem>
+  )
+}
+
+/** A plain row's tile, the size of `CreditsBadge size="sm"` beside it. */
+function PickerTile({
+  icon: Icon,
+  className,
+}: {
+  icon: LucideIcon
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+        className ?? "bg-muted text-muted-foreground"
+      )}
+    >
+      <Icon className="size-4" />
+    </span>
   )
 }
 

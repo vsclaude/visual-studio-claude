@@ -105,6 +105,24 @@ export function creditsArrived(
   return Math.max(0, after.credits - before.credits)
 }
 
+/**
+ * How much of everything bought is left, for the bars that empty as it is
+ * spent — and whether that is little enough to say so.
+ *
+ * All-time, because `credits` and `creditsUsed` are the only two numbers the
+ * server hands over and a pack has no end date to measure a month against. A
+ * tenth is where a balance stops being something to forget about; nothing at
+ * all is `low` too, so a bar at zero is never drawn in the calm colours.
+ */
+export function creditsLeft(account: StudioAccount): {
+  share: number
+  low: boolean
+} {
+  const total = account.credits + account.creditsUsed
+  const share = total > 0 ? Math.max(0, account.credits) / total : 0
+  return { share, low: share <= 0.1 }
+}
+
 /** `3.3M`, `250,000` — a balance as the dialogs write it. */
 export function formatCredits(credits: number): string {
   return credits >= 1_000_000

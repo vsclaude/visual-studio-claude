@@ -30,7 +30,6 @@ import {
   Plus,
   Puzzle,
   RefreshCw,
-  Sparkle,
   Trash2,
   UserRound,
   type LucideIcon,
@@ -62,9 +61,10 @@ import { useAgentModels } from "@/lib/chat/models"
 import { useAccount } from "@/lib/account"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
-import { formatCredits } from "@shared/credits"
+import { creditsLeft, formatCredits, type StudioAccount } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
 import { ClaudeLoginDialog } from "./claude-login-dialog"
+import { CREDITS_SURFACE, CreditsBadge, CreditsBar } from "./credits-badge"
 import { IconButton } from "./icon-button"
 import { OfficialBadge } from "./official-badge"
 import { UpdateProgressBar } from "./update-progress"
@@ -973,56 +973,76 @@ function SectionHeading({
  */
 function CreditsCard() {
   const ready = useFreeAi((state) => state.ready)
-  const credits = useStudioAccount((state) => state.account?.credits)
+  const account = useStudioAccount((state) => state.account)
+  const credits = account?.credits
   const showCredits = useCreditsDialog((state) => state.show)
   const busy = useAccount((state) => state.busy)
   const signIn = useAccount((state) => state.signIn)
   const broke = ready && credits !== undefined && credits <= 0
 
   return (
-    <div className="flex items-center gap-4 rounded-lg border border-violet-500/25 bg-linear-to-br from-violet-500/10 via-transparent to-amber-400/10 p-4">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-amber-400 text-white shadow-md shadow-violet-500/25">
-        <Sparkle className="size-5 fill-current" />
-      </span>
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm leading-none font-medium">Pay with credits</p>
-        <p
-          className={cn(
-            "text-xs",
-            broke ? "text-destructive" : "text-muted-foreground"
-          )}
-        >
-          {!ready ? (
-            "Sign in to run any chat on every model, paid as you go — never a monthly fee."
-          ) : broke ? (
-            "No credits left — top up to keep going."
-          ) : credits !== undefined ? (
-            <>
-              <span className="font-medium text-foreground tabular-nums">
-                {formatCredits(credits)}
-              </span>{" "}
-              credits left · every model, never a monthly fee
-            </>
-          ) : (
-            "Every model, paid as you go — never a monthly fee."
-          )}
-        </p>
+    <div className={cn("space-y-3 rounded-lg border p-4", CREDITS_SURFACE)}>
+      <div className="flex items-center gap-4">
+        <CreditsBadge size="md" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm leading-none font-medium">Pay with credits</p>
+          <p
+            className={cn(
+              "text-xs",
+              broke ? "text-destructive" : "text-muted-foreground"
+            )}
+          >
+            {!ready ? (
+              "Sign in to run any chat on every model, paid as you go — never a monthly fee."
+            ) : broke ? (
+              "No credits left — top up to keep going."
+            ) : credits !== undefined ? (
+              <>
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatCredits(credits)}
+                </span>{" "}
+                credits left · every model, never a monthly fee
+              </>
+            ) : (
+              "Every model, paid as you go — never a monthly fee."
+            )}
+          </p>
+        </div>
+        {ready ? (
+          <Button size="sm" onClick={showCredits}>
+            <Coins data-icon="inline-start" />
+            Buy credits
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void signIn()}
+          >
+            {busy ? "Signing in…" : "Sign in with Google"}
+          </Button>
+        )}
       </div>
-      {ready ? (
-        <Button size="sm" onClick={showCredits}>
-          <Coins data-icon="inline-start" />
-          Buy credits
-        </Button>
-      ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => void signIn()}
-        >
-          {busy ? "Signing in…" : "Sign in with Google"}
-        </Button>
-      )}
+      {ready && account && <CreditsMeter account={account} />}
+    </div>
+  )
+}
+
+/** The bar and its two figures under the balance. The share and the colour
+ * are `creditsLeft`'s, shared with the composer and the account menu. */
+function CreditsMeter({ account }: { account: StudioAccount }) {
+  const { share } = creditsLeft(account)
+  return (
+    <div className="space-y-1.5 pl-14">
+      <CreditsBar account={account} />
+      <div className="flex items-baseline justify-between gap-2 text-[0.7rem] text-muted-foreground tabular-nums">
+        <span>{Math.round(share * 100)}% left</span>
+        {/* 0 is also what a server too old to count spending answers. */}
+        {account.creditsUsed > 0 && (
+          <span>{formatCredits(account.creditsUsed)} used so far</span>
+        )}
+      </div>
     </div>
   )
 }

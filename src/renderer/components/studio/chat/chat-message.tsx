@@ -47,6 +47,8 @@ import { MentionText } from "./chat-composer"
 import { NoteImages } from "./chat-images"
 import { rowOf, splitStat } from "@/lib/chat/tool-row"
 import { toolMark } from "./chat-marks"
+import { creditsRefusalOf } from "@/lib/chat/credits-refusal"
+import { CreditsRefusalCard } from "./chat-credits-refusal"
 
 /**
  * One line of an agent conversation.
@@ -322,6 +324,10 @@ function OtherMessage({
   }
 
   if (of.role === "error") {
+    // Want of credits is drawn as the way to buy some, not as one more red
+    // line — see `creditsRefusalOf` for why the sentence is the signal.
+    const refusal = creditsRefusalOf(of.text)
+    if (refusal) return <CreditsRefusalCard reason={refusal} />
     return (
       <p
         className={cn(

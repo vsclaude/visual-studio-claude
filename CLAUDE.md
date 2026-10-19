@@ -598,6 +598,10 @@ own `ChatNotices` (`test/notify.ts`),
 `lib/chat/tool-row.ts` — a tool call as `verb · object · outcome`,
 and an open fold's rows with like calls merged (`test/tool-row.ts`),
 `lib/chat/unread.ts` (`test/chat-unread.ts`),
+`lib/chat/credits-refusal.ts` — which failed turns are drawn as a way to buy
+credits rather than as an error line (`test/credits-refusal.ts`), with
+`shared/credits.ts`'s `creditsLeft`, the share every credits bar empties by
+(`test/credits.ts`),
 `lib/chat/reply.ts` — a selected run of the transcript as the quote
 the `Reply` button beside it types into the composer (`chat-reply.tsx`,
 `test/chat-reply.ts`),

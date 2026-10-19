@@ -1,7 +1,7 @@
 import { useEffect } from "react"
-import { Coins, Loader2, UserRound } from "lucide-react"
+import { ChevronRight, Loader2, UserRound } from "lucide-react"
 
-import { formatCredits } from "@shared/credits"
+import { creditsLeft, formatCredits } from "@shared/credits"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useAccount, watchAccount } from "@/lib/account"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
+import { cn } from "@/lib/utils"
+import { CreditsBadge, CreditsBar } from "./credits-badge"
 import { IconButton } from "./icon-button"
 
 /**
@@ -31,7 +33,7 @@ export function AccountMenu() {
   const cancelSignIn = useAccount((state) => state.cancelSignIn)
   const signOut = useAccount((state) => state.signOut)
   const showCredits = useCreditsDialog((state) => state.show)
-  const credits = useStudioAccount((state) => state.account?.credits)
+  const studio = useStudioAccount((state) => state.account)
 
   useEffect(watchAccount, [])
 
@@ -40,6 +42,9 @@ export function AccountMenu() {
   // about somebody who is about to be signed in. A sign-in waiting on the
   // browser spins too, since the avatar is all there is to look at meanwhile.
   const loading = !ready || (busy && !account)
+  // The one thing on the rail that says a balance is running out, for somebody
+  // whose chats are on a login and never see the composer's meter go amber.
+  const low = account && studio ? creditsLeft(studio).low : false
 
   return (
     <DropdownMenu>
@@ -52,8 +57,17 @@ export function AccountMenu() {
                 : (name ?? (busy ? "Signing in…" : "Sign in with Google"))
             }
             side="right"
-            className="size-8"
+            className="relative size-8"
           >
+            {low && (
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute top-0.5 right-0.5 size-2 rounded-full ring-2 ring-background",
+                  studio && studio.credits <= 0 ? "bg-red-500" : "bg-amber-500"
+                )}
+              />
+            )}
             {loading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : account?.photo ? (
@@ -73,7 +87,7 @@ export function AccountMenu() {
           </IconButton>
         }
       />
-      <DropdownMenuContent side="right" align="end" className="min-w-56">
+      <DropdownMenuContent side="right" align="end" className="w-64">
         {/* A label is only valid inside a group — the menu throws without one. */}
         <DropdownMenuGroup>
           {account ? (
@@ -87,14 +101,39 @@ export function AccountMenu() {
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={showCredits}>
-                <Coins className="text-amber-500" />
-                Buy credits
-                {credits !== undefined && (
-                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                    {formatCredits(credits)} left
+              {/* The balance and the way to more as one row: the badge and
+                  the bar are the composer's and Settings', so credits look
+                  like credits wherever they are met. */}
+              <DropdownMenuItem
+                onClick={showCredits}
+                className="cursor-pointer items-center gap-3 px-2 py-2"
+              >
+                <CreditsBadge size="sm" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-medium">Buy credits</span>
+                    {studio && (
+                      <span
+                        className={cn(
+                          "text-xs tabular-nums",
+                          studio.credits <= 0
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {formatCredits(studio.credits)} left
+                      </span>
+                    )}
                   </span>
-                )}
+                  {studio ? (
+                    <CreditsBar account={studio} className="h-1" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Every model, never a monthly fee
+                    </span>
+                  )}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={busy} onClick={() => void signOut()}>

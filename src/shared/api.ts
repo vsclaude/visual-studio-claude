@@ -8,11 +8,11 @@
 
 import type { PluginInfo, PluginInstall, PluginSource } from "./plugins"
 import type {
+  CreditPack,
   PaymentMethod,
-  PurchaseItem,
   PurchaseResult,
   StudioAccount,
-} from "./plans"
+} from "./credits"
 
 /**
  * One folder the workspace has been pointed at — a repository on this machine,
@@ -2638,25 +2638,22 @@ export type DesktopApi = {
    */
   setFreeAiToken: (token: string | null) => Promise<boolean>
   /**
-   * The signed-in user's plan, day and credits, asked of the free AI's server
+   * The signed-in user's day and credits, asked of the free AI's server
    * with the same token — or null while signed out, with no server, or when
    * the server could not be reached (`main/free-ai.ts`).
    */
   studioAccount: () => Promise<StudioAccount | null>
   /**
-   * Opens a purchase of `item` in the browser — a VietQR page for a bank
-   * transfer, Paddle's checkout for a card. The server creates it with the
-   * user's uid on it, so it lands on this account. Resolves once the browser
-   * is asked to open it, not when the purchase is done — the plan changes when
-   * the payment provider tells the server.
+   * Opens a purchase of a credit pack in the browser — a VietQR page for a
+   * bank transfer, Paddle's checkout for a card. The server creates it with
+   * the user's uid on it, so it lands on this account. Resolves once the
+   * browser is asked to open it, not when the purchase is done — the credits
+   * arrive when the payment provider tells the server.
    */
-  buyPlanItem: (
-    item: PurchaseItem,
+  buyCredits: (
+    item: CreditPack["id"],
     method: PaymentMethod
   ) => Promise<PurchaseResult>
-  /** Opens the payment provider's customer portal for the user's plan — to
-   * change it, update a card or cancel. */
-  managePlan: () => Promise<PurchaseResult>
   /**
    * The left column's Search: `query` across every file in the workspace and
    * everything said in every chat — see `WorkspaceSearch`.
@@ -3051,8 +3048,7 @@ export const IPC = {
   freeAiAvailable: "free-ai:available",
   setFreeAiToken: "free-ai:token",
   studioAccount: "free-ai:account",
-  buyPlanItem: "free-ai:buy",
-  managePlan: "free-ai:manage",
+  buyCredits: "free-ai:buy",
   searchWorkspace: "search:workspace",
   replaceInFiles: "search:replace",
   deleteChat: "chats:delete",

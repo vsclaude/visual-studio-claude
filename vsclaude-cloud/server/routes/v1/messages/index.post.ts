@@ -12,10 +12,8 @@ import {
 } from "../../../utils/anthropic.ts"
 import { chargeCredits } from "../../../utils/accounts.ts"
 import { authenticate } from "../../../utils/auth.ts"
-import { creditCharge } from "../../../utils/billing.ts"
-import { limitsOf, planName } from "../../../utils/limits.ts"
+import { limitsOf } from "../../../utils/limits.ts"
 import { logLine, noteRequest } from "../../../utils/log.ts"
-import { addSpend, secondsToReset, spentToday } from "../../../utils/quota.ts"
 import {
   StreamUsage,
   usageOf,
@@ -25,8 +23,8 @@ import {
 
 /**
  * `POST /v1/messages` — the one call a chat makes, passed through to Anthropic
- * for a signed-in user, on a model their plan allows, within the plan's day
- * and then their credits (`limits.ts`, `billing.ts`).
+ * for a signed-in user with credits, on any of the server's models, and paid
+ * for out of those credits (`limits.ts`, `billing.ts`).
  *
  * The body goes on **as the bytes that arrived**: it is parsed only to read the
  * model, and re-serialising it could reorder what the CLI wrote and spoil the
@@ -61,8 +59,7 @@ export default defineHandler(async (event) => {
     model: typeof model === "string" ? model : undefined,
     bytes: text.length,
   })
-  const { plan, models, budget, account } = await limitsOf(user.uid)
-  noteRequest(event, { plan })
+  const { models, account } = await limitsOf(user.uid)
   const allowed = allowedModel(body, models)
   if (!allowed) {
     noteRequest(event, { refused: "model not allowed" })
@@ -71,19 +68,21 @@ export default defineHandler(async (event) => {
     return anthropicError(
       400,
       "invalid_request_error",
-      `The ${planName(plan)} plan runs ${models.join(", ")} only.`
+      `This server runs ${models.join(", ")} only.`
     )
   }
 
-  // Past the day's budget, a request runs on credits while there are any.
-  const spent = await spentToday(user.uid)
-  if (budget > 0 && spent >= budget && account.credits <= 0) {
-    noteRequest(event, { refused: "daily budget spent", spent, budget })
+  // Every request is paid for out of credits, so none left is a refusal before
+  // anything is spent. 400 for the reason above, and because no reset is
+  // coming for a `retry-after` to name. A request that starts with a little
+  // left is finished and the balance stops at 0 (`chargeCredits`) — the
+  // overdraft is one request, never more.
+  if (account.credits <= 0) {
+    noteRequest(event, { refused: "no credits" })
     return anthropicError(
-      429,
-      "rate_limit_error",
-      `You have used today's ${planName(plan)} allowance. It resets at 00:00 UTC — or upgrade or buy credits from the account menu.`,
-      { "retry-after": String(secondsToReset()) }
+      400,
+      "invalid_request_error",
+      "You have no credits left. Buy credits from the account menu in Visual Studio Claude to keep going."
     )
   }
 
@@ -134,18 +133,14 @@ export default defineHandler(async (event) => {
   // answer was read whole, on a line of its own when it streamed.
   const spend = async (usage: Usage, ended?: string) => {
     const amount = weighted(usage, allowed)
-    const total = await addSpend(user.uid, amount)
-    const credits = creditCharge(total - amount, total, budget)
-    await chargeCredits(user.uid, credits)
+    await chargeCredits(user.uid, amount)
     return {
-      credits_charged: credits || undefined,
+      credits_charged: amount || undefined,
       in: usage.input_tokens,
       out: usage.output_tokens,
       cache_read: usage.cache_read_input_tokens,
       cache_write: usage.cache_creation_input_tokens,
       weighted: amount,
-      spent_today: total,
-      budget: budget || undefined,
       ended,
     }
   }

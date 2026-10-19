@@ -65,6 +65,15 @@
      page's picture drifting a few pixels, slow enough to read as weightless
      rather than as something asking to be clicked. */
   --animate-float: float 5s ease-in-out infinite;
+
+  /* Credits arriving (`credits-dialog.tsx`): the coin lands with one
+     overshoot, the small coins scatter out from behind it once, and the
+     sparkles twinkle on — the one place the studio celebrates, so the one
+     place allowed to be a little loud. */
+  --animate-coin-land: coin-land 640ms var(--ease-overshoot) backwards;
+  --animate-scatter: scatter 900ms var(--ease-out-quint) backwards;
+  --animate-twinkle: twinkle 2.2s ease-in-out infinite;
+  --animate-halo: halo 3.2s ease-in-out infinite;
 }
 
 @keyframes rise {
@@ -110,6 +119,42 @@
 @keyframes float {
   50% {
     transform: translateY(-0.3rem);
+  }
+}
+
+@keyframes coin-land {
+  from {
+    opacity: 0;
+    transform: translateY(-1.5rem) scale(0.6) rotate(-18deg);
+  }
+}
+
+/* From the middle to wherever each small coin rests — its own transform, so
+   one keyframe sends six of them six ways, and with motion reduced they are
+   simply already there. */
+@keyframes scatter {
+  from {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes halo {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.08);
   }
 }
 
@@ -340,6 +385,10 @@
     --animate-dot: breathe 1.2s ease-in-out infinite;
     --animate-shimmer: none;
     --animate-float: none;
+    --animate-coin-land: fade 200ms ease-out backwards;
+    --animate-scatter: fade 200ms ease-out backwards;
+    --animate-twinkle: none;
+    --animate-halo: none;
   }
 
   /* Scoped to the launch screen's own crossfade rather than left to a blanket

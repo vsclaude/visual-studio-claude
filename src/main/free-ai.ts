@@ -28,7 +28,7 @@ import {
   freeAiEnv,
   normalizeAiUrl,
 } from "../shared/free-ai"
-import type { PurchaseResult, StudioAccount } from "../shared/plans"
+import type { PurchaseResult, StudioAccount } from "../shared/credits"
 
 const TOKEN_FILE = "vsclaude-token"
 
@@ -101,7 +101,7 @@ export async function setFreeAiToken(next: string | null): Promise<boolean> {
 
 /**
  * A call to the free AI's server as the signed-in user, answered as its JSON —
- * or why not, in words the Upgrade dialog can show. Main makes these rather
+ * or why not, in words the credits dialog can show. Main makes these rather
  * than the renderer because main is what knows the server (`VSCLAUDE_AI_URL`
  * is its environment's) and already holds the token.
  */
@@ -143,22 +143,24 @@ async function serverCall(
   return { ok: true, json }
 }
 
-/** The user's plan, day and credits, or null when there is none to ask. */
+/** The user's day and credits, or null when there is none to ask. */
 export async function studioAccount(): Promise<StudioAccount | null> {
   const answer = await serverCall("GET", "/api/usage")
   if (!answer.ok || !answer.json || typeof answer.json !== "object") {
     return null
   }
-  return answer.json as StudioAccount
+  const account = answer.json as StudioAccount
+  // A server from before `creditsUsed` leaves it out; the dialog draws a sum.
+  return { ...account, creditsUsed: Number(account.creditsUsed) || 0 }
 }
 
 /**
- * A checkout's or a portal's page from the server, handed to `open` — the
+ * A checkout's page from the server, handed to `open` — the
  * browser. Only an `https:` page is opened: it is a link the server chose,
  * and nothing else from there should reach `shell.openExternal`.
  */
 export async function openServerPage(
-  route: "/api/checkout" | "/api/orders" | "/api/portal",
+  route: "/api/checkout" | "/api/orders",
   body: unknown,
   open: (url: string) => void
 ): Promise<PurchaseResult> {

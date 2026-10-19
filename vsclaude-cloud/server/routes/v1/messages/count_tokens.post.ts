@@ -8,12 +8,12 @@ import {
   upstreamHeaders,
 } from "../../../utils/anthropic.ts"
 import { authenticate } from "../../../utils/auth.ts"
-import { limitsOf, planName } from "../../../utils/limits.ts"
+import { limitsOf } from "../../../utils/limits.ts"
 import { noteRequest } from "../../../utils/log.ts"
 
 /**
  * `POST /v1/messages/count_tokens` — how big a prompt is, which the CLI asks
- * before compacting. Free at Anthropic, so it is not held against the budget,
+ * before compacting. Free at Anthropic, so it is not charged to credits,
  * but it is still a signed-in user's and still the allowed model's.
  */
 export default defineHandler(async (event) => {
@@ -32,13 +32,13 @@ export default defineHandler(async (event) => {
   } catch {
     return anthropicError(400, "invalid_request_error", "The body is not JSON.")
   }
-  const { plan, models } = await limitsOf(user.uid)
+  const { models } = await limitsOf(user.uid)
   if (!allowedModel(body, models)) {
     noteRequest(event, { refused: "model not allowed" })
     return anthropicError(
       400,
       "invalid_request_error",
-      `The ${planName(plan)} plan runs ${models.join(", ")} only.`
+      `This server runs ${models.join(", ")} only.`
     )
   }
 

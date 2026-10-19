@@ -2,15 +2,13 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-import { DEFAULT_CHAT_OPTIONS, type ClaudeAccount } from "../src/shared/api"
+import type { ClaudeAccount } from "../src/shared/api"
 import {
   apiKeyHelperCommand,
   FREE_AI_MAX_PROMPT,
-  FREE_AI_MODEL,
+  FREE_AI_MODELS,
   FREE_PROFILE_ID,
-  forFreeAi,
   freeAiEnv,
-  isHaiku,
   normalizeAiUrl,
 } from "../src/shared/free-ai"
 import {
@@ -23,44 +21,15 @@ import { newChatOptions } from "../src/renderer/lib/free-ai"
 import { check, finish, section } from "./harness"
 
 /**
- * The free AI — chats through this app's server, Haiku only, for whoever is
- * signed in to the studio.
+ * The free AI — chats through this app's server, on any model it runs, for
+ * whoever is signed in to the studio.
  *
  * Tested because what is at stake is where a token goes and what it is spent
  * on: the address check keeps it off plain `http` to another machine, the env
- * keeps the user's own Anthropic key from riding along, and the model pinning
- * is what keeps a free turn from asking the server for Opus. The token file is
+ * keeps the user's own Anthropic key from riding along, and the alias pinning
+ * is what keeps a free turn from asking the server for a model it does not run. The token file is
  * written for real, the way the CLI will read it.
  */
-
-section("forFreeAi: a free chat runs Haiku")
-
-const opus = { ...DEFAULT_CHAT_OPTIONS, model: "opus", effort: "high" as const }
-const freeOpus = forFreeAi({ ...opus, profileId: FREE_PROFILE_ID })
-check("the model becomes haiku", freeOpus.model === "haiku", freeOpus)
-check("the effort is the CLI's own", freeOpus.effort === null, freeOpus)
-check("any other chat is left alone", forFreeAi(opus) === opus)
-
-section("isHaiku: the free chat's picker")
-
-check(
-  "the alias",
-  isHaiku({ value: "haiku", label: "Haiku", description: "", efforts: null })
-)
-check(
-  "default, when it resolves to Haiku",
-  isHaiku({
-    value: "default",
-    resolvedModel: "claude-haiku-5-5",
-    label: "Default",
-    description: "",
-    efforts: null,
-  })
-)
-check(
-  "not Opus",
-  !isHaiku({ value: "opus", label: "Opus", description: "", efforts: null })
-)
 
 section("normalizeAiUrl: what may become ANTHROPIC_BASE_URL")
 
@@ -95,14 +64,15 @@ check(
   env
 )
 check(
-  "every model the CLI could ask for is Haiku",
-  [
-    env.ANTHROPIC_MODEL,
-    env.ANTHROPIC_DEFAULT_OPUS_MODEL,
-    env.ANTHROPIC_DEFAULT_SONNET_MODEL,
-    env.ANTHROPIC_DEFAULT_HAIKU_MODEL,
-    env.CLAUDE_CODE_SUBAGENT_MODEL,
-  ].every((model) => model === FREE_AI_MODEL),
+  "every alias is a model the server runs, itself",
+  env.ANTHROPIC_DEFAULT_OPUS_MODEL === FREE_AI_MODELS.opus &&
+    env.ANTHROPIC_DEFAULT_SONNET_MODEL === FREE_AI_MODELS.sonnet &&
+    env.ANTHROPIC_DEFAULT_HAIKU_MODEL === FREE_AI_MODELS.haiku,
+  env
+)
+check(
+  "nothing pins the chat's own pick",
+  !("ANTHROPIC_MODEL" in env) && !("CLAUDE_CODE_SUBAGENT_MODEL" in env),
   env
 )
 check(
@@ -208,7 +178,7 @@ const signedInLogin: ClaudeAccount = { ...signedOut, state: "signedIn" }
 
 const opening = newChatOptions({ ready: true, login: signedOut, profiles: [] })
 check(
-  "no Claude login of their own: free, on Haiku",
+  "no Claude login of their own: free, starting on Haiku",
   opening?.profileId === FREE_PROFILE_ID && opening.model === "haiku",
   opening
 )

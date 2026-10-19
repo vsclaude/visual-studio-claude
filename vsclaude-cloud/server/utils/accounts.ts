@@ -8,20 +8,19 @@ import type { Order } from "./sepay-billing.ts"
  * (`nitro.config.ts`):
  *
  * - `user:<uid>` — each user's `Account`.
- * - `sub:<id>`, `txn:<id>` — Paddle's subscriptions and transactions back to
- *   the uid. A refund names only its transaction, and a subscription's events
- *   may arrive without the checkout's custom data, so the transaction that
- *   carried the uid is what links them to somebody.
+ * - `txn:<id>` — Paddle's transactions back to the uid. A refund names only
+ *   its transaction, so the transaction that carried the uid is what links it
+ *   to somebody. (`sub:<id>` keys are left from when plans were sold.)
  * - `order:<code>` — each bank-transfer purchase.
  * - `sepay:<id>` — each SePay transaction already applied. SePay retries a
  *   webhook up to seven times and a replay keeps the id, so this is what makes
  *   a transfer count once.
  *
- * Unlike `quota`, this is money somebody paid: the mount must outlive a
+ * This is money somebody paid: the mount must outlive a
  * redeploy, and more than one instance needs a shared driver for it. Writes are
- * read-modify-write without a lock, the same bargain `quota.ts` makes — a
+ * read-modify-write without a lock — a
  * payment landing in the same instant as a request's credit charge can lose
- * one of the two, which is a request's worth of credits, not a plan.
+ * one of the two, which is a request's worth of credits.
  */
 
 const storage = () => useStorage("accounts")
@@ -40,32 +39,28 @@ export async function saveAccount(
   await storage().setItem(`user:${uid}`, account)
 }
 
-/** Takes `amount` off the user's credits, never below zero. */
+/** Takes `amount` off the user's credits, never below zero, and counts what
+ * was actually taken as used. */
 export async function chargeCredits(
   uid: string,
   amount: number
 ): Promise<void> {
   if (amount <= 0) return
   const account = await getAccount(uid)
+  const taken = Math.min(amount, account.credits)
   await saveAccount(uid, {
     ...account,
-    credits: Math.max(0, account.credits - amount),
+    credits: account.credits - taken,
+    used: account.used + taken,
   })
 }
 
-export async function linkToUser(
-  kind: "sub" | "txn",
-  id: string,
-  uid: string
-): Promise<void> {
-  await storage().setItem(`${kind}:${id}`, uid)
+export async function linkToUser(id: string, uid: string): Promise<void> {
+  await storage().setItem(`txn:${id}`, uid)
 }
 
-export async function userOf(
-  kind: "sub" | "txn",
-  id: string
-): Promise<string | null> {
-  const uid = await storage().getItem<string>(`${kind}:${id}`)
+export async function userOf(id: string): Promise<string | null> {
+  const uid = await storage().getItem<string>(`txn:${id}`)
   return typeof uid === "string" && uid ? uid : null
 }
 

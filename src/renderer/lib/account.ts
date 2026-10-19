@@ -13,7 +13,7 @@ import { create } from "zustand"
 import { FIREBASE_CONFIG, SIGN_IN_CANCELLED } from "@shared/firebase"
 
 import { handFreeAiToken, watchFreeAi } from "./free-ai"
-import { watchStudioAccount } from "./plans"
+import { watchStudioAccount } from "./credits"
 
 /**
  * Who is signed in to the studio, through Firebase.
@@ -77,7 +77,7 @@ export function watchAccount(): void {
   // Firebase refreshes it ahead of that and says so here, so main's copy —
   // which the CLI re-reads every five minutes — is never the expired one.
   watchFreeAi()
-  // The plan is asked of the same server with the same token, so it follows
+  // The credits are asked of the same server with the same token, so it follows
   // the token in.
   watchStudioAccount()
   onIdTokenChanged(authOf(), (user) => {

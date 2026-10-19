@@ -15,19 +15,18 @@ import { noteRequest } from "../../utils/log.ts"
 import { paddleConfig } from "../../utils/paddle.ts"
 
 /**
- * `POST /api/webhooks/paddle` — what Paddle says was bought, changed or
- * refunded, applied to the buyer's account (`billing.ts`).
+ * `POST /api/webhooks/paddle` — what Paddle says was bought or refunded,
+ * applied to the buyer's account (`billing.ts`).
  *
  * The signature is checked over the body **as it arrived**, before anything is
  * parsed. The user is the uid the checkout carried (`checkout.post.ts`), or —
- * for a refund, or a subscription event without the custom data — the one the
- * transaction or subscription was linked to when it carried the uid.
+ * for a refund — the one the transaction was linked to when it carried the
+ * uid.
  *
- * An event whose user cannot be found yet is answered 503: Paddle does not
- * promise order, so `subscription.created` can arrive before the
- * `transaction.completed` that links it, and a retry will find it. Anything
- * this server does not sell is answered 200 and logged, since retrying will
- * not make it ours.
+ * A transaction whose user cannot be found yet is answered 503, so Paddle
+ * retries it. Anything this server does not sell — `subscription.*` among
+ * them, since there are no plans any more — is answered 200 and logged, since
+ * retrying will not make it ours.
  */
 export default defineHandler(async (event) => {
   const paddle = paddleConfig()
@@ -54,11 +53,9 @@ export default defineHandler(async (event) => {
   const refs = refsOf(payload)
   noteRequest(event, {
     webhook: refs.event,
-    subscription: refs.subscriptionId ?? undefined,
     transaction: refs.transactionId ?? undefined,
   })
   if (
-    !refs.event.startsWith("subscription.") &&
     !refs.event.startsWith("transaction.") &&
     !refs.event.startsWith("adjustment.")
   ) {
@@ -68,8 +65,7 @@ export default defineHandler(async (event) => {
 
   const uid =
     refs.uid ??
-    (refs.subscriptionId && (await userOf("sub", refs.subscriptionId))) ??
-    (refs.transactionId && (await userOf("txn", refs.transactionId))) ??
+    (refs.transactionId && (await userOf(refs.transactionId))) ??
     null
   if (!uid) {
     if (refs.event.startsWith("adjustment.")) {
@@ -82,9 +78,8 @@ export default defineHandler(async (event) => {
   noteRequest(event, { uid })
 
   // Whatever carried the uid links what it names to it, for the events after.
-  if (refs.uid) {
-    if (refs.subscriptionId) await linkToUser("sub", refs.subscriptionId, uid)
-    if (refs.transactionId) await linkToUser("txn", refs.transactionId, uid)
+  if (refs.uid && refs.transactionId) {
+    await linkToUser(refs.transactionId, uid)
   }
 
   const applied = applyWebhook(await getAccount(uid), payload, paddle.catalog)
@@ -96,7 +91,6 @@ export default defineHandler(async (event) => {
   await saveAccount(uid, applied.account)
   noteRequest(event, {
     applied: applied.kind,
-    plan: applied.kind === "subscription" ? applied.plan : undefined,
     credits_added: applied.kind === "credits" ? applied.added : undefined,
     credits_removed: applied.kind === "refund" ? applied.removed : undefined,
     credits: applied.account.credits,

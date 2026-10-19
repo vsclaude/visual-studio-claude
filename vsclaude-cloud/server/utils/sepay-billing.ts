@@ -3,85 +3,18 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto"
 import {
   CREDIT_PACKS,
   isCreditItem,
-  MONTHLY_PRICES,
   type Account,
   type CreditItem,
-  type PaidPlan,
 } from "./billing.ts"
 
 /**
- * SePay's half of `billing.ts`: Vietnamese bank transfers by VietQR.
+ * SePay's half of `billing.ts`: Vietnamese bank transfers by VietQR, one
+ * credit pack each.
  *
- * A transfer cannot renew itself, so a plan is bought for 1, 3 or 12 months up
- * front, and buying again adds to whatever is left. Each purchase is an `Order`
- * whose code the transfer's content carries; SePay watches the bank account
- * and sends every incoming transfer to the webhook, which finds the order by
- * that code.
+ * Each purchase is an `Order` whose code the transfer's content carries; SePay
+ * watches the bank account and sends every incoming transfer to the webhook,
+ * which finds the order by that code.
  */
-
-export type Months = 1 | 3 | 12
-export type PlanItem = `${PaidPlan}-${Months}m`
-export type BankItem = PlanItem | CreditItem
-
-/** Three months are three times the month; twelve are ten — two months free
- * for paying a year ahead. */
-const MONTH_FACTOR: Record<Months, number> = { 1: 1, 3: 3, 12: 10 }
-
-const DAY_MS = 24 * 60 * 60 * 1000
-/** A month bought is thirty days — the same for everybody, whatever month it
- * is bought in. */
-const MONTH_MS = 30 * DAY_MS
-
-/** `starter-3m` as its plan and months, or null for anything else. */
-export function planItemOf(
-  item: string
-): { plan: PaidPlan; months: Months } | null {
-  const match = /^(starter|plus|pro)-(1|3|12)m$/.exec(item)
-  if (!match) return null
-  return { plan: match[1] as PaidPlan, months: Number(match[2]) as Months }
-}
-
-export function isBankItem(value: unknown): value is BankItem {
-  return (
-    typeof value === "string" &&
-    (planItemOf(value) !== null || isCreditItem(value))
-  )
-}
-
-export function priceOf(item: BankItem): number {
-  const plan = planItemOf(item)
-  if (plan) return MONTHLY_PRICES[plan.plan] * MONTH_FACTOR[plan.months]
-  return CREDIT_PACKS[item as CreditItem].price
-}
-
-/**
- * The account after a plan bought by transfer.
- *
- * The same plan again extends it from whenever it would have ended. Another
- * plan starts now, and what was left of the old one is carried over **by
- * value**: its remaining days at the old plan's price buy days at the new
- * one's. An upgrade gets fewer days of the dearer plan, a downgrade more of
- * the cheaper, and nobody loses what they paid for.
- */
-export function addPrepaid(
-  account: Account,
-  plan: PaidPlan,
-  months: Months,
-  now = new Date()
-): Account {
-  const current = account.prepaid
-  const left = current
-    ? Math.max(0, new Date(current.until).getTime() - now.getTime())
-    : 0
-  const carried =
-    !current || left === 0
-      ? 0
-      : current.id === plan
-        ? left
-        : (left * MONTHLY_PRICES[current.id]) / MONTHLY_PRICES[plan]
-  const until = new Date(now.getTime() + carried + months * MONTH_MS)
-  return { ...account, prepaid: { id: plan, until: until.toISOString() } }
-}
 
 /**
  * A purchase waiting on its transfer. `code` is what the transfer's content
@@ -92,7 +25,9 @@ export function addPrepaid(
 export type Order = {
   code: string
   uid: string
-  item: BankItem
+  /** A credit pack — or, on an order written while plans were sold, a plan
+   * (`plus-3m`), which nothing grants any more. */
+  item: CreditItem | string
   amount: number
   createdAt: string
   /** The SePay transaction that paid it, once one has. */
@@ -147,7 +82,6 @@ export function orderCodeOf(transfer: Transfer, prefix: string): string | null {
 export type Paid =
   | { kind: "ignored"; reason: string }
   | { kind: "short"; order: Order }
-  | { kind: "plan"; order: Order; account: Account; until: string }
   | { kind: "credits"; order: Order; account: Account; added: number }
 
 /**
@@ -156,13 +90,13 @@ export type Paid =
  * Paid at least in full, the order grants what it sells — even an old one: the
  * money arrived, and refusing it would be keeping somebody's payment. Short,
  * it grants nothing and is noted on the order. An order already paid is not
- * paid twice; a second transfer for it is left for a human to refund.
+ * paid twice; a second transfer for it is left for a human to refund, and so
+ * is one for a plan ordered before plans were withdrawn.
  */
 export function applyTransfer(
   order: Order,
   account: Account,
-  transfer: Transfer,
-  now = new Date()
+  transfer: Transfer
 ): Paid {
   if (transfer.transferType !== "in") {
     return { kind: "ignored", reason: "money going out" }
@@ -183,18 +117,12 @@ export function applyTransfer(
     }
   }
 
-  const paid = { ...order, paidBy: transfer.id }
-  const plan = planItemOf(order.item)
-  if (plan) {
-    const updated = addPrepaid(account, plan.plan, plan.months, now)
-    return {
-      kind: "plan",
-      order: paid,
-      account: updated,
-      until: updated.prepaid?.until ?? "",
-    }
+  if (!isCreditItem(order.item)) {
+    return { kind: "ignored", reason: `${order.item} is no longer sold` }
   }
-  const added = CREDIT_PACKS[order.item as CreditItem].credits
+
+  const paid = { ...order, paidBy: transfer.id }
+  const added = CREDIT_PACKS[order.item].credits
   return {
     kind: "credits",
     order: paid,

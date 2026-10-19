@@ -8,8 +8,8 @@
  * retry — a 429 it backs off from, a 403 it does not.
  *
  * Except that this server's own refusals say `x-should-retry: false`, which the
- * CLI obeys over its status rules: a missing key is a 500 and a spent budget a
- * 429, both of which it would otherwise retry ten times with backoff, leaving
+ * CLI obeys over its status rules: a missing key is a 500, which it would
+ * otherwise retry ten times with backoff, leaving
  * the chat "working" for minutes on an answer that will not change. A 502 —
  * Anthropic unreachable — is the one worth retrying.
  */
@@ -115,7 +115,7 @@ export function countBodyOf(body: Record<string, unknown>): string {
 /**
  * The size of a prompt as Anthropic counts it, or null when it could not say —
  * the caller lets the request through then, since `weighted` charges a long
- * prompt at its real price and the budget still holds.
+ * prompt at its real price out of the credits.
  */
 export async function countTokens(
   body: Record<string, unknown>,

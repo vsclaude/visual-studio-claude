@@ -19,7 +19,6 @@ export default definePlugin((nitroApp) => {
     upstream: config.anthropicBaseUrl,
     firebase_project: config.firebaseProjectId,
     models: config.allowedModels,
-    daily_budget: config.dailyBudget,
     max_prompt_tokens: config.maxPromptTokens,
   })
 

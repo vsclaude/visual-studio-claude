@@ -1,14 +1,11 @@
 import { createHmac } from "node:crypto"
 import { describe, expect, test } from "bun:test"
 
-import { NO_ACCOUNT, planOf, type Account } from "../server/utils/billing.ts"
+import { CREDIT_PACKS, NO_ACCOUNT } from "../server/utils/billing.ts"
 import {
-  addPrepaid,
   applyTransfer,
-  isBankItem,
   newOrderCode,
   orderCodeOf,
-  priceOf,
   qrUrl,
   transferOf,
   webhookAuthentic,
@@ -17,20 +14,21 @@ import {
 } from "../server/utils/sepay-billing.ts"
 
 /**
- * Bank transfers through SePay: what an order costs, which transfer pays it,
- * and how a prepaid plan's days add up — with webhook payloads in the shape
- * SePay's docs give.
+ * Bank transfers through SePay: which transfer pays an order, and what it adds
+ * — with webhook payloads in the shape SePay's docs give.
  */
 
 const NOW = new Date("2026-10-18T00:00:00Z")
-const DAY = 24 * 60 * 60 * 1000
 
-function order(item: Order["item"], fields: Partial<Order> = {}): Order {
+function order(
+  item: Order["item"] = "credits-60k",
+  fields: Partial<Order> = {}
+): Order {
   return {
     code: "VSC12345678",
     uid: "uid-1",
     item,
-    amount: priceOf(item),
+    amount: 60_000,
     createdAt: NOW.toISOString(),
     paidBy: null,
     short: [],
@@ -44,64 +42,10 @@ function transfer(fields: Partial<Transfer> = {}): Transfer {
     code: "VSC12345678",
     content: "VSC12345678 chuyen tien",
     transferType: "in",
-    transferAmount: 99_000,
+    transferAmount: 60_000,
     ...fields,
   }
 }
-
-const daysLeft = (account: Account) =>
-  (new Date(account.prepaid?.until ?? 0).getTime() - NOW.getTime()) / DAY
-
-describe("prices", () => {
-  test("three months are three, twelve are ten", () => {
-    expect(priceOf("plus-1m")).toBe(99_000)
-    expect(priceOf("plus-3m")).toBe(297_000)
-    expect(priceOf("plus-12m")).toBe(990_000)
-    expect(priceOf("credits-60k")).toBe(60_000)
-  })
-  test("only what is sold", () => {
-    expect(isBankItem("starter-12m")).toBe(true)
-    expect(isBankItem("credits-20k")).toBe(true)
-    expect(isBankItem("plus")).toBe(false)
-    expect(isBankItem("pro-6m")).toBe(false)
-    expect(isBankItem("hobby-1m")).toBe(false)
-  })
-})
-
-describe("prepaid days", () => {
-  test("a month is thirty days from now", () => {
-    expect(daysLeft(addPrepaid(NO_ACCOUNT, "plus", 1, NOW))).toBe(30)
-  })
-
-  test("the same plan again extends it", () => {
-    const once = addPrepaid(NO_ACCOUNT, "plus", 1, NOW)
-    expect(daysLeft(addPrepaid(once, "plus", 3, NOW))).toBe(120)
-  })
-
-  test("an upgrade carries the days left over by value", () => {
-    // Thirty days of Starter are worth 49/299 of thirty days of Pro.
-    const starter = addPrepaid(NO_ACCOUNT, "starter", 1, NOW)
-    const pro = addPrepaid(starter, "pro", 1, NOW)
-    expect(pro.prepaid?.id).toBe("pro")
-    expect(daysLeft(pro)).toBeCloseTo(30 + (30 * 49_000) / 299_000, 5)
-  })
-
-  test("an expired plan carries nothing", () => {
-    const old = addPrepaid(
-      NO_ACCOUNT,
-      "pro",
-      1,
-      new Date(NOW.getTime() - 60 * DAY)
-    )
-    expect(daysLeft(addPrepaid(old, "starter", 1, NOW))).toBe(30)
-  })
-
-  test("the plan holds until its day, then Hobby", () => {
-    const plus = addPrepaid(NO_ACCOUNT, "plus", 1, NOW)
-    expect(planOf(plus, NOW)).toBe("plus")
-    expect(planOf(plus, new Date(NOW.getTime() + 31 * DAY))).toBe("hobby")
-  })
-})
 
 describe("matching a transfer to its order", () => {
   test("SePay's own code", () => {
@@ -155,31 +99,30 @@ describe("matching a transfer to its order", () => {
 })
 
 describe("applyTransfer", () => {
-  test("a full transfer grants the plan and marks the order paid", () => {
-    const paid = applyTransfer(order("plus-1m"), NO_ACCOUNT, transfer(), NOW)
-    expect(paid.kind).toBe("plan")
-    if (paid.kind !== "plan") return
+  test("a full transfer adds the pack's credits and marks the order paid", () => {
+    const paid = applyTransfer(
+      order(),
+      { ...NO_ACCOUNT, credits: 5 },
+      transfer()
+    )
+    expect(paid.kind).toBe("credits")
+    if (paid.kind !== "credits") return
     expect(paid.order.paidBy).toBe(92704)
-    expect(planOf(paid.account, NOW)).toBe("plus")
+    expect(paid.account.credits).toBe(CREDIT_PACKS["credits-60k"].credits + 5)
   })
 
   test("more than asked still pays it", () => {
     expect(
-      applyTransfer(
-        order("plus-1m"),
-        NO_ACCOUNT,
-        transfer({ transferAmount: 100_000 }),
-        NOW
-      ).kind
-    ).toBe("plan")
+      applyTransfer(order(), NO_ACCOUNT, transfer({ transferAmount: 100_000 }))
+        .kind
+    ).toBe("credits")
   })
 
   test("a short transfer grants nothing and is noted", () => {
     const paid = applyTransfer(
-      order("plus-1m"),
+      order(),
       NO_ACCOUNT,
-      transfer({ transferAmount: 50_000 }),
-      NOW
+      transfer({ transferAmount: 50_000 })
     )
     expect(paid.kind).toBe("short")
     if (paid.kind !== "short") return
@@ -189,34 +132,24 @@ describe("applyTransfer", () => {
 
   test("a paid order is not paid twice", () => {
     expect(
-      applyTransfer(
-        order("plus-1m", { paidBy: 1 }),
-        NO_ACCOUNT,
-        transfer(),
-        NOW
-      ).kind
+      applyTransfer(order(undefined, { paidBy: 1 }), NO_ACCOUNT, transfer())
+        .kind
     ).toBe("ignored")
   })
 
   test("money going out is not a payment", () => {
     expect(
-      applyTransfer(
-        order("plus-1m"),
-        NO_ACCOUNT,
-        transfer({ transferType: "out" }),
-        NOW
-      ).kind
+      applyTransfer(order(), NO_ACCOUNT, transfer({ transferType: "out" })).kind
     ).toBe("ignored")
   })
 
-  test("a credit pack adds its credits", () => {
+  test("a plan ordered before plans were withdrawn grants nothing", () => {
     const paid = applyTransfer(
-      order("credits-60k"),
-      { ...NO_ACCOUNT, credits: 5 },
-      transfer({ transferAmount: 60_000 }),
-      NOW
+      order("plus-1m", { amount: 99_000 }),
+      NO_ACCOUNT,
+      transfer({ transferAmount: 99_000 })
     )
-    expect(paid.kind === "credits" && paid.account.credits).toBe(3_300_005)
+    expect(paid.kind).toBe("ignored")
   })
 })
 

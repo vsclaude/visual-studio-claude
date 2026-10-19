@@ -1,6 +1,7 @@
 import { useRuntimeConfig } from "nitro/runtime-config"
 
-import { catalogOf, type Catalog, type PaddleItem } from "./paddle-billing.ts"
+import type { CreditItem } from "./billing.ts"
+import { catalogOf, type Catalog } from "./paddle-billing.ts"
 
 /**
  * This server's Paddle: which of its two systems, the key, and the price ids.
@@ -13,10 +14,7 @@ import { catalogOf, type Catalog, type PaddleItem } from "./paddle-billing.ts"
 export function paddleConfig() {
   const config = useRuntimeConfig()
   const sandbox = String(config.paddleEnvironment) !== "production"
-  const prices: Record<PaddleItem, string> = {
-    starter: String(config.paddlePriceStarter),
-    plus: String(config.paddlePricePlus),
-    pro: String(config.paddlePricePro),
+  const prices: Record<CreditItem, string> = {
     "credits-20k": String(config.paddlePriceCredits20k),
     "credits-60k": String(config.paddlePriceCredits60k),
     "credits-100k": String(config.paddlePriceCredits100k),

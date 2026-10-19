@@ -248,7 +248,7 @@ export function createIpc(host: Host): {
     const stored = await store.listClaudeProfiles()
     const dir = freeAiDir()
     return dir
-      ? [...stored, { id: FREE_PROFILE_ID, name: "Hobby", configDir: dir }]
+      ? [...stored, { id: FREE_PROFILE_ID, name: "Studio AI", configDir: dir }]
       : stored
   }
 
@@ -568,7 +568,7 @@ export function createIpc(host: Host): {
 
   // The item is the server's to check against what it sells; main only passes
   // a string on, to the side that takes that way of paying.
-  handle(IPC.buyPlanItem, (_event, item: unknown, method: unknown) =>
+  handle(IPC.buyCredits, (_event, item: unknown, method: unknown) =>
     typeof item === "string"
       ? openServerPage(
           method === "card" ? "/api/checkout" : "/api/orders",
@@ -576,10 +576,6 @@ export function createIpc(host: Host): {
           (url) => host.openExternal(url)
         )
       : { ok: false, error: "Nothing to buy." }
-  )
-
-  handle(IPC.managePlan, () =>
-    openServerPage("/api/portal", {}, (url) => host.openExternal(url))
   )
 
   /*
@@ -1117,12 +1113,12 @@ export function createIpc(host: Host): {
       // running beside it: the box has one message to put an answer in.
       drafts.get(folderId)?.abort()
 
-      // The same two rules a free chat's `send` keeps: Haiku whatever was
-      // picked, and a sentence rather than the CLI's own login error.
+      // The rule a free chat's `send` keeps: a sentence rather than the CLI's
+      // own login error.
       const free = profileId === FREE_PROFILE_ID
       if (free && !freeAiReady()) {
         return {
-          error: "Sign in to Visual Studio Claude to use the Hobby plan.",
+          error: "Sign in to Visual Studio Claude to use the Studio AI.",
         }
       }
 
@@ -1131,8 +1127,8 @@ export function createIpc(host: Host): {
       try {
         return await draftCommitMessage({
           cwd: await store.resolveFolderDir(folderId),
-          model: free ? "haiku" : model,
-          effort: free ? null : effort,
+          model,
+          effort,
           configDir: await configDirOf(profileId),
           signal: controller.signal,
         })

@@ -589,14 +589,16 @@ the CLI would create it. The composer's account menu shows each profile's email.
 ### The free AI
 
 Anybody signed in to the studio (Google, through Firebase) can chat on
-**Haiku through this app's own server**, with no Claude account of their own —
-the way in for somebody who has not got one. It is a row of the composer's
-account menu, `Free`, and **not a profile**: Settings has nothing to rename or
+**Haiku, Sonnet or Opus through this app's own server**, paid for with
+credits and with no Claude account of their own — the way in for somebody who has not got one. It is a row of the composer's
+account menu, `Studio AI`, and **not a profile**: Settings has nothing to rename or
 delete, and it is offered exactly while somebody is signed in. A chat on it
 carries `FREE_PROFILE_ID` as its `profileId`, and main resolves that to a
 `CLAUDE_CONFIG_DIR` of its own, `workspace/claude-free`. A new chat opens on it
 only for somebody whose own `claude` is signed out and who has no profiles —
-somebody already spending their own plan is not moved onto Haiku. The server is
+somebody already spending their own plan is not moved onto the server. It
+starts on Haiku, the cheapest on credits, and the picker offers the
+rest. The server is
 `FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
 whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
@@ -604,9 +606,9 @@ loads, so it need not be typed in each shell's own syntax.
 
 **What the server is sent is the user's Firebase ID token**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against Google's public keys), refuses any model but `FREE_AI_MODEL`, and
-forwards to Anthropic with a key of its own — so the free tier is this app's
-API spend, metered per uid by the server, and no user credential is ever
+(against Google's public keys), refuses any model outside `FREE_AI_MODELS`, and
+forwards to Anthropic with a key of its own — so every request is this app's
+API spend, charged per uid to that user's credits by the server, and no user credential is ever
 forwarded.
 
 **The token is a file, read by an `apiKeyHelper`, not a variable.** An ID token
@@ -620,14 +622,14 @@ Firebase refreshes (`onIdTokenChanged` → `setFreeAiToken`). The file is `0600`
 and deleted on sign-out; it is not sealed by the keychain, because the CLI has
 to `cat` it and it is dead within the hour anyway.
 
-**Haiku is pinned three times**: `forFreeAi` turns a free chat's options into
-`haiku` at send time in main (and the commit draft's), the composer's model menu
-offers Haiku rows alone, and `freeAiEnv` points every model the CLI could ask
-for on its own — `ANTHROPIC_MODEL`, the `opus`/`sonnet`/`haiku` aliases, a
-subagent's — at `FREE_AI_MODEL`, since each of those would otherwise be a
-request the server refuses halfway through a turn. Measured against a local
-server: `--model opus` arrives as `claude-haiku-5-5`. The server's refusal is
-the real one; these keep a turn from reaching it.
+**Every model is offered, and every alias is pinned.** The free AI was Haiku
+alone once, pinned three times over (`forFreeAi` at send, a Haiku-only picker,
+every alias pointed at Haiku); that is withdrawn — a free chat picks any model,
+and pays for it at that model's price out of the same credits. What
+stays is `freeAiEnv` pointing the `opus`/`sonnet`/`haiku` aliases at
+`FREE_AI_MODELS`: the CLI asks for models on its own — a subagent, the default
+behind `Inherit` — and an id of its own choosing that the server does not serve
+would be a request refused halfway through a turn.
 
 **The user's own credentials are emptied** — `ANTHROPIC_API_KEY`,
 `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` go over as empty strings.
@@ -635,8 +637,8 @@ A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
 key exported there would win over the helper and be sent to this app's server.
 Measured too: with one exported, the server saw the Firebase token alone.
 
-**No prompt goes past 100K tokens**, where Haiku 5.5 charges every token of
-the request fivefold. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
+**No prompt goes past 100K tokens**, where every token of the request is
+charged at a higher rate. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
 `FREE_AI_MAX_PROMPT` (100K, also the least the CLI accepts), so a long chat
 compacts at the CLI's own threshold; the server refuses anything longer anyway,
 as `prompt is too long: N tokens > 100000 maximum` — Anthropic's own wording,
@@ -655,39 +657,81 @@ The `Gateway` profile that came before this — a URL and a token typed into
 Settings per profile — was never shipped and is not here: a server of the
 app's own, reached by whoever is signed in, is the thing it was a stand-in for.
 
-### Plans: Hobby and the ones above it
+### Credits
 
-The free AI is sold as a **plan**, and the free one is called **Hobby** — the
-composer's account button says `Hobby`, its row draws a plan badge, and the
-account menu offers `Upgrade plan` and `Buy credits`. The point is that the
-studio is a way to use Claude Code **without** a $20 subscription: a free
-Haiku plan, cheaper monthly plans above it (`Starter`, `Plus` with Sonnet,
-`Pro` with Opus), and credit packs that top any of them up and never expire,
-for somebody who would rather pay for what they use than a fixed month.
+Studio AI runs on **credits alone**: nothing is free, and somebody with none
+is refused until they buy a pack — the account menu's `Buy credits`, and the
+same line under the composer's `Studio AI` row, whose own line says how many
+are left or that there are none. The point is that the studio is a way to use
+Claude Code **without** a $20 subscription: credits that never expire, paying
+for what is used rather than a fixed month.
 
-`shared/plans.ts` is the one table of plans and packs, and `plans-dialog.tsx`
-draws it — the copy, not the rules. **The server enforces them**:
-`vsclaude-cloud` learns a user's plan and credits from its payment providers'
-webhooks (never from the client) and holds each request to the plan's models
-and daily budget, then to credits (its README § Plans and credits).
+`shared/credits.ts` is the one table of packs, and `credits-dialog.tsx` draws
+it — the copy, not the rules. **The server enforces them**: `vsclaude-cloud`
+learns a user's credits from its payment providers' webhooks (never from the
+client), and charges every request on every model to them at that model's
+price (its README § Credits). Sonnet and Opus ran on credits alone for a while
+beside a free Haiku; holding them back was the plans' idea, and it went with
+them.
+
+**There is no free allowance any more.** Every signed-in user had a daily
+budget (two million Haiku-input equivalents, about $0.20), then credits past
+it. It is withdrawn — Studio AI is something bought, and a free day per Google
+account was also API spend anybody could multiply by making accounts. The
+server's `quota` store, `NITRO_DAILY_BUDGET` and
+`creditCharge` are deleted; `./.data/quota` on the server is left and nothing
+reads it.
 
 **Two ways to pay, chosen in the dialog** (`PaymentMethod`). A **Vietnamese
-bank transfer** by VietQR, through SePay: no card and next to no fee, but
-nothing renews, so a plan is bought for 1, 3 or 12 months up front and bought
-again to extend. A **card** through Paddle, for anybody outside Vietnam: a
-monthly subscription Paddle renews and its portal changes. Paddle alone was
-the first answer, and its fee is why there is a second — about $0.50 a
-transaction plus 5%, which kept a third of a 49.000 ₫ plan. Lemon Squeezy was
-tried before Paddle and replaced before anything was sold. A buy button asks
-main (`buyPlanItem`), which asks the server for the page — `/pay/<code>` or
-Paddle's checkout — and opens it in the browser; the plan shown is re-read
-when the window takes focus back from that tab.
+bank transfer** by VietQR, through SePay: no card and next to no fee. A
+**card** through Paddle, for anybody outside Vietnam. Paddle alone was the
+first answer, and its fee is why there is a second — about $0.50 a transaction
+plus 5%. Lemon Squeezy was tried before Paddle and replaced before anything was
+sold. A buy button asks main (`buyCredits`), which asks the server for the page
+— `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
+shown is re-read when the window takes focus back from that tab.
 
-**`freeAiEnv` still pins every model to Haiku**, so a Plus or Pro plan the
-server would honour cannot reach Sonnet or Opus from the studio until the app
-pins per plan. The id stays `FREE_PROFILE_ID` (`vsclaude-free`) and the
-directory `claude-free`, because both are already on users' disks; only the
-words moved.
+**Used and left, in numbers.** The dialog's strip shows the credits as used
+and left — a balance alone does not say whether a pack lasted a week or an afternoon. The
+server counts `used` as it charges (`chargeCredits`); an account from before
+the count starts at 0. The account menu's `Buy credits` carries the balance.
+
+**An arrival is announced.** Credits landing silently looked like money gone
+nowhere: the payment is made in a browser or on a phone, and the balance only
+changed the next time somebody opened the dialog. So once a checkout opens, the
+window that opened it re-asks every five seconds for half an hour, and a balance
+going up (`creditsArrived`, tested) opens a dialog of its own — a coin dropping
+in, the amount counting up, the new balance — plus a system notification when
+the window is not focused. Only that window: every window re-reads on focus, and
+one purchase celebrated twice is one too many.
+
+The id stays `FREE_PROFILE_ID`
+(`vsclaude-free`) and the directory `claude-free`, because both are already on
+users' disks.
+
+### Plans, removed
+
+The free AI was sold as **plans** for a day: `Hobby` free, and `Starter`,
+`Plus` (Sonnet) and `Pro` (Opus) monthly above it — a card subscription renewed
+by Paddle and changed in its portal (`Manage plan`), or 1, 3 or 12 months paid
+up front by transfer, carried over by value on a switch — with credits as a
+top-up beside them. The account menu offered `Upgrade plan` beside `Buy
+credits`, the composer an `Upgrade for Sonnet and Opus` line, and a plan badge
+said which one somebody was on.
+
+They are withdrawn for credits alone. A plan was two things — a bigger day and
+a door to Sonnet and Opus — and credits already priced every model at its own
+cost, so the plan was a second way of paying for the same tokens, with a
+subscription, a portal, prepaid days and a one-plan-at-a-time rule between two
+payment providers to keep straight. Deleted: the plans table and `planName`,
+the plan badge, the dialog's Plans tab and month picker, `managePlan` and its
+channel, the server's plan budgets, `planOf`, subscriptions, prepaid days and
+`POST /api/portal`. The free profile is called `Studio AI`, the name its row already had, rather
+than `Hobby`.
+
+What stays on the server's disk stays: an account's `subscription` and
+`prepaid` keys and the `sub:<id>` links are read by nothing, and an order for a
+plan, if paid now, grants nothing and is left for a human to refund.
 
 ## Plugins
 

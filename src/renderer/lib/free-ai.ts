@@ -6,7 +6,7 @@ import {
   type ClaudeAccount,
   type ClaudeProfile,
 } from "@shared/api"
-import { FREE_PROFILE_ID, forFreeAi } from "@shared/free-ai"
+import { FREE_PROFILE_ID } from "@shared/free-ai"
 
 /**
  * Whether the free AI can be offered in this window — see `shared/free-ai.ts`.
@@ -71,5 +71,11 @@ export function newChatOptions(input: {
   const signedOut =
     input.login !== undefined && input.login.state !== "signedIn"
   if (!input.ready || !signedOut || input.profiles.length > 0) return undefined
-  return forFreeAi({ ...DEFAULT_CHAT_OPTIONS, profileId: FREE_PROFILE_ID })
+  // Haiku to start with, the cheapest on credits; the picker
+  // offers every model the server runs.
+  return {
+    ...DEFAULT_CHAT_OPTIONS,
+    model: "haiku",
+    profileId: FREE_PROFILE_ID,
+  }
 }

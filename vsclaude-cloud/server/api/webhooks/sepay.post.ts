@@ -87,9 +87,6 @@ export default defineHandler(async (event) => {
     return DONE()
   }
   await saveAccount(order.uid, paid.account)
-  noteRequest(event, {
-    until: paid.kind === "plan" ? paid.until : undefined,
-    credits_added: paid.kind === "credits" ? paid.added : undefined,
-  })
+  noteRequest(event, { credits_added: paid.added })
   return DONE()
 })

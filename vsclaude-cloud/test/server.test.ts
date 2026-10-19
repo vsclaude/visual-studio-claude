@@ -10,12 +10,7 @@ import {
   upstreamHeaders,
 } from "../server/utils/anthropic.ts"
 import { tokenOf, verifyIdToken } from "../server/utils/firebase.ts"
-import {
-  dayKey,
-  StreamUsage,
-  usageOf,
-  weighted,
-} from "../server/utils/usage.ts"
+import { StreamUsage, usageOf, weighted } from "../server/utils/usage.ts"
 
 /**
  * The parts of the server that decide who gets through and what they are
@@ -260,9 +255,5 @@ describe("usage", () => {
       cache_creation_input_tokens: 0,
       cache_read_input_tokens: 300,
     })
-  })
-
-  test("the day is UTC", () => {
-    expect(dayKey(new Date("2026-10-17T23:30:00-05:00"))).toBe("2026-10-18")
   })
 })

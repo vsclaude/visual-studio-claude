@@ -1,7 +1,8 @@
 import { defineHandler } from "nitro"
 
 import { getOrder } from "../../utils/accounts.ts"
-import { planItemOf, qrUrl } from "../../utils/sepay-billing.ts"
+import { CREDIT_PACKS, isCreditItem } from "../../utils/billing.ts"
+import { qrUrl } from "../../utils/sepay-billing.ts"
 import { sepayConfig } from "../../utils/sepay.ts"
 
 /**
@@ -13,16 +14,12 @@ import { sepayConfig } from "../../utils/sepay.ts"
  * In Vietnamese: it is the page for people paying from a Vietnamese bank.
  */
 
-const PLAN_NAMES: Record<string, string> = {
-  starter: "Starter",
-  plus: "Plus",
-  pro: "Pro",
-}
-
 function itemName(item: string): string {
-  const plan = planItemOf(item)
-  if (plan) return `Gói ${PLAN_NAMES[plan.plan]} — ${plan.months} tháng`
-  return "Gói credits"
+  if (!isCreditItem(item)) return "Đơn hàng"
+  const credits = new Intl.NumberFormat("vi-VN").format(
+    CREDIT_PACKS[item].credits
+  )
+  return `Gói ${credits} credits`
 }
 
 const escape = (text: string) =>
@@ -85,7 +82,7 @@ export default defineHandler(async (event) => {
         try {
           const answer = await (await fetch("/api/orders/" + code)).json()
           if (answer.paid) {
-            status.textContent = "Đã nhận thanh toán. Quay lại Visual Studio Claude — gói của bạn đã được kích hoạt."
+            status.textContent = "Đã nhận thanh toán. Quay lại Visual Studio Claude — credits đã được cộng vào tài khoản."
             status.classList.add("done")
             return
           }

@@ -19,21 +19,14 @@ export default defineConfig({
     /** NITRO_FIREBASE_JWKS_URL — the keys ID tokens are checked against.
      * Empty is Google's own; set only for a test that signs its own tokens. */
     firebaseJwksUrl: "",
-    /** NITRO_ALLOWED_MODELS — comma-separated; the app's `FREE_AI_MODEL`. */
-    allowedModels: "claude-haiku-5-5",
-    /** NITRO_DAILY_BUDGET — per user per UTC day, in input-token equivalents
-     * (`server/utils/usage.ts`). 0 turns the budget off. */
-    dailyBudget: 2_000_000,
-    /** NITRO_STARTER_DAILY_BUDGET, _PLUS_, _PRO_ — the paid plans' days, in
-     * the same units. Sonnet and Opus spend them at 20× and 40× Haiku's rate
-     * (`usage.ts`), so a Pro day of Opus is a fortieth of these in tokens. */
-    starterDailyBudget: 10_000_000,
-    plusDailyBudget: 30_000_000,
-    proDailyBudget: 60_000_000,
+    /** NITRO_ALLOWED_MODELS — comma-separated; the app's `FREE_AI_MODELS`.
+     * Every one runs on credits, each at its own price
+     * (`server/utils/usage.ts`). */
+    allowedModels: "claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5",
     /** NITRO_PADDLE_ENVIRONMENT — `sandbox` or `production`. Two separate
      * Paddle accounts: every Paddle value below belongs to the one named here. */
     paddleEnvironment: "sandbox",
-    /** NITRO_PADDLE_API_KEY — creates checkouts and portal sessions. */
+    /** NITRO_PADDLE_API_KEY — creates checkouts. */
     paddleApiKey: "",
     /** NITRO_PADDLE_WEBHOOK_SECRET — the secret key of the notification
      * destination pointed at `/api/webhooks/paddle`. */
@@ -42,9 +35,6 @@ export default defineConfig({
     paddleClientToken: "",
     /** NITRO_PADDLE_PRICE_<ITEM> — each item's `pri_…` id. An empty one is
      * not on sale. */
-    paddlePriceStarter: "",
-    paddlePricePlus: "",
-    paddlePricePro: "",
     paddlePriceCredits20k: "",
     paddlePriceCredits60k: "",
     paddlePriceCredits100k: "",
@@ -70,16 +60,11 @@ export default defineConfig({
     maxPromptTokens: 100_000,
   },
 
-  /*
-   * Each user's daily spend. A directory on the server's own disk, which is
-   * right for one instance; more than one instance needs a shared driver here
-   * (`redis`, say) or each would count its own share of a user's day.
-   */
   storage: {
-    quota: { driver: "fs", base: "./.data/quota" },
-    // What each user has paid for (`server/utils/accounts.ts`). Money, unlike
-    // the quota: it must survive a redeploy, so on a platform whose disk does
-    // not, this needs a persistent driver before payments are switched on.
+    // What each user has paid for (`server/utils/accounts.ts`). Money: it must
+    // survive a redeploy, so on a platform whose disk does not, this needs a
+    // persistent driver before payments are switched on — and more than one
+    // instance needs a shared one (`redis`, say).
     accounts: { driver: "fs", base: "./.data/accounts" },
   },
 })

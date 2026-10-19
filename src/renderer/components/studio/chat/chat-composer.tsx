@@ -29,7 +29,7 @@ import {
   SignalHigh,
   SignalLow,
   SignalMedium,
-  Sparkles,
+  Coins,
   Square,
   Star,
   TextSelect,
@@ -70,11 +70,11 @@ import { iconFor } from "@/lib/files/icons"
 import { useFiles } from "@/lib/files/store"
 import { useSettings } from "@/lib/settings"
 import { cn } from "@/lib/utils"
-import { FREE_PROFILE_ID, forFreeAi, isHaiku } from "@shared/free-ai"
+import { formatCredits } from "@shared/credits"
+import { FREE_PROFILE_ID } from "@shared/free-ai"
 import { accountLine, useClaudeProfiles } from "@/lib/chat/claude-profiles"
 import { useFreeAi } from "@/lib/free-ai"
-import { usePlansDialog } from "@/lib/plans"
-import { PlanBadge } from "../plans-dialog"
+import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import {
   defaultModelAlias,
   effortFor,
@@ -945,7 +945,7 @@ export function ChatComposer({
           {onOptions && (
             <>
               <ModelMenu
-                models={free ? models.filter(isHaiku) : models}
+                models={models}
                 model={options.model}
                 effort={options.effort}
                 onPick={(model, effort) =>
@@ -969,9 +969,7 @@ export function ChatComposer({
                 <ProfileMenu
                   profiles={profiles}
                   profileId={options.profileId ?? null}
-                  onPick={(profileId) =>
-                    onOptions(forFreeAi({ ...options, profileId }))
-                  }
+                  onPick={(profileId) => onOptions({ ...options, profileId })}
                 />
               )}
               <McpMenu
@@ -1449,6 +1447,10 @@ export function ProfileMenu({
   const checkUnknown = useClaudeProfiles((state) => state.checkUnknown)
   const freeReady = useFreeAi((state) => state.ready)
   const free = profileId === FREE_PROFILE_ID
+  const credits = useStudioAccount((state) => state.account?.credits)
+  // Every Studio AI request is paid for out of credits, so none left is said
+  // here, before a send the server would refuse.
+  const broke = freeReady && credits !== undefined && credits <= 0
 
   return (
     <DropdownMenu
@@ -1464,7 +1466,7 @@ export function ProfileMenu({
         render={
           <ToolbarButton
             icon={<KeyRound />}
-            label={free ? "Hobby" : (chosen?.name ?? "Account")}
+            label={free ? "Studio AI" : (chosen?.name ?? "Account")}
             title="Which CLAUDE_CONFIG_DIR this chat's turns run under"
             on={profileId !== null}
           />
@@ -1500,32 +1502,35 @@ export function ProfileMenu({
               {free && <CheckIcon className="size-3.5 text-foreground" />}
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="flex items-center gap-1.5 text-xs font-normal">
-                Studio AI
-                <PlanBadge />
-              </span>
+              <span className="truncate text-xs font-normal">Studio AI</span>
               <span
                 className={cn(
                   "truncate text-[0.625rem]",
-                  freeReady ? "text-muted-foreground" : "text-destructive"
+                  freeReady && !broke
+                    ? "text-muted-foreground"
+                    : "text-destructive"
                 )}
               >
-                {freeReady ? "Haiku, with your studio account" : "Signed out"}
+                {!freeReady
+                  ? "Signed out"
+                  : broke
+                    ? "No credits — buy some to use it"
+                    : credits !== undefined
+                      ? `Every model · ${formatCredits(credits)} credits left`
+                      : "Every model, paid with credits"}
               </span>
             </div>
           </DropdownMenuItem>
         )}
         {freeReady && (
           <DropdownMenuItem
-            onClick={() => usePlansDialog.getState().show()}
+            onClick={() => useCreditsDialog.getState().show()}
             className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
           >
             <div className="flex size-4 shrink-0 items-center justify-center">
-              <Sparkles className="size-3.5 text-violet-500" />
+              <Coins className="size-3.5 text-amber-500" />
             </div>
-            <span className="truncate text-xs font-medium text-violet-600 dark:text-violet-400">
-              Upgrade for Sonnet and Opus
-            </span>
+            <span className="truncate text-xs">Buy credits</span>
           </DropdownMenuItem>
         )}
         {profiles.length > 0 && <DropdownMenuSeparator />}

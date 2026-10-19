@@ -4,6 +4,17 @@ export default defineConfig({
   preset: "cloudflare_module",
   serverDir: "./server",
 
+  // The `accounts` mount below reads this namespace. Created with
+  // `wrangler kv namespace create ACCOUNTS`; the generated wrangler config is
+  // rewritten on every build, so the binding has to live here.
+  cloudflare: {
+    wrangler: {
+      kv_namespaces: [
+        { binding: "ACCOUNTS", id: "7ee39cd4bba7416f83d35d326d96c122" },
+      ],
+    },
+  },
+
   /*
    * Every key here is overridden by `NITRO_<UPPER_SNAKE>` in the environment —
    * `.env` in development, the platform's variables in production. Only the

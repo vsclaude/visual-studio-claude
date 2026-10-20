@@ -1,11 +1,5 @@
-import { useEffect, useState } from "react"
-import {
-  ChevronDown,
-  ExternalLink,
-  Plug,
-  RefreshCw,
-  Trash2,
-} from "lucide-react"
+import { useEffect, useState, type ReactNode } from "react"
+import { ExternalLink, Plug, RefreshCw, Search, Trash2 } from "lucide-react"
 
 import type { McpListing, McpServerInfo } from "@shared/api"
 import {
@@ -19,10 +13,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
@@ -47,11 +44,16 @@ import { ToolbarButton } from "./chat-composer"
  * `/mcp` in the CLI lists — and which of their tools **this chat** may call.
  *
  * It was Settings › MCP, with one list of switched-off tools for the whole
- * workspace. It is in the composer's toolbar now because the switches are the
- * chat's (`ChatOptions.disabledTools`): the chat reading a Figma file
+ * workspace, then a popover off a button in the composer's toolbar. The switches
+ * are the chat's (`ChatOptions.disabledTools`): the chat reading a Figma file
  * wants Figma, the one refactoring a module wants its forty tools out of the
- * prompt. The listing and **Remove** came with them rather than being left as a
- * Settings section of their own, so there is one place MCP is looked at.
+ * prompt. A popover was the wrong size for that — a connector's forty tools
+ * folded under a 26rem card nobody could read — and a button for something set
+ * once a chat sat beside the model and permission, which are reached for every
+ * few messages. So it is a dialog, opened from the composer's `+` menu, with the
+ * servers down the left and the chosen one's tools on the right, Settings'
+ * shape. The toolbar keeps a chip only while something is switched off, since
+ * that is a property of the next message worth seeing without opening anything.
  *
  * **The list is the CLI's; what a chat may call is this app's.** Which servers
  * exist belongs to the user's own `claude` — `~/.claude.json`, the repository's
@@ -77,30 +79,36 @@ import { ToolbarButton } from "./chat-composer"
  * this list has often just installed something. What was last answered stays
  * on screen while the next ask runs.
  */
-export function McpMenu({
+export function McpDialog({
+  open,
+  onOpenChange,
   folderId,
   disabled,
   onPick,
 }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   /** The chat's project, whose directory the CLI is asked in — an MCP config
    * is per directory, so a repository's own `.mcp.json` is in the answer. */
   folderId: string | null
   disabled: string[]
   onPick: (disabled: string[]) => void
 }) {
-  const [open, setOpen] = useState(false)
   const [listing, setListing] = useState<McpListing | null>(null)
   const [loading, setLoading] = useState(false)
   /**
-   * Bumped by opening the popover and by **Refresh**, which is the whole of
+   * Bumped by opening the dialog and by **Refresh**, which is the whole of
    * what either does to the listing.
    *
    * The ask lives in the effect and nowhere else, so there is one path to it —
    * and nothing calls `setState` in the effect's own body, which is a
    * cascading render the lint is right to refuse. `setLoading(true)` belongs to
-   * the click for the same reason.
+   * the event for the same reason.
    */
   const [asks, setAsks] = useState(0)
+  /** Which server's tools the right side shows, by name. Held as a name rather
+   * than an index so a re-ask that reorders the list keeps the same server. */
+  const [chosen, setChosen] = useState<string | null>(null)
   /** The server the confirmation is about, and what the CLI said if it
    * refused. Removal is not undoable, so nothing happens without the dialog. */
   const [pendingRemove, setPendingRemove] = useState<McpServerInfo | null>(null)
@@ -109,6 +117,15 @@ export function McpMenu({
   const ask = () => {
     setLoading(true)
     setAsks((count) => count + 1)
+  }
+
+  // Opening is the parent's state, so the ask is started off the change in it
+  // rather than off a click this component never sees. Adjusted during render,
+  // React's documented way, rather than in an effect that would set state.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) ask()
   }
 
   useEffect(() => {
@@ -132,11 +149,10 @@ export function McpMenu({
   }, [folderId, asks])
 
   const servers = orderedServers(listing?.servers ?? [])
-
-  // The button says how many entries are off rather than how many tools: it
-  // is drawn before anything has been asked, and an entry is what the chat's
-  // record holds — a server's prefix counts once, as the one switch it is.
-  const offEntries = disabled.length
+  // Falls back to the first row — which `orderedServers` makes the one in
+  // trouble, if any is — when nothing is chosen or the chosen one has gone.
+  const current =
+    servers.find((server) => server.name === chosen) ?? servers[0] ?? null
 
   const remove = (server: McpServerInfo) => {
     setRemoveError(null)
@@ -156,73 +172,73 @@ export function McpMenu({
 
   return (
     <>
-      <Popover
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next)
-          if (next) ask()
-        }}
-      >
-        <PopoverTrigger
-          render={
-            <ToolbarButton
-              icon={<Plug />}
-              label={offEntries > 0 ? `MCP · ${offEntries} off` : "MCP"}
-              title="MCP servers, and which of their tools this chat may call"
-              on={offEntries > 0}
-            />
-          }
-        />
-        <PopoverContent
-          align="start"
-          className="max-h-[min(70vh,36rem)] w-[26rem] gap-0 overflow-y-auto p-0"
-        >
-          <div className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-3">
-            <p className="flex-1 text-xs font-medium">MCP servers</p>
-            <IconButton
-              label="Refresh"
-              side="bottom"
-              disabled={loading}
-              onClick={ask}
-              className="size-6 shrink-0"
-            >
-              <RefreshCw
-                className={cn("size-3.5", loading && "animate-spin")}
-              />
-            </IconButton>
-          </div>
-
-          {loading && !listing ? (
-            <p className="p-3 text-xs text-muted-foreground">
-              Asking <code className="font-mono">claude</code> what it
-              has&hellip;
-            </p>
-          ) : listing?.error ? (
-            <p className="p-3 text-xs text-destructive">{listing.error}</p>
-          ) : servers.length === 0 ? (
-            <p className="p-3 text-xs text-muted-foreground">
-              No MCP servers here. Add one with{" "}
-              <code className="font-mono">claude mcp add</code>, or connect one
-              to your account on claude.ai.
-            </p>
-          ) : (
-            <div className="divide-y">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="grid h-[36rem] max-h-[85vh] w-full grid-cols-[15rem_1fr] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+          <nav
+            aria-label="MCP servers"
+            className="flex min-h-0 flex-col border-r bg-muted/30"
+          >
+            <div className="flex shrink-0 items-center gap-2 px-2 pt-2 pb-1">
+              <p className="flex-1 px-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+                Servers
+              </p>
+              <IconButton
+                label="Refresh"
+                side="bottom"
+                disabled={loading}
+                onClick={ask}
+                className="size-6 shrink-0"
+              >
+                <RefreshCw
+                  className={cn("size-3.5", loading && "animate-spin")}
+                />
+              </IconButton>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2 pt-0">
               {servers.map((server) => (
-                <ServerRow
+                <ServerItem
                   key={`${server.scope}/${server.name}`}
                   server={server}
+                  current={server === current}
                   disabled={disabled}
+                  onChoose={() => setChosen(server.name)}
                   onPick={onPick}
-                  onRemove={() => {
-                    setRemoveError(null)
-                    setPendingRemove(server)
-                  }}
                 />
               ))}
             </div>
-          )}
-        </PopoverContent>
-      </Popover>
+          </nav>
+
+          <div className="flex min-h-0 min-w-0 flex-col">
+            {loading && !listing ? (
+              <Blank title="MCP servers">
+                Asking <code className="font-mono">claude</code> what it
+                has&hellip;
+              </Blank>
+            ) : listing?.error ? (
+              <Blank title="MCP servers" tone="bad">
+                {listing.error}
+              </Blank>
+            ) : !current ? (
+              <Blank title="No MCP servers here">
+                Add one with <code className="font-mono">claude mcp add</code>,
+                or connect one to your account on claude.ai, then Refresh.
+              </Blank>
+            ) : (
+              <ServerDetail
+                // Keyed so the tool filter starts empty for each server.
+                key={`${current.scope}/${current.name}`}
+                server={current}
+                disabled={disabled}
+                onPick={onPick}
+                onRemove={() => {
+                  setRemoveError(null)
+                  setPendingRemove(current)
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={pendingRemove !== null}
@@ -273,14 +289,127 @@ export function McpMenu({
 }
 
 /**
- * One server: what it is, whether it works, and what it offers.
- *
- * The tools are behind a disclosure rather than listed outright — a connector
- * carries forty of them, and a list that has to be scrolled past to reach the
- * next server is a list nobody reads. Shut by default for the same reason, and
- * counted on the summary so the count is readable without opening anything.
+ * The composer's reminder that this chat has tools switched off — drawn only
+ * then, because a chip saying everything is on is a chip saying nothing. The
+ * count is of entries rather than tools: it is drawn before anything has been
+ * asked, and an entry is what the chat's record holds — a server's prefix
+ * counts once, as the one switch it is.
  */
-function ServerRow({
+export function McpChip({
+  disabled,
+  onClick,
+}: {
+  disabled: string[]
+  onClick: () => void
+}) {
+  if (disabled.length === 0) return null
+  return (
+    <ToolbarButton
+      icon={<Plug />}
+      label={`MCP · ${disabled.length} off`}
+      title="Some MCP tools are switched off in this chat"
+      on
+      onClick={onClick}
+    />
+  )
+}
+
+/** The right side before there is a server to show. */
+function Blank({
+  title,
+  tone,
+  children,
+}: {
+  title: string
+  tone?: "bad"
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      <Plug className="size-6 text-muted-foreground/60" />
+      <DialogTitle className="text-sm">{title}</DialogTitle>
+      <DialogDescription
+        className={cn(
+          "max-w-xs text-xs leading-relaxed",
+          tone === "bad" && "text-destructive"
+        )}
+      >
+        {children}
+      </DialogDescription>
+    </div>
+  )
+}
+
+/**
+ * One server in the left column. The switch sits beside the row's button
+ * rather than inside it — a control inside a button is a click that does two
+ * things — and turns the whole server off for this chat without opening it.
+ */
+function ServerItem({
+  server,
+  current,
+  disabled,
+  onChoose,
+  onPick,
+}: {
+  server: McpServerInfo
+  current: boolean
+  disabled: string[]
+  onChoose: () => void
+  onPick: (disabled: string[]) => void
+}) {
+  const { tone } = stateLabel(server.state)
+  const off = isServerOff(disabled, server.name)
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-md pr-1.5 transition-colors",
+        current ? "bg-accent" : "hover:bg-accent/50"
+      )}
+    >
+      <button
+        type="button"
+        aria-current={current ? "page" : undefined}
+        onClick={onChoose}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pl-2 text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          current ? "font-medium text-accent-foreground" : "text-foreground",
+          off && "text-muted-foreground"
+        )}
+      >
+        <span className="relative shrink-0 text-muted-foreground">
+          {serverMark(server.name, "size-4")}
+          <span
+            aria-hidden
+            className={cn(
+              "absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full ring-2 ring-background",
+              tone === "good" && "bg-emerald-500",
+              tone === "bad" && "bg-destructive",
+              tone === "waiting" && "bg-amber-500",
+              tone === "off" && "bg-muted-foreground/50"
+            )}
+          />
+        </span>
+        <span className="truncate">{server.name}</span>
+      </button>
+      <Switch
+        checked={!off}
+        aria-label={`Allow ${server.name} in this chat`}
+        onCheckedChange={(next) =>
+          onPick(withServerOff(disabled, server.name, !next))
+        }
+        className="shrink-0 scale-90"
+      />
+    </div>
+  )
+}
+
+/**
+ * The chosen server: what it is, whether it works, and every tool it offers,
+ * each with its own switch. A filter over the tools because a connector carries
+ * forty of them and the one somebody wants out is usually known by name.
+ */
+function ServerDetail({
   server,
   disabled,
   onPick,
@@ -291,171 +420,194 @@ function ServerRow({
   onPick: (disabled: string[]) => void
   onRemove: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
   const { label, tone } = stateLabel(server.state)
   const caption = serverCaption(server)
   const auth = signIn(server)
   const off = isServerOff(disabled, server.name)
   const offTools = offCount(disabled, server)
+  const tokens = serverPromptTokens(server)
+
+  const needle = query.trim().toLowerCase()
+  const tools = needle
+    ? server.tools.filter(
+        (tool) =>
+          tool.name.toLowerCase().includes(needle) ||
+          (tool.description ?? "").toLowerCase().includes(needle)
+      )
+    : server.tools
 
   return (
-    <div className="space-y-1.5 p-3">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 shrink-0 text-muted-foreground">
-          {serverMark(server.name, "size-4")}
-        </span>
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="flex items-center gap-2 text-xs leading-none font-medium">
-            <span className="truncate">{server.name}</span>
-            <StateBadge label={label} tone={tone} />
-          </p>
-          {caption && (
-            <p className="text-[0.65rem] text-muted-foreground">{caption}</p>
-          )}
-          {server.address && (
-            <p
-              title={server.address}
-              className="truncate font-mono text-[0.65rem] text-muted-foreground"
-            >
-              {server.address}
-            </p>
-          )}
-          {server.error && (
-            <p className="text-[0.7rem] leading-relaxed text-destructive">
-              {server.error}
-            </p>
-          )}
-          {/*
-            A plain anchor, which is all it takes: `main.ts` catches the
-            navigation in `will-navigate` and hands an `https:` URL to the
-            user's browser — a link opened in this window would leave the studio
-            with no chrome and no way back. The CLI case is a sentence rather
-            than a link on purpose; see `signIn`.
-          */}
-          {auth?.kind === "connector" && (
-            <a
-              href={auth.url}
-              className="inline-flex items-center gap-1 text-[0.7rem] font-medium text-primary underline-offset-2 hover:underline"
-            >
-              Authorize on claude.ai
-              <ExternalLink className="size-3" />
-            </a>
-          )}
-          {auth?.kind === "cli" && (
-            <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
-              Sign in with <code className="font-mono">/mcp</code> in a{" "}
-              <code className="font-mono">claude</code> session — the
-              dock&rsquo;s Terminal will do — then Refresh.
-            </p>
-          )}
+    <>
+      {/* `pr-12` clears the close button, which the dialog draws in the
+          corner over whatever is there. */}
+      <header className="shrink-0 space-y-2 border-b px-5 py-4 pr-12">
+        <div className="flex items-center gap-2.5">
+          <span className="shrink-0 text-muted-foreground">
+            {serverMark(server.name, "size-5")}
+          </span>
+          <DialogTitle className="truncate">{server.name}</DialogTitle>
+          <StateBadge label={label} tone={tone} />
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {isRemovable(server) && (
-            <IconButton
-              label={`Remove ${server.name}`}
-              className="size-6 hover:text-destructive"
-              onClick={onRemove}
-            >
-              <Trash2 className="size-3.5" />
-            </IconButton>
-          )}
-          {/*
-            The server's own switch, which writes one entry standing for every
-            tool on it — including one added to it later. Off is this chat's
-            refusal, not a change to the user's config: the server stays
-            installed and their terminal still has it, which is the whole
-            difference between this and the button beside it.
-          */}
-          <Switch
-            checked={!off}
-            aria-label={`Allow ${server.name} in this chat`}
-            onCheckedChange={(next) =>
-              onPick(withServerOff(disabled, server.name, !next))
-            }
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 pl-6">
-        {server.tools.length > 0 && (
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-            className="flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 text-[0.7rem] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
+        <DialogDescription className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          {caption && <span>{caption}</span>}
+          <span>
             {server.tools.length} {server.tools.length === 1 ? "tool" : "tools"}
-            <ChevronDown
-              className={cn(
-                "size-3 transition-transform",
-                open && "rotate-180"
-              )}
-            />
-          </button>
-        )}
-        {/* What the server costs a turn when it is on — the number that decides
-            whether the switch above is worth flipping. A floor (see
-            `serverPromptTokens`), and struck through while the server is off,
-            since an off server costs nothing. */}
-        {serverPromptTokens(server) > 0 && (
-          <span
-            title="Estimated from tool names and descriptions at ~4 characters per token. Parameter schemas are not in the listing, so the real figure is higher."
-            className={cn(
-              "text-[0.7rem] text-muted-foreground",
-              off && "line-through opacity-60"
-            )}
+            {offTools > 0 && (off ? " · all off" : ` · ${offTools} off`)}
+          </span>
+          {/* What the server costs a turn when it is on — the number that
+              decides whether its switch is worth flipping. A floor (see
+              `serverPromptTokens`), and struck through while the server is
+              off, since an off server costs nothing. */}
+          {tokens > 0 && (
+            <span
+              title="Estimated from tool names and descriptions at ~4 characters per token. Parameter schemas are not in the listing, so the real figure is higher."
+              className={cn(off && "line-through opacity-60")}
+            >
+              ≥ ~{compact(tokens)} tokens/turn
+            </span>
+          )}
+        </DialogDescription>
+        {server.address && (
+          <p
+            title={server.address}
+            className="truncate font-mono text-[0.7rem] text-muted-foreground"
           >
-            ≥ ~{compact(serverPromptTokens(server))} tokens/turn
-          </span>
+            {server.address}
+          </p>
         )}
-        {offTools > 0 && (
-          <span className="text-[0.7rem] text-muted-foreground">
-            {off ? "all off" : `${offTools} of ${server.tools.length} off`}
-          </span>
+        {server.error && (
+          <p className="text-xs leading-relaxed text-destructive">
+            {server.error}
+          </p>
         )}
-      </div>
+        {/*
+          A plain anchor, which is all it takes: `main.ts` catches the
+          navigation in `will-navigate` and hands an `https:` URL to the user's
+          browser — a link opened in this window would leave the studio with no
+          chrome and no way back. The CLI case is a sentence rather than a link
+          on purpose; see `signIn`.
+        */}
+        {auth?.kind === "connector" && (
+          <a
+            href={auth.url}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Authorize on claude.ai
+            <ExternalLink className="size-3" />
+          </a>
+        )}
+        {auth?.kind === "cli" && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Sign in with <code className="font-mono">/mcp</code> in a{" "}
+            <code className="font-mono">claude</code> session — the dock&rsquo;s
+            Terminal will do — then Refresh.
+          </p>
+        )}
+      </header>
 
-      {open && (
-        <ul className="space-y-1 border-t pt-1.5 pl-6">
-          {server.tools.map((tool) => (
-            <li key={tool.name} className="flex items-start gap-2 py-0.5">
-              <div
-                title={tool.description ?? undefined}
-                className="min-w-0 flex-1 truncate text-[0.7rem]"
-              >
-                <span className="font-mono">{tool.name}</span>
-                {tool.description && (
-                  // One line: a tool's own description is a paragraph in some
-                  // servers, and this list is being scanned rather than read.
-                  <span className="ml-2 text-muted-foreground">
-                    {tool.description.split("\n")[0]}
-                  </span>
-                )}
-              </div>
-              {/*
-                Disabled while the whole server is off, and drawn off with it:
-                turning one tool back on from there would mean expanding the
-                server's single entry into every other tool it stood for and
-                guessing which ones were meant to stay — see `withToolOff`.
-              */}
-              <Switch
-                checked={!isToolOff(disabled, server.name, tool.name)}
-                disabled={off}
-                aria-label={`Allow ${tool.name} in this chat`}
-                onCheckedChange={(next) =>
-                  onPick(withToolOff(disabled, server.name, tool.name, !next))
-                }
-                className="mt-0.5 shrink-0 scale-90"
+      {server.tools.length === 0 ? (
+        <p className="flex-1 p-5 text-xs text-muted-foreground">
+          This server offers no tools
+          {server.state === "connected" ? "." : " until it connects."}
+        </p>
+      ) : (
+        <>
+          {server.tools.length > 6 && (
+            <div className="relative shrink-0 border-b px-5 py-2">
+              <Search className="pointer-events-none absolute top-1/2 left-7.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={`Filter ${server.tools.length} tools…`}
+                aria-label="Filter tools"
+                className="h-7 pl-7 text-xs md:text-xs"
               />
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+          <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
+            {tools.map((tool) => {
+              const toolOff = isToolOff(disabled, server.name, tool.name)
+              return (
+                <li
+                  key={tool.name}
+                  className="flex items-start gap-3 px-5 py-2"
+                >
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p
+                      className={cn(
+                        "truncate font-mono text-xs",
+                        toolOff && "text-muted-foreground line-through"
+                      )}
+                    >
+                      {tool.name}
+                    </p>
+                    {tool.description && (
+                      // Two lines: a tool's own description is a paragraph in
+                      // some servers, and this list is scanned, not read. The
+                      // whole of it is the title.
+                      <p
+                        title={tool.description}
+                        className="line-clamp-2 text-[0.7rem] leading-relaxed text-muted-foreground"
+                      >
+                        {tool.description}
+                      </p>
+                    )}
+                  </div>
+                  {/*
+                    Disabled while the whole server is off, and drawn off with
+                    it: turning one tool back on from there would mean expanding
+                    the server's single entry into every other tool it stood for
+                    and guessing which ones were meant to stay — see
+                    `withToolOff`.
+                  */}
+                  <Switch
+                    checked={!toolOff}
+                    disabled={off}
+                    aria-label={`Allow ${tool.name} in this chat`}
+                    onCheckedChange={(next) =>
+                      onPick(
+                        withToolOff(disabled, server.name, tool.name, !next)
+                      )
+                    }
+                    className="mt-0.5 shrink-0 scale-90"
+                  />
+                </li>
+              )
+            })}
+            {tools.length === 0 && (
+              <li className="px-5 py-4 text-xs text-muted-foreground">
+                No tool matches &ldquo;{query.trim()}&rdquo;.
+              </li>
+            )}
+          </ul>
+        </>
       )}
-    </div>
+
+      {/*
+        At the foot, with the sentence saying how far it reaches, rather than a
+        bare bin beside the title: it was the one control in the header, a
+        hair from the dialog's close button, and the switches beside every row
+        are the gesture somebody almost always means instead.
+      */}
+      {isRemovable(server) && (
+        <footer className="flex shrink-0 items-center gap-3 border-t bg-muted/30 px-5 py-2.5">
+          <p className="min-w-0 flex-1 text-[0.7rem] leading-relaxed text-muted-foreground">
+            In your <span className="font-medium">{server.scope}</span>{" "}
+            <code className="font-mono">claude</code> config. Removing it takes
+            it out of every chat and your terminal.
+          </p>
+          <Button variant="destructive" size="sm" onClick={onRemove}>
+            <Trash2 />
+            Remove server
+          </Button>
+        </footer>
+      )}
+    </>
   )
 }
 
-/** How many of a server's tools are switched off, for the line by the fold. */
+/** How many of a server's tools are switched off, for the header's count. */
 function offCount(disabled: string[], server: McpServerInfo): number {
   if (isServerOff(disabled, server.name)) return server.tools.length
   return server.tools.filter((tool) =>

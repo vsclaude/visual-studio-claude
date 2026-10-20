@@ -1,7 +1,7 @@
 import type { McpServerInfo, McpServerState, McpToolInfo } from "@shared/api"
 
 /**
- * The composer's MCP menu (`chat-mcp.tsx`), minus the drawing.
+ * The composer's MCP dialog (`chat-mcp.tsx`), minus the drawing.
  *
  * Split out for the reason the other `lib/chat` halves are: what order
  * the rows go in and what each state is *called* are the two things worth being

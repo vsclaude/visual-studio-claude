@@ -24,6 +24,7 @@ import {
   MessageCircleQuestion,
   Paperclip,
   PencilLine,
+  Plug,
   Plus,
   ShieldOff,
   Signal,
@@ -127,7 +128,7 @@ import {
 } from "@/lib/chat/mention-text"
 import { IconButton } from "../icon-button"
 import { ImageThumb } from "./chat-images"
-import { McpMenu } from "./chat-mcp"
+import { McpChip, McpDialog } from "./chat-mcp"
 import { PlanUsageMeter } from "./chat-plan-usage"
 import { CreditsBadge } from "../credits-badge"
 import { CreditsMeter } from "./chat-credits-meter"
@@ -361,6 +362,7 @@ export function ChatComposer({
    * one out, and `attachedIn` is where that is read.
    */
   const [images, setImages] = useState(initialImages)
+  const [mcpOpen, setMcpOpen] = useState(false)
   /**
    * The one menu, in whichever of its two kinds is open.
    *
@@ -979,7 +981,13 @@ export function ChatComposer({
                   onPick={(profileId) => onOptions({ ...options, profileId })}
                 />
               )}
-              <McpMenu
+              <McpChip
+                disabled={options.disabledTools ?? []}
+                onClick={() => setMcpOpen(true)}
+              />
+              <McpDialog
+                open={mcpOpen}
+                onOpenChange={setMcpOpen}
                 folderId={folderId}
                 disabled={options.disabledTools ?? []}
                 onPick={(disabledTools) =>
@@ -1046,6 +1054,15 @@ export function ChatComposer({
                     /
                   </span>
                 </DropdownMenuItem>
+                {onOptions && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setMcpOpen(true)}>
+                      <Plug />
+                      MCP servers…
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

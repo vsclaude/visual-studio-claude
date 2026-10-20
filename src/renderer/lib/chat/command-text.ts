@@ -136,7 +136,7 @@ export function localCommand(
  *   Desktop of a process that is not this one.
  * - **Controls this composer already has**, and would then have twice: `/model`,
  *   `/effort` and `/fast` are the toolbar's model menu, and a session's model is
- *   moved by `setModel` here rather than by a message. `/mcp` is the toolbar's MCP menu.
+ *   moved by `setModel` here rather than by a message. `/mcp` is the composer's MCP dialog.
  * - **Sessions this app has no notion of**: the CLI's `__`-prefixed internals
  *   and its server-launched workflow handoffs, which are for a session started
  *   by something other than a person typing.

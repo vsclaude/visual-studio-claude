@@ -85,8 +85,13 @@ export function refsOf(payload: unknown): {
 /** What a webhook did, for the log line and for a test to check. */
 export type Applied =
   | { kind: "ignored"; reason: string }
-  | { kind: "credits"; account: Account; added: number }
-  | { kind: "refund"; account: Account; removed: number }
+  | { kind: "credits"; transactionId: string; account: Account; added: number }
+  | {
+      kind: "refund"
+      transactionId: string
+      account: Account
+      removed: number
+    }
 
 type Item = { price?: { id?: unknown }; quantity?: unknown }
 
@@ -129,6 +134,7 @@ export function applyWebhook(
     }
     return {
       kind: "credits",
+      transactionId: id,
       added,
       account: {
         ...account,
@@ -153,6 +159,7 @@ export function applyWebhook(
     const removed = Math.min(account.credits, order.credits)
     return {
       kind: "refund",
+      transactionId: order.id,
       removed,
       account: {
         ...account,

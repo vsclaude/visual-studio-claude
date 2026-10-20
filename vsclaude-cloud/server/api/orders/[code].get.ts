@@ -20,6 +20,6 @@ export default defineHandler(async (event) => {
     paid: order.paidBy !== null,
     // A transfer that carried the code but not enough — the page says so
     // rather than waiting forever.
-    short: order.short.reduce((sum, transfer) => sum + transfer.amount, 0),
+    short: order.short,
   }
 })

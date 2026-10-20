@@ -112,10 +112,15 @@ What credits pay for:
   known yet is answered **503**, so Paddle retries it. `subscription.*` events
   are answered 200 and ignored.
 - Stored in the D1 database `vsclaude` (binding `DB`, `server/utils/database.ts`):
-  one row per account, with `credits` and `used` as columns. A balance changes
-  in a single statement, so two requests cannot both spend the same credits.
-  Locally, Miniflare keeps the database under `.wrangler/`. A database made
-  before the move to D1 is not copied over: its balances must be moved by hand.
+  `users` (the balance, one row per buyer) and `transactions` (one row per
+  purchase, `provider` = `paddle` or `sepay`, `status` = `pending` / `paid` /
+  `refunded`), plus `sign_ins` for a sign-in's answer waiting minutes to be
+  collected. No JSON in a cell. A balance only changes by a statement relative
+  to what it is, and a purchase leaves `pending` in the same D1 batch that adds
+  its credits, so neither a charge racing a payment nor a webhook delivered
+  twice can miscount. Locally,
+  Miniflare keeps the database under `.wrangler/`. Nothing earlier is carried
+  over: the first request drops the tables of the layout that kept JSON.
 
 Setting up SePay:
 

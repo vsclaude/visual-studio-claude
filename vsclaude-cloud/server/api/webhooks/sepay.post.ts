@@ -1,11 +1,10 @@
 import { defineHandler } from "nitro"
 
 import {
-  claimTransfer,
+  addShortfall,
   getAccount,
   getOrder,
-  saveAccount,
-  saveOrder,
+  payOrder,
 } from "../../utils/accounts.ts"
 import { noteRequest } from "../../utils/log.ts"
 import {
@@ -70,23 +69,21 @@ export default defineHandler(async (event) => {
     noteRequest(event, { ignored: "no such order" })
     return DONE()
   }
-  if (!(await claimTransfer(transfer.id))) {
-    noteRequest(event, { ignored: "transfer already applied" })
-    return DONE()
-  }
-
   const paid = applyTransfer(order, await getAccount(order.uid), transfer)
   noteRequest(event, { uid: order.uid, applied: paid.kind })
   if (paid.kind === "ignored") {
     noteRequest(event, { ignored: paid.reason })
     return DONE()
   }
-  await saveOrder(paid.order)
   if (paid.kind === "short") {
+    await addShortfall(order.code, {
+      id: transfer.id,
+      amount: transfer.transferAmount,
+    })
     noteRequest(event, { short_of: paid.order.amount })
     return DONE()
   }
-  await saveAccount(order.uid, paid.account)
+  await payOrder(order, transfer.id, paid.added)
   noteRequest(event, { credits_added: paid.added })
   return DONE()
 })

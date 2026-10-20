@@ -669,7 +669,7 @@ the browser's page went: through the same system proxy and VPN, to the same
 Cloudflare location. With Node's `fetch` it did not, and the answer arrived
 late, after the page had long said "You're signed in". The page
 runs Firebase's popup and posts the Google ID token to
-`POST /api/signin/<nonce>`; the server keeps it in D1 (`sign_in_answers`, five
+`POST /api/signin/<nonce>`; the server keeps it in D1 (`sign_ins`, five
 minutes at most) and hands it out once. The renderer exchanges it with
 Firebase (`signInWithCredential`) as before. The server's domain has to be on
 the Firebase project's **authorized domains** for the popup to open there;

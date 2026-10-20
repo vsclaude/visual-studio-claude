@@ -63,8 +63,8 @@ export function parseAnswer(body: string): Answer | null {
 }
 
 /**
- * Under `sign_in_answers` in the D1 database (`database.ts`): one row per
- * attempt, the answer as JSON, and when it stops being collectable.
+ * Under `sign_ins` in the D1 database (`database.ts`): one row per attempt,
+ * its ID token or its error, and when it stops being collectable.
  */
 
 /** Keeps the attempt's answer; false when it already has one, so a second
@@ -76,7 +76,10 @@ export async function saveAnswer(
 ): Promise<boolean> {
   const db = await database()
   const now = Date.now()
-  const { rows = [] } = await db.sql`INSERT INTO sign_in_answers (nonce, answer, expires_at) VALUES (${nonce}, ${JSON.stringify(answer)}, ${now + ANSWER_TTL_S * 1000}) ON CONFLICT (nonce) DO UPDATE SET answer = excluded.answer, expires_at = excluded.expires_at WHERE sign_in_answers.expires_at <= ${now} RETURNING nonce`
+  const idToken = "idToken" in answer ? answer.idToken : null
+  const error = "error" in answer ? answer.error : null
+  const { rows = [] } =
+    await db.sql`INSERT INTO sign_ins (nonce, id_token, error, expires_at) VALUES (${nonce}, ${idToken}, ${error}, ${now + ANSWER_TTL_S * 1000}) ON CONFLICT (nonce) DO UPDATE SET id_token = excluded.id_token, error = excluded.error, expires_at = excluded.expires_at WHERE sign_ins.expires_at <= ${now} RETURNING nonce`
   return rows.length === 1
 }
 
@@ -88,11 +91,13 @@ export async function saveAnswer(
  */
 export async function takeAnswer(nonce: string): Promise<Answer | null> {
   const db = await database()
-  const { rows = [] } = await db.sql`DELETE FROM sign_in_answers WHERE nonce = ${nonce} RETURNING answer, expires_at`
+  const { rows = [] } =
+    await db.sql`DELETE FROM sign_ins WHERE nonce = ${nonce} RETURNING id_token, error, expires_at`
   const row = rows[0]
   if (!row || Number(row.expires_at) <= Date.now()) return null
-  const value = JSON.parse(String(row.answer))
-  return value && typeof value === "object" ? value : null
+  if (typeof row.id_token === "string") return { idToken: row.id_token }
+  if (typeof row.error === "string") return { error: row.error }
+  return null
 }
 
 /**

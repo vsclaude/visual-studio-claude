@@ -31,7 +31,7 @@ function order(
     amount: 60_000,
     createdAt: NOW.toISOString(),
     paidBy: null,
-    short: [],
+    short: 0,
     ...fields,
   }
 }
@@ -126,7 +126,7 @@ describe("applyTransfer", () => {
     )
     expect(paid.kind).toBe("short")
     if (paid.kind !== "short") return
-    expect(paid.order.short).toEqual([{ id: 92704, amount: 50_000 }])
+    expect(paid.order.short).toBe(50_000)
     expect(paid.order.paidBy).toBeNull()
   })
 

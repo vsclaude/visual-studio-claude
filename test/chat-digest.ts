@@ -45,6 +45,7 @@ const usage = (tokens: {
     costUsd: null,
     context: null,
     durationMs: null,
+    credits: null,
   } satisfies TurnUsage,
 })
 

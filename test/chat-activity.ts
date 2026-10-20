@@ -696,6 +696,7 @@ section("background agents waking the turn")
         costUsd: cost,
         context,
         durationMs: 1000,
+        credits: null,
       },
     }) as AssistantMessage
   const first = spent(100, 0.5, 40_000)

@@ -77,6 +77,7 @@ const usage = (over: Partial<TurnUsage> = {}): TurnUsage => ({
   costUsd: null,
   context: null,
   durationMs: null,
+  credits: null,
   ...over,
 })
 
@@ -524,6 +525,68 @@ section("the model's name, and the numbers")
   check("and billions", compact(1_729_000_000) === "1.7B")
   check("a cent is two places", money(0.31) === "$0.31")
   check("under one is four", money(0.0049) === "$0.0049")
+}
+
+section("a turn paid in credits")
+{
+  const spent = {
+    "claude-sonnet-5-5": {
+      inputTokens: 1_000,
+      cacheReadInputTokens: 20_000,
+      outputTokens: 1_000,
+    },
+    "claude-haiku-5-5": { cacheReadInputTokens: 10_000, outputTokens: 100 },
+  }
+  const charged = usageOf(result(spent), null, null, null, true)
+  // Each model at its own price, as the server charges — the busiest's price
+  // over the whole turn would have been 20× too much for the Haiku half.
+  check(
+    "each model at its own price, added up",
+    charged.credits ===
+      (1_000 + 20_000 * 0.05 + 1_000 * 5) * 20 + (1_000 + 500),
+    charged
+  )
+  check(
+    "a turn on a login charges nothing",
+    usageOf(result(spent)).credits === null
+  )
+  check(
+    "a crashed turn on credits has no charge rather than a free one",
+    usageOf(result({}), null, null, null, true).credits === null
+  )
+
+  check(
+    "the row says what came off the balance",
+    usageLine(usage({ output: 38, credits: 139_000 })).endsWith(
+      "38 out · 139k credits"
+    ),
+    usageLine(usage({ output: 38, credits: 139_000 }))
+  )
+  check(
+    "and nothing of credits on a login's turn",
+    !usageLine(usage({ output: 38 })).includes("credits")
+  )
+  check(
+    "the hover has the full count",
+    usageDetail(usage({ credits: 139_000 })).includes(
+      "139,000 credits off the Studio AI balance"
+    )
+  )
+
+  const moved = totalOf([
+    line({ credits: null }),
+    line({ credits: 100 }),
+    line({ credits: 250 }),
+  ])
+  check(
+    "a chat that moved to credits totals the turns it paid for",
+    moved?.credits === 350,
+    moved
+  )
+  check(
+    "and one that never did says nothing",
+    totalOf([line({}), line({})])?.credits === null
+  )
 }
 
 finish()

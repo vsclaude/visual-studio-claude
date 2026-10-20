@@ -16,6 +16,7 @@ import type {
   ChatWindowTone,
   TurnUsage,
 } from "../shared/api"
+import { creditsOf } from "../shared/credits"
 import { claudeBinary } from "./claude-bin"
 import { accountEnv } from "./free-ai"
 import { locate, spawnEnvironment } from "./shell-env"
@@ -170,6 +171,13 @@ export type AgentSessionOptions = {
    * the free AI's directory brings its server with it.
    */
   configDir?: string | null
+  /**
+   * Whether the turns are paid for in Studio AI credits — the free profile's
+   * directory — so the result line can say what each one cost
+   * (`TurnUsage.credits`). Decided by the caller, which knows the profile; here
+   * a `configDir` is only a path.
+   */
+  charged?: boolean
   /** Directories outside `cwd` the turn may read. */
   addDirs?: string[]
   appendSystemPrompt?: string
@@ -1003,7 +1011,13 @@ export async function startAgentSession(
 
         if (message.type === "result") {
           handlers.onUsage(
-            usageOf(message, previous, context, Date.now() - turnStartedAt)
+            usageOf(
+              message,
+              previous,
+              context,
+              Date.now() - turnStartedAt,
+              session.charged === true
+            )
           )
           previous = message
           context = null
@@ -1380,7 +1394,10 @@ export function usageOf(
   context?: number | null,
   /** How long the turn took, measured by the caller — see `durationMs` on
    * `TurnUsage` for why it is not read off the line. */
-  durationMs?: number | null
+  durationMs?: number | null,
+  /** Whether the turn was paid for in credits, and so gets a `credits` figure —
+   * see `AgentSessionOptions.charged`. */
+  charged = false
 ): TurnUsage {
   const before = previous?.modelUsage ?? {}
   const models = Object.entries(message.modelUsage ?? {}).map(([name, use]) => {
@@ -1421,6 +1438,13 @@ export function usageOf(
   )
 
   const cost = since(message.total_cost_usd, previous?.total_cost_usd)
+  // Per model and then summed, as the server charges each request: a turn on
+  // Sonnet whose subagent ran on Haiku is two prices, and the busiest model's
+  // alone would overstate it twentyfold. Null, not zero, for a turn that
+  // counted nothing — the same reason as `costUsd`.
+  const credits = charged
+    ? models.reduce((sum, [name, use]) => sum + creditsOf(use, name), 0)
+    : 0
   return {
     model: busiest?.[0] ?? null,
     ...total,
@@ -1430,6 +1454,7 @@ export function usageOf(
     costUsd: cost > 0 ? cost : null,
     context: context ?? null,
     durationMs: durationMs ?? null,
+    credits: credits > 0 ? credits : null,
   }
 }
 

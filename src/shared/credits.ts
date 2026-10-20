@@ -126,6 +126,44 @@ export function creditsLeft(account: StudioAccount): {
   return { share, low: share <= 0.1 }
 }
 
+/**
+ * What a turn's tokens come to in credits, the way the server charges them.
+ *
+ * A credit is one Haiku input token's worth: every kind of token is weighted
+ * by its price against that — cache writes 1.25×, output 5×, cache reads 0.1×
+ * on Haiku and 0.05× on Sonnet and Opus — and the whole is multiplied by the
+ * model's price against Haiku's, 20× for Sonnet and 40× for Opus. Anything
+ * not recognised is Opus, the dearest, as the server has it.
+ *
+ * **A copy of `weighted` in `vsclaude-cloud/server/utils/usage.ts`, kept in
+ * step by hand** — the two packages share no code, and a figure on the row
+ * that disagrees with what came off the balance is worse than no figure. Two
+ * ways it can still differ, both small: the server rounds up per request and
+ * this per turn, and Haiku's long-prompt price is charged per request where
+ * this sees only the turn's sum — a case the server refuses before it costs
+ * anything, so it is left out here rather than guessed at.
+ */
+export function creditsOf(
+  usage: {
+    input: number
+    cacheWrite: number
+    cacheRead: number
+    output: number
+  },
+  model: string
+): number {
+  const haiku = /haiku/i.test(model)
+  const factor = haiku ? 1 : /sonnet/i.test(model) ? 20 : 40
+  const cacheRead = haiku ? 0.1 : 0.05
+  return Math.ceil(
+    (usage.input +
+      usage.cacheWrite * 1.25 +
+      usage.cacheRead * cacheRead +
+      usage.output * 5) *
+      factor
+  )
+}
+
 /** `3.3M`, `250,000` — a balance as the dialogs write it. */
 export function formatCredits(credits: number): string {
   return credits >= 1_000_000

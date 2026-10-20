@@ -102,7 +102,7 @@ import { expandHome } from "./shell-env"
  * repository's own `.mcp.json`, enabled plugins, claude.ai connectors, all
  * merged the way running plain `claude` in this directory would. So a server
  * that works from the dock's Terminal works from a chat here, with nothing to
- * switch on for it — and the composer's MCP menu is a listing of what that
+ * switch on for it — and the composer's MCP dialog is a listing of what that
  * came to, with switches that only take things away.
  *
  * **What the chat's own toolbar decides** is on the record rather than here:
@@ -1440,6 +1440,9 @@ export class Chats {
         model: options.model,
         effort: options.effort,
         configDir,
+        // On Studio AI every turn comes off the credit balance, and its usage
+        // line says by how much — see `TurnUsage.credits`.
+        charged: options.profileId === FREE_PROFILE_ID,
         // The mode's own policy, applied in this process and read per call. What
         // goes to the CLI is identical for every mode, which is what keeps one
         // cached prefix serving all five — see `permits` in `claude-agent.ts`.

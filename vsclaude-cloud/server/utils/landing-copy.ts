@@ -222,6 +222,10 @@ const en: Copy = {
         a: "Haiku, Sonnet and Opus. Each spends credits at its own price — Sonnet 20× and Opus 40× Haiku — so a credit is worth the same money on every model.",
       },
       {
+        q: "How far does a pack go?",
+        a: "Every reply on credits ends with what it took off your balance, so you never have to guess. As a rough guide, one call to Sonnet with a mostly cached prompt is around 100–150k credits, and a Claude Code message makes a few of them. Haiku costs a twentieth of that and Opus twice as much.",
+      },
+      {
         q: "Where do my requests go?",
         a: "On credits, through this server to Anthropic, which is how they are charged; your sign-in token is never passed on. On your own accounts, straight from the app to Anthropic — this server is not involved.",
       },
@@ -372,6 +376,10 @@ const vi: Copy = {
       {
         q: "Tôi dùng được model nào?",
         a: "Haiku, Sonnet và Opus. Mỗi model trừ credit theo tỷ lệ riêng: Sonnet gấp 20 lần Haiku, Opus gấp 40 lần. Nhờ vậy, một credit luôn có cùng giá trị tiền trên mọi model.",
+      },
+      {
+        q: "Một gói dùng được bao lâu?",
+        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã trừ bao nhiêu, nên bạn không phải đoán. Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng 100–150 nghìn credit, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ tốn một phần hai mươi, Opus gấp đôi.",
       },
       {
         q: "Yêu cầu của tôi được gửi đi đâu?",

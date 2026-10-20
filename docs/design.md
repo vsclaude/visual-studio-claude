@@ -767,6 +767,21 @@ shown is re-read when the window takes focus back from that tab.
 and left — a balance alone does not say whether a pack lasted a week or an afternoon. The
 server counts `used` as it charges (`chargeCredits`); an account from before
 the count starts at 0. The account menu's `Buy credits` carries the balance.
+A streamed answer's charge is known only when its body ends, and on Cloudflare
+Workers the first version of that charged almost nothing: a day that had spent
+close to seven million credits read as a hundred and sixty thousand used, and
+the balance in D1 agreed. The route metered each chunk in a `pull` on its way
+to the client and charged when the pull saw the end — but the CLI's SDK closes
+the connection the moment it reads `message_stop`, a chunk before Anthropic's
+body is done, and on workerd a client that has gone is a request torn down:
+the pending read never resolved, `cancel` was never called, and a `waitUntil`
+added at that point changed nothing because nothing ran to call it. Under
+Node the pending read simply finished, which is why the file store never
+missed a turn. The body is now `tee`d — one branch to the client, the other
+read to its end for the usage by a task registered with `event.waitUntil`
+before the response goes out, which workerd keeps running after the client
+has gone. The count also restarted when sign-in moved from Firebase to Google,
+since the uid is the row's key and the old row was not carried over.
 
 **An arrival is announced.** Credits landing silently looked like money gone
 nowhere: the payment is made in a browser or on a phone, and the balance only

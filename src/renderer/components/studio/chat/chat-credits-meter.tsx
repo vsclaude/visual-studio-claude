@@ -16,9 +16,14 @@ import { CreditsBar } from "../credits-badge"
  * send it. A click is the way to more, rather than a popover of detail: there
  * is one number, and it is already on the button.
  *
- * Re-asked when a turn ends, the moment the number moved. Everything else —
- * sign-in, focus, a checkout landing — `watchStudioAccount` already covers.
+ * Re-asked when a turn ends, the moment the number moved — and once more a
+ * little later: the server charges the last call of a turn after its body has
+ * closed, which is also the moment the turn ends here, so the first ask can
+ * land before the write does and show the number from before it. Everything
+ * else — sign-in, focus, a checkout landing — `watchStudioAccount` covers.
  */
+const SETTLE_MS = 2_000
+
 export function CreditsMeter({ sending }: { sending: boolean }) {
   const ready = useFreeAi((state) => state.ready)
   const account = useStudioAccount((state) => state.account)
@@ -27,8 +32,13 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
 
   const wasSending = useRef(sending)
   useEffect(() => {
-    if (wasSending.current && !sending) void refresh()
+    let settled: ReturnType<typeof setTimeout> | undefined
+    if (wasSending.current && !sending) {
+      void refresh()
+      settled = setTimeout(() => void refresh(), SETTLE_MS)
+    }
     wasSending.current = sending
+    return () => clearTimeout(settled)
   }, [sending, refresh])
 
   if (!ready || !account) return null

@@ -50,11 +50,17 @@ export function MarkdownView({
   className,
   rawHtml = false,
   baseDir,
+  copyButtons = rawHtml,
 }: {
   source: string
   className?: string
   /** Whether the markup in this document is part of it. True for a file. */
   rawHtml?: boolean
+  /**
+   * A Copy on each fence, shown on hover. On by default for a file; a chat
+   * reply turns it on too, since a fence in an answer is what gets pasted.
+   */
+  copyButtons?: boolean
   /**
    * The directory of the file the document came from: a local picture —
    * `./logo.png` — resolves against it and is read in as a `data:` URL.
@@ -75,7 +81,7 @@ export function MarkdownView({
       try {
         node.replaceChildren(sanitizeHtml(markdownToHTML(source)))
         if (baseDir) resolveLocalImages(node, baseDir)
-        addCopyButtons(node)
+        if (copyButtons) addCopyButtons(node)
       } catch (error) {
         console.error("Could not render markdown", error)
         // The same fallback as `failed` below, put in place rather than flagged:
@@ -99,6 +105,7 @@ export function MarkdownView({
         if (!node) return
         node.replaceChildren(render(source))
         if (baseDir) resolveLocalImages(node, baseDir)
+        if (copyButtons) addCopyButtons(node)
         // A frame later, once the parser is in: the text is on screen plain
         // first and coloured when the grammar arrives, the way a file tab is.
         void highlightCodeBlocks(node, () => alive)
@@ -112,7 +119,7 @@ export function MarkdownView({
     return () => {
       alive = false
     }
-  }, [source, rawHtml, baseDir])
+  }, [source, rawHtml, baseDir, copyButtons])
 
   if (failed)
     return (
@@ -143,8 +150,9 @@ function iconSvg(paths: string): string {
 
 /**
  * A Copy button on every fence of a file — a README's `docker ps` is there to
- * be pasted into a shell. A file only: a chat reply has its one Copy on the
- * turn's cost line (`replyOf`), and a button per fence there would be a second.
+ * be pasted into a shell — and on every fence of a chat reply, where the one
+ * Copy on the turn's cost line (`replyOf`) copies the whole answer, not the
+ * command in it. Hidden until hover, so a reply with no fence draws nothing.
  *
  * Plain DOM, like the document it goes into, with lucide's two paths by hand
  * rather than a React root per fence. The `<pre>` is wrapped because it scrolls

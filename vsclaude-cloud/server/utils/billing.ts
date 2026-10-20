@@ -20,17 +20,27 @@ export type CreditItem = "credits-20k" | "credits-60k" | "credits-100k"
  * Credit packs: the price a transfer must reach, and what the pack adds in
  * `usage.ts`'s input-token equivalents. Keep in step with the app's `src/shared/credits.ts`, which
  * draws them: a dialog promising another price is a customer who paid what
- * they were shown and is told it was short. The smallest is 25.000 ₫ although
- * its id says 20k: Paddle will not charge less than 20.276 ₫, and one price on
- * both sides is one less thing for the dialog to explain.
+ * they were shown and is told it was short.
+ *
+ * The rate is 200,000 credits per 1,000 ₫, then a bonus on the bigger packs.
+ * A million credits is $0.10 of Anthropic's price (`usage.ts`), about
+ * 2,630 ₫ at 26,300 ₫/USD, so the small pack charges 1.9× that and the large
+ * 1.6× — enough for Paddle's 5% + $0.50 a transaction, VAT and the đồng
+ * drifting against the dollar, and still a price a developer who knows the
+ * API's can look at. The smallest is 50.000 ₫ and not less because the $0.50
+ * is fixed: on 25.000 ₫ it was 58% of the price. One table for both ways of
+ * paying — a VietQR transfer costs nothing per transaction, so it is simply
+ * the better side of the same margin rather than a second price list
+ * (`docs/design.md` § Credits). The ids carry the prices of an earlier table
+ * and are kept: `NITRO_PADDLE_PRICE_CREDITS*` is named after them.
  */
 export const CREDIT_PACKS: Record<
   CreditItem,
   { price: number; credits: number }
 > = {
-  "credits-20k": { price: 25_000, credits: 1_000_000 },
-  "credits-60k": { price: 60_000, credits: 3_300_000 },
-  "credits-100k": { price: 100_000, credits: 6_000_000 },
+  "credits-20k": { price: 50_000, credits: 10_000_000 },
+  "credits-60k": { price: 100_000, credits: 22_000_000 },
+  "credits-100k": { price: 200_000, credits: 48_000_000 },
 }
 
 export function isCreditItem(value: unknown): value is CreditItem {

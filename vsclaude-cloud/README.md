@@ -18,25 +18,26 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 
 ## Endpoints
 
-| Route                            | What                                                                       |
-| -------------------------------- | -------------------------------------------------------------------------- |
-| `GET /`                          | The home page, in English; `?lang=vi` for Vietnamese.                      |
-| `POST /v1/messages`              | Passed through, streamed; charged to the user's credits.                   |
-| `POST /v1/messages/count_tokens` | Passed through; not counted (free at Anthropic).                           |
-| `GET /v1/models`                 | The models served, in Anthropic's list shape.                              |
-| `GET /api/usage`                 | The user's credits: `{ models, credits, creditsUsed }`.                    |
-| `POST /api/orders`               | `{ item }` → `{ url }`: a bank-transfer order and its `/pay` page.         |
-| `GET /api/orders/<code>`         | Whether an order is paid, for `/pay` to poll. No token.                    |
-| `POST /api/webhooks/sepay`       | SePay's webhook; signed or keyed, no token.                                |
-| `GET /pay/<code>`                | The VietQR page a bank-transfer purchase opens.                            |
-| `POST /api/checkout`             | `{ item }` → `{ url }`: a Paddle checkout carrying the uid.                |
-| `POST /api/webhooks/paddle`      | Paddle's webhook; signed, no token.                                        |
-| `GET /checkout`                  | The page Paddle's default payment link points at: Paddle.js, nothing else. |
-| `HEAD/GET /api/hello`            | The reachability probe Claude Code sends to a custom base URL.             |
-| `GET /signin/<nonce>`            | The sign-in page the studio opens in the browser; links to Google.         |
-| `GET /signin/callback`           | Google's redirect: writes the user, keeps `{ token }` or `{ error }`.      |
-| `GET /api/signin/<nonce>`        | The studio collects that answer: `204` until there is one, then it once.   |
-| `POST /api/session`              | Session token as bearer → `{ token, expiresAt }`, an hour's access token.  |
+| Route                            | What                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /`                          | The home page, in English; `?lang=vi` for Vietnamese.                                            |
+| `POST /v1/messages`              | Passed through, streamed; charged to the user's credits.                                         |
+| `POST /v1/messages/count_tokens` | Passed through; not counted (free at Anthropic).                                                 |
+| `GET /v1/models`                 | The models served, in Anthropic's list shape.                                                    |
+| `GET /api/usage`                 | The user's credits: `{ models, credits, creditsUsed }`.                                          |
+| `POST /api/orders`               | `{ item }` → `{ url }`: a bank-transfer order and its `/pay` page.                               |
+| `GET /api/orders/<code>`         | Whether an order is paid, for `/pay` to poll. No token.                                          |
+| `POST /api/webhooks/sepay`       | SePay's webhook; signed or keyed, no token.                                                      |
+| `GET /pay/<code>`                | The VietQR page a bank-transfer purchase opens.                                                  |
+| `POST /api/checkout`             | `{ item }` → `{ url }`: a Paddle checkout carrying the uid.                                      |
+| `POST /api/webhooks/paddle`      | Paddle's webhook; signed, no token.                                                              |
+| `GET /checkout`                  | The page Paddle's default payment link points at: Paddle.js, and the credits card once it is in. |
+| `GET /api/checkout/<txn>`        | Whether a Paddle purchase is credited and how much it added, for `/checkout` to poll. No token.  |
+| `HEAD/GET /api/hello`            | The reachability probe Claude Code sends to a custom base URL.                                   |
+| `GET /signin/<nonce>`            | The sign-in page the studio opens in the browser; links to Google.                               |
+| `GET /signin/callback`           | Google's redirect: writes the user, keeps `{ token }` or `{ error }`.                            |
+| `GET /api/signin/<nonce>`        | The studio collects that answer: `204` until there is one, then it once.                         |
+| `POST /api/session`              | Session token as bearer → `{ token, expiresAt }`, an hour's access token.                        |
 
 Every route but `/api/hello`, the webhooks, `/checkout`, `/pay`, `/api/orders/<code>`, the sign-in routes and `/api/session` needs the access token, as `Authorization: Bearer …` or
 `x-api-key` (the CLI sends both). Errors are Anthropic's own shape, so the CLI

@@ -738,7 +738,27 @@ reads it.
 bank transfer** by VietQR, through SePay: no card and next to no fee. A
 **card** through Paddle, for anybody outside Vietnam. Paddle alone was the
 first answer, and its fee is why there is a second — about $0.50 a transaction
-plus 5%. Lemon Squeezy was tried before Paddle and replaced before anything was
+plus 5%.
+
+**What a pack costs.** A credit is a Haiku input token, so a million is $0.10
+of Anthropic's price on any model — about 2,630 ₫. The packs are 50.000,
+100.000 and 200.000 ₫ (the top-up denominations people already know) at
+200,000 credits per 1,000 ₫, with 10% and 20% more on the two bigger ones:
+10M, 22M and 48M. That is 1.9× down to 1.6× Anthropic's price. The first table
+was 25.000 / 60.000 / 100.000 ₫ for 1M / 3.3M / 6M, which was 9.5× down to
+6.3× — numbers put in to have numbers — and its bonus badges did not match its
+own figures (the 60k pack was +37% over the small one, badged +10%). The
+smallest pack moved up from 25.000 ₫ because Paddle's $0.50 is fixed and took
+58% of it; at 50.000 ₫ the card side keeps about 16% and the transfer side
+47%. **One table for both ways of paying**: a transfer-only bonus or a
+transfer-only small pack were both considered, and each is a second price for
+the dialog, the arrival card and the webhooks to keep straight, for a
+difference that is mostly that fixed $0.50 — so the transfer is simply the
+better side of one margin. SePay's own charge is monthly (a free tier of fifty
+transfers, then 99.000 ₫ for unlimited), not per transaction. The item ids
+still say `20k` / `60k` / `100k`: they are the names of the Paddle price
+variables, and renaming them is a configuration change on the server, left for
+when Paddle goes live. Lemon Squeezy was tried before Paddle and replaced before anything was
 sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
@@ -755,7 +775,12 @@ window that opened it re-asks every five seconds for half an hour, and a balance
 going up (`creditsArrived`, tested) opens a dialog of its own — a coin dropping
 in, the amount counting up, the new balance — plus a system notification when
 the window is not focused. Only that window: every window re-reads on focus, and
-one purchase celebrated twice is one too many.
+one purchase celebrated twice is one too many. The payment page celebrates it
+too: `/checkout` after Paddle's `checkout.completed` (it asks
+`/api/checkout/<txn>` until the webhook has credited it, and closes Paddle's
+overlay so the card is not hidden under it), and `/pay/<code>` when the transfer
+arrives (`/api/orders/<code>` says what the pack adds). That card is the same
+celebration in plain CSS and SVG (`vsclaude-cloud/server/utils/arrival-page.ts`).
 
 The id stays `FREE_PROFILE_ID`
 (`vsclaude-free`) and the directory `claude-free`, because both are already on

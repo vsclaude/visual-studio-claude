@@ -38,24 +38,27 @@ export type CreditPack = {
  * Credits, which every Studio AI request is paid for out of, on any model —
  * they do not expire.
  *
- * The smallest pack is 25.000 ₫ although its id says 20k: Paddle will not
- * charge less than 20.276 ₫, and the id is the server's item name
+ * 200,000 credits per 1,000 ₫, plus the bonus the bigger packs are badged
+ * with: 100.000 ₫ is 20M and 10% more, 200.000 ₫ is 40M and 20% more, so the
+ * badge and the number say the same thing. Why that rate, and why nothing
+ * under 50.000 ₫, is the server's `billing.ts`. The ids name an earlier
+ * table's prices and stay: they are the server's item names
  * (`NITRO_PADDLE_PRICE_CREDITS20K`), which renaming would break. The same
  * price by bank transfer, so the pack has one price whichever way it is paid.
  */
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "credits-20k", price: 25_000, credits: 1_000_000 },
+  { id: "credits-20k", price: 50_000, credits: 10_000_000 },
   {
     id: "credits-60k",
-    price: 60_000,
-    credits: 3_300_000,
+    price: 100_000,
+    credits: 22_000_000,
     bonus: 10,
     popular: true,
   },
   {
     id: "credits-100k",
-    price: 100_000,
-    credits: 6_000_000,
+    price: 200_000,
+    credits: 48_000_000,
     bonus: 20,
   },
 ]
@@ -65,7 +68,7 @@ const VND = new Intl.NumberFormat("vi-VN", {
   currency: "VND",
 })
 
-/** A price as the checkout will show it — `25.000 ₫`. */
+/** A price as the checkout will show it — `50.000 ₫`. */
 export function formatPrice(price: number): string {
   return VND.format(price)
 }

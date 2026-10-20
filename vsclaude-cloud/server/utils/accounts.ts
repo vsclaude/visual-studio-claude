@@ -110,6 +110,19 @@ export async function creditPaddleTransaction(
   )
 }
 
+/** Whether a Paddle purchase is credited yet, and how much it added — what the
+ * `/checkout` page waits on. Null until the webhook has carried its uid. */
+export async function paddlePurchase(
+  id: string
+): Promise<{ paid: boolean; credits: number } | null> {
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT status, credits FROM transactions WHERE provider = 'paddle' AND id = ${id}`
+  const row = rows[0]
+  if (!row) return null
+  return { paid: row.status === "paid", credits: Number(row.credits) || 0 }
+}
+
 /** Takes a refunded Paddle purchase's credits back, as far as they have not
  * been spent. */
 export async function refundPaddleTransaction(

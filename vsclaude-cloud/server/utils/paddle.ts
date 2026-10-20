@@ -33,8 +33,49 @@ export function paddleConfig() {
 }
 
 /** A call to Paddle's API, answered as its JSON — or null with the reason, for
- * the request's log line. */
+ * the request's log line. A `body` of `undefined` is a GET. */
 export async function paddleApi(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal
+): Promise<
+  { ok: true; data: Record<string, unknown> } | { ok: false; error: string }
+> {
+  return paddleCall(body === undefined ? "GET" : "POST", path, body, signal)
+}
+
+/**
+ * The Paddle customer for an email, made if Paddle has none. A transaction
+ * that names it is checked out with that email already filled in — the
+ * checkout does not ask for it again — and the uid rides on the customer as
+ * well, for whoever reads Paddle's side.
+ */
+export async function paddleCustomerOf(
+  email: string,
+  uid: string,
+  signal?: AbortSignal
+): Promise<string | null> {
+  // A list, not an object: `data` is the array of matches, newest first.
+  const found = await paddleCall(
+    "GET",
+    `/customers?email=${encodeURIComponent(email)}`,
+    undefined,
+    signal
+  )
+  const matches = found.ok
+    ? (found.data as unknown as Array<{ id?: unknown }>)
+    : []
+  if (typeof matches[0]?.id === "string") return matches[0].id
+  const made = await paddleApi(
+    "/customers",
+    { email, custom_data: { uid } },
+    signal
+  )
+  return made.ok && typeof made.data.id === "string" ? made.data.id : null
+}
+
+async function paddleCall(
+  method: "GET" | "POST",
   path: string,
   body: unknown,
   signal?: AbortSignal
@@ -45,12 +86,12 @@ export async function paddleApi(
   let response: Response
   try {
     response = await fetch(`${apiBase}${path}`, {
-      method: "POST",
+      method,
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     })
   } catch (error) {

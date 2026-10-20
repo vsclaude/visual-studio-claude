@@ -1,6 +1,7 @@
 import { defineHandler } from "nitro"
 
 import { getOrder } from "../../utils/accounts.ts"
+import { ARRIVAL_CSS, arrivalCard, arrivalScript } from "../../utils/arrival-page.ts"
 import { CREDIT_PACKS, isCreditItem } from "../../utils/billing.ts"
 import { qrUrl } from "../../utils/sepay-billing.ts"
 import { sepayConfig } from "../../utils/sepay.ts"
@@ -9,7 +10,8 @@ import { sepayConfig } from "../../utils/sepay.ts"
  * `GET /pay/<code>` — the page a bank-transfer purchase opens in the browser:
  * the VietQR to scan, and the account, amount and content written out for
  * somebody typing them in by hand. It asks `GET /api/orders/<code>` every few
- * seconds and says so once the transfer has arrived.
+ * seconds and says so once the transfer has arrived — with the card of credits
+ * it added, on this page.
  *
  * In Vietnamese: it is the page for people paying from a Vietnamese bank.
  */
@@ -74,16 +76,23 @@ export default defineHandler(async (event) => {
         ? "Đã nhận thanh toán. Bạn có thể đóng trang này."
         : "Đang chờ chuyển khoản…"
     }</p>
+    ${arrivalCard({
+      title: "Đã cộng credits",
+      note: "Credits không bao giờ hết hạn. Quay lại VS Claude để tiếp tục.",
+      button: "Đóng",
+    })}
     <p class="muted small">Nhớ giữ đúng nội dung <b>${escape(order.code)}</b> — đó là cách hệ thống biết khoản tiền này là của bạn.</p>
     <script>
       const code = ${JSON.stringify(order.code)}
       const status = document.getElementById("status")
+      ${arrivalScript("vi-VN")}
       const poll = async () => {
         try {
           const answer = await (await fetch("/api/orders/" + code)).json()
           if (answer.paid) {
             status.textContent = "Đã nhận thanh toán. Quay lại VS Claude — credits đã được cộng vào tài khoản."
             status.classList.add("done")
+            showArrival(answer.credits)
             return
           }
           if (answer.short > 0) {
@@ -119,7 +128,7 @@ function page(body: string): string {
     dd { margin: 0; word-break: break-all; }
     .code { color: #c4b5fd; letter-spacing: .05em; }
     .status { padding: .75rem; border-radius: 10px; background: #1c1c25; }
-    .status.done { background: #133222; color: #86efac; }
+    .status.done { background: #133222; color: #86efac; }${ARRIVAL_CSS}
   </style>
 </head>
 <body><main>${body}</main></body>

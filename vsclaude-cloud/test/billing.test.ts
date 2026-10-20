@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto"
 import { describe, expect, test } from "bun:test"
 
 import {
+  CREDIT_PACKS,
   isCreditItem,
   NO_ACCOUNT,
   type Account,
@@ -108,7 +109,7 @@ describe("items", () => {
 describe("credit packs", () => {
   test("a completed one-time transaction adds its credits once", () => {
     const once = accountAfter(transaction())
-    expect(once.credits).toBe(3_300_000)
+    expect(once.credits).toBe(CREDIT_PACKS["credits-60k"].credits)
     expect(applyWebhook(once, transaction(), catalog).kind).toBe("ignored")
   })
 
@@ -141,7 +142,7 @@ describe("credit packs", () => {
     const two = accountAfter(
       transaction({ items: [{ price: { id: "pri_c60" }, quantity: 2 }] })
     )
-    expect(two.credits).toBe(6_600_000)
+    expect(two.credits).toBe(2 * CREDIT_PACKS["credits-60k"].credits)
   })
 
   test("a price this server does not sell — a plan's — adds nothing", () => {

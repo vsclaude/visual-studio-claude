@@ -55,11 +55,13 @@ import {
   Pencil,
   RotateCw,
   Scissors,
+  SquareTerminal,
   Trash2,
 } from "lucide-react"
 
 import type { FileEntry, WorkspaceFolder } from "@shared/api"
 import { changeCount, useChanges, useWatchChanges } from "@/lib/files/changes"
+import { useShells } from "@/lib/shell/store"
 import { isDirty, useFiles, viewOf } from "@/lib/files/store"
 import {
   gitStateOf,
@@ -609,6 +611,21 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 <FolderPlus />
                 New folder…
               </ContextMenuItem>
+              {/* In the folder the tree is showing, so the shell's directory is
+                  inside a root main already knows; `openAt` only ever gets a
+                  path under it. */}
+              {folder && (
+                <ContextMenuItem
+                  onClick={() =>
+                    useShells
+                      .getState()
+                      .openAt(folder.id, menuTarget.entry.path)
+                  }
+                >
+                  <SquareTerminal />
+                  New terminal here
+                </ContextMenuItem>
+              )}
               {copied && (
                 <ContextMenuItem onClick={() => paste(menuTarget.entry.path)}>
                   <ClipboardPaste />

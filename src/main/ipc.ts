@@ -1560,9 +1560,22 @@ export function createIpc(host: Host): {
       folderId: string,
       cols: number,
       rows: number,
-      shellId?: string
+      shellId?: string,
+      dir?: string
     ) => {
-      const cwd = await store.resolveFolderDir(folderId)
+      const folderDir = await store.resolveFolderDir(folderId)
+      // A directory inside the folder, when the tree asked for one: the same
+      // containment as every read, and a file is refused rather than made the
+      // cwd of a shell that would start somewhere it cannot be in.
+      if (dir) {
+        if (
+          !files.insideAny([folderDir], dir) ||
+          !(await stat(dir).catch(() => null))?.isDirectory()
+        ) {
+          throw new Error(`${path.basename(dir)} is not a folder in this one.`)
+        }
+      }
+      const cwd = dir || folderDir
       // No command: an interactive shell, which is the only thing a pty is
       // started for now. The agent CLIs used to be started here too, with
       // their flags built alongside — what runs one is the agent SDK in

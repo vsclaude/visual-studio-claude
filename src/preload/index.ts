@@ -205,8 +205,8 @@ const api: DesktopApi = {
   writeNoteFile: (fileName, bytes) =>
     ipcRenderer.invoke(IPC.writeNoteFile, fileName, bytes),
 
-  terminalCreate: (folderId, cols, rows, shellId) =>
-    ipcRenderer.invoke(IPC.terminalCreate, folderId, cols, rows, shellId),
+  terminalCreate: (folderId, cols, rows, shellId, dir) =>
+    ipcRenderer.invoke(IPC.terminalCreate, folderId, cols, rows, shellId, dir),
   terminalShells: () => ipcRenderer.invoke(IPC.terminalShells),
   terminalWrite: (terminalId, data) =>
     ipcRenderer.invoke(IPC.terminalWrite, terminalId, data),

@@ -79,7 +79,7 @@ function ShellView({ shell }: { shell: Shell }) {
   // so writes go through a ref rather than state.
   const terminalId = useRef<string | null>(null)
 
-  const { id, folderId, shellId, command } = shell
+  const { id, folderId, shellId, dir, command } = shell
   // Until the first cwd lookup lands, the shell is where it started.
   const folderPath = useStudio(
     (state) => state.folders.find((folder) => folder.id === folderId)?.path
@@ -117,7 +117,8 @@ function ShellView({ shell }: { shell: Shell }) {
           folderId,
           terminal.cols,
           terminal.rows,
-          shellId ?? undefined
+          shellId ?? undefined,
+          dir ?? undefined
         )
         .then((created) => {
           // The pane unmounted while the shell was starting; it would otherwise
@@ -172,7 +173,7 @@ function ShellView({ shell }: { shell: Shell }) {
         if (current) void window.desktop.terminalKill(current)
       }
     },
-    [id, folderId, shellId, command, setExited, setCwd]
+    [id, folderId, shellId, dir, command, setExited, setCwd]
   )
 
   const onResize = useCallback((size: { cols: number; rows: number }) => {

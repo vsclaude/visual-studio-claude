@@ -471,8 +471,10 @@ even from inside a pty.
 Any number of shells per project, a tab each, named for the directory the shell
 is in now (asked of the kernel off the pty's pid, once output goes quiet after
 Enter). Clicking a project row points the dock at that project; the pty starts
-only when the tab is shown. Shells are not restored across a launch. ptys live
-in a detached per-machine daemon (`main/daemon.ts`).
+only when the tab is shown. A folder in the file tree has `New terminal here`,
+which opens the shell in that directory instead of the project's root (`dir` on
+`terminalCreate`, checked to be inside the folder). Shells are not restored
+across a launch. ptys live in a detached per-machine daemon (`main/daemon.ts`).
 
 A tab can be **renamed** — double-click it, or `Rename` in its right-click
 menu — and a typed name then wins over the cwd; emptying it hands the tab back.
@@ -523,8 +525,10 @@ click replaces; a double click or a keystroke keeps it. Only the tree previews.
 
 **`⌘P`** opens everything this window can open — files and chats. It only
 opens things; there is no commands half. Files come from an index walked the
-first time the palette opens (skipping `IGNORED_DIRECTORIES`, capped at 20,000),
-re-walked by Refresh or when a folder is added or removed, and cut to a
+every time the palette opens (skipping `IGNORED_DIRECTORIES`, capped at 20,000)
+— the list already held stays up until the walk lands, so a file created since
+the last open is found without Refresh. It is also re-walked by Refresh and when
+a folder is added or removed, and cut to a
 shortlist by a subsequence pass before cmdk ranks them.
 
 The walk also skips what the repository's `.gitignore` names. This reverses

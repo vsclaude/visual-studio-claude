@@ -2839,12 +2839,18 @@ export type DesktopApi = {
    * `shellId` is one of `terminalShells`' ids, by the same rule — the renderer
    * picks from main's list rather than naming a program; an id main does not
    * know, or none, is the default shell.
+   *
+   * `dir` opens the shell in a directory **inside** the folder instead of at
+   * its root — the file tree's `New terminal here`. It is a path, so it is
+   * checked the way every read is (`insideAny`) and must be a directory; a
+   * path outside the folder is refused rather than opened.
    */
   terminalCreate: (
     folderId: string,
     cols: number,
     rows: number,
-    shellId?: string
+    shellId?: string,
+    dir?: string
   ) => Promise<string>
   /** The shells installed on this machine, the default first. */
   terminalShells: () => Promise<TerminalShell[]>

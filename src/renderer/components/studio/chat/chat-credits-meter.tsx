@@ -19,10 +19,14 @@ import { CreditsBar } from "../credits-badge"
  * Re-asked when a turn ends, the moment the number moved — and once more a
  * little later: the server charges the last call of a turn after its body has
  * closed, which is also the moment the turn ends here, so the first ask can
- * land before the write does and show the number from before it. Everything
- * else — sign-in, focus, a checkout landing — `watchStudioAccount` covers.
+ * land before the write does and show the number from before it. Also re-asked
+ * every couple of seconds while the window is visible, so a balance moved by
+ * another window or a checkout paid on a phone shows almost at once. A hidden
+ * window skips it — focus re-asks when it comes back. Sign-in and focus are
+ * `watchStudioAccount`'s.
  */
 const SETTLE_MS = 2_000
+const POLL_MS = 2_000
 
 export function CreditsMeter({ sending }: { sending: boolean }) {
   const ready = useFreeAi((state) => state.ready)
@@ -40,6 +44,13 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
     wasSending.current = sending
     return () => clearTimeout(settled)
   }, [sending, refresh])
+
+  useEffect(() => {
+    const poll = setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, POLL_MS)
+    return () => clearInterval(poll)
+  }, [refresh])
 
   if (!ready || !account) return null
 

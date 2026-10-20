@@ -1,5 +1,6 @@
 import { create } from "zustand"
 
+import type { DraftedCommit } from "@shared/api"
 import { useSettings } from "../settings"
 import { useChanges } from "./changes"
 import type { FileRoot } from "./roots"
@@ -24,6 +25,12 @@ export type CommitBoxState = {
   error: string | null
   /** What the last commit was, until the next word is typed. */
   done: string | null
+  /**
+   * A drafted split into several commits, in order, each with its message
+   * open to edit. Null while there is one message, which is the box's usual
+   * shape; a plan of one is folded into `message` and is never held here.
+   */
+  plan: DraftedCommit[] | null
 }
 
 const EMPTY: CommitBoxState = {
@@ -32,11 +39,15 @@ const EMPTY: CommitBoxState = {
   drafting: false,
   error: null,
   done: null,
+  plan: null,
 }
 
 type CommitBoxes = {
   byRoot: Record<string, CommitBoxState>
   setMessage: (rootId: string, message: string) => void
+  setPlanMessage: (rootId: string, index: number, message: string) => void
+  /** A plan folded into the one message box, as its messages in order. */
+  mergePlan: (rootId: string) => void
   commit: (root: FileRoot) => Promise<void>
   draft: (root: FileRoot) => Promise<void>
   stopDraft: (root: FileRoot) => void
@@ -66,19 +77,51 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
       patch(rootId, { message, done: null })
     },
 
+    setPlanMessage(rootId, index, message) {
+      const plan = box(rootId).plan
+      if (!plan) return
+      patch(rootId, {
+        plan: plan.map((commit, at) =>
+          at === index ? { ...commit, message } : commit
+        ),
+        done: null,
+      })
+    },
+
+    mergePlan(rootId) {
+      const plan = box(rootId).plan
+      if (!plan) return
+      patch(rootId, {
+        plan: null,
+        message: plan.map((commit) => commit.message).join("\n\n"),
+      })
+    },
+
     async commit(root) {
-      const { message, committing, drafting } = box(root.id)
-      if (!message.trim() || committing) return
+      const { message, committing, drafting, plan } = box(root.id)
+      if (committing) return
+      const empty = plan
+        ? plan.some((commit) => !commit.message.trim())
+        : !message.trim()
+      if (empty) return
       // A draft still running is about what is being committed right now, and
       // would land over the message it was committed with.
       if (drafting) get().stopDraft(root)
       patch(root.id, { committing: true, error: null })
       try {
-        const written = await useChanges.getState().commit(root, message)
-        patch(root.id, {
-          message: "",
-          done: `${written.sha} · ${written.subject}`,
-        })
+        const done = plan
+          ? await useChanges
+              .getState()
+              .commitSeries(root, plan)
+              .then((made) => {
+                const last = made[made.length - 1]
+                return `${made.length} commits · ${last?.sha} · ${last?.subject}`
+              })
+          : await useChanges
+              .getState()
+              .commit(root, message)
+              .then((written) => `${written.sha} · ${written.subject}`)
+        patch(root.id, { message: "", plan: null, done })
       } catch (failed) {
         patch(root.id, {
           error: failed instanceof Error ? failed.message : String(failed),
@@ -115,9 +158,12 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
       // Replaced, not appended, and this is the one place the draft touches
       // something the user may have typed — which is why the button is theirs
       // to press and why what lands is editable rather than committed.
+      const [only] = answer.commits
+      const split = answer.commits.length > 1
       patch(root.id, {
         drafting: false,
-        message: answer.text.trim(),
+        message: split || !only ? "" : only.message,
+        plan: split ? answer.commits : null,
         done: null,
       })
     },

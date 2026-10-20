@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Claude } from "@/components/ui/svgs/claude"
 import { Textarea } from "@/components/ui/textarea"
+import type { DraftedCommit } from "@shared/api"
 import { useCommitBox, useCommitBoxes } from "@/lib/files/commit-box"
 import type { FileRoot } from "@/lib/files/roots"
 import { isStudioShortcut } from "@/lib/shortcuts"
@@ -34,39 +35,57 @@ import { isStudioShortcut } from "@/lib/shortcuts"
 export function CommitBox({ root }: { root: FileRoot }) {
   // In a store rather than `useState`: this box is unmounted by switching the
   // `Git` tab to `Commits`, and a draft or a typed message has to survive that.
-  const { message, committing, drafting, error, done } = useCommitBox(root.id)
+  const { message, committing, drafting, error, done, plan } = useCommitBox(
+    root.id
+  )
   const boxes = useCommitBoxes.getState()
   const commit = () => boxes.commit(root)
   const draft = () => boxes.draft(root)
   const stopDraft = () => boxes.stopDraft(root)
+  const onCommitKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // ⌘⏎ commits, which is the shortcut every message box in every forge and
+    // editor has. A bare Enter must not: a commit message has a body, and this
+    // is the field it is typed in. Lowercased, which is what `isStudioShortcut`
+    // compares against.
+    if (!isStudioShortcut(event.nativeEvent, "enter")) return
+    event.preventDefault()
+    void commit()
+  }
+  const empty = plan
+    ? plan.some((planned) => !planned.message.trim())
+    : !message.trim()
 
   return (
     <div className="flex flex-col gap-1.5 border-b border-border/60 px-3 py-2">
-      {/* `rounded-lg` is the textarea's own, which the ring inherits; the
-          border is the textarea's too, so the ring does not reach past it. */}
-      <div
-        className="border-run rounded-lg [--run-edge:0px]"
-        data-running={drafting || undefined}
-      >
-        <Textarea
-          value={message}
-          onChange={(event) => boxes.setMessage(root.id, event.target.value)}
-          onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
-            // ⌘⏎ commits, which is the shortcut every message box in every forge
-            // and editor has. A bare Enter must not: a commit message has a body,
-            // and this is the field it is typed in.
-            // Lowercased, which is what `isStudioShortcut` compares against.
-            if (!isStudioShortcut(event.nativeEvent, "enter")) return
-            event.preventDefault()
-            void commit()
-          }}
-          placeholder="Message (⌘⏎ to commit)"
-          // Two lines to start with, which is a subject and the blank line under
-          // it — the shape of the message this is for. It grows as one is typed.
-          rows={2}
-          className="min-h-14 resize-none text-xs"
+      {plan ? (
+        <DraftPlan
+          plan={plan}
+          onMessage={(index, text) =>
+            boxes.setPlanMessage(root.id, index, text)
+          }
+          onMerge={() => boxes.mergePlan(root.id)}
+          onCommitKey={onCommitKey}
         />
-      </div>
+      ) : (
+        /* `rounded-lg` is the textarea's own, which the ring inherits; the
+            border is the textarea's too, so the ring does not reach past it. */
+        <div
+          className="border-run rounded-lg [--run-edge:0px]"
+          data-running={drafting || undefined}
+        >
+          <Textarea
+            value={message}
+            onChange={(event) => boxes.setMessage(root.id, event.target.value)}
+            onKeyDown={onCommitKey}
+            placeholder="Message (⌘⏎ to commit)"
+            // Two lines to start with, which is a subject and the blank line
+            // under it — the shape of the message this is for. It grows as one
+            // is typed.
+            rows={2}
+            className="min-h-14 resize-none text-xs"
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5">
         <Button
@@ -107,14 +126,78 @@ export function CommitBox({ root }: { root: FileRoot }) {
 
         <Button
           size="sm"
-          disabled={committing || !message.trim()}
+          disabled={committing || empty}
           onClick={() => void commit()}
           className="h-6 px-2 text-[0.6875rem]"
         >
           {committing ? <Spinner className="size-3" /> : null}
-          Commit
+          {plan ? `Commit ${plan.length}` : "Commit"}
         </Button>
       </div>
+    </div>
+  )
+}
+
+/** The files a planned commit takes, as far as the box has room to say. */
+const SHOWN_FILES = 3
+
+/**
+ * A drafted split: one card per commit, in the order it would land, each with
+ * its files and its message open to edit. The files are read-only — moving one
+ * between commits is a re-draft, not a click, because the draft is the reading
+ * of the diff and a hand-built split would be a second reading nobody checked.
+ */
+function DraftPlan({
+  plan,
+  onMessage,
+  onMerge,
+  onCommitKey,
+}: {
+  plan: DraftedCommit[]
+  onMessage: (index: number, message: string) => void
+  onMerge: () => void
+  onCommitKey: (event: KeyboardEvent<HTMLTextAreaElement>) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-[0.6875rem] text-muted-foreground">
+        <span>{plan.length} commits, in this order</span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onMerge}
+          className="h-5 px-1.5 text-[0.6875rem]"
+          title="Put the messages in the one box, to commit as one"
+        >
+          Merge into one
+        </Button>
+      </div>
+      {plan.map((commit, index) => {
+        const shown = commit.files.slice(0, SHOWN_FILES)
+        const more = commit.files.length - shown.length
+        return (
+          <div
+            key={index}
+            className="flex flex-col gap-1 rounded-md border border-border/60 p-1.5"
+          >
+            <div
+              className="truncate text-[0.625rem] text-muted-foreground"
+              title={commit.files.join("\n")}
+            >
+              {index + 1}.{" "}
+              {shown.map((file) => file.split("/").pop()).join(", ")}
+              {more > 0 ? ` +${more} more` : ""}
+            </div>
+            <Textarea
+              value={commit.message}
+              onChange={(event) => onMessage(index, event.target.value)}
+              onKeyDown={onCommitKey}
+              rows={2}
+              className="min-h-12 resize-none text-xs"
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }

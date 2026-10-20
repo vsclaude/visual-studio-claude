@@ -81,6 +81,8 @@ const api: DesktopApi = {
   gitDiscardAll: (folderId) => ipcRenderer.invoke(IPC.gitDiscardAll, folderId),
   gitCommit: (folderId, message) =>
     ipcRenderer.invoke(IPC.gitCommit, folderId, message),
+  gitCommitSeries: (folderId, commits) =>
+    ipcRenderer.invoke(IPC.gitCommitSeries, folderId, commits),
   gitPush: (folderId) => ipcRenderer.invoke(IPC.gitPush, folderId),
   draftCommitMessage: (folderId, model, effort, profileId) =>
     ipcRenderer.invoke(

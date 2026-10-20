@@ -684,6 +684,20 @@ export type TurnUsage = {
    * from last week claiming its turns were instant.
    */
   durationMs: number | null
+  /**
+   * What the turn took off the Studio AI balance, in credits
+   * (`creditsOf` in `shared/credits.ts`), for a turn that ran on it.
+   *
+   * Written on the line rather than worked out when it is drawn, because the
+   * chat can move between a login and credits mid-conversation and the line has
+   * to keep saying what *that* turn was paid with. Counted per model before
+   * being added up, as the server charges: a Sonnet turn whose subagent ran on
+   * Haiku is two prices, not one.
+   *
+   * Null for a turn on the user's own `claude` — nothing was charged — and for
+   * every line written before this existed.
+   */
+  credits: number | null
 }
 
 /**
@@ -1930,7 +1944,14 @@ export type ChatSpend = {
  * the one answer nobody can act on. The error is whatever the CLI said, drawn
  * where the answer would have gone rather than written anywhere.
  */
-export type AgentTurnAnswer = { text: string } | { error: string }
+export type CommitDraftAnswer = { commits: DraftedCommit[] } | { error: string }
+
+/**
+ * One commit of a drafted plan: the staged files it takes and its message.
+ * Paths are repository-relative, `/`-separated, exactly as `git diff --cached
+ * --name-only` names them — see `readPlan` in `main/commit-plan.ts`.
+ */
+export type DraftedCommit = { message: string; files: string[] }
 
 /**
  * The language a fenced block carries when it holds a drawing.
@@ -2225,6 +2246,15 @@ export type DesktopApi = {
     message: string
   ) => Promise<{ sha: string; subject: string }>
   /**
+   * Several commits in order, each with its own files — see `commitSeries` in
+   * `main/git.ts`. Rejects on the first that git refuses, with how many were
+   * made before it.
+   */
+  gitCommitSeries: (
+    folderId: string,
+    commits: DraftedCommit[]
+  ) => Promise<{ sha: string; subject: string }[]>
+  /**
    * The checked-out branch pushed, in the background, without prompting —
    * `docs/design.md` § Commits. Answers rather than rejects, since `auth` is
    * not an error so much as a request for the terminal.
@@ -2243,7 +2273,7 @@ export type DesktopApi = {
     model: string | null,
     effort: ChatEffort | null,
     profileId: string | null
-  ) => Promise<AgentTurnAnswer>
+  ) => Promise<CommitDraftAnswer>
   /**
    * Stops the folder's running draft, if there is one. Its pending
    * `draftCommitMessage` answers with an error the box ignores, since the
@@ -2489,7 +2519,7 @@ export type DesktopApi = {
   planUsage: (profileId: string | null, fresh: boolean) => Promise<PlanUsage>
   /**
    * Removes one of those servers from the user's own `claude` config — the
-   * **Remove** button on a row in the composer's MCP menu.
+   * **Remove** button on a row in the composer's MCP dialog.
    *
    * Run as `claude mcp remove`, the CLI's own command, rather than by editing
    * `~/.claude.json` or a repository's `.mcp.json` from here: the config is the
@@ -2989,6 +3019,7 @@ export const IPC = {
   gitDiscard: "git:discard",
   gitDiscardAll: "git:discard-all",
   gitCommit: "git:commit",
+  gitCommitSeries: "git:commit-series",
   gitPush: "git:push",
   draftCommitMessage: "git:draft-message",
   cancelCommitDraft: "git:draft-cancel",

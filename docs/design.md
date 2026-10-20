@@ -783,6 +783,21 @@ before the response goes out, which workerd keeps running after the client
 has gone. The count also restarted when sign-in moved from Firebase to Google,
 since the uid is the row's key and the old row was not carried over.
 
+**A turn says what it cost in credits.** The usage line under a reply on
+Studio AI ends with the credits it took off the balance — `… · 38 out · 139k
+credits` — where a turn on a login ends without one. The dollar estimate stays
+off the row (§ above: it is the CLI's guess at a bill a subscription already
+covers); credits are the balance the user bought going down, in the unit the
+packs are sold in, which is the figure the meter beside the composer moves by.
+Worked out in main at the end of the turn (`creditsOf` in `shared/credits.ts`,
+a hand-kept copy of the server's `weighted`) and **written on the line**, so a
+chat that moved between a login and credits mid-conversation keeps saying what
+each turn was paid with; per model before summing, as the server charges, so a
+Sonnet turn whose subagent ran on Haiku is two prices and not the busiest one's
+over everything. The app's figure can differ from the balance by a handful of
+credits — the server rounds up per request and the app per turn — and leaves
+out Haiku's long-prompt price, which the server refuses before it is charged.
+
 **An arrival is announced.** Credits landing silently looked like money gone
 nowhere: the payment is made in a browser or on a phone, and the balance only
 changed the next time somebody opened the dialog. So once a checkout opens, the
@@ -955,10 +970,18 @@ server by name; an unlisted tool is still refused by `deciding`.
 
 ### Per chat, in the composer
 
-The composer's MCP menu (`chat/chat-mcp.tsx`) lists the servers, asked of
-the CLI in the project's directory (`mcpServerStatus()`, not cached, re-asked
-for up to 8 s while servers are pending — claude.ai connectors take ~4 s).
-Trouble sorts first; headers are never drawn.
+The composer's MCP dialog (`chat/chat-mcp.tsx`, `MCP servers…` in the `+`
+menu) lists the servers, asked of the CLI in the project's directory
+(`mcpServerStatus()`, not cached, re-asked for up to 8 s while servers are
+pending — claude.ai connectors take ~4 s). Trouble sorts first; headers are
+never drawn.
+
+It was a popover off a toolbar button, and that was wrong twice: a connector's
+forty tools folded into a 26rem card, and a control set once per chat sat
+beside the model and permission, which are reached for every few messages. It
+is Settings' shape now — servers down the left, the chosen one's tools on the
+right with a filter — and the toolbar keeps a `MCP · n off` chip only while
+something is switched off, since that is a property of the next message.
 
 - **Switches** are this app's refusal, per chat (`disabledTools`), sent as
   `disallowedTools` so the tools are **absent** from the prompt, not refused on
@@ -1087,7 +1110,27 @@ A message box above the piles while something is staged; `⌘⏎` commits with
 read-only one-turn `claude` (`draftCommitMessage`) for a message off the staged
 diff and the last ten subjects — a button pressed, its output text in a box
 somebody still has to commit, which is why it passes the rule against helper
-turns. A failed commit **rejects** and keeps the message. No amend, branch
+turns. A failed commit **rejects** and keeps the message.
+
+**A draft can propose more than one commit.** One staged change is sometimes
+two or three things, and a single message for them is the wrong answer. So the
+answer is JSON, `{"commits": [{"files", "message"}]}`, read against the staged
+paths by `readPlan` (`main/commit-plan.ts`, tested): a file the answer leaves
+out goes in the last commit, an unstaged path is ignored, at most five commits.
+Plain text that is not JSON is still one commit over everything, as before.
+One commit shows the usual box; several show a card each, in order, with the
+files named and the message open to edit. `Merge into one` puts the messages
+back in the box. The files are not movable between cards: a split is a reading
+of the diff, and a hand-built one would be a second reading nobody checked —
+press `Draft` again instead.
+
+`Commit N` is `gitCommitSeries` (`commitSeries` in `main/git.ts`, tested against
+a real repository). It **refuses** rather than guesses in two cases: a file
+staged since the draft (it would be left out silently), and a planned file that
+also has unstaged edits (staging it would take them too). Otherwise it unstages
+everything, then stages and commits each group in turn. A refused commit stops
+the series and says how many went in before it; the work it did not commit is
+still in the tree. No amend, branch
 or stash: the dock's shell is the git client. Push is the `Commits` view's
 button (§ Commits).
 

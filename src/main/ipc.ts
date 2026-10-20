@@ -26,6 +26,7 @@ import {
   type WorkspaceSearch,
   type ChatAnswer,
   type ChatOptions,
+  type DraftedCommit,
 } from "../shared/api"
 import { FREE_PROFILE_ID } from "../shared/free-ai"
 import type { PluginFile, PluginSource } from "../shared/plugins"
@@ -63,6 +64,7 @@ import {
   changes,
   log,
   commit,
+  commitSeries,
   commitFileDiff,
   commitFiles,
   currentBranch,
@@ -1086,6 +1088,18 @@ export function createIpc(host: Host): {
    */
   handle(IPC.gitCommit, async (_event, folderId: string, message: string) =>
     commit(await store.resolveFolderDir(folderId), message)
+  )
+
+  handle(
+    IPC.gitCommitSeries,
+    async (_event, folderId: string, commits: DraftedCommit[]) =>
+      commitSeries(
+        await store.resolveFolderDir(folderId),
+        (Array.isArray(commits) ? commits : []).map((commit) => ({
+          message: String(commit?.message ?? ""),
+          files: (Array.isArray(commit?.files) ? commit.files : []).map(String),
+        }))
+      )
   )
 
   /*

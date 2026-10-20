@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { create } from "zustand"
 
-import type { GitChange } from "@shared/api"
+import type { DraftedCommit, GitChange } from "@shared/api"
 import { useProjects } from "../projects"
 import { useStudio } from "../store"
 import { useGitStatus } from "./git-status"
@@ -103,6 +103,14 @@ type ChangesState = {
     root: FileRoot,
     message: string
   ) => Promise<{ sha: string; subject: string }>
+  /**
+   * A drafted plan, committed as several commits in order — the same rule as
+   * `commit`: rejects with git's words, and the staged paths are re-read after.
+   */
+  commitSeries: (
+    root: FileRoot,
+    commits: DraftedCommit[]
+  ) => Promise<{ sha: string; subject: string }[]>
 
   /** Opens the diff tab for a root and puts it on screen — a row in the
    * Explorer's `Changes` list. */
@@ -180,6 +188,15 @@ export const useChanges = create<ChangesState>((set, get) => ({
     const paths = (get().byRoot[root.id] ?? []).map((change) => change.path)
     await window.desktop.gitDiscardAll(root.folderId)
     await settle(root, paths)
+  },
+
+  async commitSeries(root, commits) {
+    const paths = (get().byRoot[root.id] ?? [])
+      .filter((change) => change.staged)
+      .map((change) => change.path)
+    const written = await window.desktop.gitCommitSeries(root.folderId, commits)
+    await settle(root, paths)
+    return written
   },
 
   async commit(root, message) {

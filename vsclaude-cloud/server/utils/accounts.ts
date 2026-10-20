@@ -1,44 +1,46 @@
-import { useStorage } from "nitro/storage"
-
 import { NO_ACCOUNT, type Account } from "./billing.ts"
+import { database } from "./database.ts"
 import type { Order } from "./sepay-billing.ts"
 
 /**
- * What people have paid for, under the `accounts` storage mount
- * (`nitro.config.ts`):
+ * What people have paid for, in the D1 database (`database.ts`):
  *
- * - `user:<uid>` — each user's `Account`.
- * - `txn:<id>` — Paddle's transactions back to the uid. A refund names only
+ * - `accounts` — each user's `Account`: `credits` and `used` as columns, the
+ *   Paddle transactions already credited as the `orders` JSON.
+ * - `transactions` — Paddle's transactions back to the uid. A refund names only
  *   its transaction, so the transaction that carried the uid is what links it
- *   to somebody. (`sub:<id>` keys are left from when plans were sold.)
- * - `order:<code>` — each bank-transfer purchase.
- * - `sepay:<id>` — each SePay transaction already applied. SePay retries a
- *   webhook up to seven times and a replay keeps the id, so this is what makes
- *   a transfer count once.
- * - `signin:<nonce>` — a Google sign-in's answer waiting for the studio to
+ *   to somebody. (`sub:<id>` rows are left from when plans were sold.)
+ * - `transfer_orders` — each bank-transfer purchase, as its `Order` JSON.
+ * - `sepay_transfers` — each SePay transaction already applied. SePay retries a
+ *   webhook up to seven times and a replay keeps the id, so the primary key is
+ *   what makes a transfer count once.
+ * - `sign_in_answers` — a Google sign-in's answer waiting for the studio to
  *   collect it, for minutes at most (`server/utils/signin.ts`).
  *
- * This is money somebody paid: the mount must outlive a
- * redeploy, and more than one instance needs a shared driver for it. Writes are
- * read-modify-write without a lock — a
- * payment landing in the same instant as a request's credit charge can lose
- * one of the two, which is a request's worth of credits.
+ * This is money somebody paid. A balance changes in one statement, so two
+ * requests charging the same account cannot read the same balance and each
+ * take it; a payment and a charge are the same kind of statement.
  */
 
-const storage = () => useStorage("accounts")
-
 export async function getAccount(uid: string): Promise<Account> {
-  const value = await storage().getItem<Account>(`user:${uid}`)
-  return value && typeof value === "object"
-    ? { ...NO_ACCOUNT, ...value }
-    : NO_ACCOUNT
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT credits, used, orders FROM accounts WHERE uid = ${uid}`
+  const row = rows[0]
+  if (!row) return NO_ACCOUNT
+  return {
+    credits: Number(row.credits),
+    used: Number(row.used),
+    orders: JSON.parse(String(row.orders)),
+  }
 }
 
 export async function saveAccount(
   uid: string,
   account: Account
 ): Promise<void> {
-  await storage().setItem(`user:${uid}`, account)
+  const db = await database()
+  await db.sql`INSERT INTO accounts (uid, credits, used, orders) VALUES (${uid}, ${account.credits}, ${account.used}, ${JSON.stringify(account.orders)}) ON CONFLICT (uid) DO UPDATE SET credits = excluded.credits, used = excluded.used, orders = excluded.orders`
 }
 
 /** Takes `amount` off the user's credits, never below zero, and counts what
@@ -48,37 +50,38 @@ export async function chargeCredits(
   amount: number
 ): Promise<void> {
   if (amount <= 0) return
-  const account = await getAccount(uid)
-  const taken = Math.min(amount, account.credits)
-  await saveAccount(uid, {
-    ...account,
-    credits: account.credits - taken,
-    used: account.used + taken,
-  })
+  const db = await database()
+  await db.sql`UPDATE accounts SET used = used + MIN(credits, ${amount}), credits = credits - MIN(credits, ${amount}) WHERE uid = ${uid}`
 }
 
 export async function linkToUser(id: string, uid: string): Promise<void> {
-  await storage().setItem(`txn:${id}`, uid)
+  const db = await database()
+  await db.sql`INSERT INTO transactions (id, uid) VALUES (${id}, ${uid}) ON CONFLICT (id) DO UPDATE SET uid = excluded.uid`
 }
 
 export async function userOf(id: string): Promise<string | null> {
-  const uid = await storage().getItem<string>(`txn:${id}`)
+  const db = await database()
+  const { rows = [] } = await db.sql`SELECT uid FROM transactions WHERE id = ${id}`
+  const uid = rows[0]?.uid
   return typeof uid === "string" && uid ? uid : null
 }
 
 export async function getOrder(code: string): Promise<Order | null> {
-  const value = await storage().getItem<Order>(`order:${code}`)
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT data FROM transfer_orders WHERE code = ${code}`
+  const value = rows[0] ? JSON.parse(String(rows[0].data)) : null
   return value && typeof value === "object" ? value : null
 }
 
 export async function saveOrder(order: Order): Promise<void> {
-  await storage().setItem(`order:${order.code}`, order)
+  const db = await database()
+  await db.sql`INSERT INTO transfer_orders (code, data) VALUES (${order.code}, ${JSON.stringify(order)}) ON CONFLICT (code) DO UPDATE SET data = excluded.data`
 }
 
 /** Marks a SePay transaction applied; false when it already was. */
 export async function claimTransfer(id: number): Promise<boolean> {
-  const key = `sepay:${id}`
-  if (await storage().hasItem(key)) return false
-  await storage().setItem(key, new Date().toISOString())
-  return true
+  const db = await database()
+  const { rows = [] } = await db.sql`INSERT INTO sepay_transfers (id, applied_at) VALUES (${id}, ${new Date().toISOString()}) ON CONFLICT (id) DO NOTHING RETURNING id`
+  return rows.length === 1
 }

@@ -1,6 +1,5 @@
-import { useStorage } from "nitro/storage"
-
 import { APP_MARK, APP_MARK_URL } from "./brand.ts"
+import { database } from "./database.ts"
 
 /**
  * Google sign-in for the studio, which cannot run Google's own flow.
@@ -38,7 +37,7 @@ export const MAX_ANSWER_BYTES = 16 * 1024
 /**
  * How long an answer waits to be collected — the studio's own timeout. The
  * studio asks every second or two, so in practice an answer is gone within
- * one; this bounds a token nobody came back for. KV's floor is 60.
+ * one; this bounds a token nobody came back for.
  */
 const ANSWER_TTL_S = 5 * 60
 
@@ -64,36 +63,36 @@ export function parseAnswer(body: string): Answer | null {
 }
 
 /**
- * Under the `accounts` mount, as `signin:<nonce>` — the one KV namespace this
- * server has. Short-lived and nobody's money, unlike the rest of it.
+ * Under `sign_in_answers` in the D1 database (`database.ts`): one row per
+ * attempt, the answer as JSON, and when it stops being collectable.
  */
-const storage = () => useStorage("accounts")
 
 /** Keeps the attempt's answer; false when it already has one, so a second
- * post to the same nonce cannot replace the first. */
+ * post to the same nonce cannot replace the first. A row past its time is
+ * nobody's answer any more, so it is replaced. */
 export async function saveAnswer(
   nonce: string,
   answer: Answer
 ): Promise<boolean> {
-  const key = `signin:${nonce}`
-  if (await storage().hasItem(key)) return false
-  await storage().setItem(key, answer, { ttl: ANSWER_TTL_S })
-  return true
+  const db = await database()
+  const now = Date.now()
+  const { rows = [] } = await db.sql`INSERT INTO sign_in_answers (nonce, answer, expires_at) VALUES (${nonce}, ${JSON.stringify(answer)}, ${now + ANSWER_TTL_S * 1000}) ON CONFLICT (nonce) DO UPDATE SET answer = excluded.answer, expires_at = excluded.expires_at WHERE sign_in_answers.expires_at <= ${now} RETURNING nonce`
+  return rows.length === 1
 }
 
 /**
  * The attempt's answer, removed as it is read, or null while there is none.
  *
- * KV is eventually consistent, so a read straight after the removal can still
- * see the answer at another edge. The studio stops asking at its first answer,
- * and the TTL is what finally bounds it.
+ * The delete and the read are one statement, so two collectors cannot both
+ * take the same answer.
  */
 export async function takeAnswer(nonce: string): Promise<Answer | null> {
-  const key = `signin:${nonce}`
-  const value = await storage().getItem<Answer>(key)
-  if (!value || typeof value !== "object") return null
-  await storage().removeItem(key)
-  return value
+  const db = await database()
+  const { rows = [] } = await db.sql`DELETE FROM sign_in_answers WHERE nonce = ${nonce} RETURNING answer, expires_at`
+  const row = rows[0]
+  if (!row || Number(row.expires_at) <= Date.now()) return null
+  const value = JSON.parse(String(row.answer))
+  return value && typeof value === "object" ? value : null
 }
 
 /**

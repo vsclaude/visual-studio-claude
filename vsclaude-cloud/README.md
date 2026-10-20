@@ -111,10 +111,11 @@ What credits pay for:
   uid for a refund, which does not carry it. A transaction whose user is not
   known yet is answered **503**, so Paddle retries it. `subscription.*` events
   are answered 200 and ignored.
-- Stored under the `accounts` mount (`./.data/accounts`). An account written
-  while plans were sold keeps its `subscription` and `prepaid` keys, and
-  nothing reads them. This is what people paid for: on a platform whose disk does not survive a deploy, give it a
-  persistent driver **before** taking a payment.
+- Stored in the D1 database `vsclaude` (binding `DB`, `server/utils/database.ts`):
+  one row per account, with `credits` and `used` as columns. A balance changes
+  in a single statement, so two requests cannot both spend the same credits.
+  Locally, Miniflare keeps the database under `.wrangler/`. A database made
+  before the move to D1 is not copied over: its balances must be moved by hand.
 
 Setting up SePay:
 

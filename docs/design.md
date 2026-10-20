@@ -669,7 +669,7 @@ the browser's page went: through the same system proxy and VPN, to the same
 Cloudflare location. With Node's `fetch` it did not, and the answer arrived
 late, after the page had long said "You're signed in". The page
 runs Firebase's popup and posts the Google ID token to
-`POST /api/signin/<nonce>`; the server keeps it in KV (`signin:<nonce>`, five
+`POST /api/signin/<nonce>`; the server keeps it in D1 (`sign_in_answers`, five
 minutes at most) and hands it out once. The renderer exchanges it with
 Firebase (`signInWithCredential`) as before. The server's domain has to be on
 the Firebase project's **authorized domains** for the popup to open there;
@@ -692,8 +692,8 @@ a word of it was a release. The cost is that the token now passes through the
 server for the second or so between the page's post and the studio's next ask,
 and that a build with no server cannot sign in at all — which, with sign-in
 being for the free AI and its credits, is a build with nothing to sign in for.
-KV is eventually consistent, so "once" means the studio stops asking at its
-first answer; the five-minute TTL is what bounds a token nobody collected.
+Taking the answer is one `DELETE ... RETURNING`, so two collectors cannot both
+get it; the five-minute expiry is what bounds a token nobody collected.
 
 ### Credits
 

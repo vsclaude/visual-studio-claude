@@ -5,7 +5,7 @@ import { isNonce, parseAnswer, signInPage } from "../server/utils/signin.ts"
 /**
  * The sign-in routes' own decisions: which paths are an attempt, which bodies
  * are an answer, and that the page posts where the routes listen. The storage
- * half is KV's.
+ * half is D1's.
  */
 
 describe("isNonce", () => {

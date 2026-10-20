@@ -6,19 +6,28 @@ import { useDatabase } from "nitro/database"
  * request asks for the database in an isolate; `IF NOT EXISTS` is what lets
  * every isolate run the same statements.
  *
- * Two tables hold the money, described where they are read (`accounts.ts`):
- * `users`, one row per buyer with the balance on it, and `transactions`, one
- * row per purchase from either provider. `sign_ins` is the third and is not
- * money: a sign-in's answer, kept for minutes before it has a user to belong
- * to (`signin.ts`). No JSON inside a cell — a payment is a statement about the
- * rows it changes rather than a whole record read, edited and written back.
+ * Two tables hold the users and the money, described where they are read
+ * (`accounts.ts`): `users`, one row per person who signed in, with who Google
+ * says they are and their balance, and `transactions`, one row per purchase
+ * from either provider. `sign_ins` is the third: a sign-in's answer, kept for
+ * minutes until the studio collects it (`signin.ts`). No JSON inside a cell —
+ * a payment is a statement about the rows it changes rather than a whole
+ * record read, edited and written back.
  */
 const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, credits INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, PRIMARY KEY (provider, id))`,
+  `CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, email TEXT, name TEXT, picture TEXT, signed_in_at TEXT, credits INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
-  `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, id_token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
 ]
+
+/** Columns added since a table was first made — added to one made before,
+ * which keeps its rows. `users` gained who somebody is when sign-in moved here
+ * from Firebase; `transactions` gained the currency a Paddle charge was in. */
+const ADDED_COLUMNS: Record<string, string[]> = {
+  users: ["email", "name", "picture", "signed_in_at"],
+  transactions: ["currency"],
+}
 
 /**
  * The first D1 layout's tables, which kept records as JSON. Nothing creates
@@ -59,12 +68,36 @@ export async function database(): Promise<Database> {
 
 async function createTables(db: Database): Promise<void> {
   for (const table of RETIRED) await db.exec(`DROP TABLE IF EXISTS ${table}`)
-  try {
-    await db.exec(`SELECT provider FROM transactions LIMIT 0`)
-  } catch {
+  if (!(await hasColumn(db, "transactions", "provider"))) {
     await db.exec(`DROP TABLE IF EXISTS transactions`)
   }
+  // It held a Google ID token for Firebase; what it holds now is this
+  // server's, and an answer minutes old is nobody's loss.
+  if (!(await hasColumn(db, "sign_ins", "token"))) {
+    await db.exec(`DROP TABLE IF EXISTS sign_ins`)
+  }
   for (const statement of SCHEMA) await db.exec(statement)
+  for (const [table, columns] of Object.entries(ADDED_COLUMNS)) {
+    for (const column of columns) {
+      if (!(await hasColumn(db, table, column))) {
+        await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
+      }
+    }
+  }
+}
+
+/** Whether the table has the column — false for no such table too. */
+async function hasColumn(
+  db: Database,
+  table: string,
+  column: string
+): Promise<boolean> {
+  try {
+    await db.exec(`SELECT ${column} FROM ${table} LIMIT 0`)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export type Statement = { sql: string; params: unknown[] }

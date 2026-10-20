@@ -5,8 +5,8 @@ import type { H3Event } from "nitro"
  * log search can filter on `uid=` or `status=429` without a log library.
  *
  * Never a token or a key, and the uid rather than the email: the uid is enough
- * to find somebody in the Firebase console, and the log is read by more people
- * than the user table is.
+ * to find somebody in `users`, and the log is read by more people than the
+ * user table is.
  */
 
 export type LogFields = Record<

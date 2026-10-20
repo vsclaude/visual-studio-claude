@@ -588,7 +588,7 @@ the CLI would create it. The composer's account menu shows each profile's email.
 
 ### The free AI
 
-Anybody signed in to the studio (Google, through Firebase) can chat on
+Anybody signed in to the studio (Google, through the server) can chat on
 **Haiku, Sonnet or Opus through this app's own server**, paid for with
 credits and with no Claude account of their own — the way in for somebody who has not got one. It is a row of the composer's
 account menu, `Studio AI`, and **not a profile**: Settings has nothing to rename or
@@ -604,23 +604,25 @@ whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
 loads, so it need not be typed in each shell's own syntax.
 
-**What the server is sent is the user's Firebase ID token**, as
+**What the server is sent is an access token of its own**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against Google's public keys), refuses any model outside `FREE_AI_MODELS`, and
+(against its own secret), refuses any model outside `FREE_AI_MODELS`, and
 forwards to Anthropic with a key of its own — so every request is this app's
 API spend, charged per uid to that user's credits by the server, and no user credential is ever
 forwarded.
 
-**The token is a file, read by an `apiKeyHelper`, not a variable.** An ID token
-lives an hour and a chat session can stay open all day; a token fixed into a
-process's env at spawn is a session that fails at minute sixty. So the free
-directory's own `settings.json` names an `apiKeyHelper` that prints
+**The token is a file, read by an `apiKeyHelper`, not a variable.** An access
+token lives an hour and a chat session can stay open all day; a token fixed
+into a process's env at spawn is a session that fails at minute sixty. So the
+free directory's own `settings.json` names an `apiKeyHelper` that prints
 `vsclaude-token` (`type` on Windows, where the CLI runs it through `cmd.exe` —
 measured; `cat` elsewhere), the CLI re-runs it every five minutes
-(`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), and the renderer hands main every token
-Firebase refreshes (`onIdTokenChanged` → `setFreeAiToken`). The file is `0600`
-and deleted on sign-out; it is not sealed by the keychain, because the CLI has
-to `cat` it and it is dead within the hour anyway.
+(`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), and main renews the file from the
+session the renderer hands it (`setFreeAiToken` → `POST /api/session`), ten
+minutes before each hour is up. The file is `0600` and deleted on sign-out; it
+is not sealed by the keychain, because the CLI has to `cat` it and it is dead
+within the hour anyway — which is why it holds the hour's token and never the
+ninety-day session.
 
 **Every model is offered, and every alias is pinned.** The free AI was Haiku
 alone once, pinned three times over (`forFreeAi` at send, a Haiku-only picker,
@@ -635,7 +637,7 @@ would be a request refused halfway through a turn.
 `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` go over as empty strings.
 A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
 key exported there would win over the helper and be sent to this app's server.
-Measured too: with one exported, the server saw the Firebase token alone.
+Measured too: with one exported, the server saw the studio's token alone.
 
 **No prompt goes past 100K tokens**, where every token of the request is
 charged at a higher rate. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
@@ -659,37 +661,49 @@ app's own, reached by whoever is signed in, is the thing it was a stand-in for.
 
 ### Signing in
 
-Google will not run its sign-in in an embedded browser, and Firebase's popup
-will not open on `app://studio`, which is not an authorized domain. So signing
-in happens in the user's own browser, on **the free AI's server**:
+Google will not run its sign-in in an embedded browser, and no OAuth client
+can name `app://studio` as a redirect. So signing in happens in the user's own
+browser, on **the free AI's server**:
 `main/google-sign-in.ts` draws a 24-byte nonce, opens `<server>/signin/<nonce>`,
 and asks `GET <server>/api/signin/<nonce>` every second and a half — through
 `net.fetch` (`host.fetch`), Chromium's network stack, so the asking goes the way
 the browser's page went: through the same system proxy and VPN, to the same
 Cloudflare location. With Node's `fetch` it did not, and the answer arrived
-late, after the page had long said "You're signed in". The page
-runs Firebase's popup and posts the Google ID token to
-`POST /api/signin/<nonce>`; the server keeps it in D1 (`sign_ins`, five
-minutes at most) and hands it out once. The renderer exchanges it with
-Firebase (`signInWithCredential`) as before. The server's domain has to be on
-the Firebase project's **authorized domains** for the popup to open there;
-`localhost` is on it by default, which is what keeps a server on this machine
-(`VSCLAUDE_AI_URL`) working.
+late, after the page had long said "You're signed in". The page's
+button is a link to Google's own sign-in, with the nonce as OAuth `state`;
+Google sends the browser back to `/signin/callback`, where the server exchanges
+the code with **its own OAuth client's secret**, writes the user to `users`
+and leaves a session token it signed itself in D1 (`sign_ins`, five minutes at
+most), which it hands out once. The callback URL has to be among the OAuth
+client's **authorized redirect URIs** — the server's own, and
+`http://localhost:3000/signin/callback` for one on this machine
+(`VSCLAUDE_AI_URL`).
 
-The studio's own session needs none of this after the first time: Firebase
-keeps it in `app://studio`'s IndexedDB, so a relaunch is still signed in, and
-the page is only reached after a sign-out. There, the popup goes **without
-`prompt: select_account`**, so somebody signed in to Google with one account
-who has consented before gets a popup that closes by itself — one click. It
-used to force the account picker every time; `Use a different account` under
-the button is that picker now, asked for on purpose.
+The studio's own session needs none of this after the first time: the
+renderer keeps the ninety-day session token in `app://studio`'s
+`localStorage`, so a relaunch is still signed in, and the page is only reached
+after a sign-out. Who is signed in is read off the token's own claims
+(`lib/session.ts`); main turns it into the hour-long access tokens the free AI
+sends. The link goes **without `prompt: select_account`**, so somebody
+signed in to Google with one account who has consented before is sent straight
+back — one click. `Use a different account` under it is the picker, asked for
+on purpose.
+
+**It was Firebase Authentication**, the page running Firebase's popup and the
+renderer exchanging the Google token with Firebase's SDK. It was replaced so
+that who somebody is lives beside what they paid, in the server's D1, rather
+than in a second service with its own console, its own uids and its own
+domains list to keep in step. The cost is that the server now holds an OAuth
+client secret and a signing secret, and a session cannot be revoked one token
+at a time: deleting the user's row is what ends their sessions, at their next
+renewal.
 
 **It was a server of the app's own on `localhost`**, one per attempt, on a
 random port, which the page posted back to — with a Host check against DNS
 rebinding and the nonce as its path. That is removed: it opened a port on the
 user's machine for every sign-in, and the page was inside the app, so changing
-a word of it was a release. The cost is that the token now passes through the
-server for the second or so between the page's post and the studio's next ask,
+a word of it was a release. The cost is that the token now waits on the
+server for the second or so between the callback and the studio's next ask,
 and that a build with no server cannot sign in at all — which, with sign-in
 being for the free AI and its credits, is a build with nothing to sign in for.
 Taking the answer is one `DELETE ... RETURNING`, so two collectors cannot both

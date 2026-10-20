@@ -12,7 +12,7 @@ import { FREE_PROFILE_ID } from "@shared/free-ai"
  * Whether the free AI can be offered in this window — see `shared/free-ai.ts`.
  *
  * `ready` follows the studio's own sign-in: `watchAccount` hands main every
- * token Firebase refreshes and lands main's answer here, so the composer's
+ * session it holds and lands main's answer here, so the composer's
  * menu shows the free AI exactly while main can run it.
  */
 type FreeAiState = {

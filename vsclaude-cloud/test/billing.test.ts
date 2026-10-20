@@ -112,6 +112,31 @@ describe("credit packs", () => {
     expect(applyWebhook(once, transaction(), catalog).kind).toBe("ignored")
   })
 
+  test("what was bought and paid goes on the row", () => {
+    const applied = applyWebhook(
+      NO_ACCOUNT,
+      transaction({
+        currency_code: "VND",
+        details: { totals: { grand_total: "59000" } },
+      }),
+      catalog
+    )
+    expect(applied.kind === "credits" && applied.purchase).toEqual({
+      item: "credits-60k",
+      amount: 59000,
+      currency: "VND",
+    })
+  })
+
+  test("a payload without totals still credits, with no amount", () => {
+    const applied = applyWebhook(NO_ACCOUNT, transaction(), catalog)
+    expect(applied.kind === "credits" && applied.purchase).toEqual({
+      item: "credits-60k",
+      amount: null,
+      currency: null,
+    })
+  })
+
   test("a quantity of two is twice the credits", () => {
     const two = accountAfter(
       transaction({ items: [{ price: { id: "pri_c60" }, quantity: 2 }] })

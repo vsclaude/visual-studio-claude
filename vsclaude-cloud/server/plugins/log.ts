@@ -17,7 +17,8 @@ export default definePlugin((nitroApp) => {
   logLine("start", {
     anthropic_key: config.anthropicApiKey ? "set" : "MISSING",
     upstream: config.anthropicBaseUrl,
-    firebase_project: config.firebaseProjectId,
+    google_client: config.googleClientId ? "set" : "MISSING",
+    session_secret: config.sessionSecret ? "set" : "MISSING",
     models: config.allowedModels,
     max_prompt_tokens: config.maxPromptTokens,
   })

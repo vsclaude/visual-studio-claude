@@ -3,12 +3,14 @@
 The server behind VS Claude's **free AI**: anybody signed in to the
 studio can chat on Haiku, Sonnet or Opus without a Claude account of their
 own, paid for with credits they buy — there is no free allowance. The studio's
-`claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends the user's Firebase ID
-token; this server checks it, refuses a user with no credits, and
-forwards it to Anthropic with its own API key.
+`claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends an access token this
+server signed when the user signed in with Google; this server checks it,
+refuses a user with no credits, and forwards the request to Anthropic with its
+own API key. Who the users are, what they paid and how much is left all live
+here, in D1.
 
 ```
-studio's claude ──(Firebase ID token)──▶ vsclaude-cloud ──(server API key)──▶ api.anthropic.com
+studio's claude ──(access token)──▶ vsclaude-cloud ──(server API key)──▶ api.anthropic.com
 ```
 
 The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
@@ -31,11 +33,12 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 | `POST /api/webhooks/paddle`      | Paddle's webhook; signed, no token.                                        |
 | `GET /checkout`                  | The page Paddle's default payment link points at: Paddle.js, nothing else. |
 | `HEAD/GET /api/hello`            | The reachability probe Claude Code sends to a custom base URL.             |
-| `GET /signin/<nonce>`            | The Google sign-in page the studio opens in the browser.                   |
-| `POST /api/signin/<nonce>`       | The page's answer (`{ idToken }` or `{ error }`), kept a few minutes.      |
+| `GET /signin/<nonce>`            | The sign-in page the studio opens in the browser; links to Google.         |
+| `GET /signin/callback`           | Google's redirect: writes the user, keeps `{ token }` or `{ error }`.      |
 | `GET /api/signin/<nonce>`        | The studio collects that answer: `204` until there is one, then it once.   |
+| `POST /api/session`              | Session token as bearer → `{ token, expiresAt }`, an hour's access token.  |
 
-Every route but `/api/hello`, the webhooks, `/checkout`, `/pay`, `/api/orders/<code>` and the sign-in routes needs the token, as `Authorization: Bearer …` or
+Every route but `/api/hello`, the webhooks, `/checkout`, `/pay`, `/api/orders/<code>`, the sign-in routes and `/api/session` needs the access token, as `Authorization: Bearer …` or
 `x-api-key` (the CLI sends both). Errors are Anthropic's own shape, so the CLI
 shows them as it would Anthropic's — but **never 401 or 403**, and always with
 `x-should-retry: false`. Measured against the CLI: a 401/403 is read as a
@@ -43,9 +46,9 @@ credential to refresh and retried ten times over ~2.5 minutes whatever the
 header says, which leaves a chat "working" on an answer that will not change.
 A 400 or a 500 with the header is shown at once.
 
-- `400 authentication_error` — no token, or not a live ID token of the project;
-  the message says which (expired, another project, not signed by Firebase, or
-  issued in the future — this server's clock is wrong).
+- `400 authentication_error` — no token, or not a live access token of this
+  server; the message says which (expired, a session token where an access
+  token belongs, or not signed with `NITRO_SESSION_SECRET`).
 - `400 invalid_request_error` — a model other than the allowed ones, or no
   credits left.
 - `500 api_error` — no Anthropic key configured, or Anthropic refused it (its
@@ -149,6 +152,19 @@ Setting up Paddle — **once in the sandbox, again in the live account**:
 
 Sandbox cards: `4242 4242 4242 4242`, any future date, any CVC.
 
+Setting up Google sign-in:
+
+1. Google Cloud › APIs & Services › OAuth consent screen: the app's name, an
+   External audience, and the scopes `openid`, `email`, `profile`.
+2. Credentials › Create credentials › **OAuth client ID**, type **Web
+   application**, with the authorized redirect URIs
+   `https://<server>/signin/callback` and, for `bun run dev`,
+   `http://localhost:3000/signin/callback`. Its id and secret go in
+   `NITRO_GOOGLE_CLIENT_ID` and `NITRO_GOOGLE_CLIENT_SECRET`.
+3. `NITRO_SESSION_SECRET`: 32 random bytes or more
+   (`openssl rand -base64 48`). It signs every session; changing it signs
+   everybody out.
+
 ## Configuration
 
 All in `nitro.config.ts` › `runtimeConfig`, overridden by environment variables
@@ -168,9 +184,9 @@ All in `nitro.config.ts` › `runtimeConfig`, overridden by environment variable
 | `NITRO_PADDLE_CLIENT_TOKEN`                                      | —                                                    | Paddle.js's, for `/checkout`.                                                                                       |
 | `NITRO_PADDLE_PRICE_CREDITS20K` / `_CREDITS60K` / `_CREDITS100K` | —                                                    | The credit packs' `pri_…` ids.                                                                                      |
 | `NITRO_MAX_PROMPT_TOKENS`                                        | `100000`                                             | Largest prompt forwarded (Haiku 5.5 is 5× past 100K). `0` = no limit.                                               |
-| `NITRO_FIREBASE_PROJECT_ID`                                      | `simm-chat`                                          | The project the studio signs in to.                                                                                 |
+| `NITRO_GOOGLE_CLIENT_ID` / `NITRO_GOOGLE_CLIENT_SECRET`          | —                                                    | The Web application OAuth client sign-in goes through. Without them nobody can sign in.                             |
+| `NITRO_SESSION_SECRET`                                           | —                                                    | Signs the session and access tokens. Without it nobody can sign in, and nothing is let through.                     |
 | `NITRO_ANTHROPIC_BASE_URL`                                       | `https://api.anthropic.com`                          |                                                                                                                     |
-| `NITRO_FIREBASE_JWKS_URL`                                        | Google's                                             | Only for a test that signs its own tokens.                                                                          |
 
 ## Logs
 
@@ -179,9 +195,9 @@ One line per request on stdout, `key=value` (`server/plugins/log.ts`), plus a
 and a `usage` line when a streamed answer ends, joined to its request by `rid`:
 
 ```
-2026-10-18T03:50:01.120Z start anthropic_key=set upstream=https://api.anthropic.com firebase_project=simm-chat models=claude-haiku-5-5 max_prompt_tokens=100000
-2026-10-18T03:50:02.410Z request method=POST path=/v1/messages status=200 ms=812 uid=Xy12… model=claude-haiku-5-5 bytes=82422 rid=req_011… upstream_status=200
-2026-10-18T03:50:04.977Z usage uid=Xy12… rid=req_011… in=12 out=180 cache_read=21000 cache_write=0 weighted=3012 credits_charged=3012 ended=done
+2026-10-18T03:50:01.120Z start anthropic_key=set upstream=https://api.anthropic.com google_client=set session_secret=set models=claude-haiku-5-5 max_prompt_tokens=100000
+2026-10-18T03:50:02.410Z request method=POST path=/v1/messages status=200 ms=812 uid=google:1043… model=claude-haiku-5-5 bytes=82422 rid=req_011… upstream_status=200
+2026-10-18T03:50:04.977Z usage uid=google:1043… rid=req_011… in=12 out=180 cache_read=21000 cache_write=0 weighted=3012 credits_charged=3012 ended=done
 2026-10-18T03:51:10.003Z request method=POST path=/v1/messages status=400 ms=2 refused="the token has expired"
 ```
 

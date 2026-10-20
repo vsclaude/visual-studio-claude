@@ -1,21 +1,26 @@
 import { NO_ACCOUNT, type Account } from "./billing.ts"
 import { atomically, database, statement } from "./database.ts"
+import type { Purchase } from "./paddle-billing.ts"
 import type { Order } from "./sepay-billing.ts"
+import type { User } from "./session.ts"
 
 /**
  * What people have paid for, in the D1 database (`database.ts`):
  *
- * - `users` — each buyer's credits left and credits ever used. A row appears
- *   with the first credits added; a user with none has no row.
+ * - `users` — everybody who has signed in (`/signin/callback`): who Google
+ *   says they are, as of their last sign-in, and their credits left and ever
+ *   used. The uid is `google:<sub>`. Ending somebody's sessions is deleting
+ *   their row (`POST /api/session`).
  * - `transactions` — one row per purchase, `provider` saying whose:
  *   - `paddle`, keyed by Paddle's transaction id. The webhook that carries the
  *     uid writes it `pending` before anything is credited, because a refund
  *     names only its transaction and this row is how it finds somebody.
- *     Credited, it is `paid` with the `credits` it added; refunded in full,
+ *     Credited, it is `paid` with the `credits` it added and the `item`,
+ *     `amount` and `currency` Paddle charged; refunded in full,
  *     `refunded` — kept rather than deleted, so a late replay of the purchase
  *     cannot credit it again.
  *   - `sepay`, keyed by the order code a bank transfer carries. It is written
- *     `pending` with the `item` and `amount` asked when the order is opened,
+ *     `pending` with the `item` and `amount` (`VND`) asked when the order is opened,
  *     and is `paid` by the SePay transfer in `paid_by`. Transfers that fell
  *     short add up in `short_amount`; `short_by` is the last one, so SePay
  *     retrying the same webhook adds it once.
@@ -25,6 +30,28 @@ import type { Order } from "./sepay-billing.ts"
  * purchase moves out of `pending` in the same D1 batch that adds its credits,
  * so neither a charge racing a payment nor a webhook delivered twice miscounts.
  */
+
+/** Writes down who just signed in, keeping their balance. */
+export async function saveUser(user: User): Promise<void> {
+  const db = await database()
+  await db.sql`INSERT INTO users (uid, email, name, picture, signed_in_at) VALUES (${user.uid}, ${user.email}, ${user.name}, ${user.picture}, ${new Date().toISOString()}) ON CONFLICT (uid) DO UPDATE SET email = excluded.email, name = excluded.name, picture = excluded.picture, signed_in_at = excluded.signed_in_at`
+}
+
+export async function getUser(uid: string): Promise<User | null> {
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT uid, email, name, picture FROM users WHERE uid = ${uid}`
+  const row = rows[0]
+  if (!row) return null
+  const text = (value: unknown) =>
+    typeof value === "string" && value ? value : null
+  return {
+    uid: String(row.uid),
+    email: text(row.email),
+    name: text(row.name),
+    picture: text(row.picture),
+  }
+}
 
 export async function getAccount(uid: string): Promise<Account> {
   const db = await database()
@@ -74,11 +101,12 @@ export async function userOf(id: string): Promise<string | null> {
 export async function creditPaddleTransaction(
   uid: string,
   id: string,
-  credits: number
+  credits: number,
+  { item, amount, currency }: Purchase
 ): Promise<void> {
   await atomically(
     statement`INSERT INTO users (uid, credits) SELECT ${uid}, ${credits} WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE provider = 'paddle' AND id = ${id} AND status != 'pending') ON CONFLICT (uid) DO UPDATE SET credits = credits + excluded.credits`,
-    statement`INSERT INTO transactions (provider, id, uid, status, credits, created_at) VALUES ('paddle', ${id}, ${uid}, 'paid', ${credits}, ${new Date().toISOString()}) ON CONFLICT (provider, id) DO UPDATE SET status = 'paid', credits = excluded.credits WHERE transactions.status = 'pending'`
+    statement`INSERT INTO transactions (provider, id, uid, status, item, amount, currency, credits, created_at) VALUES ('paddle', ${id}, ${uid}, 'paid', ${item}, ${amount}, ${currency}, ${credits}, ${new Date().toISOString()}) ON CONFLICT (provider, id) DO UPDATE SET status = 'paid', item = excluded.item, amount = excluded.amount, currency = excluded.currency, credits = excluded.credits WHERE transactions.status = 'pending'`
   )
 }
 
@@ -115,7 +143,7 @@ export async function getOrder(code: string): Promise<Order | null> {
 export async function addOrder(order: Order): Promise<boolean> {
   const db = await database()
   const { rows = [] } =
-    await db.sql`INSERT INTO transactions (provider, id, uid, status, item, amount, created_at) VALUES ('sepay', ${order.code}, ${order.uid}, 'pending', ${order.item}, ${order.amount}, ${order.createdAt}) ON CONFLICT (provider, id) DO NOTHING RETURNING id`
+    await db.sql`INSERT INTO transactions (provider, id, uid, status, item, amount, currency, created_at) VALUES ('sepay', ${order.code}, ${order.uid}, 'pending', ${order.item}, ${order.amount}, 'VND', ${order.createdAt}) ON CONFLICT (provider, id) DO NOTHING RETURNING id`
   return rows.length === 1
 }
 

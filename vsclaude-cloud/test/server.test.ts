@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose"
+import { SignJWT } from "jose"
 
 import {
   allowedModel,
@@ -9,114 +9,150 @@ import {
   promptTooLong,
   upstreamHeaders,
 } from "../server/utils/anthropic.ts"
-import { tokenOf, verifyIdToken } from "../server/utils/firebase.ts"
+import { authorizeUrl, userOfIdToken } from "../server/utils/google.ts"
+import {
+  signAccess,
+  signSession,
+  tokenOf,
+  verifyAccess,
+  verifySession,
+} from "../server/utils/session.ts"
 import { StreamUsage, usageOf, weighted } from "../server/utils/usage.ts"
 
 /**
  * The parts of the server that decide who gets through and what they are
- * charged — tested without Anthropic or Google: the ID tokens are signed here
- * with a key of the test's own, the way `securetoken` signs real ones.
+ * charged — tested without Anthropic or Google: the tokens are this server's
+ * own, and Google's ID token is one the test writes.
  */
 
-const PROJECT = "simm-chat"
-const { publicKey, privateKey } = await generateKeyPair("RS256")
-const jwk = { ...(await exportJWK(publicKey)), kid: "test", alg: "RS256" }
-const keys = createLocalJWKSet({ keys: [jwk] })
-
-function idToken(claims: Record<string, unknown> = {}, project = PROJECT) {
-  return new SignJWT({ email: "a@example.com", ...claims })
-    .setProtectedHeader({ alg: "RS256", kid: "test" })
-    .setIssuer(`https://securetoken.google.com/${project}`)
-    .setAudience(project)
-    .setSubject("uid-1")
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(privateKey)
+const SECRET = "test-secret-of-at-least-thirty-two-bytes"
+const USER = {
+  uid: "google:123",
+  email: "a@example.com",
+  name: "A",
+  picture: null,
 }
 
-describe("verifyIdToken", () => {
-  test("a live token of this project is its user", async () => {
-    const verified = await verifyIdToken(await idToken(), PROJECT, keys)
-    expect(verified).toEqual({
+describe("session and access tokens", () => {
+  test("an access token is its user", async () => {
+    expect(await verifyAccess(await signAccess(USER, SECRET), SECRET)).toEqual({
       ok: true,
-      user: { uid: "uid-1", email: "a@example.com" },
+      user: USER,
     })
   })
 
-  test("another project's token is nobody", async () => {
-    expect(
-      await verifyIdToken(await idToken({}, "other-app"), PROJECT, keys)
-    ).toEqual({
+  test("neither kind passes for the other", async () => {
+    const session = await signSession(USER, SECRET)
+    const access = await signAccess(USER, SECRET)
+    expect(await verifyAccess(session, SECRET)).toEqual({
       ok: false,
-      reason: "the token is for another Firebase project",
+      reason: "the token is not for this use",
     })
-  })
-
-  test("a token from the future blames this server's clock", async () => {
-    const now = Math.floor(Date.now() / 1000)
-    const ahead = await new SignJWT({ auth_time: now + 7 * 3600 })
-      .setProtectedHeader({ alg: "RS256", kid: "test" })
-      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
-      .setAudience(PROJECT)
-      .setSubject("uid-1")
-      .setIssuedAt(now + 7 * 3600)
-      .setExpirationTime(now + 8 * 3600)
-      .sign(privateKey)
-    const verified = await verifyIdToken(ahead, PROJECT, keys)
-    expect(verified.ok).toBe(false)
-    expect(!verified.ok && verified.reason).toContain(
-      "420 minutes in the future"
-    )
+    expect((await verifySession(access, SECRET)).ok).toBe(false)
+    expect((await verifySession(session, SECRET)).ok).toBe(true)
   })
 
   test("a token a minute past its expiry still passes", async () => {
     const now = Math.floor(Date.now() / 1000)
-    const lapsed = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: "test" })
-      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
-      .setAudience(PROJECT)
-      .setSubject("uid-1")
-      .setIssuedAt(now - 3660)
-      .setExpirationTime(now - 60)
-      .sign(privateKey)
-    expect((await verifyIdToken(lapsed, PROJECT, keys)).ok).toBe(true)
+    const lapsed = await signAccess(USER, SECRET, now - 3660)
+    expect((await verifyAccess(lapsed, SECRET)).ok).toBe(true)
   })
 
   test("an expired token is nobody", async () => {
-    const expired = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: "test" })
-      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
-      .setAudience(PROJECT)
-      .setSubject("uid-1")
-      .setIssuedAt(Math.floor(Date.now() / 1000) - 7200)
-      .setExpirationTime(Math.floor(Date.now() / 1000) - 3600)
-      .sign(privateKey)
-    expect(await verifyIdToken(expired, PROJECT, keys)).toEqual({
+    const now = Math.floor(Date.now() / 1000)
+    const expired = await signAccess(USER, SECRET, now - 2 * 3600)
+    expect(await verifyAccess(expired, SECRET)).toEqual({
       ok: false,
       reason: "the token has expired",
     })
   })
 
-  test("a token signed by another key is nobody", async () => {
-    const stranger = await generateKeyPair("RS256")
-    const forged = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: "test" })
-      .setIssuer(`https://securetoken.google.com/${PROJECT}`)
-      .setAudience(PROJECT)
-      .setSubject("uid-1")
-      .setExpirationTime("1h")
-      .sign(stranger.privateKey)
-    expect(await verifyIdToken(forged, PROJECT, keys)).toEqual({
+  test("a token signed with another secret is nobody", async () => {
+    const forged = await signAccess(USER, "another-secret-of-thirty-two-bytes!")
+    expect(await verifyAccess(forged, SECRET)).toEqual({
       ok: false,
-      reason: "the token is not signed by Firebase",
+      reason: "the token is not signed by this server",
     })
   })
 
   test("not a JWT is nobody", async () => {
-    expect(await verifyIdToken("sk-ant-something", PROJECT, keys)).toEqual({
+    expect(await verifyAccess("sk-ant-something", SECRET)).toEqual({
       ok: false,
-      reason: "the token is not a Firebase ID token",
+      reason: "the token is not a VS Claude sign-in",
     })
+  })
+
+  test("a server with no secret signs nobody in", async () => {
+    expect(await verifyAccess(await signAccess(USER, SECRET), "")).toEqual({
+      ok: false,
+      reason: "the server has no session secret",
+    })
+  })
+})
+
+describe("Google", () => {
+  const google = (claims: Record<string, unknown>) =>
+    new SignJWT(claims)
+      .setProtectedHeader({ alg: "HS256" })
+      .sign(new TextEncoder().encode("whatever-google-signs-it-with-here"))
+
+  test("the ID token for this client is its user", async () => {
+    const token = await google({
+      iss: "https://accounts.google.com",
+      aud: "client-1",
+      sub: "123",
+      email: "a@example.com",
+      email_verified: true,
+      name: "A",
+    })
+    expect(userOfIdToken(token, "client-1")).toEqual({
+      uid: "google:123",
+      email: "a@example.com",
+      name: "A",
+      picture: null,
+    })
+  })
+
+  test("another client's token is refused", async () => {
+    const token = await google({
+      iss: "https://accounts.google.com",
+      aud: "client-2",
+      sub: "123",
+    })
+    expect(userOfIdToken(token, "client-1")).toBe(
+      "Google's ID token is for another client"
+    )
+  })
+
+  test("an unverified email is not taken as theirs", async () => {
+    const token = await google({
+      iss: "accounts.google.com",
+      aud: "client-1",
+      sub: "123",
+      email: "b@example.com",
+      email_verified: false,
+    })
+    const user = userOfIdToken(token, "client-1")
+    expect(typeof user !== "string" && user.email).toBeNull()
+  })
+
+  test("the way in carries the sign-in as state", () => {
+    const url = new URL(
+      authorizeUrl("client-1", "https://s/signin/callback", "nonce", true)
+    )
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      client_id: "client-1",
+      redirect_uri: "https://s/signin/callback",
+      response_type: "code",
+      scope: "openid email profile",
+      state: "nonce",
+      prompt: "select_account",
+    })
+    expect(
+      new URL(
+        authorizeUrl("client-1", "https://s/signin/callback", "nonce", false)
+      ).searchParams.has("prompt")
+    ).toBe(false)
   })
 })
 

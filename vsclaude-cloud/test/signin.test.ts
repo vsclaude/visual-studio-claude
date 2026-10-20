@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test"
 
-import { isNonce, parseAnswer, signInPage } from "../server/utils/signin.ts"
+import { isNonce, signInPage } from "../server/utils/signin.ts"
 
 /**
- * The sign-in routes' own decisions: which paths are an attempt, which bodies
- * are an answer, and that the page posts where the routes listen. The storage
- * half is D1's.
+ * The sign-in routes' own decisions: which paths are an attempt, and what the
+ * page offers before Google and says after it. The storage half is D1's.
  */
 
 describe("isNonce", () => {
@@ -18,46 +17,29 @@ describe("isNonce", () => {
     expect(isNonce("8Blmm0_ofvUXzW_Tk0hWqUrj19oH3RIjX")).toBe(false)
     expect(isNonce("8Blmm0_ofvUXzW_Tk0hWqUrj19oH3RI:")).toBe(false)
     expect(isNonce("")).toBe(false)
-  })
-})
-
-describe("parseAnswer", () => {
-  test("a token is an answer", () => {
-    expect(parseAnswer('{"idToken":"x"}')).toEqual({ idToken: "x" })
-  })
-
-  test("an error is an answer", () => {
-    expect(parseAnswer('{"error":"no"}')).toEqual({ error: "no" })
-  })
-
-  test("anything else is refused", () => {
-    expect(parseAnswer("not json")).toBeNull()
-    expect(parseAnswer("[]")).toBeNull()
-    expect(parseAnswer("42")).toBeNull()
-    expect(parseAnswer("{}")).toBeNull()
-    expect(parseAnswer('{"idToken":42}')).toBeNull()
-    expect(parseAnswer('{"idToken":""}')).toBeNull()
+    expect(isNonce("callback")).toBe(false)
   })
 })
 
 describe("signInPage", () => {
-  const page = signInPage()
-
-  test("posts its answer to the route that keeps it", () => {
-    expect(page).toContain('fetch("/api/signin/"')
+  test("links to Google, once as is and once choosing an account", () => {
+    const page = signInPage({
+      kind: "start",
+      google: "https://accounts.google.com/a?x=1&y=2",
+      chooseAccount: "https://accounts.google.com/b",
+    })
+    expect(page).toContain('href="https://accounts.google.com/a?x=1&amp;y=2"')
+    expect(page).toContain('href="https://accounts.google.com/b"')
+    expect(page).not.toContain("<script")
   })
 
-  test("runs Firebase's popup for the studio's project", () => {
-    expect(page).toContain("firebase-auth.js")
-    expect(page).toContain('"projectId":"simm-chat"')
+  test("says when it is done", () => {
+    expect(signInPage({ kind: "done" })).toContain("You're signed in")
   })
 
-  test("asks for an account only when the link is pressed", () => {
-    expect(page).toContain(
-      'if (chooseAccount) provider.setCustomParameters({ prompt: "select_account" })'
-    )
-    expect(page).toContain(
-      'other.addEventListener("click", () => signIn(true))'
-    )
+  test("says why it failed, escaped", () => {
+    const page = signInPage({ kind: "failed", reason: "<b>no</b>" })
+    expect(page).toContain("&lt;b&gt;no&lt;/b&gt;")
+    expect(page).not.toContain("<b>no</b>")
   })
 })

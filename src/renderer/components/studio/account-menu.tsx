@@ -38,7 +38,7 @@ export function AccountMenu() {
   useEffect(watchAccount, [])
 
   const name = account ? (account.name ?? account.email ?? "Signed in") : null
-  // Until Firebase has answered, the empty silhouette would say "signed out"
+  // Until the stored session has been read, the empty silhouette would say "signed out"
   // about somebody who is about to be signed in. A sign-in waiting on the
   // browser spins too, since the avatar is all there is to look at meanwhile.
   const loading = !ready || (busy && !account)

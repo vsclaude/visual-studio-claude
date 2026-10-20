@@ -19,7 +19,7 @@ export const FREE_PROFILE_ID = "vsclaude-free"
  * hides the free AI everywhere. `VSCLAUDE_AI_URL` in the environment main is
  * started with overrides it, for a server running on this machine.
  *
- * The server is sent the signed-in user's Firebase ID token on every request,
+ * The server is sent the signed-in user's access token on every request,
  * as `Authorization: Bearer` and as `x-api-key` both (the CLI's own habit with
  * an `apiKeyHelper`), and is expected to verify it, refuse any model outside
  * `FREE_AI_MODELS`, and forward to Anthropic with a key of its own.
@@ -75,7 +75,7 @@ export function normalizeAiUrl(input: string): string | null {
  * the helper and be sent to this app's server — somebody's key for Anthropic,
  * handed to a third party.
  *
- * The helper is re-run every five minutes, well inside the hour a Firebase ID
+ * The helper is re-run every five minutes, well inside the hour an access
  * token lives, so a session open all afternoon keeps sending a live one.
  *
  * **The conversation is compacted before 100K**, where the price goes up: the server refuses a longer prompt (in words the CLI compacts on),

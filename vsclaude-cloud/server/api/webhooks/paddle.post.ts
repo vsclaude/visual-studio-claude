@@ -90,7 +90,12 @@ export default defineHandler(async (event) => {
   }
 
   if (applied.kind === "credits") {
-    await creditPaddleTransaction(uid, applied.transactionId, applied.added)
+    await creditPaddleTransaction(
+      uid,
+      applied.transactionId,
+      applied.added,
+      applied.purchase
+    )
   } else {
     await refundPaddleTransaction(uid, applied.transactionId)
   }

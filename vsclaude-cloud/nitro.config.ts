@@ -43,12 +43,15 @@ export default defineConfig({
     anthropicApiKey: "",
     /** NITRO_ANTHROPIC_BASE_URL */
     anthropicBaseUrl: "https://api.anthropic.com",
-    /** NITRO_FIREBASE_PROJECT_ID — the project the studio signs in to
-     * (`FIREBASE_CONFIG` in the app's `src/shared/firebase.ts`). */
-    firebaseProjectId: "simm-chat",
-    /** NITRO_FIREBASE_JWKS_URL — the keys ID tokens are checked against.
-     * Empty is Google's own; set only for a test that signs its own tokens. */
-    firebaseJwksUrl: "",
+    /** NITRO_GOOGLE_CLIENT_ID / NITRO_GOOGLE_CLIENT_SECRET — the Web
+     * application OAuth client the studio signs in through
+     * (`server/utils/google.ts`). Without them nobody can sign in. */
+    googleClientId: "",
+    googleClientSecret: "",
+    /** NITRO_SESSION_SECRET — signs the session and access tokens
+     * (`server/utils/session.ts`). Long and random; changing it signs
+     * everybody out. */
+    sessionSecret: "",
     /** NITRO_ALLOWED_MODELS — comma-separated; the app's `FREE_AI_MODELS`.
      * Every one runs on credits, each at its own price
      * (`server/utils/usage.ts`). */

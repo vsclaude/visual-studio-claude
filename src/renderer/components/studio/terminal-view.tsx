@@ -13,6 +13,7 @@ import { ClipboardPaste, Copy, Eraser, MessageSquarePlus } from "lucide-react"
 
 import { monoFontFamily, terminalFontSize } from "@/lib/appearance"
 import { useSettings } from "@/lib/settings"
+import { useAppBackground } from "@/lib/app-background"
 import { isNewTerminalShortcut, isTerminalShortcut } from "@/lib/shortcuts"
 import { useTheme } from "next-themes"
 import { IS_MAC } from "./title-bar"
@@ -590,16 +591,26 @@ export function TerminalView({
     }
   }, [])
 
+  // With a picture behind the studio the terminal is see-through like the
+  // card it sits in, rather than a solid block of `--background` over it.
+  // Only then: `allowTransparency` gives up the atlas's contrast tricks for
+  // glyphs, which is a cost worth paying only when there is something to see.
+  const backgroundImage = useAppBackground((state) => state.image)
   useEffect(() => {
     const terminal = terminalRef.current
     if (!terminal) return
-    terminal.options.theme = resolvedTheme === "dark" ? darkTheme : lightTheme
+    const theme = resolvedTheme === "dark" ? darkTheme : lightTheme
+    const transparent = backgroundImage !== null
+    terminal.options.allowTransparency = transparent
+    terminal.options.theme = transparent
+      ? { ...theme, background: "#00000000" }
+      : theme
     const linkColor = linkColorOf(resolvedTheme)
     if (linkColorRef.current !== linkColor) {
       linkColorRef.current = linkColor
       fileLinksRef.current?.repaint()
     }
-  }, [resolvedTheme])
+  }, [resolvedTheme, backgroundImage])
 
   // Settings › Appearance's monospace face and size, applied to a live
   // terminal: xterm rebuilds the atlas on the option change, but the host's

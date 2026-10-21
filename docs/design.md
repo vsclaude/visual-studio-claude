@@ -77,7 +77,9 @@ collapsed sizes stay exact.
   button is its way back.
 - **The dock** is under the pane, spanning its width — not under the Explorer,
   where a 520px cap left a shell ~60 columns wide.
-- The current **branch** is at the head of the status bar along the bottom.
+- The current **branch** is at the head of the status bar along the bottom,
+  with what is unpushed, behind and changed, then what the chats are doing —
+  § The system bar.
 
 A shut column is hidden rather than squeezed, and never unmounted: the tree
 watches the checkout, and a pty taken out of the React tree ends.
@@ -1217,6 +1219,16 @@ scene's `customData`, with their button portalled into Excalidraw's toolbar.
 CPU and memory for the machine and this app, polled every two seconds by one
 poller (each figure is a delta). Available memory includes reclaimable cache;
 CPU is a share of all cores. The dock's shells are not counted as the app's.
+
+Ahead of the meters, two things that change while somebody is reading something
+else. The **branch** carries `↑`/`↓` against its upstream (`gitUpstream`,
+re-read on the git status signal the `Commits` list uses) and the count of
+changed files; a click opens the Explorer on `Changes`. Then **the chats across
+the workspace** — waiting on a question, answered and unread, working — drawn
+only when one of the three is not zero, since the projects column may be shut.
+A click goes to the next chat of the most urgent kind (question, then unread,
+then working), so repeated clicks walk them. Neither is a total that only grows
+— § What the chats have cost, removed.
 
 ### The usage dashboard counts tokens, not dollars
 

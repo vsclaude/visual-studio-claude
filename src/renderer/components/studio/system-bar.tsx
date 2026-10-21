@@ -1,12 +1,26 @@
-import { Cpu, GitBranch, MemoryStick } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  Cpu,
+  FileDiff,
+  GitBranch,
+  MemoryStick,
+  ShieldQuestion,
+} from "lucide-react"
 
-import type { SystemUsage } from "@shared/api"
+import type { GitUpstream, SystemUsage } from "@shared/api"
+import { Spinner } from "@/components/ui/spinner"
+import { activityOf } from "@/lib/chat/running"
+import { useChats } from "@/lib/chat/store"
+import { unreadIn } from "@/lib/chat/unread"
+import { changeCount, useChanges } from "@/lib/files/changes"
+import { useGitStatus } from "@/lib/files/git-status"
 import { shownRootOf } from "@/lib/files/roots"
 import { useProjects } from "@/lib/projects"
 import { useStudio } from "@/lib/store"
 import { useSystemUsage } from "@/lib/system/usage"
+import { cn } from "@/lib/utils"
 import { useUpdateWatch } from "@/lib/updates"
-import { Meter } from "./meter"
+import { VsGlyph } from "./credits-badge"
 import { UpdatePill } from "./update-pill"
 
 /**
@@ -22,6 +36,10 @@ import { UpdatePill } from "./update-pill"
  * At the bottom of the workbench rather than in the header, and never in the
  * way: this is a number to glance at, not one to act on, and the header is
  * already where the things you click live.
+ *
+ * Ahead of the meters, the two things that change while somebody is reading
+ * something else: where the checkout stands (`GitLabel`) and what the chats are
+ * doing (`ChatsLabel`). Both are a click away from the panel that says more.
  */
 export function SystemBar() {
   const usage = useSystemUsage()
@@ -30,60 +48,84 @@ export function SystemBar() {
   // thing that keeps the check running.
   useUpdateWatch()
 
-  // Nothing is drawn until the first reading lands — a row of empty meters
-  // would be a claim that the machine is idle, which is not what "not yet
-  // measured" means. It arrives within a frame or two of the app opening.
-  if (!usage) return null
-
-  const memoryPercent = memoryUsedPercent(usage)
-  const freeText = `${bytes(usage.memoryAvailable)} free`
-
   return (
     // No edge or fill of its own: it sits on the canvas under the cards, which
-    // is what separates it from them.
-    <footer className="flex h-6 shrink-0 items-center gap-2 px-3 text-[0.6875rem] text-muted-foreground">
-      <BranchLabel />
+    // is what separates it from them. Two halves, the way an editor's status
+    // bar splits them: the project on screen at the left, the machine and the
+    // app at the right — so nothing needs a separator but the one divider.
+    <footer className="flex h-6 shrink-0 items-stretch gap-0.5 px-2 text-[0.6875rem] text-muted-foreground">
+      <GitLabel />
+      <ChatsLabel />
 
-      <span
-        className="flex shrink-0 items-center gap-1.5"
-        title={cpuTitle(usage)}
-      >
+      {/* The `ml-auto` is on the group rather than on the figures, so an
+          update pill appearing beside them moves nothing else in the row. */}
+      <div className="ml-auto flex min-w-0 items-stretch gap-0.5">
+        <span className="flex items-center pr-1">
+          <UpdatePill />
+        </span>
+        {/* Nothing is drawn until the first reading lands — a row of empty
+            meters would be a claim that the machine is idle, which is not
+            what "not yet measured" means. The left half does not wait on it. */}
+        {usage && <MachineUsage usage={usage} />}
+      </div>
+    </footer>
+  )
+}
+
+/** One slot of the bar, and a `button` only when it does something. A
+ * clickable one says so by brightening its text alone: a filled cell on hover
+ * was a block sitting on the canvas the bar is drawn on, heavier than
+ * anything it was labelling. */
+const ITEM =
+  "flex min-w-0 shrink-0 items-center gap-1.5 rounded-sm px-1.5 tabular-nums"
+const ACTION = cn(
+  ITEM,
+  "transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+)
+
+function Divider() {
+  return <span aria-hidden className="mx-1 my-1.5 w-px shrink-0 bg-border" />
+}
+
+/**
+ * The figures alone, without the `Meter` beside them: at this size a bar
+ * repeated what the number beside it said, at twice its width. What the bar
+ * did that the number does not is warn, so the number takes its colour — the
+ * same thresholds as `Meter`, so amber means one thing wherever it is seen.
+ */
+function MachineUsage({ usage }: { usage: SystemUsage }) {
+  return (
+    <>
+      <span className={ITEM} title={cpuTitle(usage)}>
         <Cpu className="size-3 shrink-0" />
-        <Meter percent={usage.cpuPercent} label="CPU in use" className="w-14" />
-        <span className="tabular-nums">{Math.round(usage.cpuPercent)}%</span>
+        {/* A fixed width, so the row does not shift as 9% becomes 10%. */}
+        <span className={cn("w-7", tone(usage.cpuPercent))}>
+          {Math.round(usage.cpuPercent)}%
+        </span>
       </span>
 
-      <span className="text-muted-foreground/40">·</span>
-
-      <span
-        className="flex min-w-0 shrink items-center gap-1.5"
-        title={memoryTitle(usage)}
-      >
+      <span className={cn(ITEM, "shrink")} title={memoryTitle(usage)}>
         <MemoryStick className="size-3 shrink-0" />
-        <Meter percent={memoryPercent} label="Memory in use" className="w-14" />
         {/* The free figure, not the used one: "how much is left" is the
-            question, and the meter beside it already says how much is gone. */}
-        <span className="truncate tabular-nums">{freeText}</span>
+            question a glance at the bottom of the window is asking. */}
+        <span className={cn("truncate", tone(memoryUsedPercent(usage)))}>
+          {bytes(usage.memoryAvailable)} free
+        </span>
       </span>
 
-      {/* Right-hand end, away from the machine's two: this app is a part of
-          what those meters are already showing, not a third thing beside
-          them, and a divider would suggest otherwise. The `ml-auto` is on the
-          group rather than on the figures, so an update pill appearing beside
-          them moves nothing else in the row. */}
-      <span className="ml-auto flex shrink-0 items-center gap-2">
-        <UpdatePill />
-        <span
-          className="flex shrink-0 items-center gap-1.5 tabular-nums"
-          title={appTitle(usage)}
-        >
-          <span className="text-muted-foreground/70">This app</span>
-          {formatPercent(usage.appCpuPercent)} CPU
-          <span className="text-muted-foreground/40">·</span>
+      {/* The app's share after a divider: it is a part of what the machine's
+          two meters show, measured on the same scale, and the divider is
+          what keeps "this app" from reading as a third resource. */}
+      <Divider />
+      <span className={ITEM} title={appTitle(usage)}>
+        <VsGlyph className="h-2.5 w-auto shrink-0" />
+        <span className="sr-only">VS Claude</span>
+        <span>{formatPercent(usage.appCpuPercent)}</span>
+        <span className="text-muted-foreground/60">
           {bytes(usage.appMemory)}
         </span>
       </span>
-    </footer>
+    </>
   )
 }
 
@@ -93,28 +135,188 @@ export function SystemBar() {
  * title bar, which made git state read as a place one level below the project.
  * Resolved through `shownRootOf`, as the Explorer is, so the two always name
  * the same project.
+ *
+ * With where it stands — unpushed, behind, files changed — because those are
+ * the questions a branch name is glanced at to answer, and the Explorer that
+ * answers them may be shut to its rail. A click opens it on `Changes`.
  */
-function BranchLabel() {
+function GitLabel() {
   const folders = useStudio((state) => state.folders)
   const branches = useStudio((state) => state.branches)
   const activeFolderId = useProjects((state) => state.activeFolderId)
 
   const shown = shownRootOf(folders, activeFolderId)
-  const branch = shown ? branches[shown.folderId] : undefined
+  const rootId = shown?.id ?? null
+  const folderId = shown?.folderId ?? null
+  const branch = folderId ? branches[folderId] : undefined
+
+  // Kept current by the Explorer's own `useWatchChanges`: the panel is hidden
+  // rather than unmounted when shut, so it is always watching this root.
+  const changes = useChanges((state) =>
+    rootId ? state.byRoot[rootId] : undefined
+  )
+  const changed = changeCount(changes)
+
+  // Re-read on the same signal the `Commits` list re-reads on — the status
+  // changing identity is a commit, a checkout or a fetch having landed.
+  const status = useGitStatus((state) =>
+    rootId ? state.byRoot[rootId] : undefined
+  )
+  const [upstream, setUpstream] = useState<GitUpstream | null>(null)
+  useEffect(() => {
+    if (!folderId || !branch) return
+    let current = true
+    void window.desktop
+      .gitUpstream(folderId)
+      .catch(() => null)
+      .then((answer) => {
+        if (current) setUpstream(answer)
+      })
+    return () => {
+      current = false
+    }
+  }, [folderId, branch, status])
+
   if (!shown || !branch) return null
 
+  const ahead = upstream?.aheadCount ?? 0
+  const behind = upstream?.behind ?? 0
+
+  function openChanges() {
+    const studio = useStudio.getState()
+    if (!studio.sidebar) studio.toggleSidebar()
+    studio.setExplorerTab("git")
+    studio.setGitView("changes")
+  }
+
   return (
-    <>
-      <span
-        className="flex min-w-0 shrink items-center gap-1.5"
-        title={`${branch}\n${shown.path}`}
-      >
-        <GitBranch className="size-3 shrink-0" />
-        <span className="truncate font-mono">{branch}</span>
-      </span>
-      <span className="text-muted-foreground/40">·</span>
-    </>
+    <button
+      type="button"
+      className={cn(ACTION, "shrink")}
+      title={gitTitle(branch, shown.path, upstream, changed)}
+      onClick={openChanges}
+    >
+      <GitBranch className="size-3 shrink-0" />
+      <span className="truncate font-mono">{branch}</span>
+      {(ahead > 0 || behind > 0) && (
+        <span className="flex shrink-0 items-center gap-1">
+          {ahead > 0 && <span>↑{ahead}</span>}
+          {behind > 0 && <span>↓{behind}</span>}
+        </span>
+      )}
+      {changed > 0 && (
+        <span className="flex shrink-0 items-center gap-1">
+          <FileDiff className="size-3" />
+          {changed}
+        </span>
+      )}
+    </button>
   )
+}
+
+function gitTitle(
+  branch: string,
+  path: string,
+  upstream: GitUpstream | null,
+  changed: number
+): string {
+  const lines = [branch, path, ""]
+  if (upstream?.name) {
+    lines.push(
+      `${upstream.aheadCount} to push, ${upstream.behind} to pull — ${upstream.name}`
+    )
+  } else if (upstream) {
+    lines.push(`No upstream — ${upstream.aheadCount} commits not pushed`)
+  }
+  lines.push(
+    changed === 1 ? "1 file changed" : `${changed} files changed`,
+    "",
+    "Click to open Changes."
+  )
+  return lines.join("\n")
+}
+
+/**
+ * What the chats across the whole workspace are doing — working, stopped on a
+ * question, answered and not yet read.
+ *
+ * Every chat rather than the active project's, for the reason the rail's dot
+ * gives: the one that matters is usually the one in another project, and with
+ * the projects column shut nothing else in the window says so. Drawn only when
+ * there is something to say, since three zeros is a row of noise.
+ *
+ * A click goes to the chat most in want of somebody — a question before an
+ * answer, an answer before a spinner — and a second click to the next of that
+ * kind, so a handful of finished chats can be walked through from here.
+ */
+function ChatsLabel() {
+  const chats = useChats((state) => state.chats)
+  const sending = useChats((state) => state.sending)
+  const asks = useChats((state) => state.asks)
+  const unread = useChats((state) => state.unread)
+  const selectedId = useChats((state) => state.selectedId)
+
+  const { working, waiting } = activityOf(chats, sending, asks)
+  const unseen = unreadIn(chats, unread)
+  if (working + waiting + unseen === 0) return null
+
+  function reveal() {
+    const ids = chats.map((chat) => chat.id)
+    const kinds = [
+      ids.filter((id) => asks[id] !== undefined),
+      ids.filter((id) => unread[id] === true),
+      ids.filter((id) => sending.includes(id) && asks[id] === undefined),
+    ]
+    const targets = kinds.find((kind) => kind.length > 0)
+    if (!targets) return
+    const at = selectedId ? targets.indexOf(selectedId) : -1
+    const next = targets[(at + 1) % targets.length]
+    if (next) useChats.getState().select(next)
+  }
+
+  const title = [
+    waiting > 0 && `${waiting} waiting on a question`,
+    unseen > 0 && `${unseen} answered, unread`,
+    working > 0 && `${working} working`,
+    "",
+    "Click to go to the next one.",
+  ]
+    .filter((line) => line !== false)
+    .join("\n")
+
+  return (
+    <button
+      type="button"
+      className={cn(ACTION, "gap-2.5")}
+      title={title}
+      onClick={reveal}
+    >
+      {waiting > 0 && (
+        <span className="flex items-center gap-1 text-primary">
+          <ShieldQuestion className="size-3 animate-pulse" />
+          {waiting}
+        </span>
+      )}
+      {unseen > 0 && (
+        <span className="flex items-center gap-1">
+          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+          {unseen}
+        </span>
+      )}
+      {working > 0 && (
+        <span className="flex items-center gap-1">
+          <Spinner className="size-3" />
+          {working}
+        </span>
+      )}
+    </button>
+  )
+}
+
+function tone(percent: number): string | undefined {
+  if (percent >= 90) return "text-destructive"
+  if (percent >= 70) return "text-warning"
+  return undefined
 }
 
 function memoryUsedPercent(usage: SystemUsage): number {

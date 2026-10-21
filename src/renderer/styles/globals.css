@@ -599,3 +599,13 @@
 [data-app-background] .studio-tabs {
   background-color: transparent;
 }
+
+/*
+ * The terminal goes see-through with a transparent theme
+ * (`terminal-view.tsx`), but xterm's own stylesheet paints its viewport
+ * `#000` under the canvas — invisible while the canvas is opaque, a black
+ * slab once it is not.
+ */
+[data-app-background] .xterm .xterm-viewport {
+  background-color: transparent;
+}

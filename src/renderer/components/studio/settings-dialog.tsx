@@ -1001,7 +1001,7 @@ function CreditsCard() {
                 <span className="font-medium text-foreground tabular-nums">
                   {formatCredits(credits)}
                 </span>{" "}
-                credits left · every model, never a monthly fee
+                left · every model, never a monthly fee
               </>
             ) : (
               "Every model, paid as you go — never a monthly fee."

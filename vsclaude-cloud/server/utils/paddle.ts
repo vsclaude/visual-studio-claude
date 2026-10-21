@@ -14,7 +14,8 @@ import { catalogOf, type Catalog } from "./paddle-billing.ts"
 export function paddleConfig() {
   const config = useRuntimeConfig()
   const sandbox = String(config.paddleEnvironment) !== "production"
-  const prices: Record<CreditItem, string> = {
+  // No `credits-mini`: it is sold by bank transfer only (`bankOnly`).
+  const prices: Partial<Record<CreditItem, string>> = {
     "credits-20k": String(config.paddlePriceCredits20k),
     "credits-60k": String(config.paddlePriceCredits60k),
     "credits-100k": String(config.paddlePriceCredits100k),

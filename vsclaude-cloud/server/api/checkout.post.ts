@@ -1,7 +1,7 @@
 import { defineHandler } from "nitro"
 
 import { authenticate } from "../utils/auth.ts"
-import { isCreditItem } from "../utils/billing.ts"
+import { CREDIT_PACKS, isCreditItem } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
 import { paddleApi, paddleConfig, paddleCustomerOf } from "../utils/paddle.ts"
 
@@ -39,6 +39,13 @@ export default defineHandler(async (event) => {
   if (!isCreditItem(item)) {
     noteRequest(event, { refused: "unknown item" })
     return Response.json({ error: "Nothing here sells that." }, { status: 400 })
+  }
+  if (CREDIT_PACKS[item].bankOnly) {
+    noteRequest(event, { refused: `${item} is bank transfer only` })
+    return Response.json(
+      { error: "That pack is sold by bank transfer only." },
+      { status: 400 }
+    )
   }
   const price = paddle.prices[item]
   if (!price) {

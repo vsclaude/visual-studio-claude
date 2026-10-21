@@ -78,6 +78,8 @@ export type Copy = {
     bonus: (percent: number) => string
     starter: string
     note: string
+    /** The note on a pack sold by bank transfer alone (`bankOnly`). */
+    bankOnly: string
     pay: string
   }
   steps: {
@@ -173,10 +175,11 @@ const en: Copy = {
     title: ["Pay with ", "credits"],
     body: "The app is free. Out of your 5-hour window, or no Claude subscription at all? Buy a pack once and use it on Haiku, Sonnet or Opus — it never expires.",
     popular: "Most popular",
-    credits: "credits",
+    credits: "in credits",
     bonus: (percent) => `+${percent}% bonus`,
     starter: "Starter",
     note: "once · never expires",
+    bankOnly: "VietQR transfer only · never expires",
     pay: "Pay by VietQR bank transfer or international card. Credits are only for when your own accounts run out — your logins stay free.",
   },
   steps: {
@@ -219,11 +222,11 @@ const en: Copy = {
       },
       {
         q: "Which models can I use?",
-        a: "Haiku, Sonnet and Opus. Each spends credits at its own price — Sonnet 20× and Opus 40× Haiku — so a credit is worth the same money on every model.",
+        a: "Haiku, Sonnet and Opus. Credits are dollars of Anthropic's own list price, and each model is charged at its own rate — Sonnet 20× and Opus 40× Haiku — so a dollar buys the same amount of work whichever model spends it.",
       },
       {
         q: "How far does a pack go?",
-        a: "Every reply on credits ends with what it took off your balance, so you never have to guess. As a rough guide, one call to Sonnet with a mostly cached prompt is around 100–150k credits, and a Claude Code message makes a few of them. Haiku costs a twentieth of that and Opus twice as much.",
+        a: "Every reply on credits ends with what it took off your balance, in dollars, so you never have to guess. As a rough guide, one call to Sonnet with a mostly cached prompt is around $0.01–0.015, and a Claude Code message makes a few of them. Haiku costs a twentieth of that and Opus twice as much.",
       },
       {
         q: "Where do my requests go?",
@@ -333,6 +336,7 @@ const vi: Copy = {
     bonus: (percent) => `tặng thêm ${percent}%`,
     starter: "Khởi đầu",
     note: "trả một lần · không hết hạn",
+    bankOnly: "chỉ chuyển khoản VietQR · không hết hạn",
     pay: "Thanh toán qua chuyển khoản VietQR hoặc thẻ quốc tế. Credit chỉ dùng khi tài khoản của bạn đã hết hạn mức; dùng tài khoản riêng thì vẫn miễn phí.",
   },
   steps: {
@@ -375,11 +379,11 @@ const vi: Copy = {
       },
       {
         q: "Tôi dùng được model nào?",
-        a: "Haiku, Sonnet và Opus. Mỗi model trừ credit theo tỷ lệ riêng: Sonnet gấp 20 lần Haiku, Opus gấp 40 lần. Nhờ vậy, một credit luôn có cùng giá trị tiền trên mọi model.",
+        a: "Haiku, Sonnet và Opus. Credit tính bằng đô la theo đúng bảng giá niêm yết của Anthropic, và mỗi model trừ theo giá riêng: Sonnet gấp 20 lần Haiku, Opus gấp 40 lần. Nhờ vậy, một đô la mua được cùng một lượng việc dù chạy model nào.",
       },
       {
         q: "Một gói dùng được bao lâu?",
-        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã trừ bao nhiêu, nên bạn không phải đoán. Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng 100–150 nghìn credit, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ tốn một phần hai mươi, Opus gấp đôi.",
+        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã trừ bao nhiêu đô la, nên bạn không phải đoán. Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng $0,01–0,015, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ tốn một phần hai mươi, Opus gấp đôi.",
       },
       {
         q: "Yêu cầu của tôi được gửi đi đâu?",

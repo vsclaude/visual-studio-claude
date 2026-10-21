@@ -14,33 +14,45 @@
  * Pure — no storage, no config — so `test/billing.test.ts` can feed it.
  */
 
-export type CreditItem = "credits-20k" | "credits-60k" | "credits-100k"
+import { CREDITS_PER_USD } from "./usage.ts"
+
+export type CreditItem =
+  "credits-mini" | "credits-20k" | "credits-60k" | "credits-100k"
+
+/** A pack's size written as the dollars it is sold as, in `usage.ts`'s unit. */
+function usd(dollars: number): number {
+  return Math.round(dollars * CREDITS_PER_USD)
+}
 
 /**
- * Credit packs: the price a transfer must reach, and what the pack adds in
- * `usage.ts`'s input-token equivalents. Keep in step with the app's `src/shared/credits.ts`, which
- * draws them: a dialog promising another price is a customer who paid what
- * they were shown and is told it was short.
+ * Credit packs: the price a transfer must reach, and what the pack adds, in
+ * `usage.ts`'s unit — written as the dollars of Anthropic's list price it
+ * buys, which is also how every page and the studio show it. Keep in step
+ * with the app's `src/shared/credits.ts`, which draws them: a dialog promising
+ * another price is a customer who paid what they were shown and is told it
+ * was short.
  *
- * The rate is 200,000 credits per 1,000 ₫, then a bonus on the bigger packs.
- * A million credits is $0.10 of Anthropic's price (`usage.ts`), about
- * 2,630 ₫ at 26,300 ₫/USD, so the small pack charges 1.9× that and the large
- * 1.6× — enough for Paddle's 5% + $0.50 a transaction, VAT and the đồng
- * drifting against the dollar, and still a price a developer who knows the
- * API's can look at. The smallest is 50.000 ₫ and not less because the $0.50
- * is fixed: on 25.000 ₫ it was 58% of the price. One table for both ways of
- * paying — a VietQR transfer costs nothing per transaction, so it is simply
- * the better side of the same margin rather than a second price list
- * (`docs/design.md` § Credits). The ids carry the prices of an earlier table
- * and are kept: `NITRO_PADDLE_PRICE_CREDITS*` is named after them.
+ * The rate is $1.00 of usage per 2.000 ₫, then a bonus on the bigger packs.
+ * It is set against what API credit actually sells for in Vietnam — around
+ * 1.500 ₫ to the dollar — and not against Anthropic's list price of about
+ * 26.300 ₫, which was the first table's mistake: it sold $1.00 for 50.000 ₫,
+ * twenty-five times the going rate. 2.000 ₫ is a third over that cost.
+ * The packs are the four amounts a Vietnamese transfer is made in — 20.000,
+ * 50.000, 100.000 and 200.000 ₫. The smallest is **`bankOnly`**: Paddle's
+ * fixed $0.50 is about 13.000 ₫ of a 20.000 ₫ pack, and Paddle charges no
+ * less than 20.276 ₫ in đồng anyway, so a card buys from 50.000 ₫ up. One
+ * table otherwise for both ways of paying (`docs/design.md` § Credits). The
+ * older ids carry the prices of an earlier table and are kept:
+ * `NITRO_PADDLE_PRICE_CREDITS*` is named after them.
  */
 export const CREDIT_PACKS: Record<
   CreditItem,
-  { price: number; credits: number }
+  { price: number; credits: number; bankOnly?: true }
 > = {
-  "credits-20k": { price: 50_000, credits: 10_000_000 },
-  "credits-60k": { price: 100_000, credits: 22_000_000 },
-  "credits-100k": { price: 200_000, credits: 48_000_000 },
+  "credits-mini": { price: 20_000, credits: usd(10), bankOnly: true },
+  "credits-20k": { price: 50_000, credits: usd(25) },
+  "credits-60k": { price: 100_000, credits: usd(55) },
+  "credits-100k": { price: 200_000, credits: usd(120) },
 }
 
 export function isCreditItem(value: unknown): value is CreditItem {

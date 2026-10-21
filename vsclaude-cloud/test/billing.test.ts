@@ -97,12 +97,20 @@ describe("signatureValid", () => {
 describe("items", () => {
   test("the credit packs, and nothing else", () => {
     expect(isCreditItem("credits-20k")).toBe(true)
+    expect(isCreditItem("credits-mini")).toBe(true)
     expect(isCreditItem("plus")).toBe(false)
     expect(isCreditItem("plus-3m")).toBe(false)
     expect(isCreditItem("pri_c60")).toBe(false)
   })
   test("an unset price is not on sale", () => {
     expect(Object.values(catalog)).not.toContain("credits-100k")
+  })
+  // Paddle's fixed $0.50 is most of 20.000 ₫, and its floor is 20.276 ₫.
+  test("only the smallest pack is bank transfer only", () => {
+    const bankOnly = Object.entries(CREDIT_PACKS)
+      .filter(([, pack]) => pack.bankOnly)
+      .map(([id, pack]) => [id, pack.price])
+    expect(bankOnly).toEqual([["credits-mini", 20_000]])
   })
 })
 

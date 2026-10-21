@@ -76,6 +76,11 @@ it costs more than is left; the balance stops at 0 and the next one is refused.
 their 0.05× cache reads and no long-prompt surcharge — so a credit is the same
 money whichever model spends it. An unknown model counts as Opus.
 
+**The unit is shown as dollars.** Ten million of it are $1.00 of Anthropic's
+list price (`CREDITS_PER_USD` in `usage.ts`), and that is how the studio, the
+landing page and the payment pages write every balance, pack and charge —
+`$1.00`, `$0.135`— never as a count. The database, the webhooks,`/api/usage`and the`usage` log line carry the integer.
+
 ## Credits
 
 There are no plans — the monthly Starter, Plus and Pro were withdrawn. What is

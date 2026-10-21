@@ -1544,7 +1544,7 @@ export function ProfileMenu({
                     : broke
                       ? "No credits left · top up to keep going"
                       : credits !== undefined
-                        ? `Every model · ${formatCredits(credits)} credits left`
+                        ? `Every model · ${formatCredits(credits)} left`
                         : "Every model, paid with credits"}
                 </span>
               }

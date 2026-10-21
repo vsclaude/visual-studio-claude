@@ -1,4 +1,5 @@
 import type { AssistantMessage, TurnUsage } from "@shared/api"
+import { formatCredits } from "@shared/credits"
 import { duration } from "./since"
 
 /**
@@ -89,10 +90,11 @@ export function usageLine(usage: TurnUsage | ChatTotal): string {
   //
   // Credits are the exception, and the difference is who is paying: the dollar
   // figure is the CLI's guess at a bill the user's subscription already covers,
-  // where credits are the balance the user bought going down, in the unit the
-  // packs are sold in. Only on a turn that spent them — null everywhere else,
-  // so a chat on a login never shows a charge that was not made.
-  if (usage.credits) parts.push(`${compact(usage.credits)} credits`)
+  // where credits are the balance the user bought going down, written as the
+  // dollars the packs are sold as (`formatCredits`). Only on a turn that spent
+  // them — null everywhere else, so a chat on a login never shows a charge
+  // that was not made.
+  if (usage.credits) parts.push(`${formatCredits(usage.credits)} in credits`)
 
   // A result that reported nothing at all — a crashed turn carries zeroes —
   // rather than a row saying the turn was free.
@@ -144,8 +146,14 @@ export function usageDetail(usage: TurnUsage | ChatTotal): string {
     lines.push(`${count(usage.context)} in the window when the turn ended`)
   }
   if (usage.model) lines.push(usage.model)
+  // The dollars, and the integer the server took off the balance: the latter
+  // is what its `usage` log line says, for anybody reconciling the two.
   if (usage.credits) {
-    lines.push(`${count(usage.credits)} credits off the Studio AI balance`)
+    lines.push(
+      `${formatCredits(usage.credits)} off the Studio AI balance (${count(
+        usage.credits
+      )} credits)`
+    )
   }
   if (usage.costUsd !== null) {
     lines.push(`${money(usage.costUsd)} — the CLI's own estimate`)

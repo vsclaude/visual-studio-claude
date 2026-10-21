@@ -555,10 +555,12 @@ section("a turn paid in credits")
     usageOf(result({}), null, null, null, true).credits === null
   )
 
+  // In dollars, not the integer: beside `33.4k prompt`, `1.3M credits` reads
+  // as a token count forty times too big, where `$0.135` is what happened.
   check(
-    "the row says what came off the balance",
+    "the row says what came off the balance, in dollars",
     usageLine(usage({ output: 38, credits: 139_000 })).endsWith(
-      "38 out · 139k credits"
+      "38 out · $0.014 in credits"
     ),
     usageLine(usage({ output: 38, credits: 139_000 }))
   )
@@ -567,10 +569,11 @@ section("a turn paid in credits")
     !usageLine(usage({ output: 38 })).includes("credits")
   )
   check(
-    "the hover has the full count",
+    "the hover has the dollars and the server's own integer",
     usageDetail(usage({ credits: 139_000 })).includes(
-      "139,000 credits off the Studio AI balance"
-    )
+      "$0.014 off the Studio AI balance (139,000 credits)"
+    ),
+    usageDetail(usage({ credits: 139_000 }))
   )
 
   const moved = totalOf([

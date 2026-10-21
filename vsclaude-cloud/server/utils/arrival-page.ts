@@ -1,3 +1,5 @@
+import { CREDITS_PER_USD } from "./usage.ts"
+
 /**
  * The card a payment page shows once the purchase's credits are on the account
  * — the page where the money was paid, not the studio, since that is where
@@ -119,8 +121,8 @@ export function arrivalCard(copy: {
       </div>
       <div class="body">
         <h2>${copy.title}</h2>
-        <p class="amount" id="arrived-amount">+0</p>
-        <p class="unit">credits</p>
+        <p class="amount" id="arrived-amount">+$0.00</p>
+        <p class="unit">in credits</p>
         <p class="note">${copy.note}</p>
         <button type="button" id="arrived-close">${copy.button}</button>
       </div>
@@ -131,7 +133,9 @@ export function arrivalCard(copy: {
 /**
  * The script half: `showArrival(credits)` shows the card and counts the amount
  * up from zero over most of a second — straight to it when motion is reduced.
- * `locale` is how the number is grouped: `vi-VN` reads 1.000.000.
+ * The amount arrives in the server's integer unit and is written as the
+ * dollars it is (`CREDITS_PER_USD`), the way the studio and the packs say it;
+ * `locale` is how that is grouped: `vi-VN` reads 1.234,56.
  */
 export function arrivalScript(locale: string): string {
   return `const arrived = document.getElementById("arrived")
@@ -139,7 +143,8 @@ export function arrivalScript(locale: string): string {
       document.getElementById("arrived-close").onclick = () => { arrived.hidden = true }
       const showArrival = (credits) => {
         arrived.hidden = false
-        const format = (value) => "+" + value.toLocaleString(${JSON.stringify(locale)})
+        const dollars = new Intl.NumberFormat(${JSON.stringify(locale)}, { style: "currency", currency: "USD" })
+        const format = (value) => "+" + dollars.format(value / ${CREDITS_PER_USD})
         if (credits <= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
           arrivedAmount.textContent = format(credits)
           return

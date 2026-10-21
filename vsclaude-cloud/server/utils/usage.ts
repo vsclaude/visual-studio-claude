@@ -9,7 +9,31 @@
  * output 5×). A million credits are then "what a million fresh Haiku input
  * tokens would cost", whatever the mix — and whatever the model, since
  * Sonnet and Opus are counted at their own price (`MODEL_PRICES`).
+ *
+ * The unit is never shown as a count: a million of it is $0.10, so the studio
+ * and every page here write a balance, a pack or a charge as **dollars**
+ * (`CREDITS_PER_USD`), and only the database, the webhooks and the `usage`
+ * log line carry the integer.
  */
+
+/** Ten million of the unit are $1.00 of Anthropic's list price. Kept in step
+ * with the app's `src/shared/credits.ts` by hand. */
+export const CREDITS_PER_USD = 10_000_000
+
+/** `$8.63`, `$0.135`, `$0.005` — as the studio's own `formatCredits`: cents
+ * from a dollar up, a third place under it so a Haiku turn is neither doubled
+ * to a cent nor shown as free, and that place dropped where it is a zero. */
+export function formatCredits(credits: number): string {
+  const dollars = Math.max(0, credits / CREDITS_PER_USD)
+  if (dollars >= 1) {
+    return `$${dollars.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
+  const three = dollars.toFixed(3)
+  return `$${three.endsWith("0") ? three.slice(0, -1) : three}`
+}
 
 export type Usage = {
   input_tokens: number

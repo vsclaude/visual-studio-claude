@@ -733,6 +733,34 @@ sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
 
+**Written as dollars, counted as before.** Every balance, pack and charge is
+shown as the dollars of Anthropic's list price it is — `$1.00` for the small
+pack, `$8.63` left, `$0.135` under an Opus reply — and never as a count
+(`formatCredits`, `CREDITS_PER_USD` in `shared/credits.ts`). It was `10M
+credits`, `1.3M credits`, and the figure sat beside token counts on the same
+line, so it was read as one: a 67-token answer on Opus charged `1.3M credits`
+looked like the app miscounting by forty, where `$0.13` beside `33.4k prompt,
+0% cached` says what happened — an uncached prompt on the dearest model. The
+unit underneath did not move: it is still one Haiku input token, ten million
+to the dollar, and D1, the webhooks, `/api/usage` and the server's log line
+all carry the integer, because a dollar figure would lose a Haiku request's
+$0.0003 to rounding and a turn's charge to a cent. Only the formatting knows
+the rate, and the hover under a reply still gives the integer beside the
+dollars for anybody reconciling against the server.
+
+**Priced against the market, not the list price.** Written as dollars, the
+first table said what it had been hiding: 50.000 ₫ bought $1.00 of usage,
+priced off Anthropic's list price at about 26.300 ₫ to the dollar. API credit
+sells in Vietnam for around 1.500 ₫ to the dollar, so that was twenty-five
+times the going rate. The packs are now $25, $55 and $120 for the same
+50.000, 100.000 and 200.000 ₫ — 2.000 ₫ to the dollar, a third over that
+cost, with the 10% and 20% bonuses kept. A fourth, $10 for 20.000 ₫, makes
+the four amounts a Vietnamese transfer is made in, and it is **bank transfer
+only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
+charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is
+chosen and `POST /api/checkout` refuses it. The paragraph below on what a pack
+costs is the earlier table's reasoning, kept for the record.
+
 **Used and left, in numbers.** The dialog's strip shows the credits as used
 and left — a balance alone does not say whether a pack lasted a week or an afternoon. The
 server counts `used` as it charges (`chargeCredits`); an account from before

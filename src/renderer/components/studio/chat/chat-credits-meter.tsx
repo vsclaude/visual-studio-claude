@@ -64,7 +64,7 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
       title={
         broke
           ? "No credits left — buy more to keep going"
-          : `${formatCredits(account.credits)} credits left — buy more`
+          : `${formatCredits(account.credits)} in credits left — buy more`
       }
       aria-label="Credits"
       className={cn(

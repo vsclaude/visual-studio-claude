@@ -13,6 +13,7 @@ import {
 import { paymentDocument } from "../../utils/payment-page.ts"
 import { qrUrl } from "../../utils/sepay-billing.ts"
 import { sepayConfig } from "../../utils/sepay.ts"
+import { formatCredits } from "../../utils/usage.ts"
 
 /**
  * `GET /pay/<code>` — the page a bank-transfer purchase opens in the browser:
@@ -26,10 +27,7 @@ import { sepayConfig } from "../../utils/sepay.ts"
 
 function itemName(item: string): string {
   if (!isCreditItem(item)) return "Đơn hàng"
-  const credits = new Intl.NumberFormat("vi-VN").format(
-    CREDIT_PACKS[item].credits
-  )
-  return `Gói ${credits} credits`
+  return `Gói credit ${formatCredits(CREDIT_PACKS[item].credits)}`
 }
 
 /**

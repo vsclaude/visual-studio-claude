@@ -1,9 +1,10 @@
 import { useId, useState } from "react"
-import { AlertCircle, Check, Loader2 } from "lucide-react"
+import { AlertCircle, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 
 import { brandIcon } from "@/lib/brand-icons"
 import { parentOf } from "@/lib/files/paths"
@@ -235,7 +236,7 @@ export function TemplateProjectForm({ onClose }: { onClose: () => void }) {
             type="submit"
             disabled={creating || !trimmed || !!problem || !parent.trim()}
           >
-            {creating && <Loader2 className="animate-spin" />}
+            {creating && <Spinner />}
             Create
           </Button>
         </div>

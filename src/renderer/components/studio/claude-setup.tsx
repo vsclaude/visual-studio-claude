@@ -7,7 +7,6 @@ import {
   FolderOpen,
   GitCompare,
   KeyRound,
-  Loader2,
   MessagesSquare,
   type LucideIcon,
 } from "lucide-react"
@@ -15,6 +14,7 @@ import {
 import type { ClaudeVersions } from "@shared/api"
 import { Button } from "@/components/ui/button"
 import { Claude } from "@/components/ui/svgs/claude"
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { accountCaption, useClaudeProfiles } from "@/lib/chat/claude-profiles"
 import {
@@ -357,7 +357,7 @@ function RecheckButton({
       disabled={checking}
       onClick={onClick}
     >
-      {checking && <Loader2 className="animate-spin" />}
+      {checking && <Spinner />}
       Check again
     </Button>
   )
@@ -366,7 +366,7 @@ function RecheckButton({
 function Checking({ label }: { label: string }) {
   return (
     <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
-      <Loader2 className="size-4 animate-spin" />
+      <Spinner />
       {label}
     </div>
   )
@@ -434,7 +434,7 @@ function Hero({
           )}
         >
           {state === "busy" ? (
-            <Loader2 className="animate-spin" />
+            <Spinner />
           ) : state === "done" ? (
             <Check strokeWidth={3} />
           ) : (

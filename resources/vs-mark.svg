@@ -9,7 +9,8 @@
 
   Drawn as strokes rather than set in a font, so it is the same on every
   machine. Copied, path for path, into resources/logo.svg, src/renderer/
-  components/studio/wordmark.tsx, vsclaude-cloud/server/utils/brand.ts and
+  components/studio/wordmark.tsx, the loaders in src/renderer/components/ui/
+  spinner.tsx, vsclaude-cloud/server/utils/brand.ts and
   docs/banner.svg.
   The box is measured, not guessed: the glyph's own ink, stroke caps
   included.

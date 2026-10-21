@@ -4,7 +4,6 @@ import {
   Folder,
   FolderPlus,
   FolderX,
-  Loader2,
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Spinner } from "@/components/ui/spinner"
 
 import * as repo from "@/lib/workspace"
 import { useStudio } from "@/lib/store"
@@ -313,7 +313,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={!path || adding}>
-                  {adding && <Loader2 className="animate-spin" />}
+                  {adding && <Spinner />}
                   Add folder
                 </Button>
               </div>

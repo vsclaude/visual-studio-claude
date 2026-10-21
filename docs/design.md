@@ -146,13 +146,22 @@ any more, and nothing deletes it.
 
 ### The chat's loading indicator
 
-While a turn runs the pane draws three `primary` dots hopping in turn, then
-`Working…` with a light passing over it, then a running clock — all CSS in
-`styles/motion.css`, so it follows the theme and `prefers-reduced-motion` (the
-dots fall back to breathing, the shimmer stops). It was a hand-drawn SVG, then a
-spritesheet, then a GIF swordsman beside `Hasaging…`, removed at the user's
-request: `prefers-reduced-motion` could not reach it, it did not follow the
-theme, and it was fan art of somebody else's character.
+While a turn runs the pane draws the **VS lettermark writing itself** — the V,
+then the S through its arm, in the logo's violet-to-amber over a faint copy —
+held a beat and wiped from where it started; then `Working…` with a light
+passing over it, then a running clock. All CSS in `styles/motion.css`
+(`stroke-dashoffset` over `pathLength="100"`), so `prefers-reduced-motion`
+reaches it: the glyph is drawn whole and breathes, the shimmer stops. It was a
+hand-drawn SVG, then a spritesheet, then a GIF swordsman beside `Hasaging…`,
+removed at the user's request (`prefers-reduced-motion` could not reach it, it
+did not follow the theme, and it was fan art of somebody else's character), then
+three `primary` dots, which said "loading" in every app's words rather than this
+one's.
+
+The **spinner** (`ui/spinner.tsx`) is the same glyph at row size: faint, with
+one light running down the V and on through the S, in `currentColor` so a filled
+button paints it in its own text colour. It replaced a 3×3 shuffling grid, and
+the last lucide `Loader2`s on buttons went with it.
 
 ### Worktrees, as projects
 

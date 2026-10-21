@@ -9,7 +9,15 @@ import {
 import {
   CaseSensitive,
   ChevronRight,
+  ChevronsUpDown,
+  Copy,
+  ExternalLink,
+  FileText,
   FolderDot,
+  FolderTree,
+  History,
+  Link,
+  Link2,
   ListCollapse,
   ListFilter,
   MessageSquare,
@@ -17,6 +25,7 @@ import {
   ReplaceAll,
   RotateCw,
   WholeWord,
+  X,
 } from "lucide-react"
 
 import type {
@@ -36,8 +45,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { cn } from "@/lib/utils"
+import { since } from "@/lib/chat/since"
 import { nameOf } from "@/lib/files/paths"
+import { useFiles } from "@/lib/files/store"
 import { revealAt } from "@/lib/files/typescript"
 import { useProjects } from "@/lib/projects"
 import { useStudio } from "@/lib/store"
@@ -95,6 +113,7 @@ export function SearchSection() {
   const focused = useWorkspaceSearch((state) => state.focused)
   const shut = useWorkspaceSearch((state) => state.shut)
   const shutKinds = useWorkspaceSearch((state) => state.shutKinds)
+  const recent = useWorkspaceSearch((state) => state.recent)
   const {
     setQuery,
     toggleOption,
@@ -107,6 +126,10 @@ export function SearchSection() {
     toggleGroup,
     toggleKind,
     toggleAll,
+    remember,
+    forget,
+    clearRecent,
+    dismiss,
   } = useWorkspaceSearch.getState()
   const folders = useStudio((state) => state.folders)
   const activeFolderId = useProjects((state) => state.activeFolderId)
@@ -174,7 +197,14 @@ export function SearchSection() {
     setCursor(row.key)
     if (row.type === "kind") toggleKind(row.kind)
     else if (row.type === "group") toggleGroup(row.group)
-    else if (row.chatId) {
+    else {
+      remember(query)
+      openLine(row)
+    }
+  }
+
+  function openLine(row: Extract<Row, { type: "line" }>) {
+    if (row.chatId) {
       useWorkspaceSearch.getState().land({
         chatId: row.chatId,
         messageId: row.messageId,
@@ -215,9 +245,37 @@ export function SearchSection() {
     return () => window.removeEventListener("keydown", onKeyDown)
   })
 
+  /**
+   * Dismisses the file or chat `row` belongs to, and moves the cursor to the
+   * first row past it — or the last one before it, at the end of the list — so
+   * Delete pressed again keeps clearing downwards.
+   */
+  function dismissRow(row: Row) {
+    if (row.type === "kind") return
+    const from = rows.indexOf(row)
+    const after = rows.slice(from).find((other) => groupOf(other) !== row.group)
+    const before = rows
+      .slice(0, from)
+      .reverse()
+      .find((other) => groupOf(other) !== row.group)
+    dismiss(row.group)
+    setCursor((after ?? before)?.key ?? null)
+  }
+
   function onListKey(event: ReactKeyboardEvent<HTMLDivElement>) {
     const row = rows[at]
     switch (event.key) {
+      case "Escape":
+        event.preventDefault()
+        setCursor(null)
+        field.current?.focus()
+        break
+      case "Delete":
+      case "Backspace":
+        if (!row || row.type === "kind") break
+        event.preventDefault()
+        dismissRow(row)
+        break
       case "ArrowDown": {
         event.preventDefault()
         const next = rows[Math.min(at + 1, rows.length - 1)]
@@ -269,19 +327,52 @@ export function SearchSection() {
 
   const replaceable = replaceOpen && fileMatches > 0 && !replacing
   const filtered = scope.include.trim() !== "" || scope.exclude.trim() !== ""
+  const narrowing = [
+    scope.kinds === "chats" && "chats only",
+    scope.kinds === "files" && "files only",
+    scope.thisProject && "this project",
+    filtered && "file globs",
+  ].filter((part): part is string => Boolean(part))
+
+  // `toggleAll` opens everything once every group is shut, so the button says
+  // which of the two it is about to do.
+  const groups = (result?.files.length ?? 0) + (result?.chats.length ?? 0)
+  const allShut = groups > 0 && shut.length >= groups
+
+  const sections = useMemo(() => sectionsOf(rows), [rows])
+
+  /*
+   * `⌥⌘C` / `⌥⌘W` / `⌥⌘R` — the editors' keys for the three toggles, taken
+   * anywhere inside this column, field or list. `code` rather than `key`: with
+   * ⌥ held, macOS hands over `ç`, `∑` and `®`.
+   */
+  function onSectionKey(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (!event.altKey || !(event.metaKey || event.ctrlKey) || event.shiftKey)
+      return
+    const option = OPTION_KEYS[event.code]
+    if (!option) return
+    event.preventDefault()
+    toggleOption(option)
+  }
+
+  function pickRecent(entry: string) {
+    setQuery(entry)
+    remember(entry)
+    field.current?.focus()
+  }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col" onKeyDown={onSectionKey}>
       <PanelHeader title="Search">
         <IconButton label="Search again" onClick={run} disabled={!query}>
           <RotateCw />
         </IconButton>
         <IconButton
-          label="Collapse all"
+          label={allShut ? "Expand all" : "Collapse all"}
           onClick={toggleAll}
           disabled={!result || (fileMatches === 0 && chatMatches === 0)}
         >
-          <ListCollapse />
+          {allShut ? <ChevronsUpDown /> : <ListCollapse />}
         </IconButton>
       </PanelHeader>
 
@@ -312,6 +403,7 @@ export function SearchSection() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault()
+                    remember(query)
                     run()
                   }
                   if (event.key === "Escape" && query) {
@@ -328,9 +420,19 @@ export function SearchSection() {
                 spellCheck={false}
                 className="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
               />
+              {/* Kept mounted while empty, disabled, so the toggles beside it
+                  do not jump left as the first letter is typed. */}
+              <IconButton
+                label="Clear search (Esc)"
+                onClick={() => setQuery("")}
+                disabled={!query}
+                className="size-6 [&_svg]:size-3"
+              >
+                <X />
+              </IconButton>
               <Toggle
                 option="matchCase"
-                label="Match case"
+                label="Match case (⌥⌘C)"
                 options={options}
                 onToggle={toggleOption}
               >
@@ -338,7 +440,7 @@ export function SearchSection() {
               </Toggle>
               <Toggle
                 option="wholeWord"
-                label="Match whole word"
+                label="Match whole word (⌥⌘W)"
                 options={options}
                 onToggle={toggleOption}
               >
@@ -346,7 +448,7 @@ export function SearchSection() {
               </Toggle>
               <Toggle
                 option="regex"
-                label="Use regular expression"
+                label="Use regular expression (⌥⌘R)"
                 options={options}
                 onToggle={toggleOption}
               >
@@ -482,67 +584,107 @@ export function SearchSection() {
         }}
         className="group/list min-h-0 flex-1 overflow-y-auto py-1 outline-none"
       >
-        {rows.map((row) => {
-          const current = row.key === cursor
-          if (row.type === "kind")
-            return (
-              <Kind
-                key={row.key}
-                id={row.key}
-                current={current}
-                label={row.label}
-                count={row.count}
-                open={row.open}
-                onToggle={() => openRow(row)}
-              />
-            )
-          if (row.type === "group")
-            return (
-              <Group
-                key={row.key}
-                id={row.key}
-                current={current}
-                open={row.open}
-                onToggle={() => openRow(row)}
-                icon={
-                  row.path ? (
-                    <FileIcon filePath={row.path} />
-                  ) : (
-                    <MessageSquare className="size-3.5 shrink-0 text-muted-foreground" />
-                  )
-                }
-                name={row.name}
-                where={row.where}
-                title={row.path}
-                count={row.count}
-                onReplace={
-                  replaceable && row.path
-                    ? () => void replace([row.path!])
-                    : undefined
-                }
-              />
-            )
-          return (
-            <Line
-              key={row.key}
-              id={row.key}
-              current={current}
-              preview={row.preview}
-              replacement={row.chatId ? undefined : preview}
-              title={row.chatId ? undefined : `Line ${row.line}`}
-              onClick={() => openRow(row)}
+        {!query && rows.length === 0 && (
+          <SearchStart
+            recent={recent}
+            onPick={pickRecent}
+            onForget={forget}
+            onClear={clearRecent}
+          />
+        )}
+
+        {/* Drawn nested — a box per kind, a box per file or chat — though
+            `rows` stays flat for the keys: a sticky header sticks only inside
+            its own box, so each file's name stays on screen while its matches
+            scroll under it and gives way to the next file's, rather than every
+            header piling up at the top of the list. */}
+        {sections.map(({ head, groups }) => (
+          <div key={head.key}>
+            <Kind
+              id={head.key}
+              current={head.key === cursor}
+              label={head.label}
+              count={head.count}
+              open={head.open}
+              onToggle={() => openRow(head)}
             />
-          )
-        })}
+            {groups.map(({ head: group, lines }) => (
+              <div key={group.key}>
+                <Group
+                  id={group.key}
+                  current={group.key === cursor}
+                  open={group.open}
+                  onToggle={() => openRow(group)}
+                  icon={
+                    group.path ? (
+                      <FileIcon filePath={group.path} />
+                    ) : (
+                      <MessageSquare className="size-3.5 shrink-0 text-muted-foreground" />
+                    )
+                  }
+                  name={group.name}
+                  where={group.where}
+                  when={group.when}
+                  title={group.relative ?? group.name}
+                  count={group.count}
+                  onReplace={
+                    replaceable && group.path
+                      ? () => void replace([group.path!])
+                      : undefined
+                  }
+                  onDismiss={() => dismissRow(group)}
+                  menu={
+                    <GroupMenu
+                      group={group}
+                      onOpen={() => {
+                        // On its first match where one is drawn; a shut group
+                        // has none on screen, so the file or chat itself.
+                        const first = lines[0]
+                        if (first) openRow(first)
+                        else if (group.path)
+                          useFiles.getState().select(group.path)
+                        else useChats.getState().select(group.group)
+                      }}
+                      onDismiss={() => dismissRow(group)}
+                    />
+                  }
+                />
+                {lines.map((row) => (
+                  <Line
+                    key={row.key}
+                    id={row.key}
+                    current={row.key === cursor}
+                    preview={row.preview}
+                    replacement={row.chatId ? undefined : preview}
+                    // A chat's lines have no line number; they have a voice.
+                    line={row.chatId ? undefined : row.line}
+                    role={row.role}
+                    onClick={() => openRow(row)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
 
         {result &&
           !result.error &&
           !searching &&
           result.files.length === 0 &&
           result.chats.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">
-              Nothing found.
-            </p>
+            <div className="space-y-1 px-3 py-2 text-xs text-muted-foreground">
+              <p>
+                No results for{" "}
+                <span className="text-foreground">“{query}”</span>
+              </p>
+              {/* A filter that is on narrows the answer without saying so, so
+                  the empty answer is the place to say it. */}
+              {narrowing.length > 0 && (
+                <p className="text-[0.7rem]">
+                  Narrowed by {narrowing.join(", ")}
+                </p>
+              )}
+            </div>
           )}
       </div>
 
@@ -597,20 +739,28 @@ type Row =
       open: boolean
       name: string
       where?: string
+      /** A chat's last activity, as the projects column draws it — `3d`. */
+      when?: string
       /** A file's; a chat group has none. */
       path?: string
+      /** A file's path inside its folder, for the tooltip and the menu. */
+      relative?: string
       count: number
     }
   | {
       type: "line"
       key: string
       parent: string
+      /** Its group's `group`, so a line can dismiss the file it is in. */
+      group: string
       preview: SearchPreview
       path: string
       line: number
       column: number
       length: number
       chatId?: string
+      /** A chat's; a file's line has no voice. */
+      role?: "user" | "assistant"
       messageId: string
       offset: number
     }
@@ -655,6 +805,7 @@ function rowsOf(
           open: groupOpen,
           name: chat.title,
           where: folderName(chat.folderId),
+          when: since(chat.updatedAt) || undefined,
           count: chat.matches.length,
         })
         // Keyed by place in the group, not by message: a transcript carries the
@@ -666,12 +817,14 @@ function rowsOf(
               type: "line",
               key: `${key}:${index}`,
               parent: key,
+              group: chat.chatId,
               preview: match.preview,
               path: "",
               line: 0,
               column: 0,
               length: match.length,
               chatId: chat.chatId,
+              role: match.role,
               messageId: match.messageId,
               offset: match.offset,
             })
@@ -702,6 +855,7 @@ function rowsOf(
           name: nameOf(file.relative),
           where: [folder, dir].filter(Boolean).join(" › ") || undefined,
           path: file.path,
+          relative: file.relative,
           count: file.matches.length,
         })
         if (groupOpen)
@@ -710,6 +864,7 @@ function rowsOf(
               type: "line",
               key: `${key}:${index}`,
               parent: key,
+              group: file.path,
               preview: match.preview,
               path: file.path,
               line: match.line,
@@ -722,6 +877,32 @@ function rowsOf(
   }
 
   return rows
+}
+
+type KindRow = Extract<Row, { type: "kind" }>
+type GroupRow = Extract<Row, { type: "group" }>
+type LineRow = Extract<Row, { type: "line" }>
+
+const groupOf = (row: Row) => (row.type === "kind" ? null : row.group)
+
+/** `rows` nested again for drawing — see the list's own comment. */
+function sectionsOf(
+  rows: Row[]
+): { head: KindRow; groups: { head: GroupRow; lines: LineRow[] }[] }[] {
+  const sections: ReturnType<typeof sectionsOf> = []
+  for (const row of rows) {
+    if (row.type === "kind") sections.push({ head: row, groups: [] })
+    else if (row.type === "group")
+      sections.at(-1)?.groups.push({ head: row, lines: [] })
+    else sections.at(-1)?.groups.at(-1)?.lines.push(row)
+  }
+  return sections
+}
+
+const OPTION_KEYS: Record<string, keyof SearchOptions> = {
+  KeyC: "matchCase",
+  KeyW: "wholeWord",
+  KeyR: "regex",
 }
 
 /** An element id for `aria-activedescendant`, which wants no spaces. */
@@ -844,6 +1025,13 @@ function GlobField({
  * cursor left behind in a list nobody is in reads as a selection. */
 const CURSOR = "group-focus/list:ring-1 group-focus/list:ring-ring ring-inset"
 
+/**
+ * A header that stays put while its rows scroll under it. Slightly see-through
+ * and blurred rather than solid: with a picture behind the studio the card is
+ * translucent, and a solid strip across it reads as a hole in the picture.
+ */
+const STICKY = "sticky bg-background/95 backdrop-blur-sm"
+
 /** `Chats` / `Files` above their groups — two kinds of row in one list, each
  * folding away whole, the way a `PanelHeader` folds: the whole label is the
  * target. */
@@ -871,7 +1059,8 @@ function Kind({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "flex h-6 w-full items-center gap-1 px-2 pt-1 text-left text-[0.65rem] font-medium tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground",
+        STICKY,
+        "top-0 z-20 flex h-6 w-full items-center gap-1 px-2 pt-1 text-left text-[0.65rem] font-medium tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground",
         current && CURSOR
       )}
     >
@@ -895,9 +1084,12 @@ function Group({
   icon,
   name,
   where,
+  when,
   title,
   count,
   onReplace,
+  onDismiss,
+  menu,
 }: {
   id: string
   current: boolean
@@ -906,18 +1098,23 @@ function Group({
   icon: ReactNode
   name: string
   where?: string
+  when?: string
   title?: string
   count: number
   /** Set while Replace is open, for a file's group. */
   onReplace?: () => void
+  onDismiss: () => void
+  /** The right-click menu's items — `GroupMenu`. */
+  menu: ReactNode
 }) {
-  return (
-    // A row rather than one button, so the replace action beside the count is
-    // a button of its own and not one nested in another.
+  const row = (
+    // A row rather than one button, so the actions beside the count are
+    // buttons of their own and not ones nested in another.
     <div
       id={rowId(id)}
       data-row={id}
-      className={cn("group/row relative", current && CURSOR)}
+      // Sticky under the kind's header, which is `h-6`.
+      className={cn(STICKY, "group/row top-6 z-10", current && CURSOR)}
     >
       <button
         type="button"
@@ -941,27 +1138,113 @@ function Group({
             {where}
           </span>
         )}
-        <span
-          className={cn(
-            "ml-auto shrink-0 rounded-full bg-muted px-1.5 text-[0.65rem] text-muted-foreground tabular-nums",
-            onReplace && "group-hover/row:invisible"
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 group-hover/row:invisible">
+          {when && (
+            <span className="text-[0.65rem] text-muted-foreground/70 tabular-nums">
+              {when}
+            </span>
           )}
-        >
-          {count}
+          <span className="rounded-full bg-muted px-1.5 text-[0.65rem] text-muted-foreground tabular-nums">
+            {count}
+          </span>
         </span>
       </button>
-      {onReplace && (
+      <span className="invisible absolute top-1/2 right-1 flex -translate-y-1/2 items-center group-hover/row:visible">
+        {onReplace && (
+          <IconButton
+            label="Replace in this file"
+            tabIndex={-1}
+            onClick={onReplace}
+            className="size-5 [&_svg]:size-3.5"
+          >
+            <ReplaceAll />
+          </IconButton>
+        )}
         <IconButton
-          label="Replace in this file"
+          label="Dismiss (⌫)"
           tabIndex={-1}
-          onClick={onReplace}
-          className="invisible absolute top-1/2 right-1 size-5 -translate-y-1/2 group-hover/row:visible [&_svg]:size-3.5"
+          onClick={onDismiss}
+          className="size-5 [&_svg]:size-3.5"
         >
-          <ReplaceAll />
+          <X />
         </IconButton>
-      )}
+      </span>
     </div>
   )
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger render={row} />
+      <ContextMenuContent className="w-56">{menu}</ContextMenuContent>
+    </ContextMenu>
+  )
+}
+
+/**
+ * A file's or a chat's right-click menu: open it, the copies the Explorer's
+ * tree offers for a file, and Dismiss.
+ */
+function GroupMenu({
+  group,
+  onOpen,
+  onDismiss,
+}: {
+  group: GroupRow
+  onOpen: () => void
+  onDismiss: () => void
+}) {
+  const copy = (text: string) => void navigator.clipboard.writeText(text)
+  const path = group.path
+
+  return (
+    <>
+      <ContextMenuItem onClick={onOpen}>
+        {path ? <FileText /> : <MessageSquare />}
+        {path ? "Open file" : "Open chat"}
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      {path ? (
+        <>
+          <ContextMenuItem onClick={() => copy(path)}>
+            <Link />
+            Copy path
+          </ContextMenuItem>
+          {group.relative && (
+            <ContextMenuItem onClick={() => copy(group.relative!)}>
+              <Link2 />
+              Copy relative path
+            </ContextMenuItem>
+          )}
+          <ContextMenuItem onClick={() => revealInExplorer(path)}>
+            <FolderTree />
+            Reveal in Explorer
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => void window.desktop.revealPath(path)}>
+            <ExternalLink />
+            Reveal in file manager
+          </ContextMenuItem>
+        </>
+      ) : (
+        <ContextMenuItem onClick={() => copy(group.name)}>
+          <Copy />
+          Copy title
+        </ContextMenuItem>
+      )}
+      <ContextMenuSeparator />
+      <ContextMenuItem onClick={onDismiss}>
+        <X />
+        Dismiss
+      </ContextMenuItem>
+    </>
+  )
+}
+
+/** The right-hand panel opened on `All files`, with the tree down to `path`. */
+function revealInExplorer(path: string) {
+  const studio = useStudio.getState()
+  if (!studio.sidebar) studio.toggleSidebar()
+  studio.setExplorerTab("files")
+  void useFiles.getState().reveal(path)
 }
 
 /**
@@ -973,14 +1256,18 @@ function Line({
   current,
   preview,
   replacement,
-  title,
+  line,
+  role,
   onClick,
 }: {
   id: string
   current: boolean
   preview: SearchPreview
   replacement?: (text: string, from: number) => string
-  title?: string
+  /** A file's line number, drawn the way an editor's gutter draws it. */
+  line?: number
+  /** A chat's: who said it, which is half of what a match in a chat means. */
+  role?: "user" | "assistant"
   onClick: () => void
 }) {
   const match = preview.text.slice(preview.from, preview.to)
@@ -991,7 +1278,6 @@ function Line({
       data-row={id}
       tabIndex={-1}
       onClick={onClick}
-      title={title}
       style={sideRowIndent(2)}
       className={cn(
         SIDE_ROW_SHAPE,
@@ -999,6 +1285,23 @@ function Line({
         current && CURSOR
       )}
     >
+      {line !== undefined && (
+        <span className="w-7 shrink-0 text-right text-[0.65rem] text-muted-foreground/70 tabular-nums">
+          {line}
+        </span>
+      )}
+      {role && (
+        <span
+          className={cn(
+            "shrink-0 rounded-sm px-1 text-[0.6rem] leading-4 font-medium",
+            role === "user"
+              ? "bg-primary/15 text-primary"
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          {role === "user" ? "You" : "Claude"}
+        </span>
+      )}
       <span className="min-w-0 truncate font-mono text-[0.7rem] whitespace-pre">
         {preview.text.slice(0, preview.from)}
         {replacement ? (
@@ -1018,5 +1321,87 @@ function Line({
         {preview.text.slice(preview.to)}
       </span>
     </button>
+  )
+}
+
+/**
+ * What the empty column says before anything is asked: the queries that led
+ * somewhere lately, one click from asking again, and the keys that walk a
+ * result list — none of which is on screen until there is a list to walk.
+ */
+function SearchStart({
+  recent,
+  onPick,
+  onForget,
+  onClear,
+}: {
+  recent: string[]
+  onPick: (query: string) => void
+  onForget: (query: string) => void
+  onClear: () => void
+}) {
+  const hints: [string, string][] = [
+    ["↑ ↓", "Walk the results"],
+    ["Enter", "Open the match"],
+    ["F4 / ⇧F4", "Next / previous match"],
+    ["⌫", "Dismiss a file or chat"],
+    ["⌥⌘C W R", "Case, word, regex"],
+    ["Esc", "Back to the field, then clear it"],
+  ]
+  return (
+    <div className="space-y-3 py-1">
+      {recent.length > 0 && (
+        <section>
+          <div className="flex h-6 items-center gap-1 px-2 pt-1 text-[0.65rem] font-medium tracking-wider text-muted-foreground uppercase">
+            <span className="flex-1 pl-1">Recent</span>
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-sm px-1 tracking-normal normal-case transition-colors hover:text-foreground"
+            >
+              Clear
+            </button>
+          </div>
+          <ul>
+            {recent.map((entry) => (
+              <li key={entry} className="group/recent relative">
+                <button
+                  type="button"
+                  onClick={() => onPick(entry)}
+                  style={sideRowIndent(0)}
+                  className={cn(
+                    SIDE_ROW_SHAPE,
+                    "text-left text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                  )}
+                >
+                  <History className="size-3.5 shrink-0" />
+                  <span className="min-w-0 truncate font-mono text-[0.7rem]">
+                    {entry}
+                  </span>
+                </button>
+                <IconButton
+                  label="Remove from recent"
+                  onClick={() => onForget(entry)}
+                  className="invisible absolute top-1/2 right-1 size-5 -translate-y-1/2 group-hover/recent:visible [&_svg]:size-3"
+                >
+                  <X />
+                </IconButton>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1.5 px-3 text-xs">
+        {hints.map(([keys, what]) => (
+          <div key={keys} className="contents">
+            <dt className="font-mono text-[0.7rem] whitespace-nowrap text-foreground">
+              {keys}
+            </dt>
+            <dd className="text-muted-foreground">{what}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   )
 }

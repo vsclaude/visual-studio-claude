@@ -1846,6 +1846,8 @@ export type ChatSearchMatch = {
   offset: number
   length: number
   preview: SearchPreview
+  /** Who said it — the two voices are all a chat search reads. */
+  role: "user" | "assistant"
 }
 
 export type ChatSearchResult = {
@@ -1853,6 +1855,8 @@ export type ChatSearchResult = {
   /** Null for a chat whose folder has left the workspace — `chatRootId`. */
   folderId: string | null
   title: string
+  /** When the chat last moved, so a result list can say how stale it is. */
+  updatedAt: string
   matches: ChatSearchMatch[]
 }
 

@@ -525,6 +525,11 @@ and VS Code's `files to include` / `files to exclude` globs (`pathFilterOf` in
 `shared/search.ts`), applied to the walk before anything is read. The result
 list is one flat run of rows, so `↑`/`↓`/`←`/`→`/`Enter` walk what is on screen,
 and `F4` / `⇧F4` step through the matches while the column shows Search.
+Before anything is asked the empty list says those keys (`SearchHints`), since
+none of them is on screen until there is a result to walk. A file's match shows
+its line number in an editor's gutter position, and an empty answer names the
+query and any filter narrowing it, because a filter that is on is otherwise
+silent about what it removed. The field's `✕` clears it; Esc does the same.
 
 **Replace** is the one write here, and it is files only — what a chat said is a
 record. The rows draw each match struck through beside what it becomes,

@@ -73,8 +73,24 @@ type WorkspaceSearchState = {
    */
   shutKinds: SearchKind[]
   landing: ChatLanding | null
+  /** The last few queries that led somewhere, newest first — see `remember`. */
+  recent: string[]
 
   setQuery: (query: string) => void
+  /**
+   * Keeps `query` among the recent ones. Called when a search is *used* — a
+   * match opened, Enter pressed — rather than on every answer, or each
+   * prefix typed on the way to a word would push out a query worth keeping.
+   */
+  remember: (query: string) => void
+  forget: (query: string) => void
+  clearRecent: () => void
+  /**
+   * Takes a file or a chat out of the answer, VS Code's `Dismiss`. A file
+   * dismissed is also out of `Replace all`, which is what makes it more than
+   * tidying: it is how one file is kept out of a replace across the rest.
+   */
+  dismiss: (group: string) => void
   toggleOption: (option: keyof SearchOptions) => void
   setScope: (scope: Partial<SearchScope>) => void
   toggleFilters: () => void
@@ -167,10 +183,45 @@ export const useWorkspaceSearch = create<WorkspaceSearchState>((set, get) => {
     shut: [],
     shutKinds: [],
     landing: null,
+    recent: readRecent(),
 
     setQuery(query) {
       set({ query, notice: null })
       later()
+    },
+
+    remember(query) {
+      const trimmed = query.trim()
+      if (!trimmed) return
+      const recent = [
+        trimmed,
+        ...get().recent.filter((entry) => entry !== trimmed),
+      ].slice(0, RECENT_LIMIT)
+      set({ recent })
+      writeRecent(recent)
+    },
+
+    forget(query) {
+      const recent = get().recent.filter((entry) => entry !== query)
+      set({ recent })
+      writeRecent(recent)
+    },
+
+    clearRecent() {
+      set({ recent: [] })
+      writeRecent([])
+    },
+
+    dismiss(group) {
+      const { result } = get()
+      if (!result) return
+      set({
+        result: {
+          ...result,
+          files: result.files.filter((file) => file.path !== group),
+          chats: result.chats.filter((chat) => chat.chatId !== group),
+        },
+      })
     },
 
     toggleOption(option) {
@@ -262,6 +313,35 @@ export const useWorkspaceSearch = create<WorkspaceSearchState>((set, get) => {
     clearLanding: () => set({ landing: null }),
   }
 })
+
+/**
+ * The recent queries are the one thing here written down, and only to this
+ * window's `localStorage`: a query typed yesterday is worth having back after a
+ * restart, the answers to it are not — they would be stale by then.
+ */
+const RECENT_KEY = "vsclaude.search.recent"
+const RECENT_LIMIT = 8
+
+function readRecent(): string[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]")
+    return Array.isArray(stored)
+      ? stored
+          .filter((entry): entry is string => typeof entry === "string")
+          .slice(0, RECENT_LIMIT)
+      : []
+  } catch {
+    return []
+  }
+}
+
+function writeRecent(recent: string[]) {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent))
+  } catch {
+    // A full or refused storage loses the list after a restart, nothing more.
+  }
+}
 
 const plural = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`

@@ -338,6 +338,7 @@ export function chatMatchesIn(
         offset: match.offset,
         length: match.length,
         preview: match.preview,
+        role: message.role,
       })
     }
   }

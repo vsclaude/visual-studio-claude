@@ -721,6 +721,7 @@ export class Chats {
         chatId: chat.id,
         folderId: chatRootId(chat),
         title: chat.title,
+        updatedAt: chat.updatedAt,
         matches: hits,
       })
     }

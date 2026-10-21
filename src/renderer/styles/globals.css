@@ -601,6 +601,37 @@
 }
 
 /*
+ * A pressed or selected button — the rail's, the Explorer's tabs, the dock's,
+ * the strip's active tab — is a solid chip of `--accent` / `--muted` /
+ * `--background`, and over a translucent card a solid chip is a hole punched
+ * in the picture. Lightened the same way, by the exact class only: a
+ * `hover:` variant is another class and is left solid, so the pointer still
+ * gets a clear mark. Menus and dialogs are portalled outside the root that
+ * carries the attribute, so they keep their surfaces.
+ */
+[data-app-background] .bg-accent {
+  background-color: color-mix(in oklch, var(--accent) 60%, transparent);
+}
+
+[data-app-background] .bg-muted {
+  background-color: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+
+[data-app-background] .bg-secondary {
+  background-color: color-mix(in oklch, var(--secondary) 60%, transparent);
+}
+
+/* The primary buttons — Commit, the composer's Send — less so than the chips
+ * above: white on accent is what has to stay legible over whatever picture. */
+[data-app-background] .bg-primary {
+  background-color: color-mix(in oklch, var(--primary) 75%, transparent);
+}
+
+[data-app-background] [role="tab"].bg-background {
+  background-color: color-mix(in oklch, var(--background) 60%, transparent);
+}
+
+/*
  * The terminal goes see-through with a transparent theme
  * (`terminal-view.tsx`), but xterm's own stylesheet paints its viewport
  * `#000` under the canvas — invisible while the canvas is opaque, a black

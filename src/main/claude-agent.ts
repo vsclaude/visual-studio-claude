@@ -622,9 +622,32 @@ export async function startAgentSession(
   /** `onExit` is a promise to the caller that it fires once, and there are three
    * ways to reach the end: the stream closing, a throw, and a close. */
   let finished = false
+  /** The running turn's spend, for `onLive` — see `LiveTally`. */
+  const tally = new LiveTally()
+  /**
+   * `onLive` at most once per `LIVE_MS`, trailing. The stream deltas arrive
+   * several to a word, and each `onLive` is an IPC broadcast to every window
+   * for a number nobody reads faster than this.
+   */
+  let liveTimer: ReturnType<typeof setTimeout> | undefined
+  const announceLive = () => {
+    if (liveTimer) return
+    liveTimer = setTimeout(() => {
+      liveTimer = undefined
+      handlers.onLive(tally.usage())
+    }, LIVE_MS)
+  }
+  // Before a turn's usage line and at exit: a timer firing after either would
+  // put the finished turn's running figure back on screen.
+  const stopLive = () => {
+    clearTimeout(liveTimer)
+    liveTimer = undefined
+  }
+
   const exit = (error: string | null) => {
     if (finished) return
     finished = true
+    stopLive()
     handlers.onBusy(false)
     // Before `onExit`, and unconditionally: a task belongs to the CLI that was
     // running it, so a session that died holding one has no subagent left — and
@@ -680,6 +703,10 @@ export async function startAgentSession(
       // request changes, so the cached prefix is untouched — and drawn under
       // the `Agent` row that ran it (see `parent` on a line).
       forwardSubagentText: true,
+      // The response as it is written, for the running token count under
+      // `Working…` (`LiveTally`). Output only, like the line above: the request
+      // is the same, so the cached prefix is too.
+      includePartialMessages: true,
       // A copy of each file before a turn's `Edit`/`Write` touches it, filed
       // under the prompt that started the turn — what an edited message puts
       // the files back from (`rewindSessionFiles`). Kept by the CLI beside the
@@ -747,16 +774,6 @@ export async function startAgentSession(
    * stale number would be drawn as this turn's.
    */
   let context: number | null = null
-
-  /**
-   * The turn's replies so far, by the API's message id, for `onLive`.
-   *
-   * Keyed rather than summed because a response arrives as one assistant
-   * message per content block, every one of them carrying the whole request's
-   * usage: summing frames would count a prompt once per block. The latest
-   * frame of an id wins, since only the last carries final output counts.
-   */
-  let replies = new Map<string, LiveReply>()
 
   /**
    * Whether this CLI reports its own state, so the fallback below can stand
@@ -1032,14 +1049,26 @@ export async function startAgentSession(
         // theirs too (`usageOf`), and a live figure that left them out would
         // jump at the end of exactly the turns that run longest.
         if (message.type === "assistant" && message.message.usage) {
-          replies.set(message.message.id ?? message.uuid, {
-            model: message.message.model ?? null,
-            usage: message.message.usage,
-          })
-          handlers.onLive(liveUsageOf(replies.values()))
+          tally.reply(
+            message.message.id ?? message.uuid,
+            message.message.model ?? null,
+            message.message.usage
+          )
+          announceLive()
+        }
+
+        // The same, as it is being written: what makes the count run rather
+        // than step once a content block. Read for that alone — the complete
+        // assistant message still follows each response and is what `read`
+        // draws.
+        if (message.type === "stream_event") {
+          if (tally.stream(message.event, message.parent_tool_use_id))
+            announceLive()
+          continue
         }
 
         if (message.type === "result") {
+          stopLive()
           handlers.onUsage(
             usageOf(
               message,
@@ -1051,7 +1080,7 @@ export async function startAgentSession(
           )
           previous = message
           context = null
-          replies = new Map()
+          tally.reset()
           // Whatever is queued behind this result starts being answered now.
           turnStartedAt = Date.now()
           answering = false
@@ -1619,6 +1648,114 @@ export function liveUsageOf(replies: Iterable<LiveReply>): TurnUsage {
     context: null,
     durationMs: null,
     credits: null,
+  }
+}
+
+/** One Messages API streaming event, as the SDK forwards it. */
+export type StreamEvent = (SDKMessage & { type: "stream_event" })["event"]
+
+/** How often the running count may go to the renderer — see `announceLive`. */
+const LIVE_MS = 120
+
+/**
+ * Characters to a token, for the count while a response is still being
+ * written. The API says how many output tokens a response took only at its
+ * end (`message_delta`); before that the text is all there is, and four is the
+ * rough figure the CLI's own spinner counts by. The estimate is replaced by
+ * the real count when it lands, so it is only ever wrong for a moment.
+ */
+const CHARS_PER_TOKEN = 4
+
+/**
+ * What a running turn has spent, kept as its replies arrive — whole, as the
+ * assistant messages `read` draws, or a delta at a time, as the stream events
+ * write them.
+ *
+ * Keyed by the API's message id rather than summed, because one response
+ * arrives as one assistant message per content block, every one carrying the
+ * whole request's usage: summing frames would count a prompt once per block.
+ * The prompt is known from `message_start`, before a word is written; the
+ * output is an estimate from the text until `message_delta` says what it was.
+ */
+export class LiveTally {
+  private replies = new Map<string, LiveReply>()
+  /** The response each loop is writing — the main loop under `""`, a subagent
+   * under its `Task` — and how much of it has arrived. */
+  private writing = new Map<string, { id: string; chars: number }>()
+
+  /** A complete assistant message. Its output count can trail the estimate it
+   * follows mid-response, and the count going backwards would read as a
+   * refund, so the larger stands until `message_delta` settles it. */
+  reply(id: string, model: string | null, usage: ReplyUsage): void {
+    const known = this.replies.get(id)
+    this.replies.set(id, {
+      model: model ?? known?.model ?? null,
+      usage: {
+        ...usage,
+        output_tokens: Math.max(
+          usage.output_tokens || 0,
+          known?.usage.output_tokens || 0
+        ),
+      },
+    })
+  }
+
+  /** A streaming event, with the loop it belongs to. True when the count moved. */
+  stream(event: StreamEvent, parent: string | null): boolean {
+    const loop = parent ?? ""
+
+    if (event.type === "message_start") {
+      const { id, model, usage } = event.message
+      this.writing.set(loop, { id, chars: 0 })
+      this.replies.set(id, { model: model ?? null, usage })
+      return true
+    }
+
+    const writing = this.writing.get(loop)
+    const known = writing && this.replies.get(writing.id)
+    if (!writing || !known) return false
+
+    if (event.type === "content_block_delta") {
+      const delta = event.delta
+      const text =
+        delta.type === "text_delta"
+          ? delta.text
+          : delta.type === "thinking_delta"
+            ? delta.thinking
+            : delta.type === "input_json_delta"
+              ? delta.partial_json
+              : ""
+      if (!text) return false
+      writing.chars += text.length
+      const estimate = Math.ceil(writing.chars / CHARS_PER_TOKEN)
+      if (estimate <= (known.usage.output_tokens || 0)) return false
+      this.replies.set(writing.id, {
+        ...known,
+        usage: { ...known.usage, output_tokens: estimate },
+      })
+      return true
+    }
+
+    // The real count, which replaces the estimate whichever way it lands.
+    if (event.type === "message_delta") {
+      this.writing.delete(loop)
+      this.replies.set(writing.id, {
+        ...known,
+        usage: { ...known.usage, output_tokens: event.usage.output_tokens },
+      })
+      return true
+    }
+
+    return false
+  }
+
+  usage(): TurnUsage {
+    return liveUsageOf(this.replies.values())
+  }
+
+  reset(): void {
+    this.replies.clear()
+    this.writing.clear()
   }
 }
 

@@ -1,5 +1,11 @@
 import type { AssistantMessage, TurnUsage } from "../src/shared/api"
-import { contextOf, liveUsageOf, usageOf } from "../src/main/claude-agent"
+import {
+  contextOf,
+  LiveTally,
+  liveUsageOf,
+  usageOf,
+  type StreamEvent,
+} from "../src/main/claude-agent"
 import {
   chatLine,
   compact,
@@ -637,6 +643,89 @@ section("liveUsageOf: the running turn, off its replies")
     usageLine(live) === "Opus 4.1 · 37.0k prompt, 81% cached · 700 out",
     usageLine(live)
   )
+}
+
+section("LiveTally: the count while a response is being written")
+{
+  // The fields the tally reads, cast as the SDK's event: the rest of a real
+  // frame is the API's and says nothing about the count.
+  const event = (frame: object) => frame as StreamEvent
+  const start = (id: string) =>
+    event({
+      type: "message_start",
+      message: {
+        id,
+        model: "claude-opus-4-1-20250805",
+        usage: {
+          input_tokens: 100,
+          cache_read_input_tokens: 900,
+          output_tokens: 1,
+        },
+      },
+    })
+  const text = (chunk: string) =>
+    event({
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: chunk },
+    })
+  const done = (output: number) =>
+    event({ type: "message_delta", usage: { output_tokens: output } })
+
+  const tally = new LiveTally()
+  tally.stream(start("a"), null)
+  check(
+    "the prompt is counted before a word is written",
+    tally.usage().cacheRead === 900 && tally.usage().output === 1,
+    tally.usage()
+  )
+
+  tally.stream(text("x".repeat(40)), null)
+  check(
+    "the output runs up off the text",
+    tally.usage().output === 10,
+    tally.usage()
+  )
+  check(
+    "a delta with no text in it is not news",
+    tally.stream(
+      event({
+        type: "content_block_delta",
+        delta: { type: "signature_delta", signature: "sig" },
+      }),
+      null
+    ) === false
+  )
+
+  // A complete frame that trails the estimate does not take it back.
+  tally.reply("a", "claude-opus-4-1-20250805", {
+    input_tokens: 100,
+    cache_read_input_tokens: 900,
+    output_tokens: 3,
+  })
+  check(
+    "a frame behind the estimate does not move it back",
+    tally.usage().output === 10,
+    tally.usage()
+  )
+
+  tally.stream(done(8), null)
+  check(
+    "message_delta replaces the estimate with the count",
+    tally.usage().output === 8,
+    tally.usage()
+  )
+
+  // A subagent writing at the same time is its own response.
+  tally.stream(start("b"), "task-1")
+  tally.stream(text("y".repeat(8)), "task-1")
+  check(
+    "a subagent's response is counted beside the main loop's",
+    tally.usage().output === 10 && tally.usage().cacheRead === 1_800,
+    tally.usage()
+  )
+
+  tally.reset()
+  check("reset starts the next turn from nothing", tally.usage().output === 0)
 }
 
 finish()

@@ -13,6 +13,7 @@ import {
   ShieldQuestion,
   SquareTerminal,
   Trash2,
+  X,
 } from "lucide-react"
 
 import {
@@ -383,11 +384,18 @@ export function ProjectsSection() {
       )}
 
       {/* Under the list rather than in a toast: a refusal is about one of the
-          rows above, and it stays until the next attempt says otherwise. */}
+          rows above, and it stays until the next attempt or until it is shut. */}
       {failure && (
-        <p className="shrink-0 border-t bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
-          {failure}
-        </p>
+        <div className="flex shrink-0 items-start gap-1 border-t bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
+          <p className="min-w-0 flex-1">{failure}</p>
+          <IconButton
+            label="Dismiss"
+            onClick={() => setFailure(null)}
+            className="size-5 shrink-0"
+          >
+            <X className="size-3" />
+          </IconButton>
+        </div>
       )}
     </nav>
   )

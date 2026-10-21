@@ -402,9 +402,16 @@ export function FileImageEditor({
       </div>
 
       {failure && (
-        <p className="shrink-0 border-b bg-destructive/10 px-3 py-1.5 font-mono text-xs text-destructive">
-          {failure}
-        </p>
+        <div className="flex shrink-0 items-start gap-1 border-b bg-destructive/10 px-3 py-1.5 font-mono text-xs text-destructive">
+          <p className="min-w-0 flex-1">{failure}</p>
+          <IconButton
+            label="Dismiss"
+            onClick={() => setFailure(null)}
+            className="size-5 shrink-0"
+          >
+            <X className="size-3" />
+          </IconButton>
+        </div>
       )}
 
       <div className="relative min-h-0 flex-1">

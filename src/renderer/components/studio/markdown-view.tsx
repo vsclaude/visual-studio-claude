@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react"
 import { markdownToHTML } from "@blocknote/core"
 
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useFiles } from "@/lib/files/store"
 import { highlightCodeBlocks } from "@/lib/markdown/highlight"
 import { headingSlug, linkOf } from "@/lib/markdown/links"
@@ -51,6 +58,7 @@ export function MarkdownView({
   rawHtml = false,
   baseDir,
   copyButtons = rawHtml,
+  viewTables = false,
 }: {
   source: string
   className?: string
@@ -62,6 +70,12 @@ export function MarkdownView({
    */
   copyButtons?: boolean
   /**
+   * A View on each table, shown on hover, that opens it large in a dialog. A
+   * table in a chat reply is often wider than its bubble and scrolls sideways,
+   * which is no way to read one, so a chat reply turns it on.
+   */
+  viewTables?: boolean
+  /**
    * The directory of the file the document came from: a local picture —
    * `./logo.png` — resolves against it and is read in as a `data:` URL.
    * Absent for a chat message, which has no directory for one to sit next to.
@@ -70,6 +84,9 @@ export function MarkdownView({
 }) {
   const host = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
+  // A copy of the table being viewed, taken when View is pressed: the reply can
+  // keep streaming underneath the dialog, and the table should hold still.
+  const [viewing, setViewing] = useState<HTMLTableElement | null>(null)
 
   useEffect(() => {
     // The file's own pipeline, and synchronous: `markdownToHTML` is a string
@@ -82,6 +99,7 @@ export function MarkdownView({
         node.replaceChildren(sanitizeHtml(markdownToHTML(source)))
         if (baseDir) resolveLocalImages(node, baseDir)
         if (copyButtons) addCopyButtons(node)
+        if (viewTables) addTableViews(node)
       } catch (error) {
         console.error("Could not render markdown", error)
         // The same fallback as `failed` below, put in place rather than flagged:
@@ -106,6 +124,7 @@ export function MarkdownView({
         node.replaceChildren(render(source))
         if (baseDir) resolveLocalImages(node, baseDir)
         if (copyButtons) addCopyButtons(node)
+        if (viewTables) addTableViews(node)
         // A frame later, once the parser is in: the text is on screen plain
         // first and coloured when the grammar arrives, the way a file tab is.
         void highlightCodeBlocks(node, () => alive)
@@ -119,7 +138,7 @@ export function MarkdownView({
     return () => {
       alive = false
     }
-  }, [source, rawHtml, baseDir, copyButtons])
+  }, [source, rawHtml, baseDir, copyButtons, viewTables])
 
   if (failed)
     return (
@@ -129,20 +148,32 @@ export function MarkdownView({
     )
 
   return (
-    <div
-      ref={host}
-      onClick={(event) => {
-        if (copyCode(event)) return
-        followLink(event, baseDir)
-      }}
-      className={cn("markdown-prose text-sm", className)}
-    />
+    <>
+      <div
+        ref={host}
+        onClick={(event) => {
+          if (copyCode(event)) return
+          const table = tableToView(event)
+          if (table) {
+            setViewing(table.cloneNode(true) as HTMLTableElement)
+            return
+          }
+          followLink(event, baseDir)
+        }}
+        className={cn("markdown-prose text-sm", className)}
+      />
+      {viewing && (
+        <TableDialog table={viewing} onClose={() => setViewing(null)} />
+      )}
+    </>
   )
 }
 
 const COPY_ICON =
   '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'
 const CHECK_ICON = '<path d="M20 6 9 17l-5-5"/>'
+const MAXIMIZE_ICON =
+  '<path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/>'
 
 function iconSvg(paths: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`
@@ -187,6 +218,67 @@ function copyCode(event: MouseEvent<HTMLDivElement>): boolean {
     button.title = "Copy"
   }, 1200)
   return true
+}
+
+/**
+ * A View on every table, on the same terms as a fence's Copy: hidden until
+ * hover, and in a frame of its own so the button stays put while the table
+ * scrolls sideways underneath it.
+ */
+function addTableViews(host: HTMLElement): void {
+  for (const table of Array.from(host.querySelectorAll("table"))) {
+    const frame = document.createElement("div")
+    frame.className = "markdown-table"
+    table.replaceWith(frame)
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "markdown-table-view"
+    button.title = "View table"
+    button.setAttribute("aria-label", "View table")
+    button.innerHTML = iconSvg(MAXIMIZE_ICON)
+    frame.append(table, button)
+  }
+}
+
+/** The table behind a click on a View button, or null for any other click. */
+function tableToView(
+  event: MouseEvent<HTMLDivElement>
+): HTMLTableElement | null {
+  if (!(event.target instanceof Element)) return null
+  const button = event.target.closest<HTMLButtonElement>(".markdown-table-view")
+  if (!button || !event.currentTarget.contains(button)) return null
+  return button.parentElement?.querySelector("table") ?? null
+}
+
+/**
+ * A table opened large. Shown as a copy of the one in the transcript, which is
+ * left where it is — the dialog is a second reading of it, not a move.
+ *
+ * Mounted only while open (`viewing &&` in the caller), so the copy is taken
+ * once and not kept in step with a reply that is still being written.
+ */
+function TableDialog({
+  table,
+  onClose,
+}: {
+  table: HTMLTableElement
+  onClose: () => void
+}) {
+  // A callback ref rather than an effect: the popup is portalled in after this
+  // component mounts, so an effect would find no node and never run again.
+  const place = useCallback(
+    (node: HTMLDivElement | null) => node?.replaceChildren(table),
+    [table]
+  )
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[85vh] overflow-auto sm:max-w-[min(60rem,calc(100%-4rem))]">
+        <DialogTitle className="sr-only">Table</DialogTitle>
+        <div ref={place} className="markdown-prose markdown-table-dialog" />
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 /**

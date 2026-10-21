@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Check,
   ChevronLeft,
@@ -329,37 +329,54 @@ function Viewer({
       open={image !== undefined}
       onOpenChange={(open) => !open && onAt(null)}
     >
-      <DialogContent className="w-auto max-w-[calc(100vw-4rem)] gap-2 p-2 sm:max-w-[calc(100vw-4rem)]">
+      {/* A fixed stage rather than one sized to the picture: sized to it, the
+          arrows moved with every picture's shape and the next click landed
+          on nothing. */}
+      <DialogContent className="h-[calc(100vh-4rem)] w-[calc(100vw-4rem)] max-w-none grid-rows-[minmax(0,1fr)_auto_auto] gap-2 p-2 sm:max-w-none">
         <DialogTitle className="sr-only">
           Picture {(at ?? 0) + 1} of {images.length}
         </DialogTitle>
         {image && (
           <>
-            <img
-              src={noteFileUrl(image.file)}
-              alt=""
-              className="max-h-[calc(100vh-9rem)] max-w-full rounded-md object-contain"
-            />
+            <div className="relative flex min-h-0 items-center justify-center">
+              <img
+                src={noteFileUrl(image.file)}
+                alt=""
+                className="max-h-full max-w-full rounded-md object-contain"
+              />
+              {/* Centred by the wrapper, not by a translate on the button:
+                  `Button`'s `active:translate-y-px` writes the same variable,
+                  so a press dropped the arrow by half its height. */}
+              <div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
+                <IconButton
+                  label="Newer"
+                  side="right"
+                  disabled={at === 0}
+                  onClick={() => step(-1)}
+                  className="pointer-events-auto size-9 rounded-full bg-background/80 shadow-sm backdrop-blur-sm hover:bg-background"
+                >
+                  <ChevronLeft className="size-5" />
+                </IconButton>
+              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                <IconButton
+                  label="Older"
+                  side="left"
+                  disabled={at === images.length - 1}
+                  onClick={() => step(1)}
+                  className="pointer-events-auto size-9 rounded-full bg-background/80 shadow-sm backdrop-blur-sm hover:bg-background"
+                >
+                  <ChevronRight className="size-5" />
+                </IconButton>
+              </div>
+            </div>
+            {images.length > 1 && (
+              <ThumbStrip images={images} at={at ?? 0} onAt={onAt} />
+            )}
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <IconButton
-                label="Newer"
-                disabled={at === 0}
-                onClick={() => step(-1)}
-                className="size-6"
-              >
-                <ChevronLeft className="size-3.5" />
-              </IconButton>
-              <span className="tabular-nums">
+              <span className="px-1.5 tabular-nums">
                 {(at ?? 0) + 1} / {images.length}
               </span>
-              <IconButton
-                label="Older"
-                disabled={at === images.length - 1}
-                onClick={() => step(1)}
-                className="size-6"
-              >
-                <ChevronRight className="size-3.5" />
-              </IconButton>
               <button
                 type="button"
                 onClick={() => onFind(image.lineId)}
@@ -373,5 +390,128 @@ function Viewer({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Every picture of the chat as a row of thumbnails under the viewer. A long
+ * row scrolls, and gets its own `‹` / `›` for it — a mouse without a
+ * horizontal wheel had no way along it — each shown only while there is
+ * something that way, so a short row draws no buttons at all.
+ */
+function ThumbStrip({
+  images,
+  at,
+  onAt,
+}: {
+  images: ChatMedia["images"]
+  at: number
+  onAt: (at: number) => void
+}) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const [room, setRoom] = useState({ before: false, after: false })
+
+  // Measured on scroll and on resize rather than once: the dialog's own
+  // opening animation and a window resize both change what overflows.
+  useEffect(() => {
+    const element = scroller.current
+    if (!element) return
+    const measure = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = element
+      // A pixel of slack: a fractional `scrollLeft` at the far end never
+      // quite reaches `scrollWidth - clientWidth`.
+      setRoom({
+        before: scrollLeft > 1,
+        after: scrollLeft + clientWidth < scrollWidth - 1,
+      })
+    }
+    measure()
+    element.addEventListener("scroll", measure, { passive: true })
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    if (element.firstElementChild) observer.observe(element.firstElementChild)
+    return () => {
+      element.removeEventListener("scroll", measure)
+      observer.disconnect()
+    }
+  }, [images.length])
+
+  // The strip follows the picture, so stepping with the keys never walks the
+  // highlighted thumbnail out of sight.
+  useEffect(() => {
+    scroller.current
+      ?.querySelector(`[data-at="${at}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  }, [at])
+
+  // Most of a page, so the thumbnail at the edge stays on screen and the eye
+  // has somewhere to pick the row back up.
+  const page = (direction: 1 | -1) => {
+    const element = scroller.current
+    if (!element) return
+    element.scrollBy({
+      left: direction * element.clientWidth * 0.8,
+      behavior: "smooth",
+    })
+  }
+
+  return (
+    <div className="relative">
+      <div className="[scrollbar-width:none] overflow-x-auto" ref={scroller}>
+        {/* `w-max` + `mx-auto` centres a short strip without clipping the
+            start of a long one, which `justify-center` on the scroller
+            would. The side padding keeps the end thumbnails clear of the
+            buttons. */}
+        <ul className="mx-auto flex w-max gap-1 px-9 py-0.5">
+          {images.map((thumb, index) => (
+            <li key={`${thumb.lineId}:${thumb.file}`}>
+              <button
+                type="button"
+                data-at={index}
+                aria-label={`Picture ${index + 1}`}
+                aria-current={index === at}
+                onClick={() => onAt(index)}
+                className={cn(
+                  "block size-12 overflow-hidden rounded-md border opacity-60 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  index === at && "opacity-100 ring-2 ring-primary"
+                )}
+              >
+                <img
+                  src={noteFileUrl(thumb.file)}
+                  alt=""
+                  loading="lazy"
+                  draggable={false}
+                  className="size-full object-cover"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {room.before && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
+          <IconButton
+            label="Scroll back"
+            side="top"
+            onClick={() => page(-1)}
+            className="pointer-events-auto size-7 rounded-full bg-background/90 shadow-sm hover:bg-background"
+          >
+            <ChevronLeft className="size-4" />
+          </IconButton>
+        </div>
+      )}
+      {room.after && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
+          <IconButton
+            label="Scroll on"
+            side="top"
+            onClick={() => page(1)}
+            className="pointer-events-auto size-7 rounded-full bg-background/90 shadow-sm hover:bg-background"
+          >
+            <ChevronRight className="size-4" />
+          </IconButton>
+        </div>
+      )}
+    </div>
   )
 }

@@ -353,7 +353,12 @@ function OtherMessage({
     // fences get a Copy on hover; the whole reply is still copied once from
     // its cost line.
     <div data-line={of.id} title={stampOf(of)}>
-      <MarkdownView source={of.text} className="px-1 text-chat" copyButtons />
+      <MarkdownView
+        source={of.text}
+        className="px-1 text-chat"
+        copyButtons
+        viewTables
+      />
     </div>
   )
 }

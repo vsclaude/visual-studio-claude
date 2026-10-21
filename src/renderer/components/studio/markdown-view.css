@@ -176,6 +176,47 @@
   height: 0.875rem;
 }
 
+.markdown-prose .markdown-table {
+  position: relative;
+  margin: 0 0 0.5rem;
+}
+
+/* The frame carries the bottom margin the table had; the table inside it must
+ * not add its own, or every table would be spaced twice. */
+.markdown-prose .markdown-table table {
+  margin: 0;
+}
+
+.markdown-prose .markdown-table-view {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.markdown-prose .markdown-table-view svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.markdown-prose .markdown-table:hover .markdown-table-view,
+.markdown-prose .markdown-table-view:focus-visible {
+  opacity: 1;
+}
+
+.markdown-prose .markdown-table-view:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
 .markdown-prose .markdown-code:hover .markdown-code-copy,
 .markdown-prose .markdown-code-copy:focus-visible {
   opacity: 1;
@@ -330,4 +371,16 @@
 .markdown-prose th {
   font-weight: 600;
   background: var(--muted);
+}
+
+/* A table opened in its dialog has the width of the dialog, not of its content,
+ * and the type the reply was too small to read at. */
+.markdown-table-dialog table {
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+.markdown-table-dialog th,
+.markdown-table-dialog td {
+  padding: 0.4rem 0.75rem;
 }

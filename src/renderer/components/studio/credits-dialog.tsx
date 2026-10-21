@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { Coins, CreditCard, Landmark, Sparkle } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { CreditCard, Landmark, Sparkle } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import {
@@ -16,7 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Spinner } from "@/components/ui/spinner"
+import {
+  Spinner,
+  VS_S,
+  VS_SLANT,
+  VS_V,
+  VS_VIEWBOX,
+} from "@/components/ui/spinner"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
 import { cn } from "@/lib/utils"
@@ -67,7 +73,7 @@ function BuyDialog() {
     >
       <DialogContent className="max-h-[calc(100svh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-3xl">
         <DialogHeader className="items-center text-center">
-          <CreditsBadge size="md" icon={Coins} />
+          <CreditsBadge size="md" />
           <DialogTitle className="text-xl font-semibold">
             Buy credits
           </DialogTitle>
@@ -112,12 +118,7 @@ function BuyDialog() {
                   Most popular
                 </span>
               )}
-              <Coins
-                className={cn(
-                  "size-6 text-amber-500",
-                  pack.popular && "size-7"
-                )}
-              />
+              <Coin size={pack.popular ? 34 : 28} struck />
               <span className="text-2xl font-semibold tabular-nums">
                 {formatPrice(pack.price)}
               </span>
@@ -373,19 +374,23 @@ function CoinBurst() {
             animationDelay: `${coin.delay}ms`,
           }}
         >
-          <Coin size={coin.size} />
+          <Coin size={coin.size} struck={coin.size >= 18} />
         </span>
       ))}
       <span className="relative animate-coin-land drop-shadow-[0_10px_18px_rgba(245,158,11,0.35)]">
-        <Coin size={84} big />
+        <Coin size={84} struck />
       </span>
     </div>
   )
 }
 
-/** A gold coin: a rim, a face, a shine, and on the big one a star. */
-function Coin({ size, big = false }: { size: number; big?: boolean }) {
-  const id = big ? "coin-big" : "coin-small"
+/**
+ * A gold coin: a rim, a face, a shine, and struck with the VS lettermark — the
+ * same glyph the credits' badge carries in white. Below 18px the strike is
+ * left off: the face is a dozen pixels and the letters would be a smudge.
+ */
+function Coin({ size, struck = false }: { size: number; struck?: boolean }) {
+  const id = `coin-${useId().replace(/:/g, "")}`
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
       <defs>
@@ -410,12 +415,21 @@ function Coin({ size, big = false }: { size: number; big?: boolean }) {
         strokeOpacity="0.35"
         strokeWidth="1.5"
       />
-      {big && (
-        <path
-          d="M32 19l3.6 8.2 8.9.8-6.7 5.9 2 8.7L32 38.1l-7.8 4.5 2-8.7-6.7-5.9 8.9-.8z"
-          fill="#d97706"
-          fillOpacity="0.85"
-        />
+      {struck && (
+        <svg x="20" y="21" width="24" height="22" viewBox={VS_VIEWBOX}>
+          <g
+            transform={VS_SLANT}
+            stroke="#b45309"
+            strokeOpacity="0.85"
+            strokeWidth="11"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          >
+            <path d={VS_V} />
+            <path d={VS_S} />
+          </g>
+        </svg>
       )}
       <path
         d="M17 24a17 17 0 0 1 12-9"

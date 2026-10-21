@@ -556,6 +556,17 @@ Every row says whether it is signed in and as whom, **asked of the CLI**
 (`claude auth status --json`); a missing directory is never spawned into, since
 the CLI would create it. The composer's account menu shows each profile's email.
 
+**Background** (Appearance) is one picture behind the whole window — the
+canvas the cards sit on. Chosen in the OS picker and **copied** into
+`workspace/app-background/` by main, like a project's icon, so the file need not
+stay where it was picked and the studio never reads a path the renderer named.
+It comes back as a `data:` URL on every launch (`appBackground`), held in
+`useAppBackground` (`lib/app-background.ts`), not in `workbench.settings`, which
+is rewritten whole. With a picture, each card goes translucent (`.studio-card`
+in `globals.css`) so it shows through the card's edges as well; the cards'
+contents keep their own opaque surfaces so text stays readable. Capped at the
+image-preview ceiling, 20 MB. Not drawn in the popped-out chat window.
+
 ### The free AI
 
 Anybody signed in to the studio (Google, through the server) can chat on

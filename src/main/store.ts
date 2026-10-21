@@ -108,6 +108,12 @@ export const NOTE_FILES_DIR = "note-files"
 /** The pictures chosen for projects' rows — see `Store.projectIconPath`. */
 export const PROJECT_ICONS_DIR = "project-icons"
 
+/** The studio's background picture, one file under it — see `Store.appBackgroundPath`. */
+const APP_BACKGROUND_DIR = "app-background"
+
+/** The name it is kept under, whatever the extension of the picture chosen. */
+const APP_BACKGROUND_NAME = "background"
+
 /** One directory per plugin, put there by hand — see `main/plugins.ts`. */
 export const PLUGINS_DIR = "plugins"
 
@@ -580,13 +586,46 @@ export class Store {
     })
   }
 
+  /** The studio's background picture, or null for none. */
+  appBackgroundPath(): Promise<string | null> {
+    const dir = path.join(this.workspaceDir, APP_BACKGROUND_DIR)
+    return this.enqueue(async () => {
+      try {
+        const name = (await readdir(dir))[0]
+        return name ? path.join(dir, name) : null
+      } catch (error) {
+        if (isNotFound(error)) return null
+        throw error
+      }
+    })
+  }
+
+  /** Replaces the studio's background with a copy of `source`. */
+  setAppBackground(source: string): Promise<void> {
+    const dir = path.join(this.workspaceDir, APP_BACKGROUND_DIR)
+    return this.enqueue(async () => {
+      await mkdir(dir, { recursive: true })
+      await this.dropPicture(dir, APP_BACKGROUND_NAME)
+      await copyFile(
+        source,
+        path.join(dir, APP_BACKGROUND_NAME + path.extname(source).toLowerCase())
+      )
+    })
+  }
+
+  /** Forgets the studio's background, so the canvas is plain again. */
+  clearAppBackground(): Promise<void> {
+    const dir = path.join(this.workspaceDir, APP_BACKGROUND_DIR)
+    return this.enqueue(() => this.dropPicture(dir, APP_BACKGROUND_NAME))
+  }
+
   /** Replaces a project's chosen picture with a copy of `source`. */
   setProjectIcon(folderId: string, source: string): Promise<void> {
     const id = ownId(folderId)
     const dir = path.join(this.workspaceDir, PROJECT_ICONS_DIR)
     return this.enqueue(async () => {
       await mkdir(dir, { recursive: true })
-      await this.dropProjectIcon(dir, id)
+      await this.dropPicture(dir, id)
       await copyFile(
         source,
         path.join(dir, id + path.extname(source).toLowerCase())
@@ -598,12 +637,12 @@ export class Store {
   clearProjectIcon(folderId: string): Promise<void> {
     const id = ownId(folderId)
     const dir = path.join(this.workspaceDir, PROJECT_ICONS_DIR)
-    return this.enqueue(() => this.dropProjectIcon(dir, id))
+    return this.enqueue(() => this.dropPicture(dir, id))
   }
 
-  /** Every file under the id, whatever its extension — a `.png` replaced by
+  /** Every file under the name, whatever its extension — a `.png` replaced by
    * an `.svg` would otherwise leave two, and `projectIconPath` pick either. */
-  private async dropProjectIcon(dir: string, id: string): Promise<void> {
+  private async dropPicture(dir: string, id: string): Promise<void> {
     let entries: string[]
     try {
       entries = await readdir(dir)

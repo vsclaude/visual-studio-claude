@@ -115,6 +115,9 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.pickProjectIcon, folderId),
   resetProjectIcon: (folderId) =>
     ipcRenderer.invoke(IPC.resetProjectIcon, folderId),
+  appBackground: () => ipcRenderer.invoke(IPC.appBackground),
+  pickAppBackground: () => ipcRenderer.invoke(IPC.pickAppBackground),
+  clearAppBackground: () => ipcRenderer.invoke(IPC.clearAppBackground),
   resolveRelativePath: (dir, relative) =>
     ipcRenderer.invoke(IPC.resolveRelativePath, dir, relative),
   listWorkspaceFiles: () => ipcRenderer.invoke(IPC.listWorkspaceFiles),

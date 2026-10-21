@@ -2283,6 +2283,18 @@ export type DesktopApi = {
   /** Forgets the chosen picture, so the row goes back to the favicon. */
   resetProjectIcon: (folderId: string) => Promise<void>
   /**
+   * The studio's background picture as a `data:` URL, or null for none — the
+   * canvas behind the cards, `Settings › Appearance`.
+   */
+  appBackground: () => Promise<string | null>
+  /**
+   * Asks for a picture in the OS picker and keeps a copy as the background.
+   * False when cancelled.
+   */
+  pickAppBackground: () => Promise<boolean>
+  /** Forgets the background picture, so the canvas is plain again. */
+  clearAppBackground: () => Promise<void>
+  /**
    * Where a document's relative link goes — `./CONTRIBUTING.md`, `../src/` —
    * joined in main for the same reason as `readImageRelative`.
    *
@@ -2932,6 +2944,9 @@ export const IPC = {
   projectIcon: "workspace:project-icon",
   pickProjectIcon: "workspace:pick-project-icon",
   resetProjectIcon: "workspace:reset-project-icon",
+  appBackground: "workspace:app-background",
+  pickAppBackground: "workspace:pick-app-background",
+  clearAppBackground: "workspace:clear-app-background",
   resolveRelativePath: "files:resolve-relative",
   listWorkspaceFiles: "files:index",
   watchDirectories: "files:watch",

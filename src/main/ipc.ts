@@ -1263,6 +1263,34 @@ export function createIpc(host: Host): {
     store.clearProjectIcon(folderId)
   )
 
+  handle(IPC.appBackground, async () => {
+    const found = await store.appBackgroundPath()
+    return found ? imageDataUrl(found) : null
+  })
+
+  handle(IPC.pickAppBackground, async () => {
+    const [picked] = await host.pickFiles({
+      title: "Choose a background",
+      single: true,
+      filters: [
+        {
+          name: "Images",
+          extensions: Object.keys(IMAGE_MIME_TYPES).map((ext) => ext.slice(1)),
+        },
+      ],
+    })
+    if (!picked) return false
+    // The same ceiling `imageDataUrl` holds it to when it is read back on
+    // every launch: a picture too big to preview is too big to be a backdrop.
+    if ((await stat(picked)).size > MAX_IMAGE_PREVIEW_BYTES) {
+      throw new Error(`${path.basename(picked)} is too large for a background.`)
+    }
+    await store.setAppBackground(picked)
+    return true
+  })
+
+  handle(IPC.clearAppBackground, () => store.clearAppBackground())
+
   handle(
     IPC.resolveRelativePath,
     async (_event, dir: string, relative: string) => {

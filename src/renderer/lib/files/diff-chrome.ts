@@ -1,17 +1,33 @@
+import { getChunks, getOriginalDoc } from "@codemirror/merge"
 import {
-  getChunks,
-  getOriginalDoc,
-  uncollapseUnchanged,
-} from "@codemirror/merge"
-import { EditorState, type Extension } from "@codemirror/state"
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+  type Extension,
+} from "@codemirror/state"
 import {
+  Decoration,
   EditorView,
   gutter,
   GutterMarker,
   ViewPlugin,
+  WidgetType,
   type BlockInfo,
+  type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view"
+
+import {
+  DIFF_REVEAL_STEP,
+  NOTHING_REVEALED,
+  oneClickLeft,
+  remaining,
+  revealed,
+  type Fold,
+  type Reveal,
+  type RevealDir,
+} from "./diff-folds"
 
 /**
  * The unified diff, drawn the way a pull request is.
@@ -48,9 +64,9 @@ import {
  */
 
 /** How many unchanged lines of context a hunk keeps around its changes, and the
- * shortest run worth collapsing. Both are `@codemirror/merge`'s own defaults for
- * `collapseUnchanged`, and they have to agree with what is passed there or the
- * `@@` header would describe a hunk with different bounds from the one drawn. */
+ * shortest run worth folding. Both are `@codemirror/merge`'s own defaults, kept
+ * so a diff reads as it did before the folds were owned here; `foldsOf` and the
+ * `@@` header both read them, so the header describes the bounds that are drawn. */
 export const DIFF_CONTEXT = 3
 export const DIFF_MIN_COLLAPSE = 4
 
@@ -92,6 +108,8 @@ type DiffModel = {
    */
   widgets: Set<number>
   hunks: Hunk[]
+  /** The unchanged runs the view may fold, in the new document's lines. */
+  folds: Fold[]
 }
 
 /**
@@ -179,7 +197,13 @@ function buildModel(state: EditorState): DiffModel {
     newLine += 1
   }
 
-  return { oldOf, removed, widgets, hunks: buildHunks(spans, b.lines) }
+  return {
+    oldOf,
+    removed,
+    widgets,
+    hunks: buildHunks(spans, b.lines),
+    folds: foldsOf(state),
+  }
 }
 
 /**
@@ -345,56 +369,93 @@ function rangeOf(first: number, count: number) {
 }
 
 /**
- * The expander, as an icon in the gutter rather than a glyph in the bar.
+ * One arrow of the expander, drawn rather than taken from `lucide-react`, which
+ * is the app's icon set everywhere else: a `GutterMarker` returns a DOM node and
+ * this file is not a component, so a React icon would mean rendering one per
+ * gutter cell.
  *
- * Drawn rather than taken from `lucide-react`, which is the app's icon set
- * everywhere else: a `GutterMarker` returns a DOM node and this file is not a
- * component, so a React icon would mean rendering one per gutter cell. Two
- * chevrons and a dashed rule between them is the whole shape, and it is the
- * shape every editor and forge uses for "there is more here".
+ * Filled triangles, sized for a control rather than a glyph. They were stroked
+ * chevrons at 12px for one revision, which resolved into a diamond with something
+ * inside it, and a control the reader has to squint at is not one. `fromAbove`
+ * points into the run from the hunk above, `fromBelow` out of the run to the hunk
+ * below, and `all` is both.
  */
-function unfoldIcon(): SVGElement {
+function arrowIcon(dir: RevealDir): SVGElement {
   const ns = "http://www.w3.org/2000/svg"
   const svg = document.createElementNS(ns, "svg")
   svg.setAttribute("viewBox", "0 0 16 16")
-  svg.setAttribute("width", "12")
-  svg.setAttribute("height", "12")
+  svg.setAttribute("width", "16")
+  svg.setAttribute("height", "16")
   svg.setAttribute("aria-hidden", "true")
 
-  // Two solid arrowheads pointing apart. It was a pair of stroked chevrons plus
-  // a dashed rule between them, which at twelve pixels resolved into a diamond
-  // with something inside it — the outline read as one shape rather than as two
-  // arrows. Filled triangles survive being small, which is the only size this
-  // is ever drawn at.
-  const arrows = document.createElementNS(ns, "path")
-  arrows.setAttribute("d", "M8 3.5 11.2 7.2 4.8 7.2Z M8 12.5 4.8 8.8 11.2 8.8Z")
-  arrows.setAttribute("fill", "currentColor")
+  const path = document.createElementNS(ns, "path")
+  const shape =
+    dir === "fromAbove"
+      ? "M8 3 13 10H3Z"
+      : dir === "fromBelow"
+        ? "M8 13 3 6h10Z"
+        : "M8 2 12.5 7H3.5Z M8 14 3.5 9h9Z"
+  path.setAttribute("d", shape)
+  path.setAttribute("fill", "currentColor")
 
-  svg.append(arrows)
+  svg.append(path)
   return svg
 }
 
-/** The expander cell. A button, because it is one: clicking it is what opens the
- * region, and the gutter's own click handler is what carries that out. */
+/** One control in the expander: its own element, so a click can say which
+ * direction it asked for and the title says what that will show. */
+function unfoldControl(dir: RevealDir): HTMLElement {
+  const control = document.createElement("span")
+  control.className = "cm-diffUnfoldBtn"
+  control.dataset.reveal = dir
+  control.setAttribute("role", "button")
+  control.title =
+    dir === "fromAbove"
+      ? `Show ${DIFF_REVEAL_STEP} more unchanged lines below the change above`
+      : dir === "fromBelow"
+        ? `Show ${DIFF_REVEAL_STEP} more unchanged lines above the change below`
+        : "Show all unchanged lines"
+  control.append(arrowIcon(dir))
+  return control
+}
+
+/** The expander cell: two arrows for a run a step cannot finish, one control for
+ * a run it can. The cell is one gutter element either way, so a click is read
+ * against the arrow it landed on rather than against the cell. */
 class UnfoldCell extends GutterMarker {
   override elementClass = "cm-diffCell-hunk cm-diffCell-unfold"
 
-  override eq() {
-    // Every one of these is the same control; nothing about it varies per row.
-    return true
+  constructor(readonly both: boolean) {
+    super()
+  }
+
+  override eq(other: GutterMarker) {
+    return other instanceof UnfoldCell && other.both === this.both
   }
 
   override toDOM() {
-    const button = document.createElement("span")
-    button.className = "cm-diffUnfold"
-    button.setAttribute("role", "button")
-    button.title = "Expand unchanged lines"
-    button.append(unfoldIcon())
-    return button
+    const wrap = document.createElement("span")
+    wrap.className = "cm-diffUnfold"
+    if (this.both) {
+      wrap.append(unfoldControl("fromAbove"), unfoldControl("fromBelow"))
+    } else {
+      wrap.append(unfoldControl("all"))
+    }
+    return wrap
   }
 }
 
-const unfoldCell = new UnfoldCell()
+const unfoldBoth = new UnfoldCell(true)
+const unfoldAll = new UnfoldCell(false)
+
+/** The expander for the bar at `pos`: two arrows while a step leaves something
+ * folded after it, one control once a step can open all of it. */
+function unfoldCellAt(state: EditorState, pos: number): GutterMarker {
+  const fold = foldAt(state, pos)
+  if (!fold) return unfoldBoth
+  return oneClickLeft(fold, revealOf(state, fold)) ? unfoldAll : unfoldBoth
+}
+
 const hunkBlank = new Cell("", NUM, "cm-diffCell-hunk")
 const hunkBlankSign = new Cell("", SIGN, "cm-diffCell-hunk")
 
@@ -440,7 +501,7 @@ export function githubDiffGutters(): Extension {
       },
       widgetMarker: (view, _widget, block) => {
         const model = modelOf(view.state)
-        if (isHunkBar(model, block)) return unfoldCell
+        if (isHunkBar(model, block)) return unfoldCellAt(view.state, block.from)
 
         const removed = removedColumns(model, block)
         if (!removed) return null
@@ -452,12 +513,20 @@ export function githubDiffGutters(): Extension {
       },
       // The expander is a control, and this is what makes it one: the bar's own
       // click handler lives on the widget in the content column, which the icon
-      // is not in. `uncollapseUnchanged` takes the start of the replaced range,
-      // which is exactly the block position handed in here.
+      // is not in. The click is read against the icon it landed on — the cell is
+      // one element, and the two arrows are inside it. A click on the cell that
+      // is not on an arrow opens the whole run, as the bar does.
       domEventHandlers: {
-        click(view, block) {
+        click(view, block, event) {
           if (!isHunkBar(modelOf(view.state), block)) return false
-          view.dispatch({ effects: uncollapseUnchanged.of(block.from) })
+          const fold = foldAt(view.state, block.from)
+          if (!fold) return false
+          const target = event.target instanceof Element ? event.target : null
+          const dir = target?.closest<HTMLElement>("[data-reveal]")?.dataset
+            .reveal as RevealDir | undefined
+          view.dispatch({
+            effects: revealFold.of({ fold: fold.from, dir: dir ?? "all" }),
+          })
           return true
         },
       },
@@ -516,22 +585,165 @@ export function githubDiffGutters(): Extension {
 }
 
 /**
+ * The unchanged runs to fold, worked out the way `@codemirror/merge`'s own
+ * `collapseUnchanged` works them out — the same margin either side of each
+ * change and the same shortest run — so the `@@` headers and the folds agree.
+ */
+function foldsOf(state: EditorState): Fold[] {
+  const chunks = getChunks(state)?.chunks ?? []
+  const doc = state.doc
+  const runs: Fold[] = []
+
+  let prevLine = 1
+  for (let i = 0; ; i++) {
+    const chunk = i < chunks.length ? chunks[i] : null
+    const from = i ? prevLine + DIFF_CONTEXT : 1
+    const to = chunk
+      ? doc.lineAt(chunk.fromB).number - 1 - DIFF_CONTEXT
+      : doc.lines
+    if (to - from + 1 >= DIFF_MIN_COLLAPSE) runs.push({ from, to })
+    if (!chunk) break
+    prevLine = doc.lineAt(Math.min(doc.length, chunk.toB)).number
+  }
+  return runs
+}
+
+/** The fold a bar at `pos` stands for. A bar starts where the lines still
+ * folded start, which is inside the fold it came from. */
+function foldAt(state: EditorState, pos: number): Fold | null {
+  const line = state.doc.lineAt(pos).number
+  return (
+    modelOf(state).folds.find((fold) => fold.from <= line && line <= fold.to) ??
+    null
+  )
+}
+
+function revealOf(state: EditorState, fold: Fold): Reveal {
+  return state.field(folds).reveals.get(fold.from) ?? NOTHING_REVEALED
+}
+
+/** Asks for one click on a fold: the fold by its first line, and the direction. */
+const revealFold = StateEffect.define<{ fold: number; dir: RevealDir }>()
+
+/**
+ * The collapsed bar: what stands in for the lines a fold still hides.
+ *
+ * Its own widget, rather than `@codemirror/merge`'s, because that one's click
+ * opens the whole run and the arrows need to open a step. Clicking the bar
+ * itself still opens everything it hides, as it always has.
+ */
+class FoldBar extends WidgetType {
+  constructor(
+    readonly key: number,
+    readonly lines: number
+  ) {
+    super()
+  }
+
+  override eq(other: FoldBar) {
+    return other.key === this.key && other.lines === this.lines
+  }
+
+  override toDOM(view: EditorView) {
+    const bar = document.createElement("div")
+    bar.className = "cm-collapsedLines"
+    bar.addEventListener("click", () => {
+      view.dispatch({ effects: revealFold.of({ fold: this.key, dir: "all" }) })
+    })
+    return bar
+  }
+
+  override ignoreEvent(event: Event) {
+    return event instanceof MouseEvent
+  }
+
+  override get estimatedHeight() {
+    return 27
+  }
+}
+
+/** The bars for what each fold still hides, given how far it has been shown. */
+function foldDecorations(
+  state: EditorState,
+  reveals: Map<number, Reveal>
+): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>()
+  for (const fold of modelOf(state).folds) {
+    const left = remaining(fold, reveals.get(fold.from) ?? NOTHING_REVEALED)
+    if (!left) continue
+    builder.add(
+      state.doc.line(left.from).from,
+      state.doc.line(left.to).to,
+      Decoration.replace({
+        widget: new FoldBar(fold.from, left.to - left.from + 1),
+        block: true,
+      })
+    )
+  }
+  return builder.finish()
+}
+
+/**
+ * How far each fold has been shown, and the bars that are left of it.
+ *
+ * Owned here rather than by `@codemirror/merge`'s `collapseUnchanged`, because
+ * that can only open a whole run — there is no way to ask it for a step. The
+ * reveals reset when the document changes: a fold's lines are counted from where
+ * it is, and an edit can move them.
+ */
+type Folds = { reveals: Map<number, Reveal>; decos: DecorationSet }
+
+const folds = StateField.define<Folds>({
+  create: () => ({ reveals: new Map(), decos: Decoration.none }),
+  update(value, tr) {
+    let reveals = value.reveals
+    if (tr.docChanged) reveals = new Map()
+
+    for (const effect of tr.effects) {
+      if (!effect.is(revealFold)) continue
+      const fold = modelOf(tr.state).folds.find(
+        (at) => at.from === effect.value.fold
+      )
+      if (!fold) continue
+      const next = revealed(
+        fold,
+        reveals.get(fold.from) ?? NOTHING_REVEALED,
+        effect.value.dir
+      )
+      reveals = new Map(reveals).set(fold.from, next)
+    }
+
+    const chunksMoved = getChunks(tr.state) !== getChunks(tr.startState)
+    if (reveals === value.reveals && !chunksMoved) return value
+    return { reveals, decos: foldDecorations(tr.state, reveals) }
+  },
+  provide: (field) => EditorView.decorations.from(field, (at) => at.decos),
+})
+
+/**
+ * The unchanged runs of a unified diff, folded and expandable a step at a time.
+ * Goes after `unifiedMergeView`, which is what supplies the chunks this reads.
+ */
+export function unifiedFolds(): Extension {
+  return folds.init((state) => ({
+    reveals: new Map(),
+    decos: foldDecorations(state, new Map()),
+  }))
+}
+
+/**
  * `@@ -49,6 +49,9 @@` on each collapsed bar.
  *
- * The bar itself is `@codemirror/merge`'s `CollapseWidget` — its click handler is
- * what expands the region, and reimplementing the collapse to own the DOM would
- * mean reimplementing that too. So the widget is left alone and the header is
- * written onto it as an attribute, which the theme draws with `content:
- * attr(...)`.
+ * The bar is `FoldBar`, and the header is written onto it as an attribute, which
+ * the theme draws with `content: attr(...)`.
  *
  * This is the one cosmetic thing here that reaches into the DOM, and it is
  * written to fail quietly: a bar this cannot place keeps no attribute, which
  * draws the expander with no header rather than a wrong one.
  *
  * A collapsed region always ends where the next hunk begins, so the header is
- * the first hunk starting at or after the bar — which is also why
- * `DIFF_CONTEXT`/`DIFF_MIN_COLLAPSE` have to be the values handed to
- * `collapseUnchanged`.
+ * the first hunk starting at or after the bar — which is also why `foldsOf` has
+ * to leave the same margin `DIFF_CONTEXT` names.
  */
 const hunkHeaders = ViewPlugin.fromClass(
   class {
@@ -543,7 +755,10 @@ const hunkHeaders = ViewPlugin.fromClass(
       if (
         update.docChanged ||
         update.viewportChanged ||
-        update.geometryChanged
+        update.geometryChanged ||
+        // A reveal replaces the bar with a new one: a new element, which has no
+        // header until it is stamped.
+        update.heightChanged
       ) {
         this.stamp(update.view)
       }
@@ -822,19 +1037,32 @@ export function githubDiffTheme(isDark: boolean): Extension {
         padding: "0 2px 0 10px",
         textAlign: "right",
       },
-      // The icon and nothing behind it. It sat in a rounded blue chip for one
-      // revision, which put a second box inside a row that is already a tinted
-      // strip — two backgrounds arguing about which one is the control.
+      // The arrows in a row of their own, one control per direction. A control
+      // is the size of its icon plus a row of hit area above and below, and it
+      // gets a hover fill — the strip is tinted already, so the fill is what
+      // says "this one" when the pointer is on it. It was a bare 12px glyph, which
+      // read as decoration.
       ".cm-diffUnfold": {
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         height: DIFF_ROW_HEIGHT,
-        color: hunk.icon,
-        cursor: "pointer",
         verticalAlign: "middle",
       },
-      ".cm-diffUnfold:hover": { color: hunk.iconHover },
+      ".cm-diffUnfoldBtn": {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "16px",
+        height: DIFF_ROW_HEIGHT,
+        borderRadius: "3px",
+        color: hunk.icon,
+        cursor: "pointer",
+      },
+      ".cm-diffUnfoldBtn:hover": {
+        color: hunk.iconHover,
+        backgroundColor: hunk.edge,
+      },
     },
     { dark: isDark }
   )

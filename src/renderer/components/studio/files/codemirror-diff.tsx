@@ -24,6 +24,7 @@ import {
   DIFF_MIN_COLLAPSE,
   githubDiffGutters,
   githubDiffTheme,
+  unifiedFolds,
 } from "@/lib/files/diff-chrome"
 import { languageExtension, languageForFile } from "@/lib/editor-languages"
 import { diffSelection } from "@/lib/files/diff-selection"
@@ -228,9 +229,12 @@ export default function CodeMirrorFileDiff({
           syntaxHighlightDeletions: true,
           // Accept/reject buttons are edits; see above.
           mergeControls: false,
-          collapseUnchanged,
           diffConfig,
         }),
+        // The folds are this view's own, so a step can be shown rather than the
+        // whole run — see `diff-chrome.ts`. Split view still folds through
+        // `collapseUnchanged` above, and opens a run whole.
+        unifiedFolds(),
       ]
       const view = new EditorView({
         parent: host,

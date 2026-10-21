@@ -984,23 +984,6 @@ export const useChats = create<ChatState>((set, get) => ({
           chat.id === chatId ? { ...chat, title: event.title } : chat
         )
         set({ chats })
-
-        /*
-         * And the **checkout** this chat runs in takes the same name, if it is
-         * one nobody has named.
-         *
-         * Here because this is the moment the name exists, and it is the only
-         * one: a worktree cannot be opened nameless the way a chat can — its
-         * branch and directory are made before the first prompt — so one created
-         * with the branch field left empty waits for exactly this event. Main
-         * decides whether there is anything to do, since the three questions
-         * ("is this folder a checkout", "is it still on a placeholder branch")
-         * are git's to answer; the ordinary reply is that there was not.
-         */
-        const folderId = chats.find((chat) => chat.id === chatId)?.folderId
-        if (folderId) {
-          void useStudio.getState().nameWorktree(folderId, event.title)
-        }
         return
       }
 

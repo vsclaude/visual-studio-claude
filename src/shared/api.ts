@@ -182,39 +182,6 @@ export type GitPushResult =
   | { ok: true; command: string; message: string }
   | { ok: false; reason: "auth" | "failed"; command: string; message: string }
 
-/** What the New worktree dialog offers — see `worktreeOptions` in
- * `main/worktrees.ts`. */
-export type WorktreeOptions = {
-  /** Local branches, newest commit first. */
-  branches: string[]
-  /** Remote ones as git abbreviates them — `origin/feature/sso`. */
-  remotes: string[]
-  /** The main checkout's branch: what an empty base cuts from. */
-  current: string | null
-  /** `bun install` and the like, off the lock file at the root, or null. */
-  setup: string | null
-  /** Whether the repository has a `.worktreeinclude` to copy files by. */
-  includes: boolean
-}
-
-/**
- * How far one checkout has moved — see `worktreeStatus` in
- * `main/worktrees.ts`. Drawn on its row and asked again before removing it.
- */
-export type WorktreeStatus = {
-  branch: string | null
-  /** What `ahead` and `behind` count against: the branch it was cut from, or
-   * the main checkout's. */
-  base: string | null
-  /** Uncommitted entries, untracked included. */
-  changed: number
-  ahead: number | null
-  behind: number | null
-  /** Commits on this branch and on no other branch or remote — what deleting
-   * the branch loses. */
-  unique: number
-}
-
 /**
  * One file a commit changed — see `commitFiles` in `main/git.ts`. Paths are the
  * repository's own, `/`-separated, since the file may no longer be on disk.
@@ -1944,14 +1911,7 @@ export type ChatSpend = {
  * the one answer nobody can act on. The error is whatever the CLI said, drawn
  * where the answer would have gone rather than written anywhere.
  */
-export type CommitDraftAnswer = { commits: DraftedCommit[] } | { error: string }
-
-/**
- * One commit of a drafted plan: the staged files it takes and its message.
- * Paths are repository-relative, `/`-separated, exactly as `git diff --cached
- * --name-only` names them — see `readPlan` in `main/commit-plan.ts`.
- */
-export type DraftedCommit = { message: string; files: string[] }
+export type AgentTurnAnswer = { text: string } | { error: string }
 
 /**
  * The language a fenced block carries when it holds a drawing.
@@ -2062,70 +2022,6 @@ export type DesktopApi = {
    * what goes is the studio's record of it, which is all the studio ever had.
    */
   removeFolder: (id: string) => Promise<WorkspaceRecord>
-
-  /**
-   * A second checkout of a project, added to the workspace as a project of its
-   * own.
-   *
-   * `git worktree add` under this app's data directory, then the same
-   * `addFolder` the dialog uses — see `main/worktrees.ts`, which opens with why
-   * this is not the worktree *layer* that was deleted. An existing branch is
-   * checked out rather than refused, and `base` — a branch to cut from, empty
-   * for the main checkout's — applies only to a branch this creates. The
-   * repository's `.worktreeinclude` matches are copied in before it resolves.
-   * Rejects with git's own sentence, the way `addFolder` rejects with the
-   * store's: the dialog that asked is where it can be corrected.
-   */
-  addWorktree: (input: {
-    folderId: string
-    branch: string
-    name: string
-    base?: string
-  }) => Promise<WorkspaceRecord>
-  /**
-   * The checkout itself, removed, its chats and the project dropped with it,
-   * and its branch too when `deleteBranch` says so — the dialog asks, after
-   * saying how many commits exist on that branch alone (`worktreeStatus`).
-   * Rejects for a folder that is not a checkout at all, which is the renderer
-   * asking about a project it should not have offered this for.
-   */
-  removeWorktree: (
-    folderId: string,
-    options: { deleteBranch: boolean }
-  ) => Promise<WorkspaceRecord>
-  /** What the New worktree dialog offers for a project — its branches, a
-   * setup command. */
-  worktreeOptions: (folderId: string) => Promise<WorktreeOptions>
-  /** How far a checkout has moved, or null for a folder that is not one. */
-  worktreeStatus: (folderId: string) => Promise<WorktreeStatus | null>
-  /**
-   * Names a checkout nobody has named yet, after the chat running in it.
-   *
-   * A worktree cannot be created nameless the way a chat can — the branch and
-   * the directory have to exist before the first prompt — so one made with the
-   * branch field left empty is on a `vsclaude/untitled-…` branch until this. It
-   * renames **that branch** and the project with it, off the title the CLI wrote
-   * for the conversation (`retitle` in `main/chat.ts`), which is why it
-   * costs no turn of its own.
-   *
-   * Resolves with `null` for everything that is not that narrow case — an
-   * ordinary project, a checkout on a branch somebody named, a title that slugs
-   * to nothing — because the renderer calls it on **every** chat that gets a
-   * title and the answer is normally "this was nothing to do with a worktree".
-   */
-  nameWorktree: (
-    folderId: string,
-    title: string
-  ) => Promise<WorkspaceRecord | null>
-  /**
-   * Which repository this folder is a `git worktree` checkout of, or null for
-   * an ordinary one.
-   *
-   * Asked of git per folder rather than recorded, so a checkout made in
-   * somebody's own shell answers the same as one this app made. It is what
-   * decides whether `Remove worktree` is on a project's menu.
-   */
-  gitWorktreeRepo: (folderId: string) => Promise<string | null>
 
   /** Opens a folder picker and resolves with the chosen path, or null. */
   pickDirectory: () => Promise<string | null>
@@ -2246,15 +2142,6 @@ export type DesktopApi = {
     message: string
   ) => Promise<{ sha: string; subject: string }>
   /**
-   * Several commits in order, each with its own files — see `commitSeries` in
-   * `main/git.ts`. Rejects on the first that git refuses, with how many were
-   * made before it.
-   */
-  gitCommitSeries: (
-    folderId: string,
-    commits: DraftedCommit[]
-  ) => Promise<{ sha: string; subject: string }[]>
-  /**
    * The checked-out branch pushed, in the background, without prompting —
    * `docs/design.md` § Commits. Answers rather than rejects, since `auth` is
    * not an error so much as a request for the terminal.
@@ -2273,7 +2160,7 @@ export type DesktopApi = {
     model: string | null,
     effort: ChatEffort | null,
     profileId: string | null
-  ) => Promise<CommitDraftAnswer>
+  ) => Promise<AgentTurnAnswer>
   /**
    * Stops the folder's running draft, if there is one. Its pending
    * `draftCommitMessage` answers with an error the box ignores, since the
@@ -3003,17 +2890,11 @@ export const IPC = {
   trashProject: "workspace:trash-project",
   renameFolder: "workspace:rename-folder",
   removeFolder: "workspace:remove-folder",
-  addWorktree: "workspace:add-worktree",
-  removeWorktree: "workspace:remove-worktree",
-  nameWorktree: "workspace:name-worktree",
-  worktreeOptions: "workspace:worktree-options",
-  worktreeStatus: "workspace:worktree-status",
   pickDirectory: "workspace:pick-directory",
   pickFiles: "workspace:pick-files",
   clipboardImagePath: "files:clipboard-image-path",
   menuCommand: "menu:command",
   gitBranch: "git:branch",
-  gitWorktreeRepo: "git:worktree-repo",
   gitStatus: "git:status",
   gitChanges: "git:changes",
   gitLog: "git:log",
@@ -3025,7 +2906,6 @@ export const IPC = {
   gitDiscard: "git:discard",
   gitDiscardAll: "git:discard-all",
   gitCommit: "git:commit",
-  gitCommitSeries: "git:commit-series",
   gitPush: "git:push",
   draftCommitMessage: "git:draft-message",
   cancelCommitDraft: "git:draft-cancel",

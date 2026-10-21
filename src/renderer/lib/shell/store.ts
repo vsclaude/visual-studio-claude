@@ -48,7 +48,7 @@ export type Shell = {
    * tab named `vite` stays `vite` whatever it `cd`s into. Null for the
    * automatic name. */
   name: string | null
-  /** A line typed into the shell once it starts — a new worktree's setup
+  /** A line typed into the shell once it starts — a template's `create-*`
    * command — and never again: a restart is a plain shell. */
   command: string | null
 }
@@ -92,7 +92,7 @@ type ShellState = {
    * the default one, or the one picked from the menu beside it. */
   add: (shellId?: string) => void
   /** A shell in `folderId` that types `command` as it starts, in the dock and
-   * on screen — a new worktree's `bun install`, run where it can be watched
+   * on screen — a template's `create-*` CLI, run where it can be watched
    * and stopped rather than behind anybody's back. */
   run: (folderId: string, command: string) => void
   /** A shell in `dir`, a directory inside `folderId` — the file tree's `New

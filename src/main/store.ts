@@ -622,21 +622,6 @@ export class Store {
   resolveFolderDir(folderId: string): Promise<string> {
     return this.enqueue(async () => (await this.folderOf(folderId)).path)
   }
-
-  /**
-   * Where this workspace's own files live, for the one caller that has to build
-   * a path under it rather than ask for a named file: an agent's `git worktree`
-   * checkout (`main/worktrees.ts`).
-   *
-   * Public where every other path here is private, and that is the exception it
-   * looks like: a checkout is a **directory this app creates and then hands to
-   * git**, so there is no read or write here to route it through. The gate that
-   * matters is elsewhere — the folder it becomes goes through `addFolder`, and
-   * everything read out of it afterwards through `insideAny`.
-   */
-  get workspaceFilesDir(): string {
-    return this.workspaceDir
-  }
 }
 
 function isNotFound(error: unknown): boolean {

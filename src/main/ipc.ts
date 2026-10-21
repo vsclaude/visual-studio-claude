@@ -26,7 +26,6 @@ import {
   type WorkspaceSearch,
   type ChatAnswer,
   type ChatOptions,
-  type DraftedCommit,
 } from "../shared/api"
 import { FREE_PROFILE_ID } from "../shared/free-ai"
 import type { PluginFile, PluginSource } from "../shared/plugins"
@@ -64,7 +63,6 @@ import {
   changes,
   log,
   commit,
-  commitSeries,
   commitFileDiff,
   commitFiles,
   currentBranch,
@@ -120,20 +118,6 @@ import {
   WINDOWS_INSTALLER_ARGS,
 } from "./updater"
 import { DirectoryWatchers, RootWatchers } from "./watch"
-import {
-  addWorktree,
-  branchFromTitle,
-  copyIncluded,
-  deleteBranch,
-  isUntitledBranch,
-  removeWorktree,
-  renameBranch,
-  untitledBranch,
-  worktreeDir,
-  worktreeOptions,
-  worktreeRepo,
-  worktreeStatus,
-} from "./worktrees"
 
 /** What `imageDataUrl` recognises as a picture. */
 const IMAGE_MIME_TYPES: Record<string, string> = {
@@ -756,10 +740,10 @@ export function createIpc(host: Host): {
   )
 
   /*
-   * The directory a template's CLI will fill, made and added in one handler for
-   * the reason `addWorktree` is: a directory made here and an `addFolder` that
-   * then refused would be one nothing in the app knows about, so a directory
-   * this made is taken back on a refusal. An empty one already there is used
+   * The directory a template's CLI will fill, made and added in one handler: a
+   * directory made here and an `addFolder` that then refused would be one
+   * nothing in the app knows about, so a directory this made is taken back on a
+   * refusal. An empty one already there is used
    * as it is — somebody who made `~/code/my-app` first meant exactly that.
    */
   handle(
@@ -810,8 +794,7 @@ export function createIpc(host: Host): {
 
   /*
    * And back out of one: the directory to the Trash, its chats, then the
-   * project — the order `removeWorktree` keeps, so a Trash that refuses leaves
-   * the project listed rather than a row gone and a directory nobody can reach
+   * project — in that order, so a Trash that refuses leaves the project listed rather than a row gone and a directory nobody can reach
    * from here.
    *
    * What holds the directory open has to let go first, or Windows refuses the
@@ -862,125 +845,8 @@ export function createIpc(host: Host): {
 
   handle(IPC.removeFolder, (_event, id: string) => store.removeFolder(id))
 
-  /*
-   * A second checkout of a project, which becomes a project.
-   *
-   * Two calls in one handler because half of it is not the studio's to undo: a
-   * `git worktree add` that lands and an `addFolder` that then refuses would
-   * leave a directory on disk that nothing in the app knows about. So the
-   * directory is named here, git makes it, and the folder record is the same
-   * `addFolder` the dialog uses — which is also the check that this checkout is
-   * not already open as a project.
-   */
-  handle(
-    IPC.addWorktree,
-    async (
-      _event,
-      input: { folderId: string; branch: string; name: string; base?: string }
-    ) => {
-      // An empty field is deliberate and is the interesting case: the checkout
-      // goes on a placeholder branch and is named after the first chat that runs
-      // in it — see `nameWorktree` below.
-      const branch = input.branch.trim() || untitledBranch()
-
-      const repo = await store.resolveFolderDir(input.folderId)
-      const dir = worktreeDir(store.workspaceFilesDir, input.folderId, branch)
-
-      const made = await addWorktree({ repo, dir, branch, base: input.base })
-      if ("error" in made) throw new Error(made.error)
-      // Before the folder is added, so the first chat and the dock's setup
-      // command find the `.env` already there.
-      await copyIncluded(repo, made.dir)
-
-      // The branch, when the field was left empty: a project row reading
-      // `vsclaude/untitled-a1b2c3` for the minute before the first turn names it
-      // says what is happening, where the repository's own name said nothing.
-      return store.addFolder({
-        path: made.dir,
-        name: input.name.trim() || branch,
-      })
-    }
-  )
-
-  /*
-   * The name a checkout gets from the chat running in it.
-   *
-   * Three things have to be true and the first two are cheap, which is what
-   * makes this affordable on every chat that is ever titled: the folder is a
-   * checkout at all, and the branch it is on is still one this app minted. Only
-   * then does anything get written — and what is written is `git branch -m` in
-   * that checkout plus the folder's own name, which is the **title** rather
-   * than the slug: the branch is for git and the row is for reading.
-   */
-  handle(IPC.nameWorktree, async (_event, folderId: string, title: string) => {
-    const named = title.trim()
-    const wanted = named ? branchFromTitle(named) : null
-    if (!wanted) return null
-
-    const dir = await store.resolveFolderDir(folderId)
-    const branch = await currentBranch(dir)
-    if (!isUntitledBranch(branch) || !branch) return null
-    // Last, because it is the one that shells out twice.
-    if (!(await worktreeRepo(dir))) return null
-
-    // A rename git refused leaves the placeholder, and the project keeps the
-    // name it had: half of this landing would be worse than none of it.
-    if (!(await renameBranch(dir, branch, wanted))) return null
-
-    return store.renameFolder(folderId, named)
-  })
-
-  /*
-   * And back out: the checkout, its branch if asked, the chats run in it,
-   * then the project. A worktree row has no `Remove project`, so this is the
-   * one way out, and anything it left behind would have no row to reach it.
-   *
-   * The checkout goes first, so a `git worktree remove` that refuses leaves
-   * the project where it is rather than hiding a directory somebody now has
-   * to find. The repository is asked for rather than remembered — see
-   * `worktreeRepo`.
-   */
-  handle(
-    IPC.removeWorktree,
-    async (_event, folderId: string, options: { deleteBranch: boolean }) => {
-      const dir = await store.resolveFolderDir(folderId)
-      const repo = await worktreeRepo(dir)
-      if (!repo) throw new Error(`${dir} is not a git worktree checkout.`)
-      const branch = await currentBranch(dir)
-
-      const failed = await removeWorktree(repo, dir)
-      if (failed) throw new Error(failed.error)
-      // Only when asked: the dialog has said how many commits live on this
-      // branch alone, and keeping it is how somebody removes a checkout without
-      // removing the work. A detached HEAD reads as `detached @ …`, which is
-      // no branch to delete.
-      if (options?.deleteBranch && branch && !branch.startsWith("detached @"))
-        await deleteBranch(repo, branch)
-
-      for (const chat of await allChats.list()) {
-        if (chatRootId(chat) !== folderId) continue
-        notices.forget(chat.id)
-        await allChats.delete(chat.id)
-      }
-
-      return store.removeFolder(folderId)
-    }
-  )
-
-  handle(IPC.worktreeOptions, async (_event, folderId: string) =>
-    worktreeOptions(await store.resolveFolderDir(folderId))
-  )
-
-  handle(IPC.worktreeStatus, async (_event, folderId: string) =>
-    worktreeStatus(await store.resolveFolderDir(folderId))
-  )
-
   handle(IPC.gitBranch, async (_event, folderId: string) =>
     currentBranch(await store.resolveFolderDir(folderId))
-  )
-
-  handle(IPC.gitWorktreeRepo, async (_event, folderId: string) =>
-    worktreeRepo(await store.resolveFolderDir(folderId))
   )
 
   handle(IPC.gitStatus, async (_event, folderId: string) =>
@@ -1091,18 +957,6 @@ export function createIpc(host: Host): {
    */
   handle(IPC.gitCommit, async (_event, folderId: string, message: string) =>
     commit(await store.resolveFolderDir(folderId), message)
-  )
-
-  handle(
-    IPC.gitCommitSeries,
-    async (_event, folderId: string, commits: DraftedCommit[]) =>
-      commitSeries(
-        await store.resolveFolderDir(folderId),
-        (Array.isArray(commits) ? commits : []).map((commit) => ({
-          message: String(commit?.message ?? ""),
-          files: (Array.isArray(commit?.files) ? commit.files : []).map(String),
-        }))
-      )
   )
 
   /*

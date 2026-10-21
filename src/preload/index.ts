@@ -40,15 +40,6 @@ const api: DesktopApi = {
   trashProject: (folderId) => ipcRenderer.invoke(IPC.trashProject, folderId),
   renameFolder: (id, name) => ipcRenderer.invoke(IPC.renameFolder, id, name),
   removeFolder: (id) => ipcRenderer.invoke(IPC.removeFolder, id),
-  addWorktree: (input) => ipcRenderer.invoke(IPC.addWorktree, input),
-  removeWorktree: (folderId, options) =>
-    ipcRenderer.invoke(IPC.removeWorktree, folderId, options),
-  worktreeOptions: (folderId) =>
-    ipcRenderer.invoke(IPC.worktreeOptions, folderId),
-  worktreeStatus: (folderId) =>
-    ipcRenderer.invoke(IPC.worktreeStatus, folderId),
-  nameWorktree: (folderId, title) =>
-    ipcRenderer.invoke(IPC.nameWorktree, folderId, title),
 
   pickDirectory: () => ipcRenderer.invoke(IPC.pickDirectory),
   pickFiles: (directory) => ipcRenderer.invoke(IPC.pickFiles, directory),
@@ -61,8 +52,6 @@ const api: DesktopApi = {
     subscribe<MenuCommand>(IPC.menuCommand, listener),
 
   gitBranch: (folderId) => ipcRenderer.invoke(IPC.gitBranch, folderId),
-  gitWorktreeRepo: (folderId) =>
-    ipcRenderer.invoke(IPC.gitWorktreeRepo, folderId),
   gitStatus: (folderId) => ipcRenderer.invoke(IPC.gitStatus, folderId),
   gitChanges: (folderId) => ipcRenderer.invoke(IPC.gitChanges, folderId),
   gitLog: (folderId, limit, skip, query) =>
@@ -81,8 +70,6 @@ const api: DesktopApi = {
   gitDiscardAll: (folderId) => ipcRenderer.invoke(IPC.gitDiscardAll, folderId),
   gitCommit: (folderId, message) =>
     ipcRenderer.invoke(IPC.gitCommit, folderId, message),
-  gitCommitSeries: (folderId, commits) =>
-    ipcRenderer.invoke(IPC.gitCommitSeries, folderId, commits),
   gitPush: (folderId) => ipcRenderer.invoke(IPC.gitPush, folderId),
   draftCommitMessage: (folderId, model, effort, profileId) =>
     ipcRenderer.invoke(

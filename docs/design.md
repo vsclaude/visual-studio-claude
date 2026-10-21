@@ -31,7 +31,7 @@ absolute path.
   workspace/
     chats.json      the chats, listed
     chats/<id>.json one chat's lines
-    worktrees/<folderId>/    `git worktree` checkouts cut from a project
+    worktrees/<folderId>/    checkouts an older build cut; nothing makes one now
     claude-profiles/<slug>/  one Claude profile's `CLAUDE_CONFIG_DIR`
     note-files/              pictures dropped into a document or a chat
     drawings/                one `<id>.excalidraw` per drawing
@@ -86,8 +86,7 @@ watches the checkout, and a pty taken out of the React tree ends.
 
 A project's rows are its **chats**; clicking one opens it and points the
 Explorer and the dock's shell at that project too. The `+` on a project row
-starts a chat; the button beside it makes a worktree. The list shows the newest
-20 and a `View all` row. Each row carries its age (`since`, coarse: `9h`, `now`).
+starts a chat. The list shows the newest 20 and a `View all` row. Each row carries its age (`since`, coarse: `9h`, `now`).
 
 ### Saying which chats are working, and calling you back
 
@@ -163,47 +162,6 @@ one light running down the V and on through the S, in `currentColor` so a filled
 button paints it in its own text colour. It replaced a 3×3 shuffling grid, and
 the last lucide `Loader2`s on buttons went with it.
 
-### Worktrees, as projects
-
-The button beside `+` makes a `git worktree` (`main/worktrees.ts`) and adds it
-as an **ordinary workspace folder** under
-`workspace/worktrees/<folderId>/<branch slug>`. There is no worktree layer:
-nothing nullable in `FileRoot`, no `worktreeId` in `ChatPlace`, and every panel
-works on the checkout as a project. Creating one also opens a chat in it.
-
-- **The branch field is optional.** Empty mints `vsclaude/untitled-<hex>`, and
-  the first chat there to receive a title renames the branch and the project
-  (`nameWorktree`, off the CLI's own `ai-title`, so it costs no turn). That
-  `git branch -m` is the one branch write in the app, refused unless
-  `isUntitledBranch` still holds.
-- **An existing branch is checked out** rather than refused — one only on a
-  remote too, through git's DWIM, rather than shadowed by a fresh `-b` off HEAD.
-- **`From` picks the base** a new branch is cut from (the main checkout's when
-  empty), offered from the repository's branches. It is cut `--no-track` and
-  recorded as `branch.<name>.vsclaudeBase` in the repository's config — git's
-  own place for a fact about a branch, which `branch -m` carries and `branch -D`
-  drops — rather than in anything of this app's.
-- **Setting a checkout up**: the repository's `.worktreeinclude` (Claude Code's
-  name, `.gitignore` syntax) lists ignored files — `.env`, a local config — that
-  are copied in; listed-but-not-ignored ones are not, being somebody's work in
-  progress. A `Setup` command, prefilled off the lock file (`setupCommandFor`),
-  runs in a **dock shell** in the checkout, where it can be watched and stopped,
-  never in the background.
-- **A checkout's row says how far it has moved** — ahead/behind its base and
-  how many files are uncommitted (`worktreeStatus`), re-read off the folder's git
-  status signal, and nothing at all when it is level and clean.
-- **Removing one deletes the directory** (forced). The dialog asks git first and
-  warns about uncommitted files and about commits that exist on that branch
-  **alone** (`rev-list HEAD --not` every other branch and remote). Deleting the
-  branch is a box, ticked only when it would lose nothing. `git worktree
-remove` runs before the folder is dropped.
-- **Whether a folder is a checkout is asked of git** (`worktreeRepo`, with
-  `realpath` on both sides), never written down — so one made in your own shell
-  behaves the same.
-- The column files a checkout **one indent under its project**
-  (`projectTree`, tested), the only nesting there is. A shut project counts its
-  checkouts' chats too.
-
 ### A new project from a template
 
 The `Add project` dialog has a second tab, `From template`: Next.js, Nuxt, or
@@ -214,8 +172,7 @@ makes an empty `<location>/<name>` and adds it as an ordinary folder
 refuses); the framework's own CLI is typed into a **dock shell** inside it —
 `create-next-app`, `nuxi init` or `create-vite`, at `@latest`, aimed at `.`.
 
-- **A shell, not a background process**, for the reason the worktree's
-  `Setup` runs in one: these CLIs ask questions (ESLint? Tailwind? install
+- **A shell, not a background process**: these CLIs ask questions (ESLint? Tailwind? install
   now?), the install is worth watching, and a failure is a line in a terminal
   you can re-run rather than an error dialog with half a directory behind it.
 - **No bundled starters**, because what a starter contains is the framework's
@@ -232,7 +189,7 @@ refuses); the framework's own CLI is typed into a **dock shell** inside it —
   checked again by main, so a repository somebody added is never one click
   from deletion — `Remove project` stays the only way out for those, and
   forgets rather than deletes. The Trash, not an unlink, as every delete
-  here is. Its chats are deleted with it, as a worktree's are. On Windows
+  here is. Its chats are deleted with it. On Windows
   whatever holds the directory open makes the move fail, so the dock's
   shells in it are closed first, its tsservers stopped and the watchers
   dropped, and the move is retried while the ptys end; a refusal is shown
@@ -1125,25 +1082,13 @@ diff and the last ten subjects — a button pressed, its output text in a box
 somebody still has to commit, which is why it passes the rule against helper
 turns. A failed commit **rejects** and keeps the message.
 
-**A draft can propose more than one commit.** One staged change is sometimes
-two or three things, and a single message for them is the wrong answer. So the
-answer is JSON, `{"commits": [{"files", "message"}]}`, read against the staged
-paths by `readPlan` (`main/commit-plan.ts`, tested): a file the answer leaves
-out goes in the last commit, an unstaged path is ignored, at most five commits.
-Plain text that is not JSON is still one commit over everything, as before.
-One commit shows the usual box; several show a card each, in order, with the
-files named and the message open to edit. `Merge into one` puts the messages
-back in the box. The files are not movable between cards: a split is a reading
-of the diff, and a hand-built one would be a second reading nobody checked —
-press `Draft` again instead.
-
-`Commit N` is `gitCommitSeries` (`commitSeries` in `main/git.ts`, tested against
-a real repository). It **refuses** rather than guesses in two cases: a file
-staged since the draft (it would be left out silently), and a planned file that
-also has unstaged edits (staging it would take them too). Otherwise it unstages
-everything, then stages and commits each group in turn. A refused commit stops
-the series and says how many went in before it; the work it did not commit is
-still in the tree. No amend, branch
+**A draft is one commit.** It was a plan of several once — a JSON answer,
+read against the staged paths, shown as a card a commit — and it came out as
+the wrong shape for the box: a staged change is one message, and a split the
+draft proposed was a second reading of the diff nobody checked before it was
+committed in order. Removed, with `commitSeries` and `readPlan`: a draft that
+wants splitting is pressed again, or split by hand with the dock's shell. No
+amend, branch
 or stash: the dock's shell is the git client. Push is the `Commits` view's
 button (§ Commits).
 
@@ -1313,8 +1258,27 @@ somebody else's tracker, with a key on the machine and a poll always running.
 ### Worktrees, removed
 
 A layer between project and chat (`worktreeId` everywhere). The isolation was
-paid for on every chat and wanted on few. The checkout came back as a project —
-§ Worktrees, as projects.
+paid for on every chat and wanted on few. The checkout came back as a project,
+and then went too — below.
+
+### Worktrees, as projects, removed
+
+The button beside a project's `+` made a `git worktree` under
+`workspace/worktrees/<folderId>/` and added it as an ordinary folder, with a
+base to cut from, `.worktreeinclude` copied in, a setup command in a dock
+shell, ahead/behind marks on its row, `Remove worktree…`, an untitled branch
+renamed after its first chat's title, and the column filing a checkout under the
+project it was cut from. Deleted whole — `main/worktrees.ts`, the two dialogs,
+`lib/project-tree.ts`, six channels — because it was not used: a second
+checkout is `git worktree add` in the dock's shell and `Add project`, which is
+what this app does with any other folder on the machine. With it went the app's
+one branch write (`git branch -m` on a `vsclaude/untitled-…` branch).
+
+A checkout an older build made is left alone: it is still a folder in the
+manifest, so it is still a project in the column — top-level now, with
+`Remove project` as its way out — and its directory is still where git expects
+it. Nothing deletes it, and `migrateLegacyDataDir` still leaves
+`workspace/worktrees` in place.
 
 ### Distilling learnings, removed
 

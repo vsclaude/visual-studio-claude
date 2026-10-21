@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import { startAgentSession } from "./claude-agent"
-import { recentSubjects, stagedDiff, stagedPaths } from "./git"
-import { MAX_DRAFT_COMMITS, readPlan } from "./commit-plan"
-import type { CommitDraftAnswer, DraftedCommit } from "../shared/api"
+import { recentSubjects, stagedDiff } from "./git"
 
 /**
  * The **second** `claude` this app spawns, and the only one that is not a
@@ -205,11 +203,10 @@ const DRAFT_TOOLS = ["ToolSearch", "Read", "Glob", "Grep"]
  * than a rule ever does.
  */
 const DRAFT_PROMPT = [
-  "You write the commit messages for a change that is already staged. You are not reviewing it, not improving it and not commenting on it.",
-  'Answer with one JSON object and nothing else: no preamble, no code fence, no commentary. Its shape is {"commits": [{"files": ["path"], "message": "subject line, then a blank line and a body if one is needed"}]}. Each path is exactly as listed under "Staged paths".',
-  `Use one commit unless the staged change is clearly several independent things that each read well as their own commit. Then propose at most ${MAX_DRAFT_COMMITS}, in the order they should land. Every staged path goes in exactly one commit.`,
-  "A subject line under 72 characters, in the style of the recent subjects you are shown. A body only where the change needs saying why.",
-  "Describe what each commit does, not which files moved. If a commit is several unrelated things, say the largest one plainly rather than inventing a theme that covers them all.",
+  "You write the commit message for a change that is already staged. You are not reviewing it, not improving it and not commenting on it.",
+  "Answer with the message itself and nothing else — no preamble, no code fence, no sign-off, no offer to revise. What you return goes straight into the message box.",
+  "A subject line under 72 characters, in the style of the recent subjects you are shown. Where the change needs it, a blank line and then a short body saying why; where it does not, the subject alone.",
+  "Describe what the change does, not which files moved. If the staged diff is several unrelated things, say the largest one plainly rather than inventing a theme that covers them all.",
   "You may read the files around the change. You cannot edit anything, and there is nobody to ask.",
 ].join("\n")
 
@@ -226,7 +223,7 @@ export type DraftCommitRequest = {
 }
 
 /**
- * A plan of commits for what is staged, written by the read-only `claude`.
+ * A commit message for what is staged, written by the read-only `claude`.
  *
  * **Why this is not the helper turn the "no second CLI" rule refuses**: it is a
  * button, pressed by the person who is about to commit, and its whole output is
@@ -241,11 +238,10 @@ export type DraftCommitRequest = {
  */
 export async function draftCommitMessage(
   request: DraftCommitRequest
-): Promise<CommitDraftAnswer> {
-  const [{ stat, patch }, subjects, staged] = await Promise.all([
+): Promise<OneTurnResult> {
+  const [{ stat, patch }, subjects] = await Promise.all([
     stagedDiff(request.cwd),
     recentSubjects(request.cwd, DRAFT_LOG),
-    stagedPaths(request.cwd),
   ])
 
   if (!stat.trim() && !patch.trim()) {
@@ -253,17 +249,12 @@ export async function draftCommitMessage(
   }
 
   const prompt = [
-    "Write the commit message, or messages, for this staged change.",
+    "Write the commit message for this staged change.",
     "",
     "What it touches:",
     "```",
     stat.trim(),
     "```",
-    "",
-    // The `--stat` shortens long paths, so the names the answer must use are
-    // given whole, one per line.
-    "Staged paths:",
-    ...staged.map((file) => `- ${file}`),
     "",
     // Past the cap the `--stat` above is what the message is written from, said
     // out loud so the turn reads files rather than describing a patch it never
@@ -280,7 +271,7 @@ export async function draftCommitMessage(
       : []),
   ].join("\n")
 
-  const answer = await oneTurn({
+  return oneTurn({
     cwd: request.cwd,
     prompt,
     system: DRAFT_PROMPT,
@@ -292,10 +283,4 @@ export async function draftCommitMessage(
     disabledTools: request.disabledTools,
     signal: request.signal,
   })
-  if ("error" in answer) return answer
-
-  const commits: DraftedCommit[] | null = readPlan(answer.text, staged)
-  return commits
-    ? { commits }
-    : { error: "The draft came back empty. Press Draft again." }
 }

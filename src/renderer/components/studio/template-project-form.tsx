@@ -26,8 +26,7 @@ import {
  * `AddFolderDialog`.
  *
  * Main makes the empty directory and adds it; the framework's own CLI is then
- * typed into a dock shell inside it, the way the worktree dialog runs its
- * setup command. That is the whole design: the CLI's questions are answered
+ * typed into a dock shell inside it. That is the whole design: the CLI's questions are answered
  * where they are asked, its install is watched as it happens, and what a
  * starter holds stays the framework's to decide. `shared/project-templates.ts`
  * says why the name is held to npm's rule.

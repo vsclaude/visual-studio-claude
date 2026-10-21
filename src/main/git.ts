@@ -4,7 +4,6 @@ import path from "node:path"
 import { promisify } from "node:util"
 
 import type {
-  DraftedCommit,
   GitBlame,
   GitBlameCommit,
   GitChange,
@@ -1504,108 +1503,6 @@ export async function commit(
 
   const sha = (await git(dir, ["rev-parse", "--short", "HEAD"])).trim()
   return { sha, subject: body.split("\n")[0] ?? "" }
-}
-
-/**
- * The staged paths, one entry per file. `--no-renames` so a rename is its old
- * name and its new one as two entries — each has to be staged or committed on
- * its own, and a rename's old name is the half a `git add` of the new one misses.
- */
-export async function stagedPaths(dir: string): Promise<string[]> {
-  const names = await git(dir, [
-    "--literal-pathspecs",
-    "diff",
-    "--cached",
-    "--name-only",
-    "--no-renames",
-    "-z",
-  ])
-  return names.split("\0").filter(Boolean)
-}
-
-/**
- * What is staged, committed as several commits in the order given — each one
- * its own files and message.
- *
- * **Refuses rather than guesses** in two places, because either would commit
- * something other than what the draft showed. The staged set must be exactly
- * the planned files: a file staged since the draft would otherwise be left out
- * without a word. And no planned file may also have unstaged edits, because
- * staging the file would take those too. Both answer with a sentence to draft
- * again or to stage by hand.
- *
- * Unstaged to start, then each commit staged and made in turn, so a later
- * commit never picks up an earlier one's files. A failure stops there: the
- * commits already made stay, and the error says how many. The work that did
- * not commit is still in the working tree, so nothing is lost by stopping.
- */
-export async function commitSeries(
-  dir: string,
-  commits: DraftedCommit[]
-): Promise<{ sha: string; subject: string }[]> {
-  const plan = commits.map((commit) => ({
-    message: commit.message.trim(),
-    files: [...new Set(commit.files)],
-  }))
-  if (plan.length === 0) throw new Error("There is nothing to commit.")
-  if (plan.some((commit) => !commit.message || commit.files.length === 0)) {
-    throw new Error("Every commit needs a message and at least one file.")
-  }
-
-  const planned = plan.flatMap((commit) => commit.files)
-  const staged = await stagedPaths(dir)
-  const stagedSet = new Set(staged)
-  if (
-    planned.length !== stagedSet.size ||
-    new Set(planned).size !== planned.length ||
-    planned.some((file) => !stagedSet.has(file))
-  ) {
-    throw new Error(
-      "What is staged has changed since the draft. Draft the commits again."
-    )
-  }
-
-  const partly = await git(dir, [
-    "--literal-pathspecs",
-    "diff",
-    "--name-only",
-    "-z",
-    "--",
-    ...planned,
-  ])
-  const unstaged = partly.split("\0").filter(Boolean)
-  if (unstaged.length > 0) {
-    throw new Error(
-      `${unstaged.join(", ")} also has changes that are not staged. Stage or discard those, then draft again.`
-    )
-  }
-
-  await unstage(
-    dir,
-    planned.map((file) => path.join(dir, file))
-  )
-
-  const made: { sha: string; subject: string }[] = []
-  for (const [index, commit] of plan.entries()) {
-    try {
-      await git(dir, [
-        "--literal-pathspecs",
-        "add",
-        "--all",
-        "--",
-        ...commit.files,
-      ])
-      await git(dir, ["commit", "-m", commit.message])
-    } catch (failed) {
-      const reason = failed instanceof Error ? failed.message : String(failed)
-      throw new Error(
-        `Commit ${index + 1} of ${plan.length} was refused (${made.length} made before it): ${reason.trim()}`
-      )
-    }
-    const sha = (await git(dir, ["rev-parse", "--short", "HEAD"])).trim()
-    made.push({ sha, subject: commit.message.split("\n")[0] ?? "" })
-  }
-  return made
 }
 
 /**

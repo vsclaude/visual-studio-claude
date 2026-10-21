@@ -47,6 +47,7 @@ import {
   SANS_FONT_LABELS,
   sansFontFamily,
 } from "@/lib/appearance"
+import { useAppBackground } from "@/lib/app-background"
 import type { ClaudeVersions } from "@shared/api"
 import { isOn, usePlugins, type PluginStatus } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
@@ -239,6 +240,10 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
   const density = useSettings((state) => state.density)
   const setDensity = useSettings((state) => state.setDensity)
   const setOnboarded = useSettings((state) => state.setOnboarded)
+  const backgroundImage = useAppBackground((state) => state.image)
+  const chooseBackground = useAppBackground((state) => state.choose)
+  const clearBackground = useAppBackground((state) => state.clear)
+  const [backgroundError, setBackgroundError] = useState<string | null>(null)
 
   return (
     <div className="space-y-4">
@@ -338,6 +343,43 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
               if (isDensity(value)) setDensity(value)
             }}
           />
+        </Row>
+      </Card>
+
+      <Card>
+        <Row
+          title="Background"
+          description={
+            backgroundError ? (
+              <span className="text-destructive">{backgroundError}</span>
+            ) : (
+              "A picture behind the studio, seen in the gaps between panels and through them."
+            )
+          }
+        >
+          <div className="flex items-center gap-1.5">
+            {backgroundImage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void clearBackground()}
+              >
+                Remove
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setBackgroundError(null)
+                chooseBackground().catch((error: unknown) =>
+                  setBackgroundError(messageOfError(error))
+                )
+              }}
+            >
+              {backgroundImage ? "Change picture…" : "Choose picture…"}
+            </Button>
+          </div>
         </Row>
       </Card>
 
@@ -1001,7 +1043,7 @@ function CreditsCard() {
                 <span className="font-medium text-foreground tabular-nums">
                   {formatCredits(credits)}
                 </span>{" "}
-                credits left · every model, never a monthly fee
+                left · every model, never a monthly fee
               </>
             ) : (
               "Every model, paid as you go — never a monthly fee."

@@ -2,14 +2,14 @@
  * The free AI's half in main: where its `CLAUDE_CONFIG_DIR` is, the token the
  * CLI sends, and what every `claude` started on a profile is handed.
  *
- * **The token is a file the CLI reads, not a variable it is given.** A
- * Firebase ID token lives an hour and a chat session can stay open all day, so
- * a token fixed into a process's env at spawn is a session that starts failing
+ * **The token is a file the CLI reads, not a variable it is given.** An
+ * access token lives an hour and a chat session can stay open all day, so a
+ * token fixed into a process's env at spawn is a session that starts failing
  * at minute sixty. Instead the directory's own `settings.json` names an
  * `apiKeyHelper` that prints `vsclaude-token`, the CLI re-runs it every five
- * minutes (`freeAiEnv`), and the renderer hands over each token Firebase
- * refreshes (`setFreeAiToken`). The directory is this app's, under the
- * workspace, so writing the CLI's settings file there is writing nobody's.
+ * minutes (`freeAiEnv`), and this renews the token from the session the
+ * renderer hands over (`setFreeAiToken`). The directory is this app's, under
+ * the workspace, so writing the CLI's settings file there is writing nobody's.
  *
  * Written `0600` and deleted on sign-out. It is not sealed by the keychain the
  * way a long-lived secret would be: the CLI has to read it with `cat`, and what
@@ -33,8 +33,8 @@ import type { PurchaseResult, StudioAccount } from "../shared/credits"
 const TOKEN_FILE = "vsclaude-token"
 
 let freeDir: string | null = null
-/** The token this run was handed — a file left by an earlier run is not one,
- * since nobody has said that user is still signed in. */
+/** The access token this run was given — a file left by an earlier run is not
+ * one, since nobody has said that user is still signed in. */
 let token: string | null = null
 
 /** Called once by `ipc.ts`, with the workspace's own directory for it. */
@@ -56,21 +56,109 @@ export function freeAiReady(): boolean {
   return token !== null && freeAiUrl() !== null && freeDir !== null
 }
 
+/** How long before an access token lapses it is replaced — twice the CLI's
+ * five-minute cache of the helper's output, so it never sends a dead one. */
+const RENEW_AHEAD_MS = 10 * 60_000
+
+/** Between attempts when the server could not be reached. */
+const RETRY_MS = 60_000
+
 /**
- * The signed-in user's current Firebase ID token, or null on sign-out.
+ * The signed-in user's session token, or null on sign-out.
+ *
+ * The session is not what the CLI is given: it lives ninety days, and the
+ * file the CLI reads is plain. It is exchanged with the server
+ * (`POST /api/session`) for an hour's access token, which is what is written,
+ * and exchanged again ten minutes before that hour is up — here, by a timer,
+ * the way Firebase used to refresh its token in the renderer.
+ *
+ * A session the server refuses is a sign-in that is over (the user removed,
+ * the secret changed): the token goes and the free AI with it. A server that
+ * cannot be reached is a moment offline, and the current token stays while
+ * it is asked again.
+ */
+export async function setFreeAiToken(next: string | null): Promise<boolean> {
+  clearTimeout(renewal)
+  session = next
+  if (!next) {
+    await writeToken(null)
+    return false
+  }
+  return renew(next)
+}
+
+let session: string | null = null
+let renewal: ReturnType<typeof setTimeout> | undefined
+
+async function renew(held: string): Promise<boolean> {
+  const answer = await exchangeSession(held)
+  // Signed out, or in as somebody else, while the server was asked.
+  if (session !== held) return freeAiReady()
+  if (answer.kind === "refused") {
+    console.warn(`[free-ai] the session was refused: ${answer.reason}`)
+    await writeToken(null)
+    return false
+  }
+  if (answer.kind === "token") await writeToken(answer.token)
+  const wait =
+    answer.kind === "token"
+      ? Math.max(answer.expiresAt - Date.now() - RENEW_AHEAD_MS, RETRY_MS)
+      : RETRY_MS
+  renewal = setTimeout(() => void renew(held), wait)
+  return freeAiReady()
+}
+
+type Exchanged =
+  | { kind: "token"; token: string; expiresAt: number }
+  | { kind: "refused"; reason: string }
+  | { kind: "offline" }
+
+async function exchangeSession(held: string): Promise<Exchanged> {
+  const url = freeAiUrl()
+  if (!url) return { kind: "refused", reason: "no server" }
+  let response: Response
+  try {
+    response = await fetch(`${url}/api/session`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${held}` },
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch {
+    return { kind: "offline" }
+  }
+  const json = (await response.json().catch(() => null)) as {
+    token?: unknown
+    expiresAt?: unknown
+    error?: unknown
+  } | null
+  if (response.status === 401) {
+    return { kind: "refused", reason: String(json?.error ?? "401") }
+  }
+  if (
+    !response.ok ||
+    typeof json?.token !== "string" ||
+    typeof json.expiresAt !== "number"
+  ) {
+    return { kind: "offline" }
+  }
+  return { kind: "token", token: json.token, expiresAt: json.expiresAt }
+}
+
+/**
+ * The access token the CLI's `apiKeyHelper` prints, or null to remove it.
  *
  * `settings.json` is merged rather than written whole: the CLI keeps its own
  * keys in the same file, and this only owns `apiKeyHelper`.
  */
-export async function setFreeAiToken(next: string | null): Promise<boolean> {
+async function writeToken(next: string | null): Promise<void> {
   const dir = freeDir
-  if (!dir) return false
+  if (!dir) return
   const file = path.join(dir, TOKEN_FILE)
 
   if (!next) {
     token = null
     await rm(file, { force: true })
-    return false
+    return
   }
 
   await mkdir(dir, { recursive: true })
@@ -96,7 +184,6 @@ export async function setFreeAiToken(next: string | null): Promise<boolean> {
   }
 
   token = next
-  return freeAiReady()
 }
 
 /**

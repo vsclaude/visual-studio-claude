@@ -15,7 +15,7 @@ import {
   parseAnswer,
   signInWithGoogle,
 } from "../src/main/google-sign-in"
-import { SIGN_IN_CANCELLED } from "../src/shared/firebase"
+import { SIGN_IN_CANCELLED } from "../src/shared/sign-in"
 import { check, finish, section } from "./harness"
 
 /** What the page left, by nonce, and how often each nonce was asked about. */
@@ -96,7 +96,7 @@ check(
   (asked.get(first.nonce) ?? 0) >= 2,
   asked.get(first.nonce)
 )
-answers.set(first.nonce, JSON.stringify({ idToken: "abc.def" }))
+answers.set(first.nonce, JSON.stringify({ token: "abc.def" }))
 check(
   "resolves with the token the page left",
   (await settled(first.outcome)) === "resolved:abc.def"
@@ -123,7 +123,7 @@ section("an answer that is not one")
 const garbled = await attempt()
 answers.set(garbled.nonce, "not json")
 await wait(POLL_MS * 5)
-answers.set(garbled.nonce, JSON.stringify({ idToken: "after" }))
+answers.set(garbled.nonce, JSON.stringify({ token: "after" }))
 check(
   "is passed over, and the next ask still finds the real one",
   (await settled(garbled.outcome)) === "resolved:after"
@@ -140,7 +140,7 @@ check(
     "rejected:Sign-in was started again"
   )
 )
-answers.set(newer.nonce, JSON.stringify({ idToken: "newer" }))
+answers.set(newer.nonce, JSON.stringify({ token: "newer" }))
 check(
   "the newer attempt still takes its token",
   (await settled(newer.outcome)) === "resolved:newer"
@@ -164,7 +164,7 @@ section("what counts as an answer")
 
 check(
   "a token is an answer",
-  JSON.stringify(parseAnswer('{"idToken":"x"}')) === '{"idToken":"x"}'
+  JSON.stringify(parseAnswer('{"token":"x"}')) === '{"token":"x"}'
 )
 check(
   "an error is an answer",
@@ -180,9 +180,9 @@ check(
 )
 check(
   "a token that is not a string is refused",
-  parseAnswer('{"idToken":42}') === null
+  parseAnswer('{"token":42}') === null
 )
-check("an empty token is refused", parseAnswer('{"idToken":""}') === null)
+check("an empty token is refused", parseAnswer('{"token":""}') === null)
 
 server.close()
 finish()

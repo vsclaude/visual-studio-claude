@@ -1,41 +1,28 @@
-import { initializeApp } from "firebase/app"
-import {
-  getAuth,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  onIdTokenChanged,
-  signInWithCredential,
-  signOut,
-  type Auth,
-} from "firebase/auth"
 import { create } from "zustand"
 
-import { FIREBASE_CONFIG, SIGN_IN_CANCELLED } from "@shared/firebase"
+import { SIGN_IN_CANCELLED } from "@shared/sign-in"
 
 import { handFreeAiToken, watchFreeAi } from "./free-ai"
 import { watchStudioAccount } from "./credits"
+import { accountOfSession, type Account } from "./session"
 
 /**
- * Who is signed in to the studio, through Firebase.
+ * Who is signed in to the studio, through the free AI's server.
  *
- * Firebase keeps the session in this window's own storage, so it survives a
- * relaunch; `watchAccount` only has to listen to it. Signing in is the one
- * thing that needs the main process: the Google page has to open in the
- * user's browser (`main/google-sign-in.ts`), and what comes back is the Google
- * ID token that `signInWithCredential` exchanges here.
+ * Signing in is the one thing that needs the main process: the Google page has
+ * to open in the user's browser (`main/google-sign-in.ts`), and what comes
+ * back is the server's **session token** — ninety days, signed by the server,
+ * naming who signed in. It is kept in this window's own storage, the way
+ * Firebase kept its session, so it survives a relaunch; main is handed it and
+ * turns it into the hour-long tokens the free AI's requests carry
+ * (`main/free-ai.ts`).
  */
 
-/** Only what Settings shows. Not the Firebase `User`, which carries a token
- * refresh and methods a settings row has no use for. */
-export type Account = {
-  email: string | null
-  name: string | null
-  photo: string | null
-}
+export type { Account }
 
 type AccountState = {
-  /** False until Firebase has said whether anybody is signed in — before that,
-   * neither "signed in" nor "signed out" is true. */
+  /** False until the stored session has been read — before that, neither
+   * "signed in" nor "signed out" is true. */
   ready: boolean
   account: Account | null
   /** A sign-in is waiting on the browser, or a sign-out is running. */
@@ -48,43 +35,44 @@ type AccountState = {
   signOut: () => Promise<void>
 }
 
-let auth: Auth | null = null
+const SESSION_KEY = "vsclaude.session"
 
-/** One Firebase app for the window, made on first use rather than at import,
- * so a window that never opens Settings never starts the SDK. */
-function authOf(): Auth {
-  auth ??= getAuth(initializeApp(FIREBASE_CONFIG))
-  return auth
+/** The stored session and who it names, or nulls for none or a lapsed one. */
+function storedSession(): { session: string; account: Account } | null {
+  const session = localStorage.getItem(SESSION_KEY)
+  const account = session ? accountOfSession(session) : null
+  if (!session || !account) {
+    if (session) localStorage.removeItem(SESSION_KEY)
+    return null
+  }
+  return { session, account }
+}
+
+/** Draws whoever the stored session names and hands main the session. */
+function adoptStored(): void {
+  const stored = storedSession()
+  useAccount.setState({ ready: true, account: stored?.account ?? null })
+  void handFreeAiToken(stored?.session ?? null)
 }
 
 let watching = false
 
-/** Starts listening to Firebase for who is signed in. Idempotent: every caller
- * asks for it, and only the first one listens. */
+/** Reads the stored session, and follows it. Idempotent: every caller asks
+ * for it, and only the first one listens. */
 export function watchAccount(): void {
   if (watching) return
   watching = true
-  onAuthStateChanged(authOf(), (user) => {
-    useAccount.setState({
-      ready: true,
-      account: user
-        ? { email: user.email, name: user.displayName, photo: user.photoURL }
-        : null,
-    })
-  })
 
-  // The free AI's requests carry this user's ID token, which lives an hour.
-  // Firebase refreshes it ahead of that and says so here, so main's copy —
-  // which the CLI re-reads every five minutes — is never the expired one.
   watchFreeAi()
-  // The credits are asked of the same server with the same token, so it follows
-  // the token in.
+  // The credits are asked of the same server as the same user, so it follows
+  // the session in.
   watchStudioAccount()
-  onIdTokenChanged(authOf(), (user) => {
-    void (async () => {
-      const token = user ? await user.getIdToken().catch(() => null) : null
-      await handFreeAiToken(token)
-    })()
+  adoptStored()
+
+  // A popped-out chat window shares this storage: signing in or out in one
+  // window is signing in or out in all of them.
+  window.addEventListener("storage", (event) => {
+    if (event.key === SESSION_KEY || event.key === null) adoptStored()
   })
 }
 
@@ -97,12 +85,12 @@ export const useAccount = create<AccountState>()((set) => ({
   signIn: async () => {
     set({ busy: true, error: null })
     try {
-      const idToken = await window.desktop.signInWithGoogle()
-      await signInWithCredential(
-        authOf(),
-        GoogleAuthProvider.credential(idToken)
-      )
-      set({ busy: false })
+      const session = await window.desktop.signInWithGoogle()
+      const account = accountOfSession(session)
+      if (!account) throw new Error("The server answered with no sign-in.")
+      localStorage.setItem(SESSION_KEY, session)
+      set({ busy: false, account })
+      await handFreeAiToken(session)
     } catch (error) {
       const message = messageOf(error)
       set({
@@ -118,12 +106,9 @@ export const useAccount = create<AccountState>()((set) => ({
 
   signOut: async () => {
     set({ busy: true, error: null })
-    try {
-      await signOut(authOf())
-      set({ busy: false })
-    } catch (error) {
-      set({ busy: false, error: messageOf(error) })
-    }
+    localStorage.removeItem(SESSION_KEY)
+    set({ busy: false, account: null })
+    await handFreeAiToken(null)
   },
 }))
 

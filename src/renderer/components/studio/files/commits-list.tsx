@@ -363,8 +363,7 @@ function UpstreamLine({
   return (
     <>
       {line}
-      {/* Under the line rather than in a toast, the way the worktree row says
-          git refused: a rejected push's reason — fetch first, a protected
+      {/* Under the line rather than in a toast: a rejected push's reason — fetch first, a protected
           branch — is git's own words and worth reading whole. */}
       {said && (
         <p

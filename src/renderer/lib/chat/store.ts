@@ -12,6 +12,7 @@ import {
   type ChatAsk,
   type WorkspaceFolder,
   type ChatOptions,
+  type TurnUsage,
 } from "@shared/api"
 import { newChatOptions, useFreeAi } from "../free-ai"
 import { useClaudeProfiles } from "./claude-profiles"
@@ -103,6 +104,14 @@ type ChatState = {
    * the next reply arrives.
    */
   context: Record<string, number>
+  /**
+   * What each running turn has spent so far, for the row under `Working…`.
+   *
+   * Live and never kept, like `context`: it goes when the turn's own usage
+   * line lands, which is the same figure counted properly, and when the chat
+   * stops being busy.
+   */
+  live: Record<string, TurnUsage>
   /**
    * The same window, measured by the CLI rather than counted from a reply.
    *
@@ -350,6 +359,7 @@ export const useChats = create<ChatState>((set, get) => ({
   sending: [],
   startedAt: {},
   context: {},
+  live: {},
   window: {},
   agents: {},
   compacting: {},
@@ -655,6 +665,7 @@ export const useChats = create<ChatState>((set, get) => ({
       // describing no longer exists, and a percentage left on screen would be
       // reporting a conversation that has been thrown away.
       context: without(get().context, id),
+      live: without(get().live, id),
       window: without(get().window, id),
       // And the copy on the record, which the pane falls back to — main drops
       // its own, but not before the next listing would be read.
@@ -962,6 +973,16 @@ export const useChats = create<ChatState>((set, get) => ({
         return
       }
 
+      if (event.type === "live") {
+        set({ live: { ...get().live, [chatId]: event.usage } })
+        return
+      }
+      // The turn's own line supersedes the running figure; a queued message
+      // starts the next turn from nothing.
+      if (event.type === "usage" && get().live[chatId]) {
+        set({ live: without(get().live, chatId) })
+      }
+
       // The measured window, once a turn has ended — the half `context` above
       // cannot give, because a reply carries no denominator. Kept per chat and
       // never written down: it describes a live session.
@@ -984,23 +1005,6 @@ export const useChats = create<ChatState>((set, get) => ({
           chat.id === chatId ? { ...chat, title: event.title } : chat
         )
         set({ chats })
-
-        /*
-         * And the **checkout** this chat runs in takes the same name, if it is
-         * one nobody has named.
-         *
-         * Here because this is the moment the name exists, and it is the only
-         * one: a worktree cannot be opened nameless the way a chat can — its
-         * branch and directory are made before the first prompt — so one created
-         * with the branch field left empty waits for exactly this event. Main
-         * decides whether there is anything to do, since the three questions
-         * ("is this folder a checkout", "is it still on a placeholder branch")
-         * are git's to answer; the ordinary reply is that there was not.
-         */
-        const folderId = chats.find((chat) => chat.id === chatId)?.folderId
-        if (folderId) {
-          void useStudio.getState().nameWorktree(folderId, event.title)
-        }
         return
       }
 
@@ -1042,6 +1046,9 @@ export const useChats = create<ChatState>((set, get) => ({
           startedAt: event.busy
             ? { ...get().startedAt, [chatId]: Date.now() }
             : without(get().startedAt, chatId),
+          // A turn stopped or killed before its result has no line to replace
+          // this, and the row would keep the dead turn's numbers.
+          live: event.busy ? get().live : without(get().live, chatId),
         })
         return
       }

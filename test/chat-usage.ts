@@ -1,5 +1,11 @@
 import type { AssistantMessage, TurnUsage } from "../src/shared/api"
-import { contextOf, usageOf } from "../src/main/claude-agent"
+import {
+  contextOf,
+  LiveTally,
+  liveUsageOf,
+  usageOf,
+  type StreamEvent,
+} from "../src/main/claude-agent"
 import {
   chatLine,
   compact,
@@ -77,6 +83,7 @@ const usage = (over: Partial<TurnUsage> = {}): TurnUsage => ({
   costUsd: null,
   context: null,
   durationMs: null,
+  credits: null,
   ...over,
 })
 
@@ -524,6 +531,201 @@ section("the model's name, and the numbers")
   check("and billions", compact(1_729_000_000) === "1.7B")
   check("a cent is two places", money(0.31) === "$0.31")
   check("under one is four", money(0.0049) === "$0.0049")
+}
+
+section("a turn paid in credits")
+{
+  const spent = {
+    "claude-sonnet-5-5": {
+      inputTokens: 1_000,
+      cacheReadInputTokens: 20_000,
+      outputTokens: 1_000,
+    },
+    "claude-haiku-5-5": { cacheReadInputTokens: 10_000, outputTokens: 100 },
+  }
+  const charged = usageOf(result(spent), null, null, null, true)
+  // Each model at its own price, as the server charges — the busiest's price
+  // over the whole turn would have been 20× too much for the Haiku half.
+  check(
+    "each model at its own price, added up",
+    charged.credits ===
+      (1_000 + 20_000 * 0.05 + 1_000 * 5) * 20 + (1_000 + 500),
+    charged
+  )
+  check(
+    "a turn on a login charges nothing",
+    usageOf(result(spent)).credits === null
+  )
+  check(
+    "a crashed turn on credits has no charge rather than a free one",
+    usageOf(result({}), null, null, null, true).credits === null
+  )
+
+  // In dollars, not the integer: beside `33.4k prompt`, `1.3M credits` reads
+  // as a token count forty times too big, where `$0.135` is what happened.
+  check(
+    "the row says what came off the balance, in dollars",
+    usageLine(usage({ output: 38, credits: 139_000 })).endsWith(
+      "38 out · $0.014 in credits"
+    ),
+    usageLine(usage({ output: 38, credits: 139_000 }))
+  )
+  check(
+    "and nothing of credits on a login's turn",
+    !usageLine(usage({ output: 38 })).includes("credits")
+  )
+  check(
+    "the hover has the dollars and the server's own integer",
+    usageDetail(usage({ credits: 139_000 })).includes(
+      "$0.014 off the Studio AI balance (139,000 credits)"
+    ),
+    usageDetail(usage({ credits: 139_000 }))
+  )
+
+  const moved = totalOf([
+    line({ credits: null }),
+    line({ credits: 100 }),
+    line({ credits: 250 }),
+  ])
+  check(
+    "a chat that moved to credits totals the turns it paid for",
+    moved?.credits === 350,
+    moved
+  )
+  check(
+    "and one that never did says nothing",
+    totalOf([line({}), line({})])?.credits === null
+  )
+}
+
+section("liveUsageOf: the running turn, off its replies")
+{
+  const opus = "claude-opus-4-1-20250805"
+  const haiku = "claude-haiku-4-5-20251001"
+  const live = liveUsageOf([
+    {
+      model: opus,
+      usage: {
+        input_tokens: 10,
+        cache_creation_input_tokens: 2_000,
+        cache_read_input_tokens: 30_000,
+        output_tokens: 400,
+      },
+    },
+    {
+      model: haiku,
+      usage: { input_tokens: 5_000, output_tokens: 300 },
+    },
+  ])
+  check(
+    "replies are summed, a subagent's included",
+    live.input === 5_010 &&
+      live.cacheWrite === 2_000 &&
+      live.cacheRead === 30_000 &&
+      live.output === 700,
+    live
+  )
+  check(
+    "labelled with the model that read the most, as the result line is",
+    live.model === opus,
+    live.model
+  )
+  check(
+    "no cost, which only the result line can say",
+    live.costUsd === null && live.credits === null && live.durationMs === null
+  )
+  check(
+    "a turn with no replies yet counts nothing and names no model",
+    liveUsageOf([]).model === null && liveUsageOf([]).output === 0
+  )
+  check(
+    "and is drawn in the turn line's own words",
+    usageLine(live) === "Opus 4.1 · 37.0k prompt, 81% cached · 700 out",
+    usageLine(live)
+  )
+}
+
+section("LiveTally: the count while a response is being written")
+{
+  // The fields the tally reads, cast as the SDK's event: the rest of a real
+  // frame is the API's and says nothing about the count.
+  const event = (frame: object) => frame as StreamEvent
+  const start = (id: string) =>
+    event({
+      type: "message_start",
+      message: {
+        id,
+        model: "claude-opus-4-1-20250805",
+        usage: {
+          input_tokens: 100,
+          cache_read_input_tokens: 900,
+          output_tokens: 1,
+        },
+      },
+    })
+  const text = (chunk: string) =>
+    event({
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: chunk },
+    })
+  const done = (output: number) =>
+    event({ type: "message_delta", usage: { output_tokens: output } })
+
+  const tally = new LiveTally()
+  tally.stream(start("a"), null)
+  check(
+    "the prompt is counted before a word is written",
+    tally.usage().cacheRead === 900 && tally.usage().output === 1,
+    tally.usage()
+  )
+
+  tally.stream(text("x".repeat(40)), null)
+  check(
+    "the output runs up off the text",
+    tally.usage().output === 10,
+    tally.usage()
+  )
+  check(
+    "a delta with no text in it is not news",
+    tally.stream(
+      event({
+        type: "content_block_delta",
+        delta: { type: "signature_delta", signature: "sig" },
+      }),
+      null
+    ) === false
+  )
+
+  // A complete frame that trails the estimate does not take it back.
+  tally.reply("a", "claude-opus-4-1-20250805", {
+    input_tokens: 100,
+    cache_read_input_tokens: 900,
+    output_tokens: 3,
+  })
+  check(
+    "a frame behind the estimate does not move it back",
+    tally.usage().output === 10,
+    tally.usage()
+  )
+
+  tally.stream(done(8), null)
+  check(
+    "message_delta replaces the estimate with the count",
+    tally.usage().output === 8,
+    tally.usage()
+  )
+
+  // A subagent writing at the same time is its own response.
+  tally.stream(start("b"), "task-1")
+  tally.stream(text("y".repeat(8)), "task-1")
+  check(
+    "a subagent's response is counted beside the main loop's",
+    tally.usage().output === 10 && tally.usage().cacheRead === 1_800,
+    tally.usage()
+  )
+
+  tally.reset()
+  check("reset starts the next turn from nothing", tally.usage().output === 0)
 }
 
 finish()

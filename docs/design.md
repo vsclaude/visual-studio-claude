@@ -31,7 +31,7 @@ absolute path.
   workspace/
     chats.json      the chats, listed
     chats/<id>.json one chat's lines
-    worktrees/<folderId>/    `git worktree` checkouts cut from a project
+    worktrees/<folderId>/    checkouts an older build cut; nothing makes one now
     claude-profiles/<slug>/  one Claude profile's `CLAUDE_CONFIG_DIR`
     note-files/              pictures dropped into a document or a chat
     drawings/                one `<id>.excalidraw` per drawing
@@ -86,8 +86,7 @@ watches the checkout, and a pty taken out of the React tree ends.
 
 A project's rows are its **chats**; clicking one opens it and points the
 Explorer and the dock's shell at that project too. The `+` on a project row
-starts a chat; the button beside it makes a worktree. The list shows the newest
-20 and a `View all` row. Each row carries its age (`since`, coarse: `9h`, `now`).
+starts a chat. The list shows the newest 20 and a `View all` row. Each row carries its age (`since`, coarse: `9h`, `now`).
 
 ### Saying which chats are working, and calling you back
 
@@ -146,54 +145,22 @@ any more, and nothing deletes it.
 
 ### The chat's loading indicator
 
-While a turn runs the pane draws three `primary` dots hopping in turn, then
-`Working…` with a light passing over it, then a running clock — all CSS in
-`styles/motion.css`, so it follows the theme and `prefers-reduced-motion` (the
-dots fall back to breathing, the shimmer stops). It was a hand-drawn SVG, then a
-spritesheet, then a GIF swordsman beside `Hasaging…`, removed at the user's
-request: `prefers-reduced-motion` could not reach it, it did not follow the
-theme, and it was fan art of somebody else's character.
+While a turn runs the pane draws the **VS lettermark writing itself** — the V,
+then the S through its arm, in the logo's violet-to-amber over a faint copy —
+held a beat and wiped from where it started; then `Working…` with a light
+passing over it, then a running clock. All CSS in `styles/motion.css`
+(`stroke-dashoffset` over `pathLength="100"`), so `prefers-reduced-motion`
+reaches it: the glyph is drawn whole and breathes, the shimmer stops. It was a
+hand-drawn SVG, then a spritesheet, then a GIF swordsman beside `Hasaging…`,
+removed at the user's request (`prefers-reduced-motion` could not reach it, it
+did not follow the theme, and it was fan art of somebody else's character), then
+three `primary` dots, which said "loading" in every app's words rather than this
+one's.
 
-### Worktrees, as projects
-
-The button beside `+` makes a `git worktree` (`main/worktrees.ts`) and adds it
-as an **ordinary workspace folder** under
-`workspace/worktrees/<folderId>/<branch slug>`. There is no worktree layer:
-nothing nullable in `FileRoot`, no `worktreeId` in `ChatPlace`, and every panel
-works on the checkout as a project. Creating one also opens a chat in it.
-
-- **The branch field is optional.** Empty mints `vsclaude/untitled-<hex>`, and
-  the first chat there to receive a title renames the branch and the project
-  (`nameWorktree`, off the CLI's own `ai-title`, so it costs no turn). That
-  `git branch -m` is the one branch write in the app, refused unless
-  `isUntitledBranch` still holds.
-- **An existing branch is checked out** rather than refused — one only on a
-  remote too, through git's DWIM, rather than shadowed by a fresh `-b` off HEAD.
-- **`From` picks the base** a new branch is cut from (the main checkout's when
-  empty), offered from the repository's branches. It is cut `--no-track` and
-  recorded as `branch.<name>.vsclaudeBase` in the repository's config — git's
-  own place for a fact about a branch, which `branch -m` carries and `branch -D`
-  drops — rather than in anything of this app's.
-- **Setting a checkout up**: the repository's `.worktreeinclude` (Claude Code's
-  name, `.gitignore` syntax) lists ignored files — `.env`, a local config — that
-  are copied in; listed-but-not-ignored ones are not, being somebody's work in
-  progress. A `Setup` command, prefilled off the lock file (`setupCommandFor`),
-  runs in a **dock shell** in the checkout, where it can be watched and stopped,
-  never in the background.
-- **A checkout's row says how far it has moved** — ahead/behind its base and
-  how many files are uncommitted (`worktreeStatus`), re-read off the folder's git
-  status signal, and nothing at all when it is level and clean.
-- **Removing one deletes the directory** (forced). The dialog asks git first and
-  warns about uncommitted files and about commits that exist on that branch
-  **alone** (`rev-list HEAD --not` every other branch and remote). Deleting the
-  branch is a box, ticked only when it would lose nothing. `git worktree
-remove` runs before the folder is dropped.
-- **Whether a folder is a checkout is asked of git** (`worktreeRepo`, with
-  `realpath` on both sides), never written down — so one made in your own shell
-  behaves the same.
-- The column files a checkout **one indent under its project**
-  (`projectTree`, tested), the only nesting there is. A shut project counts its
-  checkouts' chats too.
+The **spinner** (`ui/spinner.tsx`) is the same glyph at row size: faint, with
+one light running down the V and on through the S, in `currentColor` so a filled
+button paints it in its own text colour. It replaced a 3×3 shuffling grid, and
+the last lucide `Loader2`s on buttons went with it.
 
 ### A new project from a template
 
@@ -205,8 +172,7 @@ makes an empty `<location>/<name>` and adds it as an ordinary folder
 refuses); the framework's own CLI is typed into a **dock shell** inside it —
 `create-next-app`, `nuxi init` or `create-vite`, at `@latest`, aimed at `.`.
 
-- **A shell, not a background process**, for the reason the worktree's
-  `Setup` runs in one: these CLIs ask questions (ESLint? Tailwind? install
+- **A shell, not a background process**: these CLIs ask questions (ESLint? Tailwind? install
   now?), the install is worth watching, and a failure is a line in a terminal
   you can re-run rather than an error dialog with half a directory behind it.
 - **No bundled starters**, because what a starter contains is the framework's
@@ -223,7 +189,7 @@ refuses); the framework's own CLI is typed into a **dock shell** inside it —
   checked again by main, so a repository somebody added is never one click
   from deletion — `Remove project` stays the only way out for those, and
   forgets rather than deletes. The Trash, not an unlink, as every delete
-  here is. Its chats are deleted with it, as a worktree's are. On Windows
+  here is. Its chats are deleted with it. On Windows
   whatever holds the directory open makes the move fail, so the dock's
   shells in it are closed first, its tsservers stopped and the watchers
   dropped, and the move is retried while the ptys end; a refusal is shown
@@ -471,8 +437,10 @@ even from inside a pty.
 Any number of shells per project, a tab each, named for the directory the shell
 is in now (asked of the kernel off the pty's pid, once output goes quiet after
 Enter). Clicking a project row points the dock at that project; the pty starts
-only when the tab is shown. Shells are not restored across a launch. ptys live
-in a detached per-machine daemon (`main/daemon.ts`).
+only when the tab is shown. A folder in the file tree has `New terminal here`,
+which opens the shell in that directory instead of the project's root (`dir` on
+`terminalCreate`, checked to be inside the folder). Shells are not restored
+across a launch. ptys live in a detached per-machine daemon (`main/daemon.ts`).
 
 A tab can be **renamed** — double-click it, or `Rename` in its right-click
 menu — and a typed name then wins over the cwd; emptying it hands the tab back.
@@ -523,8 +491,10 @@ click replaces; a double click or a keystroke keeps it. Only the tree previews.
 
 **`⌘P`** opens everything this window can open — files and chats. It only
 opens things; there is no commands half. Files come from an index walked the
-first time the palette opens (skipping `IGNORED_DIRECTORIES`, capped at 20,000),
-re-walked by Refresh or when a folder is added or removed, and cut to a
+every time the palette opens (skipping `IGNORED_DIRECTORIES`, capped at 20,000)
+— the list already held stays up until the walk lands, so a file created since
+the last open is found without Refresh. It is also re-walked by Refresh and when
+a folder is added or removed, and cut to a
 shortlist by a subsequence pass before cmdk ranks them.
 
 The walk also skips what the repository's `.gitignore` names. This reverses
@@ -586,9 +556,20 @@ Every row says whether it is signed in and as whom, **asked of the CLI**
 (`claude auth status --json`); a missing directory is never spawned into, since
 the CLI would create it. The composer's account menu shows each profile's email.
 
+**Background** (Appearance) is one picture behind the whole window — the
+canvas the cards sit on. Chosen in the OS picker and **copied** into
+`workspace/app-background/` by main, like a project's icon, so the file need not
+stay where it was picked and the studio never reads a path the renderer named.
+It comes back as a `data:` URL on every launch (`appBackground`), held in
+`useAppBackground` (`lib/app-background.ts`), not in `workbench.settings`, which
+is rewritten whole. With a picture, each card goes translucent (`.studio-card`
+in `globals.css`) so it shows through the card's edges as well; the cards'
+contents keep their own opaque surfaces so text stays readable. Capped at the
+image-preview ceiling, 20 MB. Not drawn in the popped-out chat window.
+
 ### The free AI
 
-Anybody signed in to the studio (Google, through Firebase) can chat on
+Anybody signed in to the studio (Google, through the server) can chat on
 **Haiku, Sonnet or Opus through this app's own server**, paid for with
 credits and with no Claude account of their own — the way in for somebody who has not got one. It is a row of the composer's
 account menu, `Studio AI`, and **not a profile**: Settings has nothing to rename or
@@ -604,23 +585,25 @@ whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
 loads, so it need not be typed in each shell's own syntax.
 
-**What the server is sent is the user's Firebase ID token**, as
+**What the server is sent is an access token of its own**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against Google's public keys), refuses any model outside `FREE_AI_MODELS`, and
+(against its own secret), refuses any model outside `FREE_AI_MODELS`, and
 forwards to Anthropic with a key of its own — so every request is this app's
 API spend, charged per uid to that user's credits by the server, and no user credential is ever
 forwarded.
 
-**The token is a file, read by an `apiKeyHelper`, not a variable.** An ID token
-lives an hour and a chat session can stay open all day; a token fixed into a
-process's env at spawn is a session that fails at minute sixty. So the free
-directory's own `settings.json` names an `apiKeyHelper` that prints
+**The token is a file, read by an `apiKeyHelper`, not a variable.** An access
+token lives an hour and a chat session can stay open all day; a token fixed
+into a process's env at spawn is a session that fails at minute sixty. So the
+free directory's own `settings.json` names an `apiKeyHelper` that prints
 `vsclaude-token` (`type` on Windows, where the CLI runs it through `cmd.exe` —
 measured; `cat` elsewhere), the CLI re-runs it every five minutes
-(`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), and the renderer hands main every token
-Firebase refreshes (`onIdTokenChanged` → `setFreeAiToken`). The file is `0600`
-and deleted on sign-out; it is not sealed by the keychain, because the CLI has
-to `cat` it and it is dead within the hour anyway.
+(`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), and main renews the file from the
+session the renderer hands it (`setFreeAiToken` → `POST /api/session`), ten
+minutes before each hour is up. The file is `0600` and deleted on sign-out; it
+is not sealed by the keychain, because the CLI has to `cat` it and it is dead
+within the hour anyway — which is why it holds the hour's token and never the
+ninety-day session.
 
 **Every model is offered, and every alias is pinned.** The free AI was Haiku
 alone once, pinned three times over (`forFreeAi` at send, a Haiku-only picker,
@@ -635,7 +618,7 @@ would be a request refused halfway through a turn.
 `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` go over as empty strings.
 A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
 key exported there would win over the helper and be sent to this app's server.
-Measured too: with one exported, the server saw the Firebase token alone.
+Measured too: with one exported, the server saw the studio's token alone.
 
 **No prompt goes past 100K tokens**, where every token of the request is
 charged at a higher rate. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
@@ -659,41 +642,53 @@ app's own, reached by whoever is signed in, is the thing it was a stand-in for.
 
 ### Signing in
 
-Google will not run its sign-in in an embedded browser, and Firebase's popup
-will not open on `app://studio`, which is not an authorized domain. So signing
-in happens in the user's own browser, on **the free AI's server**:
+Google will not run its sign-in in an embedded browser, and no OAuth client
+can name `app://studio` as a redirect. So signing in happens in the user's own
+browser, on **the free AI's server**:
 `main/google-sign-in.ts` draws a 24-byte nonce, opens `<server>/signin/<nonce>`,
 and asks `GET <server>/api/signin/<nonce>` every second and a half — through
 `net.fetch` (`host.fetch`), Chromium's network stack, so the asking goes the way
 the browser's page went: through the same system proxy and VPN, to the same
 Cloudflare location. With Node's `fetch` it did not, and the answer arrived
-late, after the page had long said "You're signed in". The page
-runs Firebase's popup and posts the Google ID token to
-`POST /api/signin/<nonce>`; the server keeps it in KV (`signin:<nonce>`, five
-minutes at most) and hands it out once. The renderer exchanges it with
-Firebase (`signInWithCredential`) as before. The server's domain has to be on
-the Firebase project's **authorized domains** for the popup to open there;
-`localhost` is on it by default, which is what keeps a server on this machine
-(`VSCLAUDE_AI_URL`) working.
+late, after the page had long said "You're signed in". The page's
+button is a link to Google's own sign-in, with the nonce as OAuth `state`;
+Google sends the browser back to `/signin/callback`, where the server exchanges
+the code with **its own OAuth client's secret**, writes the user to `users`
+and leaves a session token it signed itself in D1 (`sign_ins`, five minutes at
+most), which it hands out once. The callback URL has to be among the OAuth
+client's **authorized redirect URIs** — the server's own, and
+`http://localhost:3000/signin/callback` for one on this machine
+(`VSCLAUDE_AI_URL`).
 
-The studio's own session needs none of this after the first time: Firebase
-keeps it in `app://studio`'s IndexedDB, so a relaunch is still signed in, and
-the page is only reached after a sign-out. There, the popup goes **without
-`prompt: select_account`**, so somebody signed in to Google with one account
-who has consented before gets a popup that closes by itself — one click. It
-used to force the account picker every time; `Use a different account` under
-the button is that picker now, asked for on purpose.
+The studio's own session needs none of this after the first time: the
+renderer keeps the ninety-day session token in `app://studio`'s
+`localStorage`, so a relaunch is still signed in, and the page is only reached
+after a sign-out. Who is signed in is read off the token's own claims
+(`lib/session.ts`); main turns it into the hour-long access tokens the free AI
+sends. The link goes **without `prompt: select_account`**, so somebody
+signed in to Google with one account who has consented before is sent straight
+back — one click. `Use a different account` under it is the picker, asked for
+on purpose.
+
+**It was Firebase Authentication**, the page running Firebase's popup and the
+renderer exchanging the Google token with Firebase's SDK. It was replaced so
+that who somebody is lives beside what they paid, in the server's D1, rather
+than in a second service with its own console, its own uids and its own
+domains list to keep in step. The cost is that the server now holds an OAuth
+client secret and a signing secret, and a session cannot be revoked one token
+at a time: deleting the user's row is what ends their sessions, at their next
+renewal.
 
 **It was a server of the app's own on `localhost`**, one per attempt, on a
 random port, which the page posted back to — with a Host check against DNS
 rebinding and the nonce as its path. That is removed: it opened a port on the
 user's machine for every sign-in, and the page was inside the app, so changing
-a word of it was a release. The cost is that the token now passes through the
-server for the second or so between the page's post and the studio's next ask,
+a word of it was a release. The cost is that the token now waits on the
+server for the second or so between the callback and the studio's next ask,
 and that a build with no server cannot sign in at all — which, with sign-in
 being for the free AI and its credits, is a build with nothing to sign in for.
-KV is eventually consistent, so "once" means the studio stops asking at its
-first answer; the five-minute TTL is what bounds a token nobody collected.
+Taking the answer is one `DELETE ... RETURNING`, so two collectors cannot both
+get it; the five-minute expiry is what bounds a token nobody collected.
 
 ### Credits
 
@@ -724,15 +719,93 @@ reads it.
 bank transfer** by VietQR, through SePay: no card and next to no fee. A
 **card** through Paddle, for anybody outside Vietnam. Paddle alone was the
 first answer, and its fee is why there is a second — about $0.50 a transaction
-plus 5%. Lemon Squeezy was tried before Paddle and replaced before anything was
+plus 5%.
+
+**What a pack costs.** A credit is a Haiku input token, so a million is $0.10
+of Anthropic's price on any model — about 2,630 ₫. The packs are 50.000,
+100.000 and 200.000 ₫ (the top-up denominations people already know) at
+200,000 credits per 1,000 ₫, with 10% and 20% more on the two bigger ones:
+10M, 22M and 48M. That is 1.9× down to 1.6× Anthropic's price. The first table
+was 25.000 / 60.000 / 100.000 ₫ for 1M / 3.3M / 6M, which was 9.5× down to
+6.3× — numbers put in to have numbers — and its bonus badges did not match its
+own figures (the 60k pack was +37% over the small one, badged +10%). The
+smallest pack moved up from 25.000 ₫ because Paddle's $0.50 is fixed and took
+58% of it; at 50.000 ₫ the card side keeps about 16% and the transfer side
+47%. **One table for both ways of paying**: a transfer-only bonus or a
+transfer-only small pack were both considered, and each is a second price for
+the dialog, the arrival card and the webhooks to keep straight, for a
+difference that is mostly that fixed $0.50 — so the transfer is simply the
+better side of one margin. SePay's own charge is monthly (a free tier of fifty
+transfers, then 99.000 ₫ for unlimited), not per transaction. The item ids
+still say `20k` / `60k` / `100k`: they are the names of the Paddle price
+variables, and renaming them is a configuration change on the server, left for
+when Paddle goes live. Lemon Squeezy was tried before Paddle and replaced before anything was
 sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
+
+**Written as dollars, counted as before.** Every balance, pack and charge is
+shown as the dollars of Anthropic's list price it is — `$1.00` for the small
+pack, `$8.63` left, `$0.135` under an Opus reply — and never as a count
+(`formatCredits`, `CREDITS_PER_USD` in `shared/credits.ts`). It was `10M
+credits`, `1.3M credits`, and the figure sat beside token counts on the same
+line, so it was read as one: a 67-token answer on Opus charged `1.3M credits`
+looked like the app miscounting by forty, where `$0.13` beside `33.4k prompt,
+0% cached` says what happened — an uncached prompt on the dearest model. The
+unit underneath did not move: it is still one Haiku input token, ten million
+to the dollar, and D1, the webhooks, `/api/usage` and the server's log line
+all carry the integer, because a dollar figure would lose a Haiku request's
+$0.0003 to rounding and a turn's charge to a cent. Only the formatting knows
+the rate, and the hover under a reply still gives the integer beside the
+dollars for anybody reconciling against the server.
+
+**Priced against the market, not the list price.** Written as dollars, the
+first table said what it had been hiding: 50.000 ₫ bought $1.00 of usage,
+priced off Anthropic's list price at about 26.300 ₫ to the dollar. API credit
+sells in Vietnam for around 1.500 ₫ to the dollar, so that was twenty-five
+times the going rate. The packs are now $25, $55 and $120 for the same
+50.000, 100.000 and 200.000 ₫ — 2.000 ₫ to the dollar, a third over that
+cost, with the 10% and 20% bonuses kept. A fourth, $10 for 20.000 ₫, makes
+the four amounts a Vietnamese transfer is made in, and it is **bank transfer
+only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
+charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is
+chosen and `POST /api/checkout` refuses it. The paragraph below on what a pack
+costs is the earlier table's reasoning, kept for the record.
 
 **Used and left, in numbers.** The dialog's strip shows the credits as used
 and left — a balance alone does not say whether a pack lasted a week or an afternoon. The
 server counts `used` as it charges (`chargeCredits`); an account from before
 the count starts at 0. The account menu's `Buy credits` carries the balance.
+A streamed answer's charge is known only when its body ends, and on Cloudflare
+Workers the first version of that charged almost nothing: a day that had spent
+close to seven million credits read as a hundred and sixty thousand used, and
+the balance in D1 agreed. The route metered each chunk in a `pull` on its way
+to the client and charged when the pull saw the end — but the CLI's SDK closes
+the connection the moment it reads `message_stop`, a chunk before Anthropic's
+body is done, and on workerd a client that has gone is a request torn down:
+the pending read never resolved, `cancel` was never called, and a `waitUntil`
+added at that point changed nothing because nothing ran to call it. Under
+Node the pending read simply finished, which is why the file store never
+missed a turn. The body is now `tee`d — one branch to the client, the other
+read to its end for the usage by a task registered with `event.waitUntil`
+before the response goes out, which workerd keeps running after the client
+has gone. The count also restarted when sign-in moved from Firebase to Google,
+since the uid is the row's key and the old row was not carried over.
+
+**A turn says what it cost in credits.** The usage line under a reply on
+Studio AI ends with the credits it took off the balance — `… · 38 out · 139k
+credits` — where a turn on a login ends without one. The dollar estimate stays
+off the row (§ above: it is the CLI's guess at a bill a subscription already
+covers); credits are the balance the user bought going down, in the unit the
+packs are sold in, which is the figure the meter beside the composer moves by.
+Worked out in main at the end of the turn (`creditsOf` in `shared/credits.ts`,
+a hand-kept copy of the server's `weighted`) and **written on the line**, so a
+chat that moved between a login and credits mid-conversation keeps saying what
+each turn was paid with; per model before summing, as the server charges, so a
+Sonnet turn whose subagent ran on Haiku is two prices and not the busiest one's
+over everything. The app's figure can differ from the balance by a handful of
+credits — the server rounds up per request and the app per turn — and leaves
+out Haiku's long-prompt price, which the server refuses before it is charged.
 
 **An arrival is announced.** Credits landing silently looked like money gone
 nowhere: the payment is made in a browser or on a phone, and the balance only
@@ -741,7 +814,12 @@ window that opened it re-asks every five seconds for half an hour, and a balance
 going up (`creditsArrived`, tested) opens a dialog of its own — a coin dropping
 in, the amount counting up, the new balance — plus a system notification when
 the window is not focused. Only that window: every window re-reads on focus, and
-one purchase celebrated twice is one too many.
+one purchase celebrated twice is one too many. The payment page celebrates it
+too: `/checkout` after Paddle's `checkout.completed` (it asks
+`/api/checkout/<txn>` until the webhook has credited it, and closes Paddle's
+overlay so the card is not hidden under it), and `/pay/<code>` when the transfer
+arrives (`/api/orders/<code>` says what the pack adds). That card is the same
+celebration in plain CSS and SVG (`vsclaude-cloud/server/utils/arrival-page.ts`).
 
 The id stays `FREE_PROFILE_ID`
 (`vsclaude-free`) and the directory `claude-free`, because both are already on
@@ -901,10 +979,18 @@ server by name; an unlisted tool is still refused by `deciding`.
 
 ### Per chat, in the composer
 
-The composer's MCP menu (`chat/chat-mcp.tsx`) lists the servers, asked of
-the CLI in the project's directory (`mcpServerStatus()`, not cached, re-asked
-for up to 8 s while servers are pending — claude.ai connectors take ~4 s).
-Trouble sorts first; headers are never drawn.
+The composer's MCP dialog (`chat/chat-mcp.tsx`, `MCP servers…` in the `+`
+menu) lists the servers, asked of the CLI in the project's directory
+(`mcpServerStatus()`, not cached, re-asked for up to 8 s while servers are
+pending — claude.ai connectors take ~4 s). Trouble sorts first; headers are
+never drawn.
+
+It was a popover off a toolbar button, and that was wrong twice: a connector's
+forty tools folded into a 26rem card, and a control set once per chat sat
+beside the model and permission, which are reached for every few messages. It
+is Settings' shape now — servers down the left, the chosen one's tools on the
+right with a filter — and the toolbar keeps a `MCP · n off` chip only while
+something is switched off, since that is a property of the next message.
 
 - **Switches** are this app's refusal, per chat (`disabledTools`), sent as
   `disallowedTools` so the tools are **absent** from the prompt, not refused on
@@ -1033,7 +1119,15 @@ A message box above the piles while something is staged; `⌘⏎` commits with
 read-only one-turn `claude` (`draftCommitMessage`) for a message off the staged
 diff and the last ten subjects — a button pressed, its output text in a box
 somebody still has to commit, which is why it passes the rule against helper
-turns. A failed commit **rejects** and keeps the message. No amend, branch
+turns. A failed commit **rejects** and keeps the message.
+
+**A draft is one commit.** It was a plan of several once — a JSON answer,
+read against the staged paths, shown as a card a commit — and it came out as
+the wrong shape for the box: a staged change is one message, and a split the
+draft proposed was a second reading of the diff nobody checked before it was
+committed in order. Removed, with `commitSeries` and `readPlan`: a draft that
+wants splitting is pressed again, or split by hand with the dock's shell. No
+amend, branch
 or stash: the dock's shell is the git client. Push is the `Commits` view's
 button (§ Commits).
 
@@ -1203,8 +1297,27 @@ somebody else's tracker, with a key on the machine and a poll always running.
 ### Worktrees, removed
 
 A layer between project and chat (`worktreeId` everywhere). The isolation was
-paid for on every chat and wanted on few. The checkout came back as a project —
-§ Worktrees, as projects.
+paid for on every chat and wanted on few. The checkout came back as a project,
+and then went too — below.
+
+### Worktrees, as projects, removed
+
+The button beside a project's `+` made a `git worktree` under
+`workspace/worktrees/<folderId>/` and added it as an ordinary folder, with a
+base to cut from, `.worktreeinclude` copied in, a setup command in a dock
+shell, ahead/behind marks on its row, `Remove worktree…`, an untitled branch
+renamed after its first chat's title, and the column filing a checkout under the
+project it was cut from. Deleted whole — `main/worktrees.ts`, the two dialogs,
+`lib/project-tree.ts`, six channels — because it was not used: a second
+checkout is `git worktree add` in the dock's shell and `Add project`, which is
+what this app does with any other folder on the machine. With it went the app's
+one branch write (`git branch -m` on a `vsclaude/untitled-…` branch).
+
+A checkout an older build made is left alone: it is still a folder in the
+manifest, so it is still a project in the column — top-level now, with
+`Remove project` as its way out — and its directory is still where git expects
+it. Nothing deletes it, and `migrateLegacyDataDir` still leaves
+`workspace/worktrees` in place.
 
 ### Distilling learnings, removed
 

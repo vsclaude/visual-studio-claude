@@ -130,6 +130,7 @@ async function oneTurn(request: {
         onToolResult: () => {},
         onUsage: () => {},
         onContext: () => {},
+        onLive: () => {},
         onWindow: () => {},
         onCompacting: () => {},
         onCompacted: () => {},

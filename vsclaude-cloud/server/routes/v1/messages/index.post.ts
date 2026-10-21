@@ -177,42 +177,49 @@ export default defineHandler(async (event) => {
     return new Response(answer, { status: upstream.status, headers })
   }
 
-  const meter = new StreamUsage()
-  const reader = upstream.body.getReader()
-  let recorded = false
-  // Once, however the stream ends — finished, failed, or cut off by a Stop:
-  // tokens Anthropic generated before the Stop were still paid for.
-  const record = (ended: string) => {
-    if (recorded) return
-    recorded = true
-    void spend(meter.usage, ended)
-      .then((fields) => logLine("usage", { uid: user.uid, rid, ...fields }))
-      .catch((error: unknown) =>
-        logLine("usage", { uid: user.uid, rid, error: String(error) })
-      )
-  }
-
-  const counted = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
+  // The body is split in two: one branch to the client, the other read here
+  // to its end for the usage, as a task the request's runtime is told about
+  // **before the response goes out**. Both halves of that are load-bearing on
+  // Workers, and the first version — a `pull` that metered each chunk on its
+  // way to the client and charged when the pull saw the end — charged almost
+  // nothing there:
+  //
+  // - The CLI's SDK closes the connection the moment it reads `message_stop`,
+  //   while Anthropic's body is still a chunk from done. On workerd a client
+  //   that has gone is a request torn down: the `pull` awaiting that last
+  //   chunk never resolved, `cancel` was not called either, and there was no
+  //   moment left in which to charge or to `waitUntil` anything. Under Node
+  //   the pending read simply finished, which is why the file store never
+  //   missed a turn.
+  // - `tee` keeps the metering branch alive after the client's is cancelled —
+  //   it releases the source only once both are gone — and the task has been
+  //   registered since before the first byte was sent.
+  //
+  // The amount is whatever the stream carried before it ended, however it
+  // ended — finished, failed, or cut off by a Stop: tokens Anthropic generated
+  // before the Stop were still paid for.
+  const [toClient, toMeter] = upstream.body.tee()
+  const charge = async () => {
+    const meter = new StreamUsage()
+    const reader = toMeter.getReader()
+    let ended = "done"
+    try {
+      for (;;) {
         const { done, value } = await reader.read()
-        if (done) {
-          record("done")
-          controller.close()
-          return
-        }
+        if (done) break
         meter.push(value)
-        controller.enqueue(value)
-      } catch (error) {
-        record("failed")
-        controller.error(error)
       }
-    },
-    cancel(reason) {
-      record("stopped")
-      return reader.cancel(reason)
-    },
-  })
+    } catch {
+      ended = event.req.signal.aborted ? "stopped" : "failed"
+    }
+    try {
+      const fields = await spend(meter.usage, ended)
+      logLine("usage", { uid: user.uid, rid, ...fields })
+    } catch (error) {
+      logLine("usage", { uid: user.uid, rid, error: String(error) })
+    }
+  }
+  event.waitUntil(charge())
 
-  return new Response(counted, { status: upstream.status, headers })
+  return new Response(toClient, { status: upstream.status, headers })
 })

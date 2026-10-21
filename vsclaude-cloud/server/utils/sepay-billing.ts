@@ -32,9 +32,10 @@ export type Order = {
   createdAt: string
   /** The SePay transaction that paid it, once one has. */
   paidBy: number | null
-  /** Transfers that carried the code but fell short, kept for whoever
+  /** What transfers that carried the code but fell short added up to, for the
+   * `/pay` page to say so; the transfers themselves are in SePay, for whoever
    * reconciles them by hand. */
-  short: { id: number; amount: number }[]
+  short: number
 }
 
 export function newOrderCode(prefix: string): string {
@@ -109,10 +110,7 @@ export function applyTransfer(
       kind: "short",
       order: {
         ...order,
-        short: [
-          ...order.short,
-          { id: transfer.id, amount: transfer.transferAmount },
-        ],
+        short: order.short + transfer.transferAmount,
       },
     }
   }

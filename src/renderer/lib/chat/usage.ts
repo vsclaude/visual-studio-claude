@@ -1,4 +1,5 @@
 import type { AssistantMessage, TurnUsage } from "@shared/api"
+import { formatCredits } from "@shared/credits"
 import { duration } from "./since"
 
 /**
@@ -86,6 +87,14 @@ export function usageLine(usage: TurnUsage | ChatTotal): string {
   // running dollar figure under the composer is read every time it changes and
   // says nothing that can be acted on mid-chat, where the token counts beside
   // it do. It is still counted and still one hover away.
+  //
+  // Credits are the exception, and the difference is who is paying: the dollar
+  // figure is the CLI's guess at a bill the user's subscription already covers,
+  // where credits are the balance the user bought going down, written as the
+  // dollars the packs are sold as (`formatCredits`). Only on a turn that spent
+  // them — null everywhere else, so a chat on a login never shows a charge
+  // that was not made.
+  if (usage.credits) parts.push(`${formatCredits(usage.credits)} in credits`)
 
   // A result that reported nothing at all — a crashed turn carries zeroes —
   // rather than a row saying the turn was free.
@@ -137,6 +146,15 @@ export function usageDetail(usage: TurnUsage | ChatTotal): string {
     lines.push(`${count(usage.context)} in the window when the turn ended`)
   }
   if (usage.model) lines.push(usage.model)
+  // The dollars, and the integer the server took off the balance: the latter
+  // is what its `usage` log line says, for anybody reconciling the two.
+  if (usage.credits) {
+    lines.push(
+      `${formatCredits(usage.credits)} off the Studio AI balance (${count(
+        usage.credits
+      )} credits)`
+    )
+  }
   if (usage.costUsd !== null) {
     lines.push(`${money(usage.costUsd)} — the CLI's own estimate`)
   }
@@ -189,6 +207,12 @@ export function totalOf(lines: AssistantMessage[]): ChatTotal | null {
         use.durationMs === null
           ? sum.durationMs
           : (sum.durationMs ?? 0) + use.durationMs,
+      // Summed like `costUsd`, and null only where no turn spent any: a chat
+      // that moved from a login to credits halfway totals the turns it paid
+      // for, and one that never did says nothing rather than `0 credits`.
+      credits: use.credits
+        ? (sum.credits ?? 0) + use.credits
+        : (sum.credits ?? null),
     }),
     {
       turns: 0,
@@ -201,6 +225,7 @@ export function totalOf(lines: AssistantMessage[]): ChatTotal | null {
       costUsd: null,
       context: null,
       durationMs: null,
+      credits: null,
     }
   )
 }

@@ -160,7 +160,7 @@ imports may reach `electron`.
   `typescript`, and nothing if it has none.
 - **`mcp-servers.ts`** — which MCP servers the user's own `claude` has, asked of
   it over the SDK's control channel (`mcpServerStatus()`) in a project's own
-  directory, for the composer's MCP menu (`chat/chat-mcp.tsx` — there is
+  directory, for the composer's MCP dialog (`chat/chat-mcp.tsx` — there is
   no Settings › MCP any more), plus `removeMcpServer`, which
   runs the CLI's own `claude mcp remove`. **This app serves no MCP server of its
   own**: the three that served the Database, API and Notes panels are deleted —
@@ -285,7 +285,7 @@ prompt: **42,345 tokens re-written and none read**, against 103 for a turn that
 changed nothing. So no `allowedTools` at all, one `permissionMode` (`manual`),
 one system prompt, and a `disallowedTools` that is **not** a mode's business —
 the chat's switched-off MCP tools, identical on every turn until somebody
-flips a switch in the composer's MCP menu; the mode is applied in-process by `permits`,
+flips a switch in the composer's MCP dialog; the mode is applied in-process by `permits`,
 which `deciding` in `claude-agent.ts` consults, and the mode's own sentence goes
 at the head of the **message**. A switch now costs 100–170 tokens.
 
@@ -362,7 +362,7 @@ board's `startChat` — and no longer does.
 No MCP config is passed, so whatever the user's own `claude` is configured with —
 `~/.claude.json`, a repository's `.mcp.json`, enabled plugins, claude.ai
 connectors — reaches a turn the way it would running plain `claude` in that
-directory, minus whatever that chat's MCP menu has switched off. The cost is that
+directory, minus whatever that chat's MCP dialog has switched off. The cost is that
 `Plan` and `Read only` cannot refuse a server _by name_, since this app
 configures none and so has no name for one; an unlisted tool is still refused by
 `deciding`.
@@ -491,36 +491,12 @@ Such a folder carries `template` on its record, and **only** such a folder
 offers `Move to Trash…` (`IPC.trashProject`) — an added folder is never the
 app's to delete.
 
-A project's row also makes a **`git worktree`** — the button beside its `+`,
-`main/worktrees.ts`, `test/worktrees.ts`. What it produces is an ordinary
-**workspace folder** pointed at the checkout, under
-`workspace/worktrees/<folderId>/<branch slug>`, so the worktree _layer_ that was
-deleted stays deleted: no `worktreeId`, nothing nullable in `FileRoot`, and every
-panel works on it as a project. Whether a folder **is** a checkout is asked of
-git per folder (`worktreeRepo`, beside the branch in the studio store) rather
-than written down, which is what makes `Remove worktree` correct for a checkout
-somebody made in their own shell — and what makes the `realpath` on both sides of
-that comparison load-bearing. `docs/design.md` § Worktrees, as projects has the
-argument, and § Worktrees, removed is the one it is held against.
-The dialog takes a **base** to cut from (`branch.<name>.vsclaudeBase` in the
-repository's config remembers it), copies `.worktreeinclude`'s ignored files in,
-and runs an optional setup command in a **dock shell** (`useShells.run`); a
-checkout's row draws ahead/behind and uncommitted counts (`worktreeStatus`), and
-Remove warns about commits on that branch alone before offering to delete it.
-The **column** files a checkout one indent under the project it was cut from
-(`projectTree` in `lib/project-tree.ts`, tested) — the only nesting there is, and
-the column's alone: it pairs on that same `worktreeRepo` answer rather than on
-anything written down, so nothing in the data model nests and a checkout whose
-repository is not in the workspace keeps a top-level row. A shut project counts
-its checkouts' chats too, since folding it now hides them.
-
-**The branch field is optional**, and an empty one is the case to know: the
-checkout goes on `vsclaude/untitled-<hex>` and the first chat in it that receives a
-title renames the branch _and_ the project (`nameWorktree` in `ipc.ts`, off the
-same CLI `ai-title` a chat names itself with, so it costs no turn). That
-`git branch -m` is the **one branch write in this app** — `git.ts` keeps branch
-and amend out — and it is narrow by construction: only a branch this
-app minted, only while `isUntitledBranch` still holds, never one the user named.
+**There are no worktrees** — the button beside a project's `+`, its dialogs,
+`main/worktrees.ts`, the row's ahead/behind marks, the renaming of an untitled
+branch and the column's nesting (`lib/project-tree.ts`) are all deleted
+(`docs/design.md` § Worktrees, as projects, removed). A checkout an older build
+made under `workspace/worktrees/` is still a folder in the manifest, so it is an
+ordinary top-level project; nothing deletes it.
 
 ### Constraints that bite
 
@@ -623,7 +599,6 @@ composer and the transcript both draw thumbnails (`chat-images.tsx`,
 `⌘`-click opens (`test/terminal-links.ts`),
 `lib/files/conflicts.ts` — merge-conflict blocks and what Accept writes, drawn
 by `lib/editor-conflicts.ts` in the file editor (`test/conflicts.ts`),
-`lib/project-tree.ts` (`test/project-tree.ts`),
 `lib/files/git-diff.ts` with `main/git.ts`'s own `fileDiff` (`test/git-diff.ts`),
 `lib/files/diff-copy.ts` (`test/diff-copy.ts`),
 `lib/files/block-doc.ts`, `lib/chat/mention-text.ts`

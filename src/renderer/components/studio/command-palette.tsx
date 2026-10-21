@@ -337,11 +337,10 @@ function score(_value: string, search: string, keywords?: string[]): number {
  * Files are the exception, and are an index — the only one. A folder's files
  * are not a list any store holds: the Explorer's tree is what has been expanded,
  * which is a handful of directories out of a repository, while ⌘P has to find a
- * file nobody has opened a folder of. So the workspace is walked once, the first
- * time the palette is opened, and held until the folder list itself changes —
- * adding or removing a folder drops it, since a walk that never saw that folder
- * is wrong rather than merely old; `Refresh` in the Explorer re-walks it for
- * everything else. Everything that follows from that — which directories are
+ * file nobody has opened a folder of. So the workspace is walked each time the
+ * palette is opened, and the list is held in between — a folder added or removed
+ * drops it, since a walk that never saw that folder is wrong rather than merely
+ * old. Everything that follows from that — which directories are
  * skipped, the cap, and why the shortlist happens before cmdk sees a row — is in
  * `main/files.ts` and `lib/files/search.ts`.
  */
@@ -353,14 +352,16 @@ function useEntries(query: string): Group[] {
    * The one group with an index behind it rather than a store already holding
    * what it lists.
    *
-   * Walked when the palette is first opened rather than at launch — this
-   * component is a child of the dialog, so this effect runs when it opens —
-   * and held until the workspace's folders change. A studio nobody presses ⌘P
-   * in never walks the workspace at all, which is the same bargain the tree
-   * makes by reading a directory only when it is expanded.
+   * Walked each time the palette is opened rather than at launch — this
+   * component is a child of the dialog, so this effect runs when it opens. A
+   * file created since the last open has to be findable without a Refresh, and
+   * the watchers only follow the folders the tree has open, so the walk is the
+   * only thing that sees the rest. The list already held stays on screen until
+   * the walk lands, since `index` is only replaced with its result. A studio
+   * nobody presses ⌘P in never walks the workspace at all.
    */
   useEffect(() => {
-    void loadIndex()
+    void loadIndex(true)
   }, [loadIndex])
 
   const chats = useChats((state) => state.chats)

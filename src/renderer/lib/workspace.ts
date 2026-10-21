@@ -1,9 +1,4 @@
-import type {
-  WorkspaceFolder,
-  WorkspaceRecord,
-  WorktreeOptions,
-  WorktreeStatus,
-} from "@shared/api"
+import type { WorkspaceFolder, WorkspaceRecord } from "@shared/api"
 
 export type { WorkspaceFolder, WorkspaceRecord }
 
@@ -44,49 +39,6 @@ export async function removeFolder(id: string): Promise<WorkspaceRecord> {
   return window.desktop.removeFolder(id)
 }
 
-/** A second checkout of a project, which becomes a project of its own — see
- * `main/worktrees.ts`. */
-export async function addWorktree(input: {
-  folderId: string
-  branch: string
-  name: string
-  base?: string
-}): Promise<WorkspaceRecord> {
-  return window.desktop.addWorktree(input)
-}
-
-/** The checkout removed and the project dropped; the branch only when
- * `deleteBranch` says so. */
-export async function removeWorktree(
-  folderId: string,
-  options: { deleteBranch: boolean }
-): Promise<WorkspaceRecord> {
-  return window.desktop.removeWorktree(folderId, options)
-}
-
-/** Branches and a setup command for the New worktree dialog. */
-export async function worktreeOptions(
-  folderId: string
-): Promise<WorktreeOptions> {
-  return window.desktop.worktreeOptions(folderId)
-}
-
-/** How far a checkout has moved, or null for a folder that is not one. */
-export async function worktreeStatus(
-  folderId: string
-): Promise<WorktreeStatus | null> {
-  return window.desktop.worktreeStatus(folderId)
-}
-
-/** Names a checkout nobody has named yet after the chat running in it, or
- * answers null for everything that is not that — see `DesktopApi`. */
-export async function nameWorktree(
-  folderId: string,
-  title: string
-): Promise<WorkspaceRecord | null> {
-  return window.desktop.nameWorktree(folderId, title)
-}
-
 /** Opens the system folder picker. Resolves with null when cancelled. */
 export async function pickDirectory(): Promise<string | null> {
   return window.desktop.pickDirectory()
@@ -96,14 +48,6 @@ export async function pickDirectory(): Promise<string | null> {
  * repository. */
 export async function gitBranch(folderId: string): Promise<string | null> {
   return window.desktop.gitBranch(folderId)
-}
-
-/** The repository a folder is a `git worktree` checkout of, or null for an
- * ordinary folder. */
-export async function gitWorktreeRepo(
-  folderId: string
-): Promise<string | null> {
-  return window.desktop.gitWorktreeRepo(folderId)
 }
 
 export async function getSetting(key: string): Promise<string | null> {

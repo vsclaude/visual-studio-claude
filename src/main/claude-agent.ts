@@ -16,6 +16,7 @@ import type {
   ChatWindowTone,
   TurnUsage,
 } from "../shared/api"
+import { creditsOf } from "../shared/credits"
 import { claudeBinary } from "./claude-bin"
 import { accountEnv } from "./free-ai"
 import { locate, spawnEnvironment } from "./shell-env"
@@ -170,6 +171,13 @@ export type AgentSessionOptions = {
    * the free AI's directory brings its server with it.
    */
   configDir?: string | null
+  /**
+   * Whether the turns are paid for in Studio AI credits — the free profile's
+   * directory — so the result line can say what each one cost
+   * (`TurnUsage.credits`). Decided by the caller, which knows the profile; here
+   * a `configDir` is only a path.
+   */
+  charged?: boolean
   /** Directories outside `cwd` the turn may read. */
   addDirs?: string[]
   appendSystemPrompt?: string
@@ -281,6 +289,15 @@ export type AgentHandlers = {
    * working. A caller that only wants the record can ignore it.
    */
   onContext: (tokens: number) => void
+  /**
+   * What the running turn has spent so far, at every reply — see
+   * `liveUsageOf`.
+   *
+   * A count off the replies' own usage, not the result line's, so it is the
+   * turn's figure arriving early and approximately: `onUsage` is still the
+   * record, and replaces this when the turn ends.
+   */
+  onLive: (usage: TurnUsage) => void
   /**
    * The window as the CLI accounts for it, once a turn has ended.
    *
@@ -605,9 +622,32 @@ export async function startAgentSession(
   /** `onExit` is a promise to the caller that it fires once, and there are three
    * ways to reach the end: the stream closing, a throw, and a close. */
   let finished = false
+  /** The running turn's spend, for `onLive` — see `LiveTally`. */
+  const tally = new LiveTally()
+  /**
+   * `onLive` at most once per `LIVE_MS`, trailing. The stream deltas arrive
+   * several to a word, and each `onLive` is an IPC broadcast to every window
+   * for a number nobody reads faster than this.
+   */
+  let liveTimer: ReturnType<typeof setTimeout> | undefined
+  const announceLive = () => {
+    if (liveTimer) return
+    liveTimer = setTimeout(() => {
+      liveTimer = undefined
+      handlers.onLive(tally.usage())
+    }, LIVE_MS)
+  }
+  // Before a turn's usage line and at exit: a timer firing after either would
+  // put the finished turn's running figure back on screen.
+  const stopLive = () => {
+    clearTimeout(liveTimer)
+    liveTimer = undefined
+  }
+
   const exit = (error: string | null) => {
     if (finished) return
     finished = true
+    stopLive()
     handlers.onBusy(false)
     // Before `onExit`, and unconditionally: a task belongs to the CLI that was
     // running it, so a session that died holding one has no subagent left — and
@@ -663,6 +703,10 @@ export async function startAgentSession(
       // request changes, so the cached prefix is untouched — and drawn under
       // the `Agent` row that ran it (see `parent` on a line).
       forwardSubagentText: true,
+      // The response as it is written, for the running token count under
+      // `Working…` (`LiveTally`). Output only, like the line above: the request
+      // is the same, so the cached prefix is too.
+      includePartialMessages: true,
       // A copy of each file before a turn's `Edit`/`Write` touches it, filed
       // under the prompt that started the turn — what an edited message puts
       // the files back from (`rewindSessionFiles`). Kept by the CLI beside the
@@ -1001,12 +1045,42 @@ export async function startAgentSession(
           }
         }
 
+        // The spend so far, a subagent's included: the result line counts
+        // theirs too (`usageOf`), and a live figure that left them out would
+        // jump at the end of exactly the turns that run longest.
+        if (message.type === "assistant" && message.message.usage) {
+          tally.reply(
+            message.message.id ?? message.uuid,
+            message.message.model ?? null,
+            message.message.usage
+          )
+          announceLive()
+        }
+
+        // The same, as it is being written: what makes the count run rather
+        // than step once a content block. Read for that alone — the complete
+        // assistant message still follows each response and is what `read`
+        // draws.
+        if (message.type === "stream_event") {
+          if (tally.stream(message.event, message.parent_tool_use_id))
+            announceLive()
+          continue
+        }
+
         if (message.type === "result") {
+          stopLive()
           handlers.onUsage(
-            usageOf(message, previous, context, Date.now() - turnStartedAt)
+            usageOf(
+              message,
+              previous,
+              context,
+              Date.now() - turnStartedAt,
+              session.charged === true
+            )
           )
           previous = message
           context = null
+          tally.reset()
           // Whatever is queued behind this result starts being answered now.
           turnStartedAt = Date.now()
           answering = false
@@ -1380,7 +1454,10 @@ export function usageOf(
   context?: number | null,
   /** How long the turn took, measured by the caller — see `durationMs` on
    * `TurnUsage` for why it is not read off the line. */
-  durationMs?: number | null
+  durationMs?: number | null,
+  /** Whether the turn was paid for in credits, and so gets a `credits` figure —
+   * see `AgentSessionOptions.charged`. */
+  charged = false
 ): TurnUsage {
   const before = previous?.modelUsage ?? {}
   const models = Object.entries(message.modelUsage ?? {}).map(([name, use]) => {
@@ -1421,6 +1498,13 @@ export function usageOf(
   )
 
   const cost = since(message.total_cost_usd, previous?.total_cost_usd)
+  // Per model and then summed, as the server charges each request: a turn on
+  // Sonnet whose subagent ran on Haiku is two prices, and the busiest model's
+  // alone would overstate it twentyfold. Null, not zero, for a turn that
+  // counted nothing — the same reason as `costUsd`.
+  const credits = charged
+    ? models.reduce((sum, [name, use]) => sum + creditsOf(use, name), 0)
+    : 0
   return {
     model: busiest?.[0] ?? null,
     ...total,
@@ -1430,6 +1514,7 @@ export function usageOf(
     costUsd: cost > 0 ? cost : null,
     context: context ?? null,
     durationMs: durationMs ?? null,
+    credits: credits > 0 ? credits : null,
   }
 }
 
@@ -1519,6 +1604,159 @@ function toneOf(name: string): ChatWindowTone {
 /** A number the CLI sent, or zero for anything that is not one. */
 function number(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+/** One reply of a running turn, as `liveUsageOf` reads it. */
+export type LiveReply = { model: string | null; usage: ReplyUsage }
+
+/**
+ * What a turn has spent so far, off its replies rather than its result line —
+ * the line under `Working…`, so the model and the tokens are on screen while
+ * the turn runs rather than once it has finished.
+ *
+ * The same shape `usageOf` gives, labelled the same way (the model that read
+ * the most), so the row reads as the turn's line arriving early. What a reply
+ * cannot say stays null: the cost is the SDK's own estimate and exists on the
+ * result line alone, and a figure computed here would be a second estimate
+ * that disagreed with the first a moment later.
+ */
+export function liveUsageOf(replies: Iterable<LiveReply>): TurnUsage {
+  const total = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }
+  const read = new Map<string, number>()
+  for (const { model, usage } of replies) {
+    const input = usage.input_tokens || 0
+    const cacheRead = usage.cache_read_input_tokens || 0
+    total.input += input
+    total.cacheWrite += usage.cache_creation_input_tokens || 0
+    total.cacheRead += cacheRead
+    total.output += usage.output_tokens || 0
+    if (model) read.set(model, (read.get(model) ?? 0) + input + cacheRead)
+  }
+
+  let model: string | null = null
+  let most = -1
+  for (const [name, tokens] of read) {
+    if (tokens > most) [model, most] = [name, tokens]
+  }
+
+  return {
+    model,
+    ...total,
+    thinking: 0,
+    costUsd: null,
+    // The line under the composer already moves with every reply.
+    context: null,
+    durationMs: null,
+    credits: null,
+  }
+}
+
+/** One Messages API streaming event, as the SDK forwards it. */
+export type StreamEvent = (SDKMessage & { type: "stream_event" })["event"]
+
+/** How often the running count may go to the renderer — see `announceLive`. */
+const LIVE_MS = 120
+
+/**
+ * Characters to a token, for the count while a response is still being
+ * written. The API says how many output tokens a response took only at its
+ * end (`message_delta`); before that the text is all there is, and four is the
+ * rough figure the CLI's own spinner counts by. The estimate is replaced by
+ * the real count when it lands, so it is only ever wrong for a moment.
+ */
+const CHARS_PER_TOKEN = 4
+
+/**
+ * What a running turn has spent, kept as its replies arrive — whole, as the
+ * assistant messages `read` draws, or a delta at a time, as the stream events
+ * write them.
+ *
+ * Keyed by the API's message id rather than summed, because one response
+ * arrives as one assistant message per content block, every one carrying the
+ * whole request's usage: summing frames would count a prompt once per block.
+ * The prompt is known from `message_start`, before a word is written; the
+ * output is an estimate from the text until `message_delta` says what it was.
+ */
+export class LiveTally {
+  private replies = new Map<string, LiveReply>()
+  /** The response each loop is writing — the main loop under `""`, a subagent
+   * under its `Task` — and how much of it has arrived. */
+  private writing = new Map<string, { id: string; chars: number }>()
+
+  /** A complete assistant message. Its output count can trail the estimate it
+   * follows mid-response, and the count going backwards would read as a
+   * refund, so the larger stands until `message_delta` settles it. */
+  reply(id: string, model: string | null, usage: ReplyUsage): void {
+    const known = this.replies.get(id)
+    this.replies.set(id, {
+      model: model ?? known?.model ?? null,
+      usage: {
+        ...usage,
+        output_tokens: Math.max(
+          usage.output_tokens || 0,
+          known?.usage.output_tokens || 0
+        ),
+      },
+    })
+  }
+
+  /** A streaming event, with the loop it belongs to. True when the count moved. */
+  stream(event: StreamEvent, parent: string | null): boolean {
+    const loop = parent ?? ""
+
+    if (event.type === "message_start") {
+      const { id, model, usage } = event.message
+      this.writing.set(loop, { id, chars: 0 })
+      this.replies.set(id, { model: model ?? null, usage })
+      return true
+    }
+
+    const writing = this.writing.get(loop)
+    const known = writing && this.replies.get(writing.id)
+    if (!writing || !known) return false
+
+    if (event.type === "content_block_delta") {
+      const delta = event.delta
+      const text =
+        delta.type === "text_delta"
+          ? delta.text
+          : delta.type === "thinking_delta"
+            ? delta.thinking
+            : delta.type === "input_json_delta"
+              ? delta.partial_json
+              : ""
+      if (!text) return false
+      writing.chars += text.length
+      const estimate = Math.ceil(writing.chars / CHARS_PER_TOKEN)
+      if (estimate <= (known.usage.output_tokens || 0)) return false
+      this.replies.set(writing.id, {
+        ...known,
+        usage: { ...known.usage, output_tokens: estimate },
+      })
+      return true
+    }
+
+    // The real count, which replaces the estimate whichever way it lands.
+    if (event.type === "message_delta") {
+      this.writing.delete(loop)
+      this.replies.set(writing.id, {
+        ...known,
+        usage: { ...known.usage, output_tokens: event.usage.output_tokens },
+      })
+      return true
+    }
+
+    return false
+  }
+
+  usage(): TurnUsage {
+    return liveUsageOf(this.replies.values())
+  }
+
+  reset(): void {
+    this.replies.clear()
+    this.writing.clear()
+  }
 }
 
 export function contextOf(usage: ReplyUsage | undefined): number | null {

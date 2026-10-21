@@ -182,39 +182,6 @@ export type GitPushResult =
   | { ok: true; command: string; message: string }
   | { ok: false; reason: "auth" | "failed"; command: string; message: string }
 
-/** What the New worktree dialog offers — see `worktreeOptions` in
- * `main/worktrees.ts`. */
-export type WorktreeOptions = {
-  /** Local branches, newest commit first. */
-  branches: string[]
-  /** Remote ones as git abbreviates them — `origin/feature/sso`. */
-  remotes: string[]
-  /** The main checkout's branch: what an empty base cuts from. */
-  current: string | null
-  /** `bun install` and the like, off the lock file at the root, or null. */
-  setup: string | null
-  /** Whether the repository has a `.worktreeinclude` to copy files by. */
-  includes: boolean
-}
-
-/**
- * How far one checkout has moved — see `worktreeStatus` in
- * `main/worktrees.ts`. Drawn on its row and asked again before removing it.
- */
-export type WorktreeStatus = {
-  branch: string | null
-  /** What `ahead` and `behind` count against: the branch it was cut from, or
-   * the main checkout's. */
-  base: string | null
-  /** Uncommitted entries, untracked included. */
-  changed: number
-  ahead: number | null
-  behind: number | null
-  /** Commits on this branch and on no other branch or remote — what deleting
-   * the branch loses. */
-  unique: number
-}
-
 /**
  * One file a commit changed — see `commitFiles` in `main/git.ts`. Paths are the
  * repository's own, `/`-separated, since the file may no longer be on disk.
@@ -684,6 +651,20 @@ export type TurnUsage = {
    * from last week claiming its turns were instant.
    */
   durationMs: number | null
+  /**
+   * What the turn took off the Studio AI balance, in credits
+   * (`creditsOf` in `shared/credits.ts`), for a turn that ran on it.
+   *
+   * Written on the line rather than worked out when it is drawn, because the
+   * chat can move between a login and credits mid-conversation and the line has
+   * to keep saying what *that* turn was paid with. Counted per model before
+   * being added up, as the server charges: a Sonnet turn whose subagent ran on
+   * Haiku is two prices, not one.
+   *
+   * Null for a turn on the user's own `claude` — nothing was charged — and for
+   * every line written before this existed.
+   */
+  credits: number | null
 }
 
 /**
@@ -833,6 +814,15 @@ export type AssistantEvent =
    * reloaded window falls back to the last line rather than to nothing.
    */
   | { type: "context"; tokens: number }
+  /**
+   * What the running turn has spent so far — the model and the tokens, read
+   * off its replies as they arrive, for the row under `Working…`.
+   *
+   * Not written down, like `context`: the `usage` line the turn ends with is
+   * the record and supersedes this. No cost, which the SDK reports on the
+   * result line alone (`liveUsageOf` in `main/claude-agent.ts`).
+   */
+  | { type: "live"; usage: TurnUsage }
   /**
    * The window as the **CLI** accounts for it, asked for once a turn ends.
    *
@@ -2042,70 +2032,6 @@ export type DesktopApi = {
    */
   removeFolder: (id: string) => Promise<WorkspaceRecord>
 
-  /**
-   * A second checkout of a project, added to the workspace as a project of its
-   * own.
-   *
-   * `git worktree add` under this app's data directory, then the same
-   * `addFolder` the dialog uses — see `main/worktrees.ts`, which opens with why
-   * this is not the worktree *layer* that was deleted. An existing branch is
-   * checked out rather than refused, and `base` — a branch to cut from, empty
-   * for the main checkout's — applies only to a branch this creates. The
-   * repository's `.worktreeinclude` matches are copied in before it resolves.
-   * Rejects with git's own sentence, the way `addFolder` rejects with the
-   * store's: the dialog that asked is where it can be corrected.
-   */
-  addWorktree: (input: {
-    folderId: string
-    branch: string
-    name: string
-    base?: string
-  }) => Promise<WorkspaceRecord>
-  /**
-   * The checkout itself, removed, its chats and the project dropped with it,
-   * and its branch too when `deleteBranch` says so — the dialog asks, after
-   * saying how many commits exist on that branch alone (`worktreeStatus`).
-   * Rejects for a folder that is not a checkout at all, which is the renderer
-   * asking about a project it should not have offered this for.
-   */
-  removeWorktree: (
-    folderId: string,
-    options: { deleteBranch: boolean }
-  ) => Promise<WorkspaceRecord>
-  /** What the New worktree dialog offers for a project — its branches, a
-   * setup command. */
-  worktreeOptions: (folderId: string) => Promise<WorktreeOptions>
-  /** How far a checkout has moved, or null for a folder that is not one. */
-  worktreeStatus: (folderId: string) => Promise<WorktreeStatus | null>
-  /**
-   * Names a checkout nobody has named yet, after the chat running in it.
-   *
-   * A worktree cannot be created nameless the way a chat can — the branch and
-   * the directory have to exist before the first prompt — so one made with the
-   * branch field left empty is on a `vsclaude/untitled-…` branch until this. It
-   * renames **that branch** and the project with it, off the title the CLI wrote
-   * for the conversation (`retitle` in `main/chat.ts`), which is why it
-   * costs no turn of its own.
-   *
-   * Resolves with `null` for everything that is not that narrow case — an
-   * ordinary project, a checkout on a branch somebody named, a title that slugs
-   * to nothing — because the renderer calls it on **every** chat that gets a
-   * title and the answer is normally "this was nothing to do with a worktree".
-   */
-  nameWorktree: (
-    folderId: string,
-    title: string
-  ) => Promise<WorkspaceRecord | null>
-  /**
-   * Which repository this folder is a `git worktree` checkout of, or null for
-   * an ordinary one.
-   *
-   * Asked of git per folder rather than recorded, so a checkout made in
-   * somebody's own shell answers the same as one this app made. It is what
-   * decides whether `Remove worktree` is on a project's menu.
-   */
-  gitWorktreeRepo: (folderId: string) => Promise<string | null>
-
   /** Opens a folder picker and resolves with the chosen path, or null. */
   pickDirectory: () => Promise<string | null>
 
@@ -2366,6 +2292,18 @@ export type DesktopApi = {
   /** Forgets the chosen picture, so the row goes back to the favicon. */
   resetProjectIcon: (folderId: string) => Promise<void>
   /**
+   * The studio's background picture as a `data:` URL, or null for none — the
+   * canvas behind the cards, `Settings › Appearance`.
+   */
+  appBackground: () => Promise<string | null>
+  /**
+   * Asks for a picture in the OS picker and keeps a copy as the background.
+   * False when cancelled.
+   */
+  pickAppBackground: () => Promise<boolean>
+  /** Forgets the background picture, so the canvas is plain again. */
+  clearAppBackground: () => Promise<void>
+  /**
    * Where a document's relative link goes — `./CONTRIBUTING.md`, `../src/` —
    * joined in main for the same reason as `readImageRelative`.
    *
@@ -2489,7 +2427,7 @@ export type DesktopApi = {
   planUsage: (profileId: string | null, fresh: boolean) => Promise<PlanUsage>
   /**
    * Removes one of those servers from the user's own `claude` config — the
-   * **Remove** button on a row in the composer's MCP menu.
+   * **Remove** button on a row in the composer's MCP dialog.
    *
    * Run as `claude mcp remove`, the CLI's own command, rather than by editing
    * `~/.claude.json` or a repository's `.mcp.json` from here: the config is the
@@ -2617,8 +2555,8 @@ export type DesktopApi = {
   /**
    * Signs in with Google, in the user's browser, on the free AI's server's
    * `/signin` page — see `main/google-sign-in.ts` for why it is not a window
-   * of this app. Resolves with the Google ID token, which the renderer
-   * exchanges with Firebase; rejects with no server configured, when the page
+   * of this app. Resolves with the server's session token, which the renderer
+   * keeps; rejects with no server configured, when the page
    * reports a failure, or after five minutes.
    */
   signInWithGoogle: () => Promise<string>
@@ -2632,10 +2570,10 @@ export type DesktopApi = {
    */
   freeAiAvailable: () => Promise<boolean>
   /**
-   * The signed-in user's Firebase ID token, handed over every time Firebase
-   * refreshes it (`onIdTokenChanged`), or null on sign-out — what the free AI's
-   * requests are sent with (`main/free-ai.ts`). Resolves with whether a free
-   * turn can now run.
+   * The signed-in user's session token, handed over at launch and at sign-in,
+   * or null on sign-out. Main exchanges it for the hour-long access token the
+   * free AI's requests are sent with, and renews that itself
+   * (`main/free-ai.ts`). Resolves with whether a free turn can now run.
    */
   setFreeAiToken: (token: string | null) => Promise<boolean>
   /**
@@ -2809,12 +2747,18 @@ export type DesktopApi = {
    * `shellId` is one of `terminalShells`' ids, by the same rule — the renderer
    * picks from main's list rather than naming a program; an id main does not
    * know, or none, is the default shell.
+   *
+   * `dir` opens the shell in a directory **inside** the folder instead of at
+   * its root — the file tree's `New terminal here`. It is a path, so it is
+   * checked the way every read is (`insideAny`) and must be a directory; a
+   * path outside the folder is refused rather than opened.
    */
   terminalCreate: (
     folderId: string,
     cols: number,
     rows: number,
-    shellId?: string
+    shellId?: string,
+    dir?: string
   ) => Promise<string>
   /** The shells installed on this machine, the default first. */
   terminalShells: () => Promise<TerminalShell[]>
@@ -2967,17 +2911,11 @@ export const IPC = {
   trashProject: "workspace:trash-project",
   renameFolder: "workspace:rename-folder",
   removeFolder: "workspace:remove-folder",
-  addWorktree: "workspace:add-worktree",
-  removeWorktree: "workspace:remove-worktree",
-  nameWorktree: "workspace:name-worktree",
-  worktreeOptions: "workspace:worktree-options",
-  worktreeStatus: "workspace:worktree-status",
   pickDirectory: "workspace:pick-directory",
   pickFiles: "workspace:pick-files",
   clipboardImagePath: "files:clipboard-image-path",
   menuCommand: "menu:command",
   gitBranch: "git:branch",
-  gitWorktreeRepo: "git:worktree-repo",
   gitStatus: "git:status",
   gitChanges: "git:changes",
   gitLog: "git:log",
@@ -3015,6 +2953,9 @@ export const IPC = {
   projectIcon: "workspace:project-icon",
   pickProjectIcon: "workspace:pick-project-icon",
   resetProjectIcon: "workspace:reset-project-icon",
+  appBackground: "workspace:app-background",
+  pickAppBackground: "workspace:pick-app-background",
+  clearAppBackground: "workspace:clear-app-background",
   resolveRelativePath: "files:resolve-relative",
   listWorkspaceFiles: "files:index",
   watchDirectories: "files:watch",

@@ -577,3 +577,14 @@
     background-color: color-mix(in oklch, var(--foreground) 34%, transparent);
   }
 }
+
+/*
+ * With a picture behind the studio (`lib/app-background.ts`), each card goes
+ * translucent so the picture shows through the card's own edges as well as in
+ * the gaps between cards. Unlayered on purpose: it has to beat the layered
+ * `bg-background` utility the card is drawn with. The fraction is as low as the
+ * text on a card can stand — its contents keep their own opaque surfaces.
+ */
+[data-app-background] .studio-card {
+  background-color: color-mix(in oklch, var(--background) 82%, transparent);
+}

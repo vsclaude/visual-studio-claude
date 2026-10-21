@@ -349,11 +349,16 @@ function OtherMessage({
   return (
     // `data-line` for the same reason as the user's line above: this is the
     // other half of what `⌘F` searches. The stamp is the hover line alone — a
-    // reply has no corner a clock would sit in without sitting on a word. No
-    // copy button: a turn's reply is several of these, copied once from its
-    // cost line.
+    // reply has no corner a clock would sit in without sitting on a word. Its
+    // fences get a Copy on hover; the whole reply is still copied once from
+    // its cost line.
     <div data-line={of.id} title={stampOf(of)}>
-      <MarkdownView source={of.text} className="px-1 text-chat" />
+      <MarkdownView
+        source={of.text}
+        className="px-1 text-chat"
+        copyButtons
+        viewTables
+      />
     </div>
   )
 }

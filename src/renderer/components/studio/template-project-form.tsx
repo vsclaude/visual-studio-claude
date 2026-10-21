@@ -1,9 +1,10 @@
 import { useId, useState } from "react"
-import { AlertCircle, Check, Loader2 } from "lucide-react"
+import { AlertCircle, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 
 import { brandIcon } from "@/lib/brand-icons"
 import { parentOf } from "@/lib/files/paths"
@@ -25,8 +26,7 @@ import {
  * `AddFolderDialog`.
  *
  * Main makes the empty directory and adds it; the framework's own CLI is then
- * typed into a dock shell inside it, the way the worktree dialog runs its
- * setup command. That is the whole design: the CLI's questions are answered
+ * typed into a dock shell inside it. That is the whole design: the CLI's questions are answered
  * where they are asked, its install is watched as it happens, and what a
  * starter holds stays the framework's to decide. `shared/project-templates.ts`
  * says why the name is held to npm's rule.
@@ -235,7 +235,7 @@ export function TemplateProjectForm({ onClose }: { onClose: () => void }) {
             type="submit"
             disabled={creating || !trimmed || !!problem || !parent.trim()}
           >
-            {creating && <Loader2 className="animate-spin" />}
+            {creating && <Spinner />}
             Create
           </Button>
         </div>

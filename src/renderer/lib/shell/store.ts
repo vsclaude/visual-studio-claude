@@ -34,6 +34,10 @@ export type Shell = {
    * the machine's default. Kept across a restart, which is the same shell
    * started over. */
   shellId: string | null
+  /** A directory inside the folder the shell opens in, from the file tree's
+   * `New terminal here`; null for the folder's root. Kept across a restart for
+   * the same reason as `shellId`. */
+  dir: string | null
   /** Bumped to remount the pane, which is what starting a shell over is. */
   attempt: number
   exited: boolean
@@ -44,7 +48,7 @@ export type Shell = {
    * tab named `vite` stays `vite` whatever it `cd`s into. Null for the
    * automatic name. */
   name: string | null
-  /** A line typed into the shell once it starts — a new worktree's setup
+  /** A line typed into the shell once it starts — a template's `create-*`
    * command — and never again: a restart is a plain shell. */
   command: string | null
 }
@@ -88,9 +92,12 @@ type ShellState = {
    * the default one, or the one picked from the menu beside it. */
   add: (shellId?: string) => void
   /** A shell in `folderId` that types `command` as it starts, in the dock and
-   * on screen — a new worktree's `bun install`, run where it can be watched
+   * on screen — a template's `create-*` CLI, run where it can be watched
    * and stopped rather than behind anybody's back. */
   run: (folderId: string, command: string) => void
+  /** A shell in `dir`, a directory inside `folderId` — the file tree's `New
+   * terminal here`. Opened beside the others, like `add`, and in the dock. */
+  openAt: (folderId: string, dir: string) => void
   /** Asks main which shells there are, once. */
   loadInstalled: () => void
   select: (id: string) => void
@@ -174,12 +181,14 @@ export const useShells = create<ShellState>((set, get) => {
   function start(
     folderId: string,
     shellId: string | null = null,
-    command: string | null = null
+    command: string | null = null,
+    dir: string | null = null
   ) {
     const shell: Shell = {
       id: crypto.randomUUID(),
       folderId,
       shellId,
+      dir,
       attempt: 0,
       exited: false,
       cwd: null,
@@ -232,6 +241,12 @@ export const useShells = create<ShellState>((set, get) => {
     run(folderId, command) {
       set({ target: folderId })
       start(folderId, null, command)
+      useDock.getState().show()
+    },
+
+    openAt(folderId, dir) {
+      set({ target: folderId })
+      start(folderId, null, null, dir)
       useDock.getState().show()
     },
 

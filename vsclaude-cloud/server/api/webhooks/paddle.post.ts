@@ -1,9 +1,10 @@
 import { defineHandler } from "nitro"
 
 import {
+  creditPaddleTransaction,
   getAccount,
   linkToUser,
-  saveAccount,
+  refundPaddleTransaction,
   userOf,
 } from "../../utils/accounts.ts"
 import {
@@ -88,7 +89,16 @@ export default defineHandler(async (event) => {
     return { ok: true }
   }
 
-  await saveAccount(uid, applied.account)
+  if (applied.kind === "credits") {
+    await creditPaddleTransaction(
+      uid,
+      applied.transactionId,
+      applied.added,
+      applied.purchase
+    )
+  } else {
+    await refundPaddleTransaction(uid, applied.transactionId)
+  }
   noteRequest(event, {
     applied: applied.kind,
     credits_added: applied.kind === "credits" ? applied.added : undefined,

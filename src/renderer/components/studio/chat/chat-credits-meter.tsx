@@ -16,9 +16,18 @@ import { CreditsBar } from "../credits-badge"
  * send it. A click is the way to more, rather than a popover of detail: there
  * is one number, and it is already on the button.
  *
- * Re-asked when a turn ends, the moment the number moved. Everything else —
- * sign-in, focus, a checkout landing — `watchStudioAccount` already covers.
+ * Re-asked when a turn ends, the moment the number moved — and once more a
+ * little later: the server charges the last call of a turn after its body has
+ * closed, which is also the moment the turn ends here, so the first ask can
+ * land before the write does and show the number from before it. Also re-asked
+ * every couple of seconds while the window is visible, so a balance moved by
+ * another window or a checkout paid on a phone shows almost at once. A hidden
+ * window skips it — focus re-asks when it comes back. Sign-in and focus are
+ * `watchStudioAccount`'s.
  */
+const SETTLE_MS = 2_000
+const POLL_MS = 2_000
+
 export function CreditsMeter({ sending }: { sending: boolean }) {
   const ready = useFreeAi((state) => state.ready)
   const account = useStudioAccount((state) => state.account)
@@ -27,9 +36,21 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
 
   const wasSending = useRef(sending)
   useEffect(() => {
-    if (wasSending.current && !sending) void refresh()
+    let settled: ReturnType<typeof setTimeout> | undefined
+    if (wasSending.current && !sending) {
+      void refresh()
+      settled = setTimeout(() => void refresh(), SETTLE_MS)
+    }
     wasSending.current = sending
+    return () => clearTimeout(settled)
   }, [sending, refresh])
+
+  useEffect(() => {
+    const poll = setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, POLL_MS)
+    return () => clearInterval(poll)
+  }, [refresh])
 
   if (!ready || !account) return null
 
@@ -43,7 +64,7 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
       title={
         broke
           ? "No credits left — buy more to keep going"
-          : `${formatCredits(account.credits)} credits left — buy more`
+          : `${formatCredits(account.credits)} in credits left — buy more`
       }
       aria-label="Credits"
       className={cn(

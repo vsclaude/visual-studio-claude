@@ -106,6 +106,18 @@ section("setFreeAiToken and accountEnv: the directory on disk")
 const dir = await mkdtemp(path.join(tmpdir(), "vsclaude-free-"))
 const previousUrl = process.env.VSCLAUDE_AI_URL
 process.env.VSCLAUDE_AI_URL = "http://localhost:4000"
+// The server's `POST /api/session`, stood in for: a session it knows is worth
+// an access token, anything else is refused. `fetch` rather than a socket, so
+// this runs where a port cannot be opened.
+const realFetch = globalThis.fetch
+const exchanged: string[] = []
+globalThis.fetch = (async (url: string, init?: RequestInit) => {
+  const bearer = new Headers(init?.headers).get("authorization") ?? ""
+  exchanged.push(`${init?.method} ${url} ${bearer}`)
+  return bearer === "Bearer session-1"
+    ? Response.json({ token: "access-1", expiresAt: Date.now() + 3600_000 })
+    : Response.json({ error: "Sign in again." }, { status: 401 })
+}) as typeof fetch
 try {
   setFreeAiDir(dir)
   await writeFile(
@@ -115,11 +127,16 @@ try {
 
   check("not ready before a token", !freeAiReady())
 
-  const ready = await setFreeAiToken("id-token-1")
-  check("ready once handed one", ready && freeAiReady())
+  const ready = await setFreeAiToken("session-1")
+  check("ready once handed a session", ready && freeAiReady())
   check(
-    "the token file holds it",
-    (await readFile(path.join(dir, "vsclaude-token"), "utf8")) === "id-token-1"
+    "the session is exchanged with the server",
+    exchanged[0] === "POST http://localhost:4000/api/session Bearer session-1",
+    exchanged
+  )
+  check(
+    "the token file holds the access token, not the session",
+    (await readFile(path.join(dir, "vsclaude-token"), "utf8")) === "access-1"
   )
   const settings = JSON.parse(
     await readFile(path.join(dir, "settings.json"), "utf8")
@@ -157,7 +174,19 @@ try {
     () => null
   )
   check("and the token file is gone", left === null)
+
+  check(
+    "a session the server refuses is not ready",
+    !(await setFreeAiToken("session-2")) && !freeAiReady()
+  )
+  check(
+    "and leaves no token behind",
+    (await readFile(path.join(dir, "vsclaude-token"), "utf8").catch(
+      () => null
+    )) === null
+  )
 } finally {
+  globalThis.fetch = realFetch
   if (previousUrl === undefined) delete process.env.VSCLAUDE_AI_URL
   else process.env.VSCLAUDE_AI_URL = previousUrl
   await rm(dir, { recursive: true, force: true })

@@ -40,15 +40,6 @@ const api: DesktopApi = {
   trashProject: (folderId) => ipcRenderer.invoke(IPC.trashProject, folderId),
   renameFolder: (id, name) => ipcRenderer.invoke(IPC.renameFolder, id, name),
   removeFolder: (id) => ipcRenderer.invoke(IPC.removeFolder, id),
-  addWorktree: (input) => ipcRenderer.invoke(IPC.addWorktree, input),
-  removeWorktree: (folderId, options) =>
-    ipcRenderer.invoke(IPC.removeWorktree, folderId, options),
-  worktreeOptions: (folderId) =>
-    ipcRenderer.invoke(IPC.worktreeOptions, folderId),
-  worktreeStatus: (folderId) =>
-    ipcRenderer.invoke(IPC.worktreeStatus, folderId),
-  nameWorktree: (folderId, title) =>
-    ipcRenderer.invoke(IPC.nameWorktree, folderId, title),
 
   pickDirectory: () => ipcRenderer.invoke(IPC.pickDirectory),
   pickFiles: (directory) => ipcRenderer.invoke(IPC.pickFiles, directory),
@@ -61,8 +52,6 @@ const api: DesktopApi = {
     subscribe<MenuCommand>(IPC.menuCommand, listener),
 
   gitBranch: (folderId) => ipcRenderer.invoke(IPC.gitBranch, folderId),
-  gitWorktreeRepo: (folderId) =>
-    ipcRenderer.invoke(IPC.gitWorktreeRepo, folderId),
   gitStatus: (folderId) => ipcRenderer.invoke(IPC.gitStatus, folderId),
   gitChanges: (folderId) => ipcRenderer.invoke(IPC.gitChanges, folderId),
   gitLog: (folderId, limit, skip, query) =>
@@ -126,6 +115,9 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.pickProjectIcon, folderId),
   resetProjectIcon: (folderId) =>
     ipcRenderer.invoke(IPC.resetProjectIcon, folderId),
+  appBackground: () => ipcRenderer.invoke(IPC.appBackground),
+  pickAppBackground: () => ipcRenderer.invoke(IPC.pickAppBackground),
+  clearAppBackground: () => ipcRenderer.invoke(IPC.clearAppBackground),
   resolveRelativePath: (dir, relative) =>
     ipcRenderer.invoke(IPC.resolveRelativePath, dir, relative),
   listWorkspaceFiles: () => ipcRenderer.invoke(IPC.listWorkspaceFiles),
@@ -203,8 +195,8 @@ const api: DesktopApi = {
   writeNoteFile: (fileName, bytes) =>
     ipcRenderer.invoke(IPC.writeNoteFile, fileName, bytes),
 
-  terminalCreate: (folderId, cols, rows, shellId) =>
-    ipcRenderer.invoke(IPC.terminalCreate, folderId, cols, rows, shellId),
+  terminalCreate: (folderId, cols, rows, shellId, dir) =>
+    ipcRenderer.invoke(IPC.terminalCreate, folderId, cols, rows, shellId, dir),
   terminalShells: () => ipcRenderer.invoke(IPC.terminalShells),
   terminalWrite: (terminalId, data) =>
     ipcRenderer.invoke(IPC.terminalWrite, terminalId, data),

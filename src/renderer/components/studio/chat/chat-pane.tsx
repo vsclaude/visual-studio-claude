@@ -228,6 +228,7 @@ function Conversation({
   const startedAt = useChats((state) => state.startedAt[chatId])
   const agents = useChats((state) => state.agents[chatId])
   const context = useChats((state) => state.context[chatId])
+  const live = useChats((state) => state.live[chatId])
   // This run's measurement, else the one kept on the record — without the
   // fallback a restarted app drew no meter until the next turn ended.
   const contextWindow = useChats(
@@ -1034,7 +1035,7 @@ function Conversation({
                 agents are what is still out there, so they draw their own
                 spinner. */}
                 {(sending || (agents ?? []).length > 0) && !ask && (
-                  <ChatSkeleton startedAt={startedAt} />
+                  <ChatSkeleton startedAt={startedAt} live={live} />
                 )}
               </div>
             )}

@@ -44,7 +44,7 @@ export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
     : topped
       ? [
           reason === "signed-out" ? "You're signed in" : "Credits are back",
-          `You have ${formatCredits(credits)} credits now. Send your message again to pick up where you left off.`,
+          `You have ${formatCredits(credits)} in credits now. Send your message again to pick up where you left off.`,
         ]
       : [
           "You're out of credits",

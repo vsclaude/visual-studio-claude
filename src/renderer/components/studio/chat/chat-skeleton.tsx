@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
+import type { TurnUsage } from "@shared/api"
 
+import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { elapsed } from "@/lib/chat/since"
+import { usageDetail, usageLine } from "@/lib/chat/usage"
 
 /**
  * What the chat pane shows while a turn is being sent: the loader, and how long
@@ -9,24 +12,43 @@ import { elapsed } from "@/lib/chat/since"
  * and read as content arriving that never did — the rows a turn actually draws
  * land within a second of the spinner anyway.
  *
- * The loader is three dots hopping in turn and a light passing over `Working…`
- * (`styles/motion.css`). It was a GIF swordsman for a while, then a stock
- * spinner — `docs/design.md` § The chat's loading indicator has why.
+ * The loader is the VS lettermark writing itself and a light passing over
+ * `Working…` (`styles/motion.css`). It was a GIF swordsman for a while, then a
+ * stock spinner, then three dots — `docs/design.md` § The chat's loading
+ * indicator has why.
  *
  * Which subagents are running is not said here — that is `ChatAgents`, above
  * the composer, so the loader stays one line however wide a turn fans out.
  */
-export function ChatSkeleton({ startedAt }: { startedAt?: number }) {
+export function ChatSkeleton({
+  startedAt,
+  live,
+}: {
+  startedAt?: number
+  /** The running turn's spend so far — see `live` in the chat store. */
+  live?: TurnUsage
+}) {
   return (
     <div
       className={cn(
         LOADER_H,
-        "flex items-center gap-2 px-1 text-xs text-muted-foreground"
+        "flex min-w-0 items-center gap-2 px-1 text-xs text-muted-foreground"
       )}
     >
-      <WorkingDots />
-      <span className="text-shimmer">Working…</span>
+      <WorkingMark />
+      <span className="text-shimmer shrink-0">Working…</span>
       {startedAt !== undefined && <Elapsed startedAt={startedAt} />}
+      {/* The model and the tokens while they are still moving, in the turn
+          line's own words, so the row under the answer reads as this one
+          arriving early. */}
+      {live && (
+        <span
+          title={usageDetail(live)}
+          className="truncate text-muted-foreground/50 tabular-nums"
+        >
+          {usageLine(live)}
+        </span>
+      )}
     </div>
   )
 }
@@ -35,25 +57,53 @@ export function ChatSkeleton({ startedAt }: { startedAt?: number }) {
 const LOADER_H = "h-5"
 
 /**
- * Three dots hopping in turn, in the theme's accent. The stagger is a third of
- * the hop's rise, so one dot is always on its way up — a wave rather than three
- * dots blinking together.
+ * The VS lettermark writing itself in the logo's violet-to-amber, stroke order
+ * and all — the V, then the S through its arm — holding a beat, and wiping off
+ * from where it started (`.vs-trace` in `styles/motion.css`). A faint copy sits
+ * under it so the row keeps its shape between the wipe and the next stroke.
+ *
+ * The gradient id is per instance for the reason `Wordmark` gives: two chats
+ * popped out into one window would otherwise share whichever came first.
  */
-function WorkingDots() {
+function WorkingMark() {
+  const ink = `vs-trace-${useId().replace(/:/g, "")}`
   return (
     <div
       role="status"
       aria-label="Working"
-      className={cn(LOADER_H, "flex shrink-0 items-center gap-1 px-0.5")}
+      className={cn(LOADER_H, "flex shrink-0 items-center px-0.5")}
     >
-      {[0, 140, 280].map((delay) => (
-        <span
-          key={delay}
-          aria-hidden
-          className="size-1.25 animate-dot rounded-full bg-primary"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
+      <svg viewBox={VS_VIEWBOX} fill="none" aria-hidden className="vs-trace">
+        <defs>
+          <linearGradient
+            id={ink}
+            gradientUnits="userSpaceOnUse"
+            x1="5"
+            y1="5"
+            x2="66"
+            y2="55"
+          >
+            <stop offset="0" stopColor="#8B5CF6" />
+            <stop offset="0.55" stopColor="#C76BC4" />
+            <stop offset="1" stopColor="#FCC63A" />
+          </linearGradient>
+        </defs>
+        <g
+          transform={VS_SLANT}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <g className="vs-trace-ghost" stroke="currentColor">
+            <path d={VS_V} />
+            <path d={VS_S} />
+          </g>
+          <g stroke={`url(#${ink})`}>
+            <path className="vs-trace-v" d={VS_V} pathLength={100} />
+            <path className="vs-trace-s" d={VS_S} pathLength={100} />
+          </g>
+        </g>
+      </svg>
     </div>
   )
 }

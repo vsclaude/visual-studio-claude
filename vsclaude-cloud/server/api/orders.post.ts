@@ -1,6 +1,6 @@
 import { defineHandler } from "nitro"
 
-import { getOrder, saveOrder } from "../utils/accounts.ts"
+import { addOrder } from "../utils/accounts.ts"
 import { authenticate } from "../utils/auth.ts"
 import { CREDIT_PACKS, isCreditItem } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
@@ -42,20 +42,25 @@ export default defineHandler(async (event) => {
   const { prefix } = sepayConfig()
   // A hundred million codes and a handful of orders a day: a clash is all but
   // impossible, and a second draw settles one.
-  let code = newOrderCode(prefix)
-  for (let tries = 0; tries < 5 && (await getOrder(code)); tries++) {
-    code = newOrderCode(prefix)
-  }
   const order: Order = {
-    code,
+    code: newOrderCode(prefix),
     uid: user.uid,
     item,
     amount: CREDIT_PACKS[item].price,
     createdAt: new Date().toISOString(),
     paidBy: null,
-    short: [],
+    short: 0,
   }
-  await saveOrder(order)
-  noteRequest(event, { order: code, item, amount: order.amount })
-  return { url: `${publicUrlOf(event)}/pay/${code}` }
+  for (let tries = 0; !(await addOrder(order)); tries++) {
+    if (tries === 4) {
+      noteRequest(event, { refused: "no free order code" })
+      return Response.json(
+        { error: "Could not open an order. Try again." },
+        { status: 503 }
+      )
+    }
+    order.code = newOrderCode(prefix)
+  }
+  noteRequest(event, { order: order.code, item, amount: order.amount })
+  return { url: `${publicUrlOf(event)}/pay/${order.code}` }
 })

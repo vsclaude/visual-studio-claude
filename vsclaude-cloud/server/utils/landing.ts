@@ -2,6 +2,7 @@ import { CREDIT_PACKS, type CreditItem } from "./billing.ts"
 import { APP_MARK, APP_MARK_URL, WORDMARK, WORDMARK_CSS } from "./brand.ts"
 import { FEATURE_ART, type FeatureArt } from "./landing-art.ts"
 import { COPY, LANGS, pathOf, type Copy, type Lang } from "./landing-copy.ts"
+import { formatCredits } from "./usage.ts"
 
 /**
  * The home page: what VS Claude is, what credits cost, and where to
@@ -30,6 +31,7 @@ export const RELEASES_URL =
   "https://github.com/vsclaude/visual-studio-claude/releases/latest"
 
 const PACK_EXTRAS: Record<CreditItem, { bonus?: number; popular?: boolean }> = {
+  "credits-mini": {},
   "credits-20k": {},
   "credits-60k": { bonus: 10, popular: true },
   "credits-100k": { bonus: 20 },
@@ -40,20 +42,17 @@ const VND = new Intl.NumberFormat("vi-VN", {
   currency: "VND",
 })
 
-/** `3.3M`, `250,000` — the studio's own `formatCredits`. */
-export function formatCredits(credits: number): string {
-  return credits >= 1_000_000
-    ? `${Number((credits / 1_000_000).toFixed(1))}M`
-    : credits.toLocaleString("en-US")
-}
+export { formatCredits }
 
-/** The packs as the page draws them, cheapest first. */
+/** The packs as the page draws them, cheapest first — the size in dollars
+ * (`$1.00`), as the studio writes it. */
 export function packsForSale(): {
   id: CreditItem
   price: string
   credits: string
   bonus?: number
   popular: boolean
+  bankOnly: boolean
 }[] {
   return (Object.keys(CREDIT_PACKS) as CreditItem[])
     .sort((a, b) => CREDIT_PACKS[a].price - CREDIT_PACKS[b].price)
@@ -63,6 +62,7 @@ export function packsForSale(): {
       credits: formatCredits(CREDIT_PACKS[id].credits),
       bonus: PACK_EXTRAS[id].bonus,
       popular: PACK_EXTRAS[id].popular === true,
+      bankOnly: CREDIT_PACKS[id].bankOnly === true,
     }))
 }
 
@@ -141,6 +141,12 @@ const DEMO = {
 }
 
 /**
+ * The figures in the demo are worked, not made up, so a visitor who checks
+ * them against the FAQ finds they agree: the second turn is ~20.5k cached and
+ * ~0.9k fresh prompt with 0.9k out on Sonnet, which the server's `weighted`
+ * charges at about 128k of the unit — $0.013 — and the balance beside the
+ * composer is the popular $55 pack less that turn.
+ *
  * The hero window plays the page's story on a loop, like a GIF: a turn on
  * the Work account, the 5-hour limit, a switch to Credits, and the next turn
  * carrying on in the same conversation. Every moment is a share of `LOOP`
@@ -243,7 +249,7 @@ function packCell(
       <p class="pack-credits"><strong>${pack.credits}</strong> ${t.credits}</p>
       <p class="pack-bonus">${pack.bonus ? t.bonus(pack.bonus) : t.starter}</p>
       <p class="pack-price">${pack.price}</p>
-      <p class="pack-note">${t.note}</p>
+      <p class="pack-note">${pack.bankOnly ? t.bankOnly : t.note}</p>
     </article>`
 }
 
@@ -513,7 +519,13 @@ ${LANGS.map((l) => `<link rel="alternate" hreflang="${COPY[l].htmlLang}" href="$
   .art { margin-top: 1.4rem; border-radius: 7px; border: 1px solid var(--edge); background: rgb(0 0 0 / 0.25); }
   .art svg { display: block; width: 100%; height: auto; }
 
-  .packs { max-width: 860px; margin: 0 auto; }
+  /* Four packs, so four columns — the shared grid's three-column hairline
+     rules are re-cut for a row of four. */
+  .packs { max-width: 1040px; margin: 0 auto; grid-template-columns: repeat(4, 1fr); }
+  .packs > .cell:nth-child(3n) { border-right: 1px solid var(--edge); }
+  .packs > .cell:nth-child(4n) { border-right: 0; }
+  .packs > .cell:nth-last-child(-n + 3) { border-bottom: 1px solid var(--edge); }
+  .packs > .cell:nth-last-child(-n + 4) { border-bottom: 0; }
   .pack { padding: 2.2rem 1.5rem 1.8rem; }
   .pack.popular { background: linear-gradient(rgb(139 92 246 / 0.07), transparent 70%); box-shadow: inset 0 2px 0 var(--accent); }
   .pack-credits { margin: 0; color: var(--muted); }
@@ -622,9 +634,9 @@ ${LANGS.map((l) => `<link rel="alternate" hreflang="${COPY[l].htmlLang}" href="$
   @media (max-width: 900px) {
     .canvas { grid-template-columns: minmax(0, 1fr); }
     .rail, .side, .explorer, .window .status span:last-child, .toolbar .mcp, .toolbar .end { display: none; }
-    .grid { grid-template-columns: 1fr; }
-    .grid > .cell { border-right: 0; border-bottom: 1px solid var(--edge); }
-    .grid > .cell:last-child { border-bottom: 0; }
+    .grid, .packs { grid-template-columns: 1fr; }
+    .grid > .cell, .packs > .cell:nth-child(n) { border-right: 0; border-bottom: 1px solid var(--edge); }
+    .grid > .cell:last-child, .packs > .cell:last-child { border-bottom: 0; }
     .pill { display: none; }
     .nav-end { margin-left: auto; }
     footer .wrap { grid-template-columns: 1fr 1fr; }
@@ -707,7 +719,7 @@ ${LANGS.map((l) => `<link rel="alternate" hreflang="${COPY[l].htmlLang}" href="$
                   <div class="bubble beat" style="animation-name:bubble2">${DEMO.ask2}</div>
                   <div class="tool beat" style="animation-name:edit2">${UI.right}Write<span>test/sepay.test.ts · +31</span></div>
                   <div class="reply beat" style="animation-name:reply2">Added <code>test/sepay.test.ts</code>: the second delivery is ignored and the order is credited once. 6 passed.</div>
-                  <div class="cost beat" style="animation-name:cost2">Sonnet 5.5 · Credits · 21.4k prompt, 96% cached · 0.9k out · 9s</div>
+                  <div class="cost beat" style="animation-name:cost2">Sonnet 5.5 · Credits · 21.4k prompt, 96% cached · 0.9k out · 9s · $0.013 in credits</div>
                 </div>
                 <div class="composer">
                   <p><span class="hint">Ask to make changes in this project…<span class="caret"></span></span><span class="typed" style="animation-name:typed1">${DEMO.ask1}</span><span class="typed" style="animation-name:typed2">${DEMO.ask2}</span></p>
@@ -717,7 +729,7 @@ ${LANGS.map((l) => `<link rel="alternate" hreflang="${COPY[l].htmlLang}" href="$
                     <span class="mcp">${UI.plug}MCP</span>
                     <span class="stack-in">
                       <span class="work" style="animation-name:work">${UI.user}Work<span class="meter full"><span></span>5h 100%</span></span>
-                      <span class="credits" style="animation-name:oncredits">${APP_MARK}Credits<span class="meter"><span></span>3.3M left</span></span>
+                      <span class="credits" style="animation-name:oncredits">${APP_MARK}Credits<span class="meter"><span></span>$54.99 left</span></span>
                     </span>
                     <span class="end">${UI.plus}<b class="send">${UI.send}</b></span>
                   </div>

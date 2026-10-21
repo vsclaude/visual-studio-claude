@@ -21,6 +21,7 @@ import {
 } from "@/lib/shortcuts"
 import { useShells } from "@/lib/shell/store"
 import { applyAppearance } from "@/lib/appearance"
+import { backgroundStyle, useAppBackground } from "@/lib/app-background"
 import { usePlugins } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
 import { useDock } from "@/lib/dock"
@@ -101,6 +102,7 @@ export function Studio() {
     void useProjects.getState().restore()
     void useChats.getState().restore()
     void useClaudeProfiles.getState().refresh()
+    void useAppBackground.getState().restore()
     // The studio's window only: a popped-out chat is a second page, and a
     // plugin started in both would answer every event twice.
     void usePlugins.getState().restore()
@@ -252,6 +254,7 @@ function Workbench() {
   const pane = useStudio((state) => state.pane)
   const hasOpenTabs = useHasOpenTabs()
   const activeTabId = useActiveTabId(pane)
+  const backgroundImage = useAppBackground((state) => state.image)
 
   const [adding, setAdding] = useState(false)
   /** The Settings dialog — the application menu's ⌘, and nothing else, since
@@ -499,7 +502,13 @@ function Workbench() {
       There is no crumb naming the project on screen: the projects column marks
       it, and the branch is the status bar's.
     */
-    <div className="flex h-svh flex-col overflow-hidden bg-sidebar">
+    <div
+      className="flex h-svh flex-col overflow-hidden bg-sidebar"
+      // With a picture, the cards go translucent (`studio-card` in
+      // `globals.css`) so it shows through them as well as in the gaps.
+      data-app-background={backgroundImage ? "" : undefined}
+      style={backgroundStyle(backgroundImage)}
+    >
       <WindowTitleBar />
 
       <div className="flex min-h-0 flex-1 gap-1.5 px-1.5">
@@ -752,7 +761,7 @@ function Workbench() {
  * room; the rail's own edge line lands under it.
  */
 const CARD =
-  "h-full overflow-hidden rounded-xl bg-background outline -outline-offset-1 outline-border"
+  "studio-card h-full overflow-hidden rounded-xl bg-background outline -outline-offset-1 outline-border"
 
 /**
  * A resize handle drawn as the canvas between two cards rather than as a

@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { ChevronRight, Loader2, UserRound } from "lucide-react"
+import { ChevronRight, UserRound } from "lucide-react"
 
 import { creditsLeft, formatCredits } from "@shared/credits"
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Spinner } from "@/components/ui/spinner"
 import { useAccount, watchAccount } from "@/lib/account"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { cn } from "@/lib/utils"
@@ -38,7 +39,7 @@ export function AccountMenu() {
   useEffect(watchAccount, [])
 
   const name = account ? (account.name ?? account.email ?? "Signed in") : null
-  // Until Firebase has answered, the empty silhouette would say "signed out"
+  // Until the stored session has been read, the empty silhouette would say "signed out"
   // about somebody who is about to be signed in. A sign-in waiting on the
   // browser spins too, since the avatar is all there is to look at meanwhile.
   const loading = !ready || (busy && !account)
@@ -69,7 +70,7 @@ export function AccountMenu() {
               />
             )}
             {loading ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <Spinner className="size-4 text-muted-foreground" />
             ) : account?.photo ? (
               <img
                 src={account.photo}

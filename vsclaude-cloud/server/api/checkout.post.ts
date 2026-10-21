@@ -1,9 +1,9 @@
 import { defineHandler } from "nitro"
 
 import { authenticate } from "../utils/auth.ts"
-import { isCreditItem } from "../utils/billing.ts"
+import { CREDIT_PACKS, isCreditItem } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
-import { paddleApi, paddleConfig } from "../utils/paddle.ts"
+import { paddleApi, paddleConfig, paddleCustomerOf } from "../utils/paddle.ts"
 
 /**
  * `POST /api/checkout` `{ item }` — a Paddle card checkout for the signed-in
@@ -40,16 +40,30 @@ export default defineHandler(async (event) => {
     noteRequest(event, { refused: "unknown item" })
     return Response.json({ error: "Nothing here sells that." }, { status: 400 })
   }
+  if (CREDIT_PACKS[item].bankOnly) {
+    noteRequest(event, { refused: `${item} is bank transfer only` })
+    return Response.json(
+      { error: "That pack is sold by bank transfer only." },
+      { status: 400 }
+    )
+  }
   const price = paddle.prices[item]
   if (!price) {
     noteRequest(event, { refused: `no price configured for ${item}` })
     return Response.json({ error: "That is not on sale yet." }, { status: 500 })
   }
 
+  // The email Google gave us, so the checkout does not ask for it again. If
+  // Paddle cannot give a customer, the checkout still opens — and asks.
+  const customer = user.email
+    ? await paddleCustomerOf(user.email, user.uid, event.req.signal)
+    : null
+
   const created = await paddleApi(
     "/transactions",
     {
       items: [{ price_id: price, quantity: 1 }],
+      ...(customer ? { customer_id: customer } : {}),
       custom_data: { uid: user.uid },
     },
     event.req.signal

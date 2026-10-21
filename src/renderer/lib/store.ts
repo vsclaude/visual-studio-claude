@@ -145,18 +145,6 @@ type StudioState = {
   /** Each folder's checked-out branch, or null when it is not a git
    * repository. Missing until the branch has been read. */
   branches: Record<string, string | null>
-  /**
-   * For each folder, the repository it is a `git worktree` checkout **of** —
-   * null for an ordinary project, missing until it has been asked.
-   *
-   * Read beside the branch and in the same pass, because it is the same kind of
-   * fact: something git knows about the directory that nothing in the manifest
-   * records. It is what decides whether a project's menu offers `Remove
-   * worktree`, and it is deliberately not a flag written down when one is made —
-   * a checkout created in somebody's own shell and then added as a folder
-   * answers exactly like one this app made.
-   */
-  worktrees: Record<string, string | null>
 
   pane: Pane
   /**
@@ -225,8 +213,8 @@ type StudioState = {
   addFolder: (input: { path: string; name: string }) => Promise<void>
   /**
    * An empty directory under `parent`, added as a project, for a template's
-   * CLI to fill. Resolves with the new folder's id, like `addWorktree`, so the
-   * dialog can start the CLI in its shell; rejects for the dialog to show.
+   * CLI to fill. Resolves with the new folder's id, so the dialog can start the
+   * CLI in its shell; rejects for the dialog to show.
    */
   createProject: (input: {
     parent: string
@@ -242,36 +230,6 @@ type StudioState = {
   renameFolder: (id: string, name: string) => Promise<void>
   /** Drops a folder from the workspace. The directory itself is untouched. */
   removeFolder: (id: string) => Promise<void>
-  /**
-   * A second checkout of one of the projects, added as a project of its own.
-   *
-   * Rejects with git's own sentence rather than catching, the way `addFolder`
-   * does and for the same reason: the dialog that asked is the only place a
-   * branch name can be corrected.
-   */
-  addWorktree: (input: {
-    folderId: string
-    branch: string
-    name: string
-    base?: string
-  }) => Promise<string | null>
-  /**
-   * Names a checkout after the chat running in it, once that chat has a title
-   * of its own.
-   *
-   * Called for **every** chat that is titled — the answer is normally that this
-   * had nothing to do with a worktree, and main says so without writing
-   * anything. Swallows its failures: this is a nicety on top of a turn the user
-   * is reading, and a checkout that keeps its placeholder branch is not a
-   * broken one.
-   */
-  nameWorktree: (folderId: string, title: string) => Promise<void>
-  /** The checkout removed and the project dropped; its branch only when
-   * `deleteBranch` says so — the branch is the work. */
-  removeWorktree: (
-    folderId: string,
-    options: { deleteBranch: boolean }
-  ) => Promise<void>
 }
 
 /**
@@ -281,26 +239,20 @@ type StudioState = {
 let initPromise: Promise<void> | null = null
 
 export const useStudio = create<StudioState>((set, get) => {
-  /** Reads each folder's branch and whether it is a checkout of another one,
-   * dropping any that leaves the workspace while the reads are in flight. */
+  /** Reads each folder's branch, dropping any that leaves the workspace while
+   * the reads are in flight. */
   async function load(folders: WorkspaceFolder[]): Promise<void> {
     set({ folders })
 
     await Promise.all(
       folders.map(async (folder) => {
-        // Together, so a folder costs one round of git rather than two rounds
-        // a frame apart — and so the pair is written down at one moment.
-        const [branch, worktree] = await Promise.all([
-          repo.gitBranch(folder.id).catch(() => null),
-          repo.gitWorktreeRepo(folder.id).catch(() => null),
-        ])
+        const branch = await repo.gitBranch(folder.id).catch(() => null)
         // Discarded if the folder was removed while this was in flight: a
         // branch for a folder nothing shows is a leak, not a cache.
         if (!get().folders.some((current) => current.id === folder.id)) return
 
         set((state) => ({
           branches: { ...state.branches, [folder.id]: branch },
-          worktrees: { ...state.worktrees, [folder.id]: worktree },
         }))
       })
     )
@@ -373,9 +325,6 @@ export const useStudio = create<StudioState>((set, get) => {
       branches: Object.fromEntries(
         Object.entries(state.branches).filter(([id]) => kept.has(id))
       ),
-      worktrees: Object.fromEntries(
-        Object.entries(state.worktrees).filter(([id]) => kept.has(id))
-      ),
     }))
   }
 
@@ -385,7 +334,6 @@ export const useStudio = create<StudioState>((set, get) => {
 
     folders: [],
     branches: {},
-    worktrees: {},
 
     // `files`, because a pane the studio does not draw cannot be the one it
     // starts on — this was `database` while that panel still existed.
@@ -457,33 +405,6 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async removeFolder(id) {
       prune((await repo.removeFolder(id)).folders)
-    },
-
-    async addWorktree(input) {
-      const had = new Set(get().folders.map((folder) => folder.id))
-      // Not caught, for the reason `addFolder` does not catch: git's sentence
-      // belongs in the dialog that named the branch.
-      const workspace = await repo.addWorktree(input)
-      await load(workspace.folders)
-
-      // Which folder is new, so the dialog can open a chat in it. Found by
-      // difference rather than taken off the end: where the manifest appends is
-      // the manifest's business.
-      return workspace.folders.find((folder) => !had.has(folder.id))?.id ?? null
-    },
-
-    async nameWorktree(folderId, title) {
-      const workspace = await repo
-        .nameWorktree(folderId, title)
-        .catch(() => null)
-      // Null is the ordinary answer — nothing was renamed, so there is nothing
-      // to re-read. A `load` on every titled chat would be a `git branch` per
-      // project for an answer that is almost always "no change".
-      if (workspace) await load(workspace.folders)
-    },
-
-    async removeWorktree(folderId, options) {
-      prune((await repo.removeWorktree(folderId, options)).folders)
     },
   }
 })

@@ -85,8 +85,46 @@ export function refsOf(payload: unknown): {
 /** What a webhook did, for the log line and for a test to check. */
 export type Applied =
   | { kind: "ignored"; reason: string }
-  | { kind: "credits"; account: Account; added: number }
-  | { kind: "refund"; account: Account; removed: number }
+  | {
+      kind: "credits"
+      transactionId: string
+      account: Account
+      added: number
+      purchase: Purchase
+    }
+  | {
+      kind: "refund"
+      transactionId: string
+      account: Account
+      removed: number
+    }
+
+/**
+ * What was bought and paid, for the transaction's row: the pack — several
+ * joined by commas, which this server's own checkouts never make — and the
+ * total charged, in the currency's smallest unit as Paddle states it (a đồng
+ * for VND, a cent for USD), since Paddle may charge in the buyer's currency.
+ */
+export type Purchase = {
+  item: string | null
+  amount: number | null
+  currency: string | null
+}
+
+function purchaseOf(
+  data: Record<string, unknown>,
+  items: { id: CreditItem }[]
+): Purchase {
+  const details = data.details as
+    { totals?: { grand_total?: unknown } } | null | undefined
+  const total = Number(details?.totals?.grand_total)
+  const currency = data.currency_code
+  return {
+    item: [...new Set(items.map((item) => item.id))].join(",") || null,
+    amount: Number.isFinite(total) ? total : null,
+    currency: typeof currency === "string" && currency ? currency : null,
+  }
+}
 
 type Item = { price?: { id?: unknown }; quantity?: unknown }
 
@@ -119,7 +157,8 @@ export function applyWebhook(
   const id = typeof data.id === "string" ? data.id : ""
 
   if (event === "transaction.completed") {
-    const added = itemsOf(data, catalog).reduce(
+    const items = itemsOf(data, catalog)
+    const added = items.reduce(
       (sum, item) => sum + CREDIT_PACKS[item.id].credits * item.quantity,
       0
     )
@@ -129,7 +168,9 @@ export function applyWebhook(
     }
     return {
       kind: "credits",
+      transactionId: id,
       added,
+      purchase: purchaseOf(data, items),
       account: {
         ...account,
         credits: account.credits + added,
@@ -153,6 +194,7 @@ export function applyWebhook(
     const removed = Math.min(account.credits, order.credits)
     return {
       kind: "refund",
+      transactionId: order.id,
       removed,
       account: {
         ...account,

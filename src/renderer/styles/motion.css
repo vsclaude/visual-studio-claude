@@ -1,8 +1,9 @@
 /*
- * The studio's own motion: the launch screen's, and the chat's loading
- * indicator — three dots and a shimmer on `Working…` (`chat-skeleton.tsx`). That
- * indicator was an SVG choreographed in five keyframe blocks, then a
- * spritesheet, then a GIF, and briefly a stock spinner.
+ * The studio's own motion: the launch screen's, and the two loaders drawn out
+ * of the VS lettermark — the spinner, and the chat's `Working…` with its
+ * shimmer (`chat-skeleton.tsx`). That indicator was an SVG choreographed in
+ * five keyframe blocks, then a spritesheet, then a GIF, briefly a stock
+ * spinner, then three dots.
  *
  * The rest of the studio animates through what shadcn's components bring with
  * them and nothing else. It is a file of its own rather than a block in
@@ -51,15 +52,18 @@
   --animate-breathe: breathe 2.6s ease-in-out infinite;
   --animate-sweep: sweep 1.8s ease-in-out infinite;
 
-  /* The chat's turn indicator. The dots are staggered by the caller; the
-     shimmer holds still for the last third of its cycle so the light reads as
-     passing over the word rather than circling it. */
-  --animate-dot: dot 1.2s ease-in-out infinite;
+  /* The chat's turn indicator, `.vs-trace` below: the lettermark written,
+     held, and wiped. The shimmer holds still for the last third of its cycle
+     so the light reads as passing over the word rather than circling it. */
+  --animate-trace-v: trace-v 2.4s var(--ease-out-quint) infinite;
+  --animate-trace-s: trace-s 2.4s var(--ease-out-quint) infinite;
   --animate-shimmer: shimmer 2.4s ease-in-out infinite;
 
-  /* `.spinner`, below. Two loops on one clock: the grid breathes apart while
-     its eight outer cells step one place round the middle. */
-  --animate-shuffle: shuffle-spread 1s infinite, shuffle-step 1s infinite;
+  /* `.spinner`, below: one light running the V and then the S, on one clock.
+     Linear, because a runner that slows at each end reads as two loaders
+     taking turns rather than one stroke being written. */
+  --animate-run-v: run-v 1.1s linear infinite;
+  --animate-run-s: run-s 1.1s linear infinite;
 
   /* The setup screen's illustrations (`claude-setup.tsx`): the chips beside a
      page's picture drifting a few pixels, slow enough to read as weightless
@@ -167,19 +171,6 @@
   }
 }
 
-@keyframes dot {
-  0%,
-  70%,
-  100% {
-    opacity: 0.35;
-    transform: translateY(0) scale(0.8);
-  }
-  35% {
-    opacity: 1;
-    transform: translateY(-0.1875rem) scale(1);
-  }
-}
-
 @keyframes shimmer {
   from {
     background-position: 100% 0;
@@ -191,57 +182,77 @@
 }
 
 /*
- * The original grows its box from 45px to 65px around 16px cells. A row cannot
- * have its spinner change width under the text beside it, so the box holds
- * still and the cells shrink instead — 16/45 to 16/65 of it — which is the same
- * picture: percent positions keep the corners in the corners at either size.
+ * The lettermark's strokes carry `pathLength="100"`, so every offset here is a
+ * percentage of its own stroke whatever its real length. A dash of `d` with a
+ * gap of 200 is one dash and nothing after it: an offset of `d` parks it just
+ * before the stroke starts, and `-100` just past its end.
+ *
+ * The V and the S overlap by a tenth of the cycle, so the light is leaving the
+ * V's right arm as it enters the S's top — the order the glyph is written in.
  */
-@keyframes shuffle-spread {
-  0%,
-  100% {
-    background-size: 36% 36%;
+@keyframes run-v {
+  0% {
+    stroke-dashoffset: 34;
   }
-  35%,
-  65% {
-    background-size: 25% 25%;
+  55%,
+  100% {
+    stroke-dashoffset: -100;
   }
 }
 
-@keyframes shuffle-step {
+@keyframes run-s {
   0%,
-  40% {
-    background-position:
-      0 0,
-      0 50%,
-      0 100%,
-      50% 100%,
-      100% 100%,
-      100% 50%,
-      100% 0,
-      50% 0,
-      50% 50%;
+  45% {
+    stroke-dashoffset: 34;
   }
-  60%,
   100% {
-    background-position:
-      0 50%,
-      0 100%,
-      50% 100%,
-      100% 100%,
-      100% 50%,
-      100% 0,
-      50% 0,
-      0 0,
-      50% 50%;
+    stroke-dashoffset: -100;
   }
 }
 
 /*
- * The studio's spinner (`ui/spinner.tsx`): a 3×3 grid whose outer cells step
- * round the middle one, after css-loaders.com's `l32`. Everywhere but the
- * chat's `Working…`, which has its dots (`chat-skeleton.tsx`). It replaced an
- * arc, which replaced lucide's `Loader2`, whose eight ticks smeared into a grey
- * blot at the 12px most rows draw it at; nine squares stay squares there.
+ * The chat's trace: drawn on (offset 100 → 0), held whole, then wiped from the
+ * start (0 → -100) — so the ink leaves the way it arrived instead of fading,
+ * and the next stroke begins on an empty glyph.
+ */
+@keyframes trace-v {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  30%,
+  68% {
+    stroke-dashoffset: 0;
+  }
+  90%,
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes trace-s {
+  0%,
+  15% {
+    stroke-dashoffset: 100;
+  }
+  48%,
+  74% {
+    stroke-dashoffset: 0;
+  }
+  96%,
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+/*
+ * The studio's spinner (`ui/spinner.tsx`): the VS lettermark faint, and a
+ * light running along it — down the V, up its right arm, and on through the S.
+ * Everywhere but the chat's `Working…`, which writes the whole glyph
+ * (`.vs-trace`). It replaced a 3×3 shuffling grid, which replaced an arc, which
+ * replaced lucide's `Loader2`, whose eight ticks smeared into a grey blot at the
+ * 12px most rows draw it at. The glyph holds there: at that size its stroke is
+ * still two pixels, and it is the one shape in the studio a user already reads
+ * as this app.
  *
  * Painted in the brand colour, not the text's: a loader is the one mark on a
  * row that is the app speaking rather than the content, and `color` set here
@@ -249,7 +260,7 @@
  * from the icon. On a filled primary button that would be the button's own
  * colour, so there it takes the button's text instead.
  *
- * It animates `background-*`, which repaints rather than composites — the
+ * It animates `stroke-dashoffset`, which repaints rather than composites — the
  * same exception the shimmer below makes, for the same reason: what repaints
  * is a 12px box. `scale` is the icon's own inset: lucide draws in three
  * quarters of the box, and a spinner swapped in at the same class should not
@@ -257,20 +268,61 @@
  * caller's `translate-*` instead of being replaced by it.
  */
 .spinner {
-  --cell: no-repeat linear-gradient(currentColor 0 0);
   color: var(--primary);
   display: inline-block;
-  aspect-ratio: 1;
-  scale: 0.85;
-  background:
-    var(--cell), var(--cell), var(--cell), var(--cell), var(--cell),
-    var(--cell), var(--cell), var(--cell), var(--cell);
-  background-size: 36% 36%;
-  animation: var(--animate-shuffle);
+  scale: 0.9;
+  overflow: visible;
+}
+
+.spinner-track {
+  opacity: 0.28;
+}
+
+.spinner-run {
+  stroke-dasharray: 34 200;
+  stroke-dashoffset: 34;
+}
+
+.spinner-run-v {
+  animation: var(--animate-run-v);
+}
+
+.spinner-run-s {
+  animation: var(--animate-run-s);
 }
 
 .bg-primary .spinner {
   color: var(--primary-foreground);
+}
+
+/*
+ * The chat's `Working…` mark (`chat-skeleton.tsx`): the lettermark written in
+ * the logo's own violet-to-amber over a faint copy of itself. Its height is the
+ * line's — `1em` of the 12px row is the cap height of the text beside it, the
+ * way `Wordmark` sits — and its width follows from the glyph.
+ */
+.vs-trace {
+  height: 1.05em;
+  width: auto;
+  overflow: visible;
+}
+
+.vs-trace-ghost {
+  opacity: 0.15;
+}
+
+.vs-trace-v,
+.vs-trace-s {
+  stroke-dasharray: 100 200;
+  stroke-dashoffset: 100;
+}
+
+.vs-trace-v {
+  animation: var(--animate-trace-v);
+}
+
+.vs-trace-s {
+  animation: var(--animate-trace-s);
 }
 
 /*
@@ -370,10 +422,10 @@
  * screen saying the launch has not stalled, and a spinner that does not spin
  * is not a calmer app, it is one that looks hung. Both are opacity in place,
  * which is the kind of motion this setting is least aimed at. `.spinner` keeps
- * shuffling for the same reason, and has no opacity loop to fall back to — a
- * still grid is exactly the hung app. The chat's dots
- * follow the same argument and drop their hop for that same breathing; the
- * shimmer is pure decoration beside them and stops.
+ * running for the same reason — a light along a still glyph is no movement of
+ * the page, and a still glyph is exactly the hung app. The chat's trace
+ * follows the same argument and drops its writing for that same breathing, the
+ * whole glyph drawn; the shimmer is pure decoration beside it and stops.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -382,7 +434,8 @@
     --animate-fade: none;
     --animate-pop: none;
     --animate-settle: none;
-    --animate-dot: breathe 1.2s ease-in-out infinite;
+    --animate-trace-v: breathe 1.6s ease-in-out infinite;
+    --animate-trace-s: breathe 1.6s ease-in-out infinite;
     --animate-shimmer: none;
     --animate-float: none;
     --animate-coin-land: fade 200ms ease-out backwards;
@@ -402,5 +455,12 @@
      travelling and breathes in place instead. */
   .border-run[data-running]::after {
     animation: breathe 2.6s ease-in-out infinite;
+  }
+
+  /* Breathing replaces the writing, so the glyph has to be there whole to
+     breathe — its resting offset is the undrawn one. */
+  .vs-trace-v,
+  .vs-trace-s {
+    stroke-dashoffset: 0;
   }
 }

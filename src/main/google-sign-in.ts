@@ -1,17 +1,16 @@
 import { randomBytes } from "node:crypto"
 
-import { SIGN_IN_CANCELLED } from "../shared/firebase"
+import { SIGN_IN_CANCELLED } from "../shared/sign-in"
 
 /**
  * Google sign-in for a desktop window, which cannot run Google's own flow.
  *
- * Firebase's popup needs an origin on the project's authorized domains, and the
- * built renderer is `app://studio`, which is not one. Google also refuses
- * OAuth from an embedded browser, so the flow cannot run in a window of this
- * app at all. Instead the user's own browser opens `/signin/<nonce>` on the
- * free AI's server (`vsclaude-cloud`), that page runs the ordinary popup and
- * leaves the Google ID token with the server, and this asks the server for it
- * until it is there.
+ * Google refuses OAuth from an embedded browser, and the built renderer is
+ * `app://studio`, which no OAuth client can name as a redirect — so the flow
+ * cannot run in a window of this app at all. Instead the user's own browser
+ * opens `/signin/<nonce>` on the free AI's server (`vsclaude-cloud`), which
+ * sends it to Google and back, and leaves a session token of its own with the
+ * nonce; this asks the server for it until it is there.
  *
  * It used to be a server of this app's own on `localhost`, one per attempt,
  * which the page posted back to. That is gone: a port opened on the user's
@@ -35,8 +34,8 @@ const POLL_MS = 1_500
 let pending: ((outcome: string | Error) => void) | null = null
 
 /**
- * Signs in with Google through the user's browser and resolves with the Google
- * ID token the renderer hands to Firebase.
+ * Signs in with Google through the user's browser and resolves with the
+ * server's session token, which the renderer keeps.
  *
  * `server` is the free AI's base URL (`freeAiUrl`); `openUrl` is how the
  * browser is opened — the main process's `shell`, passed in so this module
@@ -125,8 +124,8 @@ export function signInWithGoogle(
       if (done) return
       if (answer) {
         finish(
-          "idToken" in answer
-            ? answer.idToken
+          "token" in answer
+            ? answer.token
             : new Error(answer.error ?? "Google returned no sign-in.")
         )
         return
@@ -160,7 +159,7 @@ function describe(error: unknown): string {
  * else is not an answer and is refused. */
 export function parseAnswer(
   body: string
-): { idToken: string } | { error?: string } | null {
+): { token: string } | { error?: string } | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(body)
@@ -170,9 +169,9 @@ export function parseAnswer(
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     return null
   }
-  const { idToken, error } = parsed as Record<string, unknown>
-  if (typeof idToken === "string" && idToken.length > 0) return { idToken }
-  if (idToken === undefined) {
+  const { token, error } = parsed as Record<string, unknown>
+  if (typeof token === "string" && token.length > 0) return { token }
+  if (token === undefined) {
     return typeof error === "string" ? { error } : {}
   }
   return null

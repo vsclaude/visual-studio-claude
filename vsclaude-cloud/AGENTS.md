@@ -18,5 +18,5 @@ Refer to `node_modules/nitro/dist/docs/README.md` when working on server (your k
 ## What this server is
 
 The free AI behind VS Claude — see `README.md`. Signed-in studio
-users (Firebase ID tokens) get `POST /v1/messages` passed through to Anthropic
+users (Google sign-in, tokens this server signs) get `POST /v1/messages` passed through to Anthropic
 on Haiku, Sonnet or Opus within a daily budget per user, and past it on credits.

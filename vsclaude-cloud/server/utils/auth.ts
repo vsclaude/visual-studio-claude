@@ -2,14 +2,8 @@ import type { H3Event } from "nitro"
 import { useRuntimeConfig } from "nitro/runtime-config"
 
 import { anthropicError } from "./anthropic.ts"
-import {
-  GOOGLE_JWKS,
-  keysAt,
-  tokenOf,
-  verifyIdToken,
-  type FirebaseUser,
-} from "./firebase.ts"
 import { noteRequest } from "./log.ts"
+import { tokenOf, verifyAccess, type User } from "./session.ts"
 
 /**
  * The signed-in studio user a request is from, or the refusal to answer with.
@@ -21,9 +15,7 @@ import { noteRequest } from "./log.ts"
  * notwithstanding. A 400 is shown at once, with the message below, which is
  * the point of the message.
  */
-export async function authenticate(
-  event: H3Event
-): Promise<FirebaseUser | Response> {
+export async function authenticate(event: H3Event): Promise<User | Response> {
   const token = tokenOf(event.req.headers)
   if (!token) {
     noteRequest(event, { refused: "no token" })
@@ -33,11 +25,9 @@ export async function authenticate(
       "Sign in to VS Claude to use the free AI."
     )
   }
-  const config = useRuntimeConfig()
-  const verified = await verifyIdToken(
+  const verified = await verifyAccess(
     token,
-    config.firebaseProjectId,
-    keysAt(config.firebaseJwksUrl || GOOGLE_JWKS)
+    String(useRuntimeConfig().sessionSecret)
   )
   if (!verified.ok) {
     noteRequest(event, { refused: verified.reason })

@@ -5,8 +5,6 @@ import {
   ExternalLink,
   Folder,
   FolderOpen,
-  GitBranch,
-  GitBranchPlus,
   Image as ImageIcon,
   ImageOff,
   MessageSquare,
@@ -37,7 +35,6 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/lib/projects"
-import { projectTree } from "@/lib/project-tree"
 import {
   chooseProjectIcon,
   resetProjectIcon,
@@ -48,9 +45,6 @@ import { IconButton } from "../icon-button"
 import { RenameDialog } from "../rename-dialog"
 import { RenameRow, useMenuFocusHandoff } from "../rename-row"
 import { SideRow } from "../side-row"
-import { NewWorktreeDialog } from "./new-worktree-dialog"
-import { RemoveWorktreeDialog } from "./remove-worktree-dialog"
-import { useWorktreeStatus, WorktreeMarks } from "./worktree-status"
 import { useShells } from "@/lib/shell/store"
 import { chatsOf, ungroupedChats, useChats } from "@/lib/chat/store"
 import type { WorkspaceFolder, Chat } from "@shared/api"
@@ -159,43 +153,26 @@ export function ProjectsSection() {
   /** Which project is being renamed. One dialog for the whole list, for the
    * reason above. */
   const [renaming, setRenaming] = useState<WorkspaceFolder | null>(null)
-  /** Which project is being checked out again, and which checkout is being
-   * taken off the disk. One of each for the whole list, for the reason above. */
-  const [branching, setBranching] = useState<WorkspaceFolder | null>(null)
-  const [unchecking, setUnchecking] = useState<WorkspaceFolder | null>(null)
   /** Which template-made project is being moved to the Trash. */
   const [trashing, setTrashing] = useState<WorkspaceFolder | null>(null)
-  /** Which repository each project is a checkout of — what decides whether
-   * `Remove worktree` is on its menu at all. */
-  const worktrees = useStudio((state) => state.worktrees)
-  /** A failed `git worktree remove`, shown against the list: the confirmation
-   * that asked is gone by the time git answers, and there is no field here to
+  /** A failed Trash or icon change, shown against the list: the confirmation
+   * that asked is gone by the time main answers, and there is no field here to
    * correct anything in. */
   const [failure, setFailure] = useState<string | null>(null)
 
-  /** The same list, with each checkout filed under the project it was cut from
-   * — see `lib/project-tree.ts` for why that is the column's shape and not the
-   * data model's. */
-  const tree = projectTree(folders, worktrees)
-
   /**
-   * One project's row, at either depth.
+   * One project's row.
    *
    * A function rather than a second component: every handler on it reaches the
-   * dialogs this section owns, and a checkout is a project in every one of them
-   * — the same `+`, the same removal, and `New worktree…` included, since a
-   * second checkout of a branch is cut from the repository either way.
-   *
-   * `covered` is the chats the row answers for while it is shut, which is not
-   * the same question as which chats are filed under it.
+   * dialogs this section owns. `covered` is the chats the row answers for while
+   * it is shut.
    */
-  function project(folder: WorkspaceFolder, indent: number, covered: Chat[]) {
+  function project(folder: WorkspaceFolder, covered: Chat[]) {
     return (
       <ProjectRow
         name={folder.name}
         folderId={folder.id}
         path={folder.path}
-        indent={indent}
         shut={collapsed.includes(folder.id)}
         // Only while it is shut: open, the chat rows underneath say this one at
         // a time and in more detail, and a count repeating what is directly
@@ -209,7 +186,6 @@ export function ProjectsSection() {
         onNewChat={() =>
           void useChats.getState().create({ folderId: folder.id })
         }
-        onNewWorktree={() => setBranching(folder)}
         // Pointing the dock first is what makes the `+`'s own `add` open the
         // shell here rather than in whichever project was clicked last.
         onNewTerminal={() => {
@@ -217,39 +193,18 @@ export function ProjectsSection() {
           shells.showFor(folder.id)
           shells.add()
         }}
-        // Not on a checkout, whose branch mark is saying something a picture
-        // would not.
-        onChangeIcon={
-          indent > 0
-            ? null
-            : () => {
-                setFailure(null)
-                void chooseProjectIcon(folder.id).catch((error: unknown) =>
-                  setFailure(
-                    error instanceof Error ? error.message : String(error)
-                  )
-                )
-              }
-        }
-        onResetIcon={indent > 0 ? null : () => void resetProjectIcon(folder.id)}
+        onChangeIcon={() => {
+          setFailure(null)
+          void chooseProjectIcon(folder.id).catch((error: unknown) =>
+            setFailure(error instanceof Error ? error.message : String(error))
+          )
+        }}
+        onResetIcon={() => void resetProjectIcon(folder.id)}
         onRename={() => setRenaming(folder)}
-        // A checkout has `Remove worktree…` instead: forgetting the folder alone
-        // would strand the directory and its branch with no row left to reach
-        // them from.
-        onRemove={worktrees[folder.id] ? null : () => setRemoving(folder)}
-        // Only for a project that is one: an ordinary folder has no checkout to
-        // remove, and a menu item that explained that would be a menu item
-        // nobody can use.
-        onRemoveWorktree={
-          worktrees[folder.id] ? () => setUnchecking(folder) : null
-        }
+        onRemove={() => setRemoving(folder)}
         // Only what this app made: `template` is written by `createProject`
         // alone, so an added folder never offers to be deleted.
-        onTrash={
-          folder.template && !worktrees[folder.id]
-            ? () => setTrashing(folder)
-            : null
-        }
+        onTrash={folder.template ? () => setTrashing(folder) : null}
         onToggle={() => {
           toggleFolder(folder.id)
           // And the dock's shell follows: a project row is the one place this
@@ -277,52 +232,12 @@ export function ProjectsSection() {
           </p>
         )}
 
-        {tree.map((branch) => {
-          const shut = collapsed.includes(branch.folder.id)
-          /*
-            A shut project answers for its checkouts as well, and that is not
-            tidiness: nesting means folding a project hides the rows underneath
-            it, so a turn running in a checkout would go completely still in the
-            only list that mentions it. The chats of a checkout that is itself
-            shut are already in here — a checkout's own row draws its own count
-            when the project above it is open.
-          */
-          const covered = shut
-            ? [
-                ...chatsOf(listed, branch.folder.id),
-                ...branch.checkouts.flatMap((checkout) =>
-                  chatsOf(listed, checkout.id)
-                ),
-              ]
-            : []
+        {folders.map((folder) => {
+          const shut = collapsed.includes(folder.id)
           return (
-            <div key={branch.folder.id}>
-              {project(branch.folder, 0, covered)}
-              {!shut && (
-                <>
-                  <ProjectChats folderId={branch.folder.id} indent={1} />
-                  {/*
-                    The checkouts after the project's own chats rather than
-                    before them: a checkout is set-up somebody did once, and the
-                    conversations are what the column is read for.
-                  */}
-                  {branch.checkouts.map((checkout) => {
-                    const checkoutShut = collapsed.includes(checkout.id)
-                    return (
-                      <div key={checkout.id}>
-                        {project(
-                          checkout,
-                          1,
-                          checkoutShut ? chatsOf(listed, checkout.id) : []
-                        )}
-                        {!checkoutShut && (
-                          <ProjectChats folderId={checkout.id} indent={2} />
-                        )}
-                      </div>
-                    )
-                  })}
-                </>
-              )}
+            <div key={folder.id}>
+              {project(folder, shut ? chatsOf(listed, folder.id) : [])}
+              {!shut && <ProjectChats folderId={folder.id} />}
             </div>
           )
         })}
@@ -345,13 +260,11 @@ export function ProjectsSection() {
               // No `+`: it needs a project, and this row names the absence of
               // one.
               onNewChat={null}
-              onNewWorktree={null}
               onNewTerminal={null}
               onChangeIcon={null}
               onResetIcon={null}
               onRename={null}
               onRemove={null}
-              onRemoveWorktree={null}
               onTrash={null}
               onToggle={() => toggleFolder(UNGROUPED_ID)}
             />
@@ -469,35 +382,8 @@ export function ProjectsSection() {
         />
       )}
 
-      {branching && (
-        <NewWorktreeDialog
-          folder={branching}
-          onClose={() => setBranching(null)}
-        />
-      )}
-
-      {unchecking && (
-        <RemoveWorktreeDialog
-          folder={unchecking}
-          onClose={() => setUnchecking(null)}
-          // Not caught: a refusal is the dialog's to show, beside the Remove
-          // that can be pressed again.
-          onRemove={async (options) => {
-            await useStudio.getState().removeWorktree(unchecking.id, options)
-            // Its chats went with it, main-side. Awaited so they leave the
-            // column with the dialog, but not a failure of the removal: the
-            // checkout is already gone, and Remove again would only be refused.
-            await useChats
-              .getState()
-              .refresh()
-              .catch(() => {})
-          }}
-        />
-      )}
-
-      {/* Under the list rather than in a toast: git refusing to remove a
-          checkout is about one of the rows above, and it stays until the next
-          attempt says otherwise. */}
+      {/* Under the list rather than in a toast: a refusal is about one of the
+          rows above, and it stays until the next attempt says otherwise. */}
       {failure && (
         <p className="shrink-0 border-t bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
           {failure}
@@ -542,31 +428,23 @@ const PILL_ACTIVE = "shadow-none"
  * offering the same.
  *
  * The `+` is Conductor's, and it belongs on the row rather than in a header
- * above the list: it acts on *this* project. It made a `git worktree` once, and
- * that was the whole complaint — a branch to name and a directory to remove
- * afterwards, before a question about the project somebody already had open,
- * when a chat is what they wanted in nearly every case. So a checkout is the
- * button **beside** it now rather than the thing it does: the same row, one
- * gesture along, for the few times isolation is the point. `onNewChat` is
- * nullable for the one row that is not a project — see `UNGROUPED_ID`.
+ * above the list: it acts on *this* project. `onNewChat` is nullable for the
+ * one row that is not a project — see `UNGROUPED_ID`.
  */
 function ProjectRow({
   name,
   folderId,
   path,
-  indent = 0,
   shut,
   activity,
   unread,
   onToggle,
   onNewChat,
-  onNewWorktree,
   onNewTerminal,
   onChangeIcon,
   onResetIcon,
   onRename,
   onRemove,
-  onRemoveWorktree,
   onTrash,
 }: {
   name: string
@@ -576,9 +454,6 @@ function ProjectRow({
    * the title bar crumb's menu, and belong on the row that names the project.
    * Null for `Ungrouped`, which is no directory. */
   path: string | null
-  /** 0 for a project, 1 for a `git worktree` checkout of one — the column's
-   * only nesting, and only the column's. See `lib/project-tree.ts`. */
-  indent?: number
   shut: boolean
   /**
    * What is happening in this project's chats, or null when the row is not the
@@ -603,9 +478,6 @@ function ProjectRow({
   unread: number
   onToggle: () => void
   onNewChat: (() => void) | null
-  /** Asks for a second checkout of this project — the dialog is the section's,
-   * for the reason `onRemove`'s is. Nullable for the same row. */
-  onNewWorktree: (() => void) | null
   /** Opens a shell in this project's directory, in the dock. Clicking the row
    * no longer starts one, so this is the way to ask for it by name. Null for
    * `Ungrouped`, which is no directory. */
@@ -625,41 +497,19 @@ function ProjectRow({
    */
   onRemove: (() => void) | null
   /**
-   * Asks to delete the checkout this project *is*, or null for a project that
-   * is not one.
-   *
-   * Null is the ordinary case and is why this is a second prop rather than a
-   * flag on `onRemove`: the two are different gestures with different stakes —
-   * one forgets a folder, one deletes a directory — and a single item that
-   * changed meaning depending on the row would be the worst of both.
-   */
-  onRemoveWorktree: (() => void) | null
-  /**
    * Asks to move this project's directory to the Trash, or null for every
    * project this app did not make from a template — which is most of them, and
-   * is the point: a second prop rather than a flag, for `onRemoveWorktree`'s
-   * reason.
+   * is the point: a second prop rather than a flag on `onRemove`, since one
+   * forgets a folder and the other deletes a directory.
    */
   onTrash: (() => void) | null
 }) {
   // Open and shut rather than one mark rotated: a folder is the thing being
   // drawn, and its two states are two glyphs rather than two angles.
-  //
-  // A checkout takes a branch mark instead, at either state. The indent already
-  // says it belongs to the project above it; what it does not say is *how* —
-  // and "a folder inside this project" is the wrong answer badly enough to be
-  // worth one glyph, since the directory is not in the project at all.
-  const Mark = indent > 0 ? GitBranch : shut ? Folder : FolderOpen
+  const Mark = shut ? Folder : FolderOpen
   // The project's own icon — the one chosen for it, or its source's favicon —
-  // says which project this is faster than its name does. Not for a checkout,
-  // whose branch mark is saying something a picture would not.
-  const favicon = useProjectIcon(indent > 0 ? null : folderId)
-  // Whether this row is a checkout is git's answer, not the indent's: one whose
-  // repository is not in the workspace sits at the top level.
-  const checkout = useStudio((state) =>
-    folderId ? !!state.worktrees[folderId] : false
-  )
-  const worktree = useWorktreeStatus(checkout ? folderId : null)
+  // says which project this is faster than its name does.
+  const favicon = useProjectIcon(folderId)
 
   const running = activity !== null && isRunning(activity)
   // Only where the row has nothing more immediate to say. A project with a turn
@@ -669,7 +519,6 @@ function ProjectRow({
   const row = (
     <div className="group/project relative flex items-center">
       <SideRow
-        indent={indent}
         onClick={onToggle}
         title={
           running
@@ -715,15 +564,6 @@ function ProjectRow({
           />
         )}
         <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-
-        {/* Before the activity marks, and hidden on hover with them: the
-            row's buttons land on this same edge. */}
-        {worktree && (
-          <WorktreeMarks
-            status={worktree}
-            className="group-hover/project:invisible"
-          />
-        )}
 
         {/*
           The count, at the end the chat rows put their age at, so a shut
@@ -790,18 +630,6 @@ function ProjectRow({
       */}
       {onNewChat && (
         <div className="absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/project:opacity-100 focus-within:opacity-100">
-          {/* First, because it is reached for least: a checkout is set-up, done
-              once for a piece of work, where the two beside it are how that work
-              is then decided and done. */}
-          {onNewWorktree && (
-            <IconButton
-              label={`New worktree of ${name}`}
-              onClick={onNewWorktree}
-              className="size-5"
-            >
-              <GitBranchPlus className="size-3" />
-            </IconButton>
-          )}
           <IconButton
             label={`New chat in ${name}`}
             onClick={onNewChat}
@@ -826,12 +654,6 @@ function ProjectRow({
           <MessageSquare className="text-muted-foreground" />
           New chat here
         </ContextMenuItem>
-        {onNewWorktree && (
-          <ContextMenuItem onClick={onNewWorktree}>
-            <GitBranchPlus className="text-muted-foreground" />
-            New worktree…
-          </ContextMenuItem>
-        )}
         {onNewTerminal && (
           <ContextMenuItem onClick={onNewTerminal}>
             <SquareTerminal className="text-muted-foreground" />
@@ -874,7 +696,7 @@ function ProjectRow({
             </ContextMenuItem>
           </>
         )}
-        {(onRemove || onRemoveWorktree || onTrash) && (
+        {(onRemove || onTrash) && (
           <>
             <ContextMenuSeparator />
             {/* "Remove", not "Delete": the directory is the user's own and
@@ -885,17 +707,9 @@ function ProjectRow({
                 Remove project
               </ContextMenuItem>
             )}
-            {/* And the one item here that is a deletion, said so: last, below
-                the one that only forgets, and only on a row that is a
-                checkout. */}
-            {onRemoveWorktree && (
-              <ContextMenuItem variant="destructive" onClick={onRemoveWorktree}>
-                <Trash2 />
-                Remove worktree…
-              </ContextMenuItem>
-            )}
-            {/* The other deletion, on the other kind of row that may have
-                one: a directory this app made, from a template. */}
+            {/* The one item here that is a deletion, said so: last, below the
+                one that only forgets, and only on a directory this app made
+                from a template. */}
             {onTrash && (
               <ContextMenuItem variant="destructive" onClick={onTrash}>
                 <Trash2 />
@@ -927,15 +741,9 @@ const CHAT_LIMIT = 20
  * and the tree at, and pointing them at whichever project was last active would
  * be this app guessing.
  */
-function ProjectChats({
-  folderId,
-  indent = 1,
-}: {
-  folderId: string | null
-  /** One level under the row that holds them, whatever level that row is at —
-   * 2 for the chats of a checkout. */
-  indent?: number
-}) {
+function ProjectChats({ folderId }: { folderId: string | null }) {
+  /** One level under the project row that holds them. */
+  const indent = 1
   const chats = useChats((state) => state.chats)
   const unsaved = useChats((state) => state.unsaved)
   const selectedId = useChats((state) => state.selectedId)

@@ -1,6 +1,5 @@
-import { Sparkle, type LucideIcon } from "lucide-react"
-
 import { creditsLeft, type StudioAccount } from "@shared/credits"
+import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
 /**
@@ -23,36 +22,72 @@ const BAR_GRADIENT = "bg-linear-to-r from-violet-500 to-amber-400"
 export const CREDITS_SURFACE =
   "border-violet-500/25 bg-linear-to-br from-violet-500/10 via-transparent to-amber-400/10"
 
+/*
+ * The coin's rim is an inset ring rather than a border, so the three sizes stay
+ * exactly the box they were; at `xs` it is left off, since a 16px coin with a
+ * rim is a grey ring round nothing.
+ */
 const BADGE_SIZES = {
   /** In a toolbar, beside a label. */
-  xs: "size-4 rounded-full shadow-sm shadow-violet-500/30 [&_svg]:size-2.5!",
+  xs: "size-4 shadow-sm shadow-violet-500/30 [&_svg]:size-2.5",
   /** A menu row's leading tile. */
-  sm: "size-8 rounded-lg shadow-sm shadow-violet-500/25 [&_svg]:size-4",
+  sm: "size-8 shadow-sm ring-2 shadow-violet-500/25 ring-white/25 ring-inset [&_svg]:size-4",
   /** A card's or a dialog's own mark. */
-  md: "size-10 rounded-xl shadow-md shadow-violet-500/25 [&_svg]:size-5",
+  md: "size-10 shadow-md ring-[3px] shadow-violet-500/25 ring-white/25 ring-inset [&_svg]:size-5",
 } as const
 
-/** The credits' mark: a filled sparkle on the gradient. */
+/**
+ * The credits' mark: a coin struck with the VS lettermark, white on the
+ * gradient. A coin and not the app icon's rounded plate, so the two read apart
+ * side by side — the plate is the app, the coin is what it runs on. It was a
+ * lucide sparkle, which said "AI" in everybody's words rather than this app's.
+ */
 export function CreditsBadge({
   size = "sm",
-  icon: Icon = Sparkle,
   className,
 }: {
   size?: keyof typeof BADGE_SIZES
-  icon?: LucideIcon
   className?: string
 }) {
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center text-white",
+        "flex shrink-0 items-center justify-center rounded-full text-white",
         CREDITS_GRADIENT,
         BADGE_SIZES[size],
         className
       )}
     >
-      <Icon className={cn(Icon === Sparkle && "fill-current")} />
+      <VsGlyph className="translate-x-[-4%]" />
     </span>
+  )
+}
+
+/**
+ * The lettermark alone, in `currentColor` — `resources/vs-mark.svg` path for
+ * path, sized by its caller. The nudge in `CreditsBadge` is the slant's: the
+ * glyph's ink leans right, so its box's centre is not the eye's.
+ */
+export function VsGlyph({
+  className,
+  strokeWidth = 11,
+}: {
+  className?: string
+  strokeWidth?: number
+}) {
+  return (
+    <svg viewBox={VS_VIEWBOX} fill="none" aria-hidden className={className}>
+      <g
+        transform={VS_SLANT}
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d={VS_V} />
+        <path d={VS_S} />
+      </g>
+    </svg>
   )
 }
 

@@ -144,7 +144,7 @@ export const useStudioAccount = create<StudioAccountState>()((set, get) => ({
 function announce(added: number) {
   if (document.hasFocus() || typeof Notification === "undefined") return
   const notice = new Notification("Credits added", {
-    body: `+${formatCredits(added)} credits are on your account. They never expire.`,
+    body: `+${formatCredits(added)} in credits is on your account. It never expires.`,
     silent: false,
   })
   notice.onclick = () => window.focus()

@@ -8,17 +8,27 @@ export default defineConfig({
   // that module calls `randomUUID()` at its top level — workerd refuses that
   // outside a handler, so the whole dev entry fails to load ("Disallowed
   // operation called within global scope"). Nothing here mounts an fs driver:
-  // there are no server assets, and `accounts` is KV. The memory driver stands
-  // in for it so the import no longer runs that code.
+  // there are no server assets, and nothing is stored in files. The memory
+  // driver stands in for it so the import no longer runs that code.
   alias: { "unstorage/drivers/fs": "unstorage/drivers/memory" },
 
-  // The `accounts` mount below reads this namespace. Created with
-  // `wrangler kv namespace create ACCOUNTS`; the generated wrangler config is
-  // rewritten on every build, so the binding has to live here.
+  experimental: { database: true },
+
+  // What people have paid for (`server/utils/accounts.ts`). Created with
+  // `wrangler d1 create vsclaude`; the generated wrangler config is rewritten
+  // on every build, so the binding has to live here. Locally, Miniflare keeps
+  // it under `.wrangler/`.
+  database: {
+    default: { connector: "cloudflare-d1", options: { bindingName: "DB" } },
+  },
   cloudflare: {
     wrangler: {
-      kv_namespaces: [
-        { binding: "ACCOUNTS", id: "7ee39cd4bba7416f83d35d326d96c122" },
+      d1_databases: [
+        {
+          binding: "DB",
+          database_name: "vsclaude",
+          database_id: "91126c97-849b-41f6-8719-0e2be12f688e",
+        },
       ],
     },
   },
@@ -33,12 +43,15 @@ export default defineConfig({
     anthropicApiKey: "",
     /** NITRO_ANTHROPIC_BASE_URL */
     anthropicBaseUrl: "https://api.anthropic.com",
-    /** NITRO_FIREBASE_PROJECT_ID — the project the studio signs in to
-     * (`FIREBASE_CONFIG` in the app's `src/shared/firebase.ts`). */
-    firebaseProjectId: "simm-chat",
-    /** NITRO_FIREBASE_JWKS_URL — the keys ID tokens are checked against.
-     * Empty is Google's own; set only for a test that signs its own tokens. */
-    firebaseJwksUrl: "",
+    /** NITRO_GOOGLE_CLIENT_ID / NITRO_GOOGLE_CLIENT_SECRET — the Web
+     * application OAuth client the studio signs in through
+     * (`server/utils/google.ts`). Without them nobody can sign in. */
+    googleClientId: "",
+    googleClientSecret: "",
+    /** NITRO_SESSION_SECRET — signs the session and access tokens
+     * (`server/utils/session.ts`). Long and random; changing it signs
+     * everybody out. */
+    sessionSecret: "",
     /** NITRO_ALLOWED_MODELS — comma-separated; the app's `FREE_AI_MODELS`.
      * Every one runs on credits, each at its own price
      * (`server/utils/usage.ts`). */
@@ -78,16 +91,5 @@ export default defineConfig({
     /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded. 100K is where
      * Haiku 5.5's price goes up fivefold; 0 turns the check off. */
     maxPromptTokens: 100_000,
-  },
-
-  storage: {
-    // What each user has paid for (`server/utils/accounts.ts`). Money: it must
-    // survive a redeploy, so on a platform whose disk does not, this needs a
-    // persistent driver before payments are switched on — and more than one
-    // instance needs a shared one (`redis`, say).
-    // On Workers there is no filesystem, and the `fs` driver would also drag
-    // chokidar/fsevents into the bundle. The KV namespace is bound in
-    // wrangler.jsonc under the same name.
-    accounts: { driver: "cloudflare-kv-binding", binding: "ACCOUNTS" },
   },
 })

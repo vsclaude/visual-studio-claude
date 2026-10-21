@@ -61,7 +61,7 @@ export function NavRail({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
     <nav
       aria-label="Window"
-      className="flex w-12 shrink-0 flex-col items-center gap-1 rounded-xl bg-background py-2 outline -outline-offset-1 outline-border"
+      className="studio-surface flex w-12 shrink-0 flex-col items-center gap-1 rounded-xl bg-background py-2 outline -outline-offset-1 outline-border"
     >
       <RailButton
         label={

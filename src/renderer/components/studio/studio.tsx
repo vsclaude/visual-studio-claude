@@ -819,7 +819,7 @@ function WindowTitleBar() {
         type="button"
         onClick={() => usePalette.getState().setOpen(true)}
         data-tour="palette"
-        className="no-drag flex h-7 w-[min(28rem,36vw)] items-center gap-2 rounded-md bg-background px-2.5 text-xs text-muted-foreground outline -outline-offset-1 outline-border transition-colors hover:text-foreground"
+        className="studio-surface no-drag flex h-7 w-[min(28rem,36vw)] items-center gap-2 rounded-md bg-background px-2.5 text-xs text-muted-foreground outline -outline-offset-1 outline-border transition-colors hover:text-foreground"
       >
         <Search className="size-3.5 shrink-0" />
         <span className="flex-1 truncate text-center">Run a command</span>

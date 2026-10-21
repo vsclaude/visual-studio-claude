@@ -198,7 +198,7 @@ export function TabStrip({
   if (items.length === 0) {
     if (!trailing) return null
     return (
-      <div className="flex h-(--density-tab) shrink-0 items-stretch border-b bg-sidebar">
+      <div className="studio-tabs flex h-(--density-tab) shrink-0 items-stretch border-b bg-sidebar">
         <div className="ml-auto flex items-center pr-1">{trailing}</div>
       </div>
     )
@@ -240,7 +240,7 @@ export function TabStrip({
           // The horizontal one is hidden outright — the thumb below stands in
           // for it, which also gives the tabs back the row of height it was
           // taking.
-          className="flex h-(--density-tab) scrollbar-none items-center overflow-x-auto overflow-y-hidden border-b bg-sidebar px-1"
+          className="studio-tabs flex h-(--density-tab) scrollbar-none items-center overflow-x-auto overflow-y-hidden border-b bg-sidebar px-1"
         >
           {/* The trigger covers the tabs only: a right-click on the empty strip
             past the last one belongs to no tab. */}

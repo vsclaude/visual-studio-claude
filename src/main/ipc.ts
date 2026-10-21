@@ -748,8 +748,11 @@ export function createIpc(host: Host): {
     clipboardImagePath(await host.clipboardImage())
   )
 
+  // The two fields by name rather than a spread: `store.addFolder` also takes
+  // `template`, the mark that licenses `trashProject`, and a spread would let
+  // the renderer write it onto any folder — `~` included.
   handle(IPC.addFolder, (_event, input: { path: string; name: string }) =>
-    store.addFolder({ ...input, path: expandHome(input.path) })
+    store.addFolder({ path: expandHome(input.path), name: input.name })
   )
 
   /*

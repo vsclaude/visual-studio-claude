@@ -86,7 +86,12 @@ async function createTables(db: Database): Promise<void> {
   }
 }
 
-/** Whether the table has the column — false for no such table too. */
+/**
+ * Whether the table has the column — false for no such table too. Only
+ * SQLite's own "no such" is a no: a false here is what drops `transactions`,
+ * so a D1 that failed to answer at all has to throw rather than read as a
+ * table from the old layout and take every purchase with it.
+ */
 async function hasColumn(
   db: Database,
   table: string,
@@ -95,9 +100,21 @@ async function hasColumn(
   try {
     await db.exec(`SELECT ${column} FROM ${table} LIMIT 0`)
     return true
-  } catch {
-    return false
+  } catch (error) {
+    if (isNoSuch(error)) return false
+    throw error
   }
+}
+
+/** D1 says `no such column: …` / `no such table: …`, sometimes on a wrapped
+ * error's `cause` rather than its own message. */
+export function isNoSuch(error: unknown): boolean {
+  for (let at = error, depth = 0; at && depth < 4; depth += 1) {
+    const message = at instanceof Error ? at.message : String(at)
+    if (/\bno such (column|table)\b/i.test(message)) return true
+    at = at instanceof Error ? at.cause : undefined
+  }
+  return false
 }
 
 export type Statement = { sql: string; params: unknown[] }

@@ -11,8 +11,10 @@ dist-plugins/
 release/
 
 # `vsclaude-cloud/` is a Nitro server; `nitro build` writes its bundle to
-# `.output/`, which is gitignored there and is not source.
+# `.output/`, which is gitignored there and is not source. `wrangler deploy`
+# writes `.wrangler/` the same way.
 vsclaude-cloud/.output/
+vsclaude-cloud/.wrangler/
 
 # The VS Code extension is its own package with its own build; its source is
 # formatted like the rest of the repo, its output is not.

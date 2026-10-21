@@ -47,7 +47,7 @@ export default defineHandler((event) => {
   return new Response(null, {
     status: 302,
     headers: {
-      location: authorizeUrl(google.clientId, callback, nonce),
+      location: authorizeUrl(google.clientId, callback, nonce, false),
       "cache-control": "no-store",
       "referrer-policy": "no-referrer",
     },

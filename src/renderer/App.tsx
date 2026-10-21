@@ -2,6 +2,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 
 import { lazy, Suspense } from "react"
 
+import { ErrorBoundary } from "@/components/error-boundary"
 import { ThemeProvider } from "@/components/theme-provider"
 import { StudioLoader } from "@/components/studio/studio-loader"
 
@@ -38,13 +39,15 @@ export function App() {
           the row on its way somewhere else.
         */}
         <TooltipProvider delay={400}>
-          {POPPED_CHAT ? (
-            <Suspense fallback={null}>
-              <ChatWindow chatId={POPPED_CHAT} />
-            </Suspense>
-          ) : (
-            <StudioLoader />
-          )}
+          <ErrorBoundary>
+            {POPPED_CHAT ? (
+              <Suspense fallback={null}>
+                <ChatWindow chatId={POPPED_CHAT} />
+              </Suspense>
+            ) : (
+              <StudioLoader />
+            )}
+          </ErrorBoundary>
         </TooltipProvider>
       </ThemeProvider>
     </div>

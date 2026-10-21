@@ -815,6 +815,15 @@ export type AssistantEvent =
    */
   | { type: "context"; tokens: number }
   /**
+   * What the running turn has spent so far — the model and the tokens, read
+   * off its replies as they arrive, for the row under `Working…`.
+   *
+   * Not written down, like `context`: the `usage` line the turn ends with is
+   * the record and supersedes this. No cost, which the SDK reports on the
+   * result line alone (`liveUsageOf` in `main/claude-agent.ts`).
+   */
+  | { type: "live"; usage: TurnUsage }
+  /**
    * The window as the **CLI** accounts for it, asked for once a turn ends.
    *
    * The difference from `context` above is the denominator, and it is the whole

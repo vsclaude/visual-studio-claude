@@ -1,5 +1,5 @@
 import type { AssistantMessage, TurnUsage } from "../src/shared/api"
-import { contextOf, usageOf } from "../src/main/claude-agent"
+import { contextOf, liveUsageOf, usageOf } from "../src/main/claude-agent"
 import {
   chatLine,
   compact,
@@ -589,6 +589,53 @@ section("a turn paid in credits")
   check(
     "and one that never did says nothing",
     totalOf([line({}), line({})])?.credits === null
+  )
+}
+
+section("liveUsageOf: the running turn, off its replies")
+{
+  const opus = "claude-opus-4-1-20250805"
+  const haiku = "claude-haiku-4-5-20251001"
+  const live = liveUsageOf([
+    {
+      model: opus,
+      usage: {
+        input_tokens: 10,
+        cache_creation_input_tokens: 2_000,
+        cache_read_input_tokens: 30_000,
+        output_tokens: 400,
+      },
+    },
+    {
+      model: haiku,
+      usage: { input_tokens: 5_000, output_tokens: 300 },
+    },
+  ])
+  check(
+    "replies are summed, a subagent's included",
+    live.input === 5_010 &&
+      live.cacheWrite === 2_000 &&
+      live.cacheRead === 30_000 &&
+      live.output === 700,
+    live
+  )
+  check(
+    "labelled with the model that read the most, as the result line is",
+    live.model === opus,
+    live.model
+  )
+  check(
+    "no cost, which only the result line can say",
+    live.costUsd === null && live.credits === null && live.durationMs === null
+  )
+  check(
+    "a turn with no replies yet counts nothing and names no model",
+    liveUsageOf([]).model === null && liveUsageOf([]).output === 0
+  )
+  check(
+    "and is drawn in the turn line's own words",
+    usageLine(live) === "Opus 4.1 · 37.0k prompt, 81% cached · 700 out",
+    usageLine(live)
   )
 }
 

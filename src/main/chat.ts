@@ -1495,6 +1495,11 @@ export class Chats {
         onContext: (tokens) => {
           if (current()) this.emit({ chatId: id, type: "context", tokens })
         },
+        // Forwarded and not kept, for the same reason: the usage line the turn
+        // ends with is the record, and this is the turn's spend so far.
+        onLive: (usage) => {
+          if (current()) this.emit({ chatId: id, type: "live", usage })
+        },
         // Forwarded, and kept on the record too: without it a restarted app
         // drew no meter until the next turn ended. `updatedAt` is left alone —
         // a measurement is not activity and must not reorder the list.

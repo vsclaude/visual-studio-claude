@@ -1,8 +1,10 @@
 import { useEffect, useId, useState } from "react"
+import type { TurnUsage } from "@shared/api"
 
 import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { elapsed } from "@/lib/chat/since"
+import { usageDetail, usageLine } from "@/lib/chat/usage"
 
 /**
  * What the chat pane shows while a turn is being sent: the loader, and how long
@@ -18,17 +20,35 @@ import { elapsed } from "@/lib/chat/since"
  * Which subagents are running is not said here — that is `ChatAgents`, above
  * the composer, so the loader stays one line however wide a turn fans out.
  */
-export function ChatSkeleton({ startedAt }: { startedAt?: number }) {
+export function ChatSkeleton({
+  startedAt,
+  live,
+}: {
+  startedAt?: number
+  /** The running turn's spend so far — see `live` in the chat store. */
+  live?: TurnUsage
+}) {
   return (
     <div
       className={cn(
         LOADER_H,
-        "flex items-center gap-2 px-1 text-xs text-muted-foreground"
+        "flex min-w-0 items-center gap-2 px-1 text-xs text-muted-foreground"
       )}
     >
       <WorkingMark />
-      <span className="text-shimmer">Working…</span>
+      <span className="text-shimmer shrink-0">Working…</span>
       {startedAt !== undefined && <Elapsed startedAt={startedAt} />}
+      {/* The model and the tokens while they are still moving, in the turn
+          line's own words, so the row under the answer reads as this one
+          arriving early. */}
+      {live && (
+        <span
+          title={usageDetail(live)}
+          className="truncate text-muted-foreground/50 tabular-nums"
+        >
+          {usageLine(live)}
+        </span>
+      )}
     </div>
   )
 }

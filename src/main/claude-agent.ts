@@ -290,6 +290,15 @@ export type AgentHandlers = {
    */
   onContext: (tokens: number) => void
   /**
+   * What the running turn has spent so far, at every reply — see
+   * `liveUsageOf`.
+   *
+   * A count off the replies' own usage, not the result line's, so it is the
+   * turn's figure arriving early and approximately: `onUsage` is still the
+   * record, and replaces this when the turn ends.
+   */
+  onLive: (usage: TurnUsage) => void
+  /**
    * The window as the CLI accounts for it, once a turn has ended.
    *
    * Apart from `onContext` because it is a different measurement, not the same
@@ -740,6 +749,16 @@ export async function startAgentSession(
   let context: number | null = null
 
   /**
+   * The turn's replies so far, by the API's message id, for `onLive`.
+   *
+   * Keyed rather than summed because a response arrives as one assistant
+   * message per content block, every one of them carrying the whole request's
+   * usage: summing frames would count a prompt once per block. The latest
+   * frame of an id wins, since only the last carries final output counts.
+   */
+  let replies = new Map<string, LiveReply>()
+
+  /**
    * Whether this CLI reports its own state, so the fallback below can stand
    * down.
    *
@@ -1009,6 +1028,17 @@ export async function startAgentSession(
           }
         }
 
+        // The spend so far, a subagent's included: the result line counts
+        // theirs too (`usageOf`), and a live figure that left them out would
+        // jump at the end of exactly the turns that run longest.
+        if (message.type === "assistant" && message.message.usage) {
+          replies.set(message.message.id ?? message.uuid, {
+            model: message.message.model ?? null,
+            usage: message.message.usage,
+          })
+          handlers.onLive(liveUsageOf(replies.values()))
+        }
+
         if (message.type === "result") {
           handlers.onUsage(
             usageOf(
@@ -1021,6 +1051,7 @@ export async function startAgentSession(
           )
           previous = message
           context = null
+          replies = new Map()
           // Whatever is queued behind this result starts being answered now.
           turnStartedAt = Date.now()
           answering = false
@@ -1544,6 +1575,51 @@ function toneOf(name: string): ChatWindowTone {
 /** A number the CLI sent, or zero for anything that is not one. */
 function number(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+/** One reply of a running turn, as `liveUsageOf` reads it. */
+export type LiveReply = { model: string | null; usage: ReplyUsage }
+
+/**
+ * What a turn has spent so far, off its replies rather than its result line —
+ * the line under `Working…`, so the model and the tokens are on screen while
+ * the turn runs rather than once it has finished.
+ *
+ * The same shape `usageOf` gives, labelled the same way (the model that read
+ * the most), so the row reads as the turn's line arriving early. What a reply
+ * cannot say stays null: the cost is the SDK's own estimate and exists on the
+ * result line alone, and a figure computed here would be a second estimate
+ * that disagreed with the first a moment later.
+ */
+export function liveUsageOf(replies: Iterable<LiveReply>): TurnUsage {
+  const total = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }
+  const read = new Map<string, number>()
+  for (const { model, usage } of replies) {
+    const input = usage.input_tokens || 0
+    const cacheRead = usage.cache_read_input_tokens || 0
+    total.input += input
+    total.cacheWrite += usage.cache_creation_input_tokens || 0
+    total.cacheRead += cacheRead
+    total.output += usage.output_tokens || 0
+    if (model) read.set(model, (read.get(model) ?? 0) + input + cacheRead)
+  }
+
+  let model: string | null = null
+  let most = -1
+  for (const [name, tokens] of read) {
+    if (tokens > most) [model, most] = [name, tokens]
+  }
+
+  return {
+    model,
+    ...total,
+    thinking: 0,
+    costUsd: null,
+    // The line under the composer already moves with every reply.
+    context: null,
+    durationMs: null,
+    credits: null,
+  }
 }
 
 export function contextOf(usage: ReplyUsage | undefined): number | null {

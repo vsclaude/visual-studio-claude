@@ -91,11 +91,6 @@ const main = {
     "process.env.VEYSTUDIO_BUILD_AI_URL": JSON.stringify(
       process.env.VEYSTUDIO_AI_URL ?? process.env.VSCLAUDE_AI_URL ?? ""
     ),
-    // Where `updater.ts` looks for `latest.json`. The same URL-not-a-secret
-    // reasoning as above, and the same reason it is read here: no `.env` at launch.
-    "process.env.VEYSTUDIO_BUILD_UPDATE_URL": JSON.stringify(
-      process.env.VEYSTUDIO_UPDATE_URL ?? ""
-    ),
   },
 }
 

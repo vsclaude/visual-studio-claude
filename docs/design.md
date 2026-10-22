@@ -1279,14 +1279,9 @@ nobody pays.
 
 ## Updating
 
-A pill in the status bar when the release server has a newer release. **Not
-`electron-updater`**: Squirrel.Mac will not replace an unsigned bundle. The
-installers are built and published by `release.yml` on a tag, to a Cloudflare
-R2 bucket rather than GitHub Releases: `v<version>/` holds the files and a
-`manifest.json`, and `latest.json` is the same manifest, written last. Its
-address is the `VEYSTUDIO_UPDATE_URL` variable, baked into the app at build
-time like the free AI's. `main/updater.ts` reads `latest.json` (at launch, then
-every six hours),
+A pill in the status bar when GitHub has a newer release. **Not
+`electron-updater`**: Squirrel.Mac will not replace an unsigned bundle. Instead,
+`main/updater.ts` checks `releases/latest` (at launch, then every six hours),
 downloads the `.dmg` itself with a progress bar, and runs the bundled
 `install.sh` **detached**, since the script quits the app. `isNewer` is numeric
 and strictly newer (`test/updates.ts`). Nothing pops up; skipping is per

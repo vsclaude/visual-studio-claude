@@ -15,9 +15,9 @@ import { dataDir } from "./data-dir"
  * **Not `electron-updater`, and deliberately.** Squirrel.Mac will not replace a
  * bundle that carries no Developer ID, and these builds carry none — signing
  * costs an Apple Developer membership, which is the same reason `install.sh`
- * exists at all. So the whole of the update story here is: ask the release
- * server what the latest release is, compare it against this build, and run the
- * very script the README already tells people to paste into a terminal. Nothing is downloaded
+ * exists at all. So the whole of the update story here is: ask GitHub what the
+ * latest release is, compare it against this build, and run the very script the
+ * README already tells people to paste into a terminal. Nothing is downloaded
  * in the background, nothing is staged, and there is no delta.
  *
  * The one thing this process does fetch is the `.dmg` itself, and only once the
@@ -31,16 +31,12 @@ import { dataDir } from "./data-dir"
  * the same bargain `git.ts` makes.
  */
 
-/**
- * Where the release manifests and installers are: a bucket behind a public URL,
- * written by the release workflow (`release.yml`). Read at build time, like the
- * free AI's address, since a built app has no `.env`. Empty when the build was
- * made without it, which reads as `unknown` rather than an error on every launch.
- */
-const UPDATE_URL = (process.env.VEYSTUDIO_BUILD_UPDATE_URL ?? "").replace(
-  /\/+$/,
-  ""
-)
+const REPO = "vsclaude/visual-studio-claude"
+
+const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`
+
+/** Where "What's new" goes, and the fallback button on anything but macOS. */
+export const RELEASES_PAGE = `https://github.com/${REPO}/releases`
 
 /**
  * A check runs unasked, on a timer, so it must not be able to hang about: an
@@ -96,58 +92,38 @@ export function isNewer(candidate: string, current: string): boolean {
   return isPrerelease(current) && !isPrerelease(candidate)
 }
 
-type Release = {
-  version: string
-  notes: string
-  url: string
-  assets: Asset[]
-}
+type Release = { version: string; notes: string; url: string }
 
-/** The shape of a release manifest, checked rather than cast: this is JSON off
- * the network. An asset the installer cannot use is dropped, not guessed at. */
+/** The shape of the one release GitHub is asked for, checked rather than cast:
+ * this is JSON off the network. */
 function asRelease(value: unknown): Release | null {
   if (typeof value !== "object" || value === null) return null
   const record = value as Record<string, unknown>
-  const version = record.version
-  if (typeof version !== "string" || version.length === 0) return null
-  const assets: Asset[] = []
-  if (Array.isArray(record.assets)) {
-    for (const entry of record.assets) {
-      if (typeof entry !== "object" || entry === null) continue
-      const file = entry as Record<string, unknown>
-      if (typeof file.name !== "string") continue
-      // An absent or nonsense size reads as zero, which is "total unknown" — the
-      // bar draws that as indeterminate rather than as a percentage of nothing.
-      const size =
-        typeof file.size === "number" && file.size > 0 ? file.size : 0
-      assets.push({ name: file.name, size })
-    }
-  }
+  const tag = record.tag_name
+  if (typeof tag !== "string" || tag.length === 0) return null
   return {
-    version: version.replace(/^v/, ""),
-    notes: typeof record.notes === "string" ? record.notes : "",
-    url: typeof record.url === "string" ? record.url : UPDATE_URL,
-    assets,
+    version: tag.replace(/^v/, ""),
+    notes: typeof record.body === "string" ? record.body : "",
+    url: typeof record.html_url === "string" ? record.html_url : RELEASES_PAGE,
   }
 }
 
-/** A manifest at a path under `UPDATE_URL`: `latest.json`, or a version's own
- * `v<version>/manifest.json`, which is the same file. */
-async function fetchRelease(file: string): Promise<Release> {
-  const response = await fetch(`${UPDATE_URL}/${file}`, {
-    headers: { "User-Agent": "Vey-Studio" },
+async function latestRelease(): Promise<Release> {
+  const response = await fetch(LATEST_RELEASE_API, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      // GitHub rejects an anonymous API request with no user agent outright,
+      // and the rejection is a 403 that reads like rate limiting.
+      "User-Agent": "Vey-Studio",
+    },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
   if (!response.ok) {
-    throw new Error(`The update server answered ${response.status}.`)
+    throw new Error(`GitHub answered ${response.status}.`)
   }
   const release = asRelease(await response.json())
-  if (!release) throw new Error("The latest release has no version.")
+  if (!release) throw new Error("The latest release has no tag.")
   return release
-}
-
-function latestRelease(): Promise<Release> {
-  return fetchRelease("latest.json")
 }
 
 /**
@@ -163,7 +139,6 @@ export async function checkForUpdate(
 ): Promise<UpdateCheck> {
   let release: Release
   try {
-    if (!UPDATE_URL) throw new Error("This build has no update address.")
     release = await latestRelease()
   } catch (error) {
     return {
@@ -192,7 +167,7 @@ export async function checkForUpdate(
  */
 const PROGRESS_INTERVAL_MS = 100
 
-type Asset = { name: string; size: number }
+type Asset = { url: string; name: string; size: number }
 
 /** What this platform's installer is called at the end — the `.dmg` on macOS,
  * the NSIS `.exe` on Windows — or null where there is none to run. */
@@ -214,19 +189,56 @@ function installerSuffix(
  * here" rather than as a 404 on a URL this app invented.
  */
 export function installerAsset(
-  release: Pick<Release, "assets">,
+  release: unknown,
   platform: NodeJS.Platform,
   arch: string
 ): Asset | null {
   const suffix = installerSuffix(platform, arch)
   if (!suffix) return null
-  return release.assets.find((asset) => asset.name.endsWith(suffix)) ?? null
+  if (typeof release !== "object" || release === null) return null
+  const assets = (release as Record<string, unknown>).assets
+  if (!Array.isArray(assets)) return null
+  for (const entry of assets) {
+    if (typeof entry !== "object" || entry === null) continue
+    const record = entry as Record<string, unknown>
+    const name = record.name
+    const url = record.browser_download_url
+    if (typeof name !== "string" || typeof url !== "string") continue
+    if (!name.endsWith(suffix)) continue
+    // An absent or nonsense size reads as zero, which is "total unknown" — the
+    // bar draws that as indeterminate rather than as a percentage of nothing.
+    const size =
+      typeof record.size === "number" && record.size > 0 ? record.size : 0
+    return { name, url, size }
+  }
+  return null
 }
 
-/** Where one file of a release is: under its version, by the name the manifest
- * gives it, encoded — a `.dmg` is named with spaces in it. */
-export function assetUrl(base: string, version: string, name: string): string {
-  return `${base}/v${version}/${encodeURIComponent(name)}`
+/** A release by tag, in both spellings — which one a release used is not
+ * something anything here should have to know, the same reason `install.sh`
+ * tries both. */
+async function releaseByTag(version: string): Promise<unknown> {
+  const bare = version.replace(/^v/, "")
+  for (const tag of [`v${bare}`, bare]) {
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO}/releases/tags/${encodeURIComponent(tag)}`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "Vey-Studio",
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }
+    )
+    if (response.ok) return response.json()
+    // Anything but "no such tag" is worth saying out loud: a 403 here is rate
+    // limiting, and retrying it under the other spelling would report it as a
+    // missing release.
+    if (response.status !== 404) {
+      throw new Error(`GitHub answered ${response.status}.`)
+    }
+  }
+  throw new Error(`No release tagged ${bare}.`)
 }
 
 /**
@@ -248,10 +260,11 @@ export async function downloadUpdate(input: {
    * `total` is 0 when the release does not say how large the asset is. */
   onProgress: (received: number, total: number) => void
 }): Promise<string> {
-  const release = await fetchRelease(
-    `v${input.version.replace(/^v/, "")}/manifest.json`
+  const asset = installerAsset(
+    await releaseByTag(input.version),
+    input.platform,
+    input.arch
   )
-  const asset = installerAsset(release, input.platform, input.arch)
   if (!asset) {
     throw new Error(
       `No ${input.platform} ${input.arch} installer in ${input.version}.`
@@ -269,12 +282,9 @@ export async function downloadUpdate(input: {
   // No timeout on this one, unlike the metadata requests above: a slow link is
   // not a hung request, and there is a person watching the bar who can say when
   // they have had enough.
-  const response = await fetch(
-    assetUrl(UPDATE_URL, release.version, asset.name),
-    {
-      headers: { "User-Agent": "Vey-Studio" },
-    }
-  )
+  const response = await fetch(asset.url, {
+    headers: { "User-Agent": "Vey-Studio" },
+  })
   if (!response.ok || !response.body) {
     throw new Error(`The download answered ${response.status}.`)
   }

@@ -68,12 +68,9 @@ jobs:
       # readable in the bundle anyway. Unset, the free AI is hidden. The
       # variable under the app's old name is the fallback, so a repository
       # that has not renamed it still ships the free AI.
-      # VEYSTUDIO_UPDATE_URL is the public address of the R2 bucket below, and
-      # is baked in the same way: an installed app has no `.env` to read it from.
       - run: bun run build
         env:
           VEYSTUDIO_AI_URL: ${{ vars.VEYSTUDIO_AI_URL || vars.VSCLAUDE_AI_URL }}
-          VEYSTUDIO_UPDATE_URL: ${{ vars.VEYSTUDIO_UPDATE_URL }}
 
       # Both are gitignored — the source art is committed and what is derived
       # from it is not — so a fresh checkout has neither until this runs.
@@ -108,54 +105,27 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # Installers go to a Cloudflare R2 bucket rather than a GitHub release, and the
-  # app's update check reads the manifest written beside them (see
-  # scripts/release-manifest.mjs and `updater.ts`). Under v<version>/, which
-  # never changes, so cached immutably; then latest.json, which is what the
-  # check asks for and so is written last — a manifest must not name a file
-  # that is not there yet.
-  #
-  # Needs the secrets R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_ENDPOINT
-  # (https://<account-id>.r2.cloudflarestorage.com), and the variables
-  # R2_BUCKET and VEYSTUDIO_UPDATE_URL (the bucket's public URL).
   publish:
     name: publish release
     needs: package
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      # Full history: the manifest's notes are the commits since the last tag.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/download-artifact@v4
         with:
           path: installers
           pattern: installers-*
           merge-multiple: true
 
-      - name: Publish to R2
+      - name: Publish
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
           ls -lh installers
-          node scripts/release-manifest.mjs "$version" installers > manifest.json
-          cat manifest.json
-
-          aws s3 cp installers/ "s3://$R2_BUCKET/v$version/" \
-            --recursive --endpoint-url "$R2_ENDPOINT" \
-            --exclude "*" --include "*.dmg" --include "*.exe" --include "*.AppImage" \
-            --cache-control "public, max-age=31536000, immutable"
-
-          for key in "v$version/manifest.json" "latest.json"; do
-            aws s3 cp manifest.json "s3://$R2_BUCKET/$key" \
-              --endpoint-url "$R2_ENDPOINT" \
-              --content-type application/json \
-              --cache-control "no-cache"
-          done
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Vey Studio ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            installers/*

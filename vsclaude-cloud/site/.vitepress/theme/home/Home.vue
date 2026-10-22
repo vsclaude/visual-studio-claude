@@ -9,7 +9,7 @@ import { ICON, RELEASES_URL } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
 import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
 import css from "./home.css?inline"
-import { packsForSale } from "./packs.ts"
+import { coin, METHOD_ICON, packsForSale, type PaymentMethod } from "./packs.ts"
 
 /*
  * The home page: what VS Claude is, what credits cost, and where to download
@@ -21,7 +21,9 @@ import { packsForSale } from "./packs.ts"
  * read as generated. What is left: one accent colour, hairlines, small radii,
  * cells that share their borders like a table, a serif italic where a
  * headline wants weight, and motion only where it shows the product working.
- * The violet-to-amber gradient is the logo's and nothing else's.
+ * The violet-to-amber gradient is the logo's — and the credits', as in the
+ * studio, where it means "this is about credits": the packs borrow the buy
+ * dialog's look so the page and the app sell the same thing the same way.
  *
  * Every animation arrives at what the markup already draws, so taking it
  * away — reduced motion, no script — leaves the page whole.
@@ -30,7 +32,9 @@ import { packsForSale } from "./packs.ts"
 const { lang } = useData()
 const t = computed(() => COPY[langOf(lang.value)])
 const home = computed(() => pathOf(langOf(lang.value)))
-const packs = packsForSale()
+const METHODS: PaymentMethod[] = ["bank", "card"]
+const method = ref<PaymentMethod>("bank")
+const packs = computed(() => packsForSale(method.value))
 const year = new Date().getFullYear()
 const style = css + "\n" + demoCss()
 const LOGO = APP_MARK + WORDMARK
@@ -178,31 +182,50 @@ onBeforeUnmount(() => seen?.disconnect())
           </h2>
           <p>{{ t.pricing.body }}</p>
         </div>
-        <div class="packs grid">
-          <article
-            v-for="(pack, i) in packs"
-            :key="pack.id"
-            class="cell pack reveal"
-            :class="{ popular: pack.popular }"
-            :style="`--d:${i * 0.06}s`"
-          >
-            <span class="num"
-              ><em v-if="pack.popular">{{ t.pricing.popular }}</em
-              ><template v-else>{{ nth(i) }}</template></span
+        <!-- The studio's Buy credits dialog, drawn: the toggle switches the
+             packs shown, and nothing here buys — that is the app's. -->
+        <div class="buy reveal">
+          <div class="methods" role="radiogroup">
+            <button
+              v-for="m in METHODS"
+              :key="m"
+              type="button"
+              role="radio"
+              :aria-checked="method === m"
+              :class="{ on: method === m }"
+              @click="method = m"
             >
-            <p class="pack-credits">
-              <strong>{{ pack.credits }}</strong> {{ t.pricing.credits }}
-            </p>
-            <p class="pack-bonus">
-              {{ pack.bonus ? t.pricing.bonus(pack.bonus) : t.pricing.starter }}
-            </p>
-            <p class="pack-price">{{ pack.price }}</p>
-            <p class="pack-note">
-              {{ pack.bankOnly ? t.pricing.bankOnly : t.pricing.note }}
-            </p>
-          </article>
+              <i v-html="METHOD_ICON[m]"></i>{{ t.pricing.methods[m] }}
+            </button>
+          </div>
+          <div class="packs" :style="`--n:${packs.length}`">
+            <article
+              v-for="pack in packs"
+              :key="pack.id"
+              class="pack"
+              :class="{ popular: pack.popular }"
+            >
+              <span v-if="pack.popular" class="pack-flag"
+                ><i v-html="SPARKLE"></i>{{ t.pricing.popular }}</span
+              >
+              <span
+                class="pack-coin"
+                v-html="coin(`coin-${pack.id}`, pack.popular ? 34 : 28)"
+              ></span>
+              <p class="pack-price">{{ pack.price }}</p>
+              <p class="pack-credits">
+                {{ pack.credits }} {{ t.pricing.credits }}
+              </p>
+              <p v-if="pack.bonus" class="pack-bonus">
+                {{ t.pricing.bonus(pack.bonus) }}
+              </p>
+              <span class="pack-buy" aria-hidden="true">{{
+                t.pricing.buy
+              }}</span>
+            </article>
+          </div>
+          <p class="pay">{{ t.pricing.pay[method] }}</p>
         </div>
-        <p class="pay">{{ t.pricing.pay }}</p>
       </section>
 
       <section>

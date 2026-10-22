@@ -90,11 +90,13 @@ export type Copy = {
     popular: string
     credits: string
     bonus: (percent: number) => string
-    starter: string
-    note: string
-    /** The note on a pack sold by bank transfer alone (`bankOnly`). */
-    bankOnly: string
-    pay: string
+    /** The payment toggle's two labels, as the studio's dialog has them. */
+    methods: { bank: string; card: string }
+    /** The pack's button — drawn as the dialog draws it, and inert: buying
+     * happens in the app, signed in. */
+    buy: string
+    /** The line under the packs, for the method chosen. */
+    pay: { bank: string; card: string }
   }
   steps: {
     kicker: string
@@ -192,10 +194,15 @@ const en: Copy = {
     popular: "Most popular",
     credits: "in credits",
     bonus: (percent) => `+${percent}% bonus`,
-    starter: "Starter",
-    note: "once · never expires",
-    bankOnly: "VietQR transfer only · never expires",
-    pay: "Pay by VietQR bank transfer or international card. Credits are only for when your own accounts run out — your logins stay free.",
+    methods: {
+      bank: "Vietnamese bank · VietQR",
+      card: "Card · international",
+    },
+    buy: "Buy credits",
+    pay: {
+      bank: "A page with the VietQR opens in your browser — scan it in your banking app. Credits never expire.",
+      card: "Checkout opens in your browser and is handled by Paddle. Credits never expire.",
+    },
   },
   steps: {
     kicker: "Get started",
@@ -346,10 +353,15 @@ const vi: Copy = {
     popular: "Phổ biến nhất",
     credits: "credit",
     bonus: (percent) => `tặng thêm ${percent}%`,
-    starter: "Khởi đầu",
-    note: "trả một lần · không hết hạn",
-    bankOnly: "chỉ chuyển khoản VietQR · không hết hạn",
-    pay: "Thanh toán qua chuyển khoản VietQR hoặc thẻ quốc tế. Credit chỉ dùng khi tài khoản của bạn đã hết hạn mức; dùng tài khoản riêng thì vẫn miễn phí.",
+    methods: {
+      bank: "Ngân hàng Việt Nam · VietQR",
+      card: "Thẻ · quốc tế",
+    },
+    buy: "Mua credit",
+    pay: {
+      bank: "Trang có mã VietQR mở trong trình duyệt — quét bằng ứng dụng ngân hàng. Credit không bao giờ hết hạn.",
+      card: "Trang thanh toán mở trong trình duyệt, do Paddle xử lý. Credit không bao giờ hết hạn.",
+    },
   },
   steps: {
     kicker: "Bắt đầu",

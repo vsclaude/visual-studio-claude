@@ -733,60 +733,140 @@ section {
   height: auto;
 }
 
-/* Four packs, so four columns — the shared grid's three-column hairline
-   rules are re-cut for a row of four. */
-.packs {
+/* The packs as the studio's Buy credits dialog draws them: a payment toggle,
+   then a card per pack — a coin, the price, what it buys, a bonus pill and
+   the button — with the popular one raised, ringed and filled. Separate
+   cards rather than the page's shared-border grid, since that is the
+   dialog's look; the column count follows the method (four, or three). */
+.buy {
   max-width: 1040px;
   margin: 0 auto;
-  grid-template-columns: repeat(4, 1fr);
 }
-.packs > .cell:nth-child(3n) {
-  border-right: 1px solid var(--edge);
+.methods {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 1.6rem;
+  padding: 3px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.06);
 }
-.packs > .cell:nth-child(4n) {
-  border-right: 0;
+.methods button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.85rem;
+  padding: 0 0.8rem;
+  border-radius: 6px;
+  color: rgb(244 244 245 / 0.6);
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
-.packs > .cell:nth-last-child(-n + 3) {
-  border-bottom: 1px solid var(--edge);
+.methods button:hover {
+  color: var(--ink);
 }
-.packs > .cell:nth-last-child(-n + 4) {
-  border-bottom: 0;
+.methods button.on {
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.09);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+.methods i,
+.pack-flag i {
+  display: inline-flex;
+}
+.methods svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+.packs {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
 }
 .pack {
-  padding: 2.2rem 1.5rem 1.8rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--raised);
+  text-align: center;
 }
+/* Taller than its neighbours rather than scaled, as in the dialog. */
 .pack.popular {
-  background: linear-gradient(rgb(139 92 246 / 0.07), transparent 70%);
-  box-shadow: inset 0 2px 0 var(--accent);
+  margin: -0.5rem 0;
+  padding-block: 1.75rem;
+  border-color: rgb(139 92 246 / 0.6);
+  background: linear-gradient(rgb(139 92 246 / 0.1), var(--raised));
+  box-shadow:
+    0 0 0 1px rgb(139 92 246 / 0.4),
+    0 10px 24px -6px rgb(139 92 246 / 0.15);
+}
+.pack-flag {
+  position: absolute;
+  top: -0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.62rem;
+  border-radius: 999px;
+  background: linear-gradient(to right, #8b5cf6, #fbbf24);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+.pack-flag svg {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+.pack-coin {
+  display: inline-flex;
+}
+.pack-price {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 .pack-credits {
   margin: 0;
   color: var(--muted);
-}
-.pack-credits strong {
-  font-size: 2.5rem;
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  color: var(--ink);
-  margin-right: 0.2rem;
+  font-size: 0.75rem;
 }
 .pack-bonus {
-  margin: 0.2rem 0 0;
-  font-size: 0.82rem;
-  color: var(--accent-soft);
-}
-.pack:not(.popular) .pack-bonus {
-  color: var(--muted);
-}
-.pack-price {
-  margin: 1.6rem 0 0.1rem;
-  font-size: 1.15rem;
-  font-weight: 500;
-}
-.pack-note {
   margin: 0;
-  color: var(--faint);
-  font-size: 0.78rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(245 158 11 / 0.15);
+  color: #fbbf24;
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+/* The dialog's button, without its action: buying is the app's. */
+.pack-buy {
+  margin-top: auto;
+  width: 100%;
+  padding: 0.5rem 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.02);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: default;
+}
+.pack.popular .pack-buy {
+  border-color: transparent;
+  background: linear-gradient(to right, #8b5cf6, #fbbf24);
+  color: #fff;
 }
 .pay {
   margin: 1.4rem auto 0;
@@ -1223,18 +1303,24 @@ footer .copy {
   .toolbar .end {
     display: none;
   }
-  .grid,
-  .packs {
+  .grid {
     grid-template-columns: 1fr;
   }
-  .grid > .cell,
-  .packs > .cell:nth-child(n) {
+  .grid > .cell {
     border-right: 0;
     border-bottom: 1px solid var(--edge);
   }
-  .grid > .cell:last-child,
-  .packs > .cell:last-child {
+  .grid > .cell:last-child {
     border-bottom: 0;
+  }
+  /* Two by two on a narrow screen; the popular pack's flag needs the
+     row gap to sit in. */
+  .packs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 1.5rem;
+  }
+  .pack.popular {
+    margin: 0;
   }
   footer .wrap {
     grid-template-columns: 1fr 1fr;

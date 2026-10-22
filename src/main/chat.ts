@@ -1873,6 +1873,35 @@ export class Chats {
     if (!live.busy) this.reap(id)
   }
 
+  /**
+   * Closes every session running on one account, ending any turn mid-way with
+   * `reason` — the studio's sign-out, for the Credits one.
+   *
+   * A close and not a Stop. `send` refuses the next message on a signed-out
+   * account, but a session already open carries on regardless: the CLI caches
+   * its `apiKeyHelper`'s token for five minutes, so the turn went on spending
+   * the credits of somebody who had just signed out, and then — once the helper
+   * read a deleted file — died in the CLI's own words about the wrong login. An
+   * interrupt would still run whatever was queued behind the turn on that same
+   * cached token.
+   *
+   * Out of the map before the close, as `reap` does, so the `onExit` this
+   * causes is not news; a session still coming up finds its entry gone and
+   * closes itself (`open`).
+   */
+  closeProfile(profileId: string, reason: string): void {
+    for (const [id, live] of [...this.live]) {
+      if (live.options.profileId !== profileId) continue
+      this.live.delete(id)
+      if (live.idle) clearTimeout(live.idle)
+      live.session?.close()
+      if (live.busy) {
+        this.setBusy(id, false)
+        this.endTurn(id, reason)
+      }
+    }
+  }
+
   /** Closes every session, for shutdown. */
   dispose(): void {
     for (const live of this.live.values()) {

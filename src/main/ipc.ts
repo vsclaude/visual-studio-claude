@@ -554,9 +554,24 @@ export function createIpc(host: Host): {
 
   handle(IPC.freeAiAvailable, () => freeAiUrl() !== null)
 
-  handle(IPC.setFreeAiToken, (_event, token: unknown) =>
-    setFreeAiToken(typeof token === "string" && token ? token : null)
-  )
+  // Every window hands over the session it holds, at launch and on each
+  // `storage` event, so the same one arrives again and again. Only a change —
+  // signing out, or in as somebody else — takes the Credits sessions down: one
+  // left open spends on the old token for as long as the CLI caches it.
+  let freeSession: string | null = null
+  handle(IPC.setFreeAiToken, (_event, token: unknown) => {
+    const next = typeof token === "string" && token ? token : null
+    if (next !== freeSession) {
+      allChats.closeProfile(
+        FREE_PROFILE_ID,
+        next
+          ? "The VS Claude sign-in changed — this turn was stopped."
+          : "Signed out of VS Claude — this turn was stopped."
+      )
+    }
+    freeSession = next
+    return setFreeAiToken(next)
+  })
 
   handle(IPC.studioAccount, () => studioAccount())
 

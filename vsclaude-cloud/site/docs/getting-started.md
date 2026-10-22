@@ -57,8 +57,13 @@ Claude account at all, you can chat on [credits](/docs/credits) instead.
 
 ## Your first chat
 
-1. **Add a project.** A project is a folder already on your machine; VS Claude
-   works on it where it is, and never copies it.
+1. **Add a project.** Click **+** beside **Projects**, choose a folder (or drag
+   one in from Finder) and click **Add folder**. A project is a folder already
+   on your machine: VS Claude works on it where it is, and never copies it.
+   **From template** starts a new project instead.
+
+   ![The Add a folder dialog, with Existing folder and From template tabs](/screenshots/add-project.png)
+
 2. **Add a Claude account** in **Settings › Claude › Add account** — see
    [Claude accounts](/docs/accounts).
 3. **Press `+`** on the project's row to open a chat, and type.

@@ -8,5 +8,5 @@ dist
 .env.local
 .wrangler
 # Built from site/ by `bun run build`; what is served as-is goes in site/public/.
-public
+/public
 site/.vitepress/cache

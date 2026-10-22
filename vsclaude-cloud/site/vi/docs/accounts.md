@@ -11,8 +11,12 @@ và chuyển chat giữa chúng mà không mất gì.
 3. Đăng nhập. Đây là màn hình login của chính Claude Code, nên mật khẩu của bạn
    không bao giờ đi qua VS Claude.
 
-Mỗi tài khoản nằm trong một thư mục riêng và giữ nguyên trạng thái đăng nhập.
-Mỗi hàng trong Settings cho biết tài khoản đã đăng nhập chưa, và bằng email nào.
+![Settings › Claude: Pay with credits, các tài khoản và nút Add account](/screenshots/settings-claude.png)
+
+`claude` bạn đang dùng sẵn được liệt kê đầu tiên, tên là **This account**. Mỗi
+tài khoản bạn thêm nằm trong một thư mục riêng và giữ nguyên trạng thái đăng
+nhập. Mỗi hàng cho biết tài khoản đã đăng nhập chưa, và bằng email nào: **Check**
+kiểm tra lại, **Log in** đăng nhập lại tài khoản đó.
 
 ## Chọn tài khoản cho một chat
 

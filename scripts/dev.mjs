@@ -11,7 +11,7 @@ import { stripVTControlCharacters } from "node:util"
  * restarted — only the renderer hot-reloads. `--hmr=false` turns that off too,
  * and a renderer change then waits for a reload of the window (⌘R).
  *
- *   node scripts/dev.mjs [--hmr=false]
+ *   node scripts/dev.mjs [--hmr=false] [electron flags…]
  */
 const root = path.join(import.meta.dirname, "..")
 
@@ -133,7 +133,11 @@ const url = await new Promise((resolve, reject) => {
   })
 })
 
-const electron = start(bin("electron"), ["."], {
+// Anything else on the command line is Electron's — `--remote-debugging-port=9222`
+// to drive the window from Playwright, say.
+const electronArgs = process.argv.slice(2).filter((arg) => arg !== "--hmr=false")
+
+const electron = start(bin("electron"), [".", ...electronArgs], {
   cwd: root,
   stdio: "inherit",
   env: { ...process.env, VITE_DEV_SERVER_URL: url },

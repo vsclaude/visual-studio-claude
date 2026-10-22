@@ -58,8 +58,13 @@ Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/
 
 ## Cuộc chat đầu tiên
 
-1. **Thêm project.** Project là một thư mục đã có trong máy. VS Claude làm việc
-   ngay tại chỗ, không bao giờ sao chép nó.
+1. **Thêm project.** Bấm **+** cạnh **Projects**, chọn một thư mục (hoặc kéo
+   thả từ Finder) rồi bấm **Add folder**. Project là một thư mục đã có trong
+   máy: VS Claude làm việc ngay tại chỗ, không bao giờ sao chép nó. Tab
+   **From template** dùng để tạo project mới.
+
+   ![Hộp thoại Add a folder, với hai tab Existing folder và From template](/screenshots/add-project.png)
+
 2. **Thêm tài khoản Claude** trong **Settings › Claude › Add account**. Xem
    [Tài khoản Claude](/vi/docs/accounts).
 3. **Bấm `+`** trên hàng của project để mở chat, rồi gõ tin nhắn.

@@ -70,3 +70,12 @@
 .vp-doc h2 {
   border-top-color: var(--edge);
 }
+
+/* Screenshots of the app: framed like the home page's picture of it, on the
+   page's hairline rather than floating on the background. */
+.vp-doc img {
+  margin: 20px 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 10px;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.45);
+}

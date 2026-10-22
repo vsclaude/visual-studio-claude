@@ -11,8 +11,12 @@ have, and move a chat between them without losing it.
 3. Sign in. It is Claude Code's own login, so your password never passes
    through VS Claude.
 
-Each account is kept in a directory of its own and stays signed in. Every row
-in Settings says whether it is signed in, and as whom.
+![Settings › Claude: Pay with credits, then your accounts and Add account](/screenshots/settings-claude.png)
+
+The `claude` you already use is listed first, as **This account**. Each account
+you add is kept in a directory of its own and stays signed in. Every row says
+whether it is signed in, and as whom — **Check** asks again, **Log in** signs
+that account in once more.
 
 ## Choosing the account a chat runs on
 

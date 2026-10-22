@@ -1,6 +1,6 @@
 # vsclaude-cloud
 
-The server behind VS Claude's **free AI**: anybody signed in to the
+The server behind Vey Studio's **free AI**: anybody signed in to the
 studio can chat on Haiku, Sonnet or Opus without a Claude account of their
 own, paid for with credits they buy — there is no free allowance. The studio's
 `claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends an access token this

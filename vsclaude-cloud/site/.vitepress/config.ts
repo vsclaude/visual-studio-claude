@@ -34,7 +34,7 @@ const searchVi = {
 }
 
 export default defineConfig({
-  title: "VS Claude",
+  title: "Vey Studio",
   outDir: "../public",
   // Workers' static assets resolve `/docs/foo` to `foo.html` themselves.
   cleanUrls: true,
@@ -67,7 +67,7 @@ export default defineConfig({
     pageData.description = t.description
     pageData.titleTemplate = false
     pageData.frontmatter.head = [
-      ["meta", { property: "og:title", content: "VS Claude" }],
+      ["meta", { property: "og:title", content: "Vey Studio" }],
       ["meta", { property: "og:description", content: t.ogDescription }],
       ...LANGS.map((l): HeadConfig => [
         "link",
@@ -86,7 +86,7 @@ export default defineConfig({
     root: {
       label: "English",
       lang: "en",
-      description: "How to use VS Claude, the desktop studio for Claude Code.",
+      description: "How to use Vey Studio, the desktop studio for Claude Code.",
       themeConfig: {
         sidebar: [
           {
@@ -124,7 +124,7 @@ export default defineConfig({
       label: "Tiếng Việt",
       lang: "vi",
       description:
-        "Hướng dẫn sử dụng VS Claude, studio desktop cho Claude Code.",
+        "Hướng dẫn sử dụng Vey Studio, studio desktop cho Claude Code.",
       themeConfig: {
         sidebar: [
           {

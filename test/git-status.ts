@@ -39,7 +39,7 @@ async function statesIn(dir: string): Promise<Record<string, string>> {
 }
 
 async function main() {
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-git-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-git-"))
 
   section("a folder that is not a repository")
 

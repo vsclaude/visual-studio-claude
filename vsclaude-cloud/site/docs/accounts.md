@@ -1,7 +1,7 @@
 # Claude accounts
 
 Plain Claude Code ties a conversation to one login and stops it at that
-login's limit. VS Claude lets you sign in to as many Claude accounts as you
+login's limit. Vey Studio lets you sign in to as many Claude accounts as you
 have, and move a chat between them without losing it.
 
 ## Adding an account
@@ -9,7 +9,7 @@ have, and move a chat between them without losing it.
 1. Open **Settings** (`⌘,`) › **Claude**.
 2. Click **Add account** and give it a name — _Work_, _Personal_, _Team_.
 3. Sign in. It is Claude Code's own login, so your password never passes
-   through VS Claude.
+   through Vey Studio.
 
 ![Settings › Claude: Pay with credits, then your accounts and Add account](/screenshots/settings-claude.png)
 
@@ -33,7 +33,7 @@ If every account is out of its window, pick **Pay with credits** in the same
 menu. See [Credits](/docs/credits).
 
 ::: info
-Switching is always your choice. VS Claude never moves a chat to another
+Switching is always your choice. Vey Studio never moves a chat to another
 account, or onto credits, by itself.
 :::
 

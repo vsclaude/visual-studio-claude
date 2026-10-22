@@ -94,7 +94,7 @@ export default defineConfig({
   // variable), for a session where an edit should not swap modules under a
   // live pty and a running chat; the window then picks changes up on ⌘R.
   server: {
-    hmr: process.env.VSCLAUDE_HMR !== "false",
+    hmr: process.env.VEYSTUDIO_HMR !== "false",
   },
   build: {
     // Out of `src/`, and named to match `dist-electron/` beside it. Vite would

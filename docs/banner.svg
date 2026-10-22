@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
-  <title>VS Claude — Claude Code and your editor, in one app</title>
+  <title>Vey Studio — Claude Code and your editor, in one app</title>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -47,12 +47,12 @@
     </svg>
   </svg>
 
-  <!-- the wordmark: resources/vs-mark.svg at the cap height, then "Claude" -->
-  <svg x="540" y="258.2" width="40.6" height="37.8" viewBox="8.85 -0.05 64.5 60.1" fill="none">
+  <!-- the wordmark: resources/vs-mark.svg at the cap height, then "Vey Studio" -->
+  <svg x="497.5" y="258.2" width="40.6" height="37.8" viewBox="8.85 -0.05 64.5 60.1" fill="none">
     <defs><linearGradient id="vs-ink" gradientUnits="userSpaceOnUse" x1="5" y1="5" x2="66" y2="55"><stop offset="0" stop-color="#A78BFA"/><stop offset="0.55" stop-color="#D88BD0"/><stop offset="1" stop-color="#FCC63A"/></linearGradient></defs>
     <g transform="skewX(-12) translate(10 0)" stroke="url(#vs-ink)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,5 20,55 35,5"/><path d="M61 13C57 6 49 4.5 44 6C36 8.5 36 19 43 24C48 27.5 56 30 60 35C66 43 60 55 49 55C43 55 38 52.5 35 47"/></g>
   </svg>
-  <text x="590.3" y="296" font-size="44" font-weight="700" letter-spacing="1" fill="#FFFFFF">Claude</text>
+  <text x="547.8" y="296" font-size="44" font-weight="700" letter-spacing="1" fill="#FFFFFF">Vey Studio</text>
   <text x="640" y="336" text-anchor="middle" font-size="19" fill="#B6ABD8">Claude Code and your editor, in one app.</text>
 
     <g>

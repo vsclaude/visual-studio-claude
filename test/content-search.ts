@@ -145,7 +145,7 @@ section("chats")
 
 section("files")
 {
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-search-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-search-"))
   try {
     await mkdir(path.join(root, "src"))
     await mkdir(path.join(root, "node_modules"))
@@ -202,7 +202,7 @@ section("files")
 
 section("a repository: what git ignores is not searched")
 {
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-search-git-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-search-git-"))
   try {
     execFileSync("git", ["init", "-q"], { cwd: root })
     await writeFile(path.join(root, ".gitignore"), ".output/\nnotes.log\n")
@@ -321,7 +321,7 @@ section("replace")
     ) === "1=x"
   )
 
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-replace-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-replace-"))
   try {
     const text = path.join(root, "a.txt")
     await writeFile(text, "foo\r\nbar foo\r\n")

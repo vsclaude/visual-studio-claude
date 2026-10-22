@@ -22,7 +22,7 @@ const bin = (name) => path.join(root, "node_modules", ".bin", name)
 const VITE_URL = /(https?:\/\/(?:localhost|127\.0\.0\.1):\d+\/?)/
 
 // The repository's `.env`, if there is one, for the variables main reads at
-// launch (`VSCLAUDE_AI_URL`, say) — so they need not be typed in a shell's own
+// launch (`VEYSTUDIO_AI_URL`, say) — so they need not be typed in a shell's own
 // syntax every run. Development only: a packaged app never reads it. What the
 // shell already set wins, since `loadEnvFile` does not override.
 try {
@@ -106,7 +106,7 @@ await new Promise((resolve, reject) => {
 // would call itself.
 const vite = start(bin("vite"), [], {
   cwd: root,
-  env: { ...process.env, VSCLAUDE_HMR: String(hmr) },
+  env: { ...process.env, VEYSTUDIO_HMR: String(hmr) },
 })
 
 const url = await new Promise((resolve, reject) => {

@@ -37,7 +37,7 @@ async function clone(remote: string, into: string) {
 }
 
 async function main() {
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-push-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-push-"))
   const remote = path.join(root, "remote.git")
   const mine = path.join(root, "mine")
   const theirs = path.join(root, "theirs")

@@ -37,7 +37,7 @@ Open **Settings** with `⌘,` or the gear at the bottom of the left rail.
 
 ## Plugins
 
-Plugins add features to VS Claude. Two come with it, switched on:
+Plugins add features to Vey Studio. Two come with it, switched on:
 
 - **Chat export** — copy a chat as Markdown, or save it as a Markdown or HTML
   file, from the chat's right-click menu.
@@ -53,6 +53,6 @@ files, your terminals, your chats. Only switch on a plugin you trust.
 
 ## Updates
 
-Shows the version of VS Claude and of your Claude Code, and whether a newer VS
+Shows the version of Vey Studio and of your Claude Code, and whether a newer VS
 Claude is out. Installing an update restarts the app, and open terminal
 sessions end. On Linux, the button links to the release page instead.

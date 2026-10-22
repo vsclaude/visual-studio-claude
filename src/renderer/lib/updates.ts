@@ -5,7 +5,7 @@ import type { UpdateCheck, UpdateProgress } from "@shared/api"
 import { recall, remember } from "./tab-memory"
 
 /**
- * Whether there is a newer VS Claude, and the one button that installs it.
+ * Whether there is a newer Vey Studio, and the one button that installs it.
  *
  * The check itself is `main/updater.ts`; what is here is when it is asked and
  * what the answer is allowed to do to the window. Both of those are deliberate:
@@ -44,7 +44,7 @@ type UpdatesState = {
   progress: UpdateProgress | null
   /** Why the installer would not start, or the download failed. Never a failure
    * of the install itself, which happens after this process is gone — that is in
-   * `~/.vsclaude/update.log`. */
+   * `~/.veystudio/update.log`. */
   error: string | null
   dismissed: string | null
 

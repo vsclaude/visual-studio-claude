@@ -2634,7 +2634,7 @@ export type DesktopApi = {
   cancelSignInWithGoogle: () => Promise<void>
   /**
    * Whether this build has a server for the free AI at all — `FREE_AI_URL`, or
-   * `VSCLAUDE_AI_URL` in main's environment. Asked once: with neither, the free
+   * `VEYSTUDIO_AI_URL` in main's environment. Asked once: with neither, the free
    * AI is drawn nowhere.
    */
   freeAiAvailable: () => Promise<boolean>

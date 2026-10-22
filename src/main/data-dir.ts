@@ -17,16 +17,19 @@ import path from "node:path"
  * from there drags a running Electron in with it, which a test running under
  * plain `bun` cannot do.
  */
-export const DATA_DIR_NAME = ".vsclaude"
-
-/** Where the app kept it while it was called Yasuo — see `migrateLegacyDataDir`. */
-const LEGACY_DATA_DIR_NAME = ".yasuo"
+export const DATA_DIR_NAME = ".veystudio"
 
 /**
- * `VSCLAUDE_DATA_DIR` moves the whole tree — the manifest, the workspace's own
- * files and the agent settings alike. `YASUO_DATA_DIR` is the same variable
- * under the app's old name, still read so a setup that exported it keeps its
- * workspace.
+ * Where the app kept it under its earlier names — VS Claude, and Yasuo before
+ * that — newest first; see `migrateLegacyDataDir`.
+ */
+const LEGACY_DATA_DIR_NAMES = [".vsclaude", ".yasuo"]
+
+/**
+ * `VEYSTUDIO_DATA_DIR` moves the whole tree — the manifest, the workspace's own
+ * files and the agent settings alike. `VSCLAUDE_DATA_DIR` and `YASUO_DATA_DIR`
+ * are the same variable under the app's old names, still read so a setup that
+ * exported one keeps its workspace.
  *
  * Read on every call rather than captured once, so that a test can point it
  * somewhere disposable before the first read. That is not a detail: the
@@ -36,6 +39,7 @@ const LEGACY_DATA_DIR_NAME = ".yasuo"
  */
 export function dataDir(): string {
   return (
+    process.env.VEYSTUDIO_DATA_DIR ??
     process.env.VSCLAUDE_DATA_DIR ??
     process.env.YASUO_DATA_DIR ??
     path.join(homedir(), DATA_DIR_NAME)
@@ -43,8 +47,11 @@ export function dataDir(): string {
 }
 
 /**
- * Moves `~/.yasuo` to `~/.vsclaude` the first time a build under the new name
- * runs, so the rename costs nobody their workspace.
+ * Moves `~/.vsclaude` — or `~/.yasuo`, for a build that skipped the name in
+ * between — to `~/.veystudio` the first time a build under the new name runs,
+ * so the rename costs nobody their workspace. The newest old name wins: a
+ * `~/.yasuo` beside a `~/.vsclaude` is the worktrees the last move left behind,
+ * not a workspace.
  *
  * Everything moves except the git worktrees under `workspace/worktrees`. Those
  * are recorded in the manifest by absolute path, the repository they were cut
@@ -59,10 +66,19 @@ export function dataDir(): string {
  * workspace somebody is already using.
  */
 export function migrateLegacyDataDir(): void {
-  if (process.env.VSCLAUDE_DATA_DIR || process.env.YASUO_DATA_DIR) return
-  const legacy = path.join(homedir(), LEGACY_DATA_DIR_NAME)
+  if (
+    process.env.VEYSTUDIO_DATA_DIR ||
+    process.env.VSCLAUDE_DATA_DIR ||
+    process.env.YASUO_DATA_DIR
+  ) {
+    return
+  }
   const current = path.join(homedir(), DATA_DIR_NAME)
-  if (existsSync(current) || !existsSync(legacy)) return
+  if (existsSync(current)) return
+  const legacy = LEGACY_DATA_DIR_NAMES.map((name) =>
+    path.join(homedir(), name)
+  ).find((dir) => existsSync(dir))
+  if (!legacy) return
   try {
     renameSync(legacy, current)
     const moved = path.join(current, "workspace", "worktrees")
@@ -74,7 +90,7 @@ export function migrateLegacyDataDir(): void {
   } catch (error) {
     // Starting on an empty workspace beside an intact old one is recoverable;
     // refusing to start is not.
-    console.error("Could not move ~/.yasuo to ~/.vsclaude:", error)
+    console.error(`Could not move ${legacy} to ${current}:`, error)
   }
 }
 

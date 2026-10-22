@@ -6,7 +6,7 @@ Bản build chưa được ký và file đã bị trình duyệt tải về đá
 lệnh này một lần:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/VS Claude.app"
+xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
 ```
 
 Hoặc cài bằng script một dòng trong [Bắt đầu](/vi/docs/getting-started#macos),
@@ -14,7 +14,7 @@ cách này không gặp vấn đề trên.
 
 ## "Could not find `claude`"
 
-VS Claude chạy chính Claude Code CLI của bạn, và tìm nó giống như login shell
+Vey Studio chạy chính Claude Code CLI của bạn, và tìm nó giống như login shell
 của bạn. Nếu CLI được cài ở chỗ `PATH` của shell không với tới, hãy đặt
 `CLAUDE_BIN` thành đường dẫn đầy đủ tới file `claude` trước khi mở app.
 **Settings › Updates** cho biết phiên bản nào đã được tìm thấy.
@@ -48,13 +48,13 @@ hãy liên hệ kèm thông tin giao dịch để được xử lý thủ công.
 
 ## Chat bằng credit báo prompt quá dài
 
-Khi dùng credit, mỗi request giới hạn 100K token. VS Claude để Claude Code nén
+Khi dùng credit, mỗi request giới hạn 100K token. Vey Studio để Claude Code nén
 cuộc trò chuyện trước khi chạm mức đó nên hiếm khi xảy ra; nếu gặp, hãy mở chat
 mới hoặc nhờ Claude tóm tắt trước.
 
 ## Dữ liệu của tôi nằm ở đâu?
 
-Project của bạn vẫn nằm nguyên chỗ cũ. Dữ liệu riêng của VS Claude — danh sách
+Project của bạn vẫn nằm nguyên chỗ cũ. Dữ liệu riêng của Vey Studio — danh sách
 project, cài đặt, chat và các phiên đăng nhập tài khoản Claude — nằm trong
-`~/.vsclaude` trên máy bạn. Request từ tài khoản Claude của bạn đi thẳng tới
-Anthropic; chỉ chat bằng credit mới đi qua server của VS Claude.
+`~/.veystudio` trên máy bạn. Request từ tài khoản Claude của bạn đi thẳng tới
+Anthropic; chỉ chat bằng credit mới đi qua server của Vey Studio.

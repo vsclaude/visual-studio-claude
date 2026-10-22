@@ -58,6 +58,6 @@ past 100K tokens.
 
 ## Where your requests go
 
-On credits, requests go through VS Claude's server to Anthropic, which is how
+On credits, requests go through Vey Studio's server to Anthropic, which is how
 they are charged. Your sign-in is never passed on. On your own accounts,
 requests go straight from the app to Anthropic — the server is not involved.

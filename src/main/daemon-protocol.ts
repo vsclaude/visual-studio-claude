@@ -8,13 +8,15 @@
 import { homedir } from "node:os"
 import path from "node:path"
 
+import { DATA_DIR_NAME } from "./data-dir"
+
 /** Where both sides find each other. A named pipe has no filesystem path to
- * agree on on Windows, so it is not "under `~/.vsclaude`" there — just a
+ * agree on on Windows, so it is not "under `~/.veystudio`" there — just a
  * name both processes know. */
 export function socketPath(): string {
   const name = `agent-daemon-v${PROTOCOL_VERSION}`
-  if (process.platform === "win32") return `\\\\.\\pipe\\vsclaude-${name}`
-  return path.join(homedir(), ".vsclaude", `${name}.sock`)
+  if (process.platform === "win32") return `\\\\.\\pipe\\veystudio-${name}`
+  return path.join(homedir(), DATA_DIR_NAME, `${name}.sock`)
 }
 
 /**

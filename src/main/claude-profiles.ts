@@ -11,8 +11,8 @@
  * at a config directory somebody already keeps.
  *
  * **Decided in the main process, and that is not a formality**: the root is
- * under the store's own workspace directory, which `VSCLAUDE_DATA_DIR` can move —
- * a renderer building `~/.vsclaude/…` for itself would write the wrong path for
+ * under the store's own workspace directory, which `VEYSTUDIO_DATA_DIR` can move —
+ * a renderer building `~/.veystudio/…` for itself would write the wrong path for
  * anybody who has moved the tree, including this repo's own tests.
  *
  * The root is passed in rather than read here, which keeps this file free of

@@ -2,7 +2,7 @@
 
 Written for macOS. On Windows and Linux, read `⌘` as `Ctrl`. Inside a terminal
 on those systems, the `Ctrl` letters belong to the shell (`Ctrl+W` deletes a
-word there), so VS Claude leaves them alone.
+word there), so Vey Studio leaves them alone.
 
 ## Window
 

@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: VS Claude
+  name: Vey Studio
   text: Hướng dẫn sử dụng
   tagline: Mọi tài khoản Claude trong một menu, cuộc chat không mất khi đổi tài khoản, và credit cho lúc mọi gói đều hết hạn mức 5 giờ.
   image:
     src: /logo.svg
-    alt: VS Claude
+    alt: Vey Studio
   actions:
     - theme: brand
       text: Bắt đầu

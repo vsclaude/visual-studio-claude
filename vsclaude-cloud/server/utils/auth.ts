@@ -22,7 +22,7 @@ export async function authenticate(event: H3Event): Promise<User | Response> {
     return anthropicError(
       400,
       "authentication_error",
-      "Sign in to VS Claude to use the free AI."
+      "Sign in to Vey Studio to use the free AI."
     )
   }
   const verified = await verifyAccess(
@@ -34,7 +34,7 @@ export async function authenticate(event: H3Event): Promise<User | Response> {
     return anthropicError(
       400,
       "authentication_error",
-      `VS Claude could not verify your sign-in: ${verified.reason}. Sign out and in again if it persists.`
+      `Vey Studio could not verify your sign-in: ${verified.reason}. Sign out and in again if it persists.`
     )
   }
   noteRequest(event, { uid: verified.user.uid })

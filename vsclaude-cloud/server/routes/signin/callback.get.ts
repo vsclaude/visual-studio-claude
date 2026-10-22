@@ -27,7 +27,7 @@ export default defineHandler(async (event) => {
   const nonce = params.get("state") ?? ""
   if (!isNonce(nonce)) {
     noteRequest(event, { refused: "no sign-in in state" })
-    return page({ kind: "failed", reason: "This is not a VS Claude sign-in." })
+    return page({ kind: "failed", reason: "This is not a Vey Studio sign-in." })
   }
 
   const outcome = await signIn(params, publicUrlOf(event))

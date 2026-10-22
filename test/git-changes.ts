@@ -54,7 +54,7 @@ async function rowsIn(dir: string) {
 }
 
 async function main() {
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-changes-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-changes-"))
 
   section("a folder that is not a repository")
 
@@ -386,7 +386,7 @@ async function main() {
   section("where the branch stands against its remote")
 
   check("no remote marks nothing", (await upstream(root))?.ahead.length === 0)
-  const remote = await mkdtemp(path.join(tmpdir(), "vsclaude-changes-remote-"))
+  const remote = await mkdtemp(path.join(tmpdir(), "veystudio-changes-remote-"))
   await git(remote, "init", "--bare", "--initial-branch", "main")
   await git(root, "remote", "add", "origin", remote)
   const unpublished = await upstream(root)
@@ -409,7 +409,7 @@ async function main() {
 
   section("a repository with no commits")
 
-  const fresh = await mkdtemp(path.join(tmpdir(), "vsclaude-changes-empty-"))
+  const fresh = await mkdtemp(path.join(tmpdir(), "veystudio-changes-empty-"))
   await git(fresh, "init", "--initial-branch", "main")
   await writeFile(path.join(fresh, "first.ts"), "a\n")
 

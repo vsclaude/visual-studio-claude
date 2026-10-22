@@ -53,7 +53,7 @@ export default defineHandler(() => {
   return htmlResponse(
     paymentDocument({
       lang: "en",
-      title: "VS Claude — Checkout",
+      title: "Vey Studio — Checkout",
       secure: "Secure checkout",
       css: CHECKOUT_CSS,
       narrow: true,
@@ -81,7 +81,7 @@ export default defineHandler(() => {
         ${raw(
           arrivalCard({
             title: "Credits added",
-            note: "They never expire. Head back to VS Claude to keep going.",
+            note: "They never expire. Head back to Vey Studio to keep going.",
             button: "Close",
           })
         )}`,
@@ -108,7 +108,7 @@ export default defineHandler(() => {
                 if (answer.paid) {
                   say(
                     "Thank you!",
-                    "Your purchase is done. You can close this tab and go back to VS Claude.",
+                    "Your purchase is done. You can close this tab and go back to Vey Studio.",
                     "done"
                   )
                   showArrival(answer.credits)
@@ -118,7 +118,7 @@ export default defineHandler(() => {
             }
             say(
               "Payment received",
-              "Your credits are on their way. VS Claude shows them when they land.",
+              "Your credits are on their way. Vey Studio shows them when they land.",
               "done"
             )
           }

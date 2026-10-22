@@ -16,7 +16,7 @@ export const FREE_PROFILE_ID = "vsclaude-free"
 
 /**
  * The server the free AI's requests go to — empty until there is one, which
- * hides the free AI everywhere. `VSCLAUDE_AI_URL` in the environment main is
+ * hides the free AI everywhere. `VEYSTUDIO_AI_URL` in the environment main is
  * started with overrides it, for a server running on this machine.
  *
  * The server is sent the signed-in user's access token on every request,

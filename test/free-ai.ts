@@ -103,9 +103,9 @@ check(
 
 section("setFreeAiToken and accountEnv: the directory on disk")
 
-const dir = await mkdtemp(path.join(tmpdir(), "vsclaude-free-"))
-const previousUrl = process.env.VSCLAUDE_AI_URL
-process.env.VSCLAUDE_AI_URL = "http://localhost:4000"
+const dir = await mkdtemp(path.join(tmpdir(), "veystudio-free-"))
+const previousUrl = process.env.VEYSTUDIO_AI_URL
+process.env.VEYSTUDIO_AI_URL = "http://localhost:4000"
 // The server's `POST /api/session`, stood in for: a session it knows is worth
 // an access token, anything else is refused. `fetch` rather than a socket, so
 // this runs where a port cannot be opened.
@@ -187,8 +187,8 @@ try {
   )
 } finally {
   globalThis.fetch = realFetch
-  if (previousUrl === undefined) delete process.env.VSCLAUDE_AI_URL
-  else process.env.VSCLAUDE_AI_URL = previousUrl
+  if (previousUrl === undefined) delete process.env.VEYSTUDIO_AI_URL
+  else process.env.VEYSTUDIO_AI_URL = previousUrl
   await rm(dir, { recursive: true, force: true })
 }
 

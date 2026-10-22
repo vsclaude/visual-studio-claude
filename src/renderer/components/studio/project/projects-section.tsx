@@ -970,7 +970,7 @@ function ProjectChats({ folderId }: { folderId: string | null }) {
             <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
             <AlertDialogDescription>
               &ldquo;{deleting?.title}&rdquo; and everything said in it are
-              deleted from VS Claude, and there is no undo.
+              deleted from Vey Studio, and there is no undo.
               {/* Said only when it is true: main kills a turn still running
                   in a chat it deletes, and that is the one part of this that
                   reaches past the transcript. */}

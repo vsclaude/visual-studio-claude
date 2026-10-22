@@ -136,7 +136,7 @@ check(
 
 section("profileDir: the path nobody has to type")
 
-const root = "/Users/hung/.vsclaude/claude-profiles"
+const root = "/Users/hung/.veystudio/claude-profiles"
 
 check(
   "a profile's directory is named after it",

@@ -3,10 +3,10 @@ import { useId, type CSSProperties } from "react"
 import { cn } from "@/lib/utils"
 
 /**
- * "VS Claude" as the brand writes it: the VS lettermark, then "Claude" in the
- * surrounding type. The lettermark is `resources/vs-mark.svg`, path for path —
- * the S runs through the V's right arm, so the two read as one glyph, the same
- * one the app icon draws in white.
+ * "Vey Studio" as the brand writes it: the VS lettermark — Vey Studio's
+ * initials — then the name in the surrounding type. The lettermark is
+ * `resources/vs-mark.svg`, path for path — the S runs through the V's right
+ * arm, so the two read as one glyph, the same one the app icon draws in white.
  *
  * Sized in `em` and sat on the baseline, so it is the cap height of whatever
  * text it is set in and needs no size of its own. The gradient id is per
@@ -20,7 +20,7 @@ export function Wordmark({
 }: {
   className?: string
   style?: CSSProperties
-  /** For "Claude" alone — the splash's faded gradient text, say. */
+  /** For the name alone — the splash's faded gradient text, say. */
   textClassName?: string
 }) {
   const ink = `vs-ink-${useId().replace(/:/g, "")}`
@@ -28,7 +28,7 @@ export function Wordmark({
     <span
       className={cn("inline-flex items-baseline gap-[0.22em]", className)}
       style={style}
-      aria-label="VS Claude"
+      aria-label="Vey Studio"
       role="img"
     >
       <svg
@@ -63,7 +63,7 @@ export function Wordmark({
         </g>
       </svg>
       <span aria-hidden className={textClassName}>
-        Claude
+        Vey Studio
       </span>
     </span>
   )

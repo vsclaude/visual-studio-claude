@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "VS Claude — settings both sides share",
+  "display": "Vey Studio — settings both sides share",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["es2022", "DOM", "DOM.Iterable"],

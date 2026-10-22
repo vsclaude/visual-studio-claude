@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# Installs VS Claude into /Applications from a GitHub release.
+# Installs Vey Studio into /Applications from a published release.
 #
-#   ./install.sh            the latest release
-#   ./install.sh 0.1.0      that release
+#   VEYSTUDIO_UPDATE_URL=https://… ./install.sh            the latest release
+#   VEYSTUDIO_UPDATE_URL=https://… ./install.sh 0.1.0      that release
 #
-# VSCLAUDE_UPDATE_DMG names a .dmg already on disk, which is how the app's own
+# VEYSTUDIO_UPDATE_URL is where the releases are published (the address the
+# app's own update check reads); it is not built in, since this script is also
+# run straight from a checkout.
+#
+# VEYSTUDIO_UPDATE_DMG names a .dmg already on disk, which is how the app's own
 # "Update and reopen" runs this: it downloads the asset itself so it can draw a
 # percentage, then hands the file over. The file is deleted afterwards.
 #
@@ -19,7 +23,6 @@
 
 set -euo pipefail
 
-REPO="vsclaude/visual-studio-claude"
 # Overridable so the script can be exercised against a scratch directory.
 APPLICATIONS="${APPLICATIONS:-/Applications}"
 
@@ -32,7 +35,7 @@ esac
 # launch with nothing that says why.
 MACOS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
 if [ "$MACOS_MAJOR" -lt 12 ]; then
-  echo "VS Claude needs macOS 12 (Monterey) or newer." >&2
+  echo "Vey Studio needs macOS 12 (Monterey) or newer." >&2
   echo "This machine runs $(sw_vers -productVersion)." >&2
   exit 1
 fi
@@ -48,44 +51,56 @@ if [ ! -w "$APPLICATIONS" ]; then
   exit 1
 fi
 
-# The asset is asked for by architecture rather than built out of a version and
-# a naming template: a release whose files are named something else should fail
-# as "no arm64 build here" instead of as a 404 on a URL this script invented.
-asset_url() {
-  curl -fsL "$1" \
-    | grep -o '"browser_download_url":[[:space:]]*"[^"]*"' \
-    | sed 's/.*"\(https[^"]*\)"/\1/' \
-    | grep -- "-${ARCH}\.dmg$" \
-    | head -1
+# The manifest names every file in a release, and the .dmg for this architecture
+# is picked out of it by name rather than built out of a version and a naming
+# template: a release whose files are named something else should fail as "no
+# arm64 build here" instead of as a 404 on a URL this script invented.
+manifest_field() {
+  grep -o "\"$2\":[[:space:]]*\"[^\"]*\"" <<<"$1" | sed 's/.*"\([^"]*\)"$/\1/' | head -1
 }
+
+UPDATE_URL="${VEYSTUDIO_UPDATE_URL:-}"
+UPDATE_URL="${UPDATE_URL%/}"
 
 # A .dmg the app downloaded itself before running this, so that the progress bar
 # in its window is a real measure: the download is the long part of an install
 # and the only one the app is still alive for — everything below the `quit` is
 # not drawable. Treated as a temporary of this run and deleted with the rest.
-PREFETCHED="${VSCLAUDE_UPDATE_DMG:-}"
+PREFETCHED="${VEYSTUDIO_UPDATE_DMG:-}"
 if [ -n "$PREFETCHED" ] && [ ! -f "$PREFETCHED" ]; then
   echo "No such file: $PREFETCHED — downloading instead." >&2
   PREFETCHED=""
 fi
 
 VERSION="${1:-}"
-if [ -n "$PREFETCHED" ]; then
-  URL=""
-elif [ -n "$VERSION" ]; then
+URL=""
+if [ -z "$PREFETCHED" ]; then
+  if [ -z "$UPDATE_URL" ]; then
+    echo "Set VEYSTUDIO_UPDATE_URL to the address releases are published at." >&2
+    exit 1
+  fi
+  if [ -n "$VERSION" ]; then
+    MANIFEST_URL="$UPDATE_URL/v${VERSION#v}/manifest.json"
+  else
+    MANIFEST_URL="$UPDATE_URL/latest.json"
+  fi
   echo "Looking up the release…"
-  # Both tag spellings, because which one a release used is not something the
-  # person running this should have to know.
-  URL=$(asset_url "https://api.github.com/repos/$REPO/releases/tags/v${VERSION#v}") || true
-  [ -n "${URL:-}" ] ||
-    URL=$(asset_url "https://api.github.com/repos/$REPO/releases/tags/${VERSION#v}") || true
-else
-  URL=$(asset_url "https://api.github.com/repos/$REPO/releases/latest") || true
+  MANIFEST=$(curl -fsL "$MANIFEST_URL") || {
+    echo "Could not read $MANIFEST_URL" >&2
+    exit 1
+  }
+  RELEASE_VERSION=$(manifest_field "$MANIFEST" version) || true
+  FILE=$(grep -o '"name":[[:space:]]*"[^"]*"' <<<"$MANIFEST" \
+    | sed 's/.*"\([^"]*\)"$/\1/' \
+    | grep -- "-${ARCH}\.dmg$" \
+    | head -1) || true
+  if [ -n "${RELEASE_VERSION:-}" ] && [ -n "${FILE:-}" ]; then
+    URL="$UPDATE_URL/v$RELEASE_VERSION/$(printf '%s' "$FILE" | sed 's/ /%20/g')"
+  fi
 fi
 
 if [ -z "$PREFETCHED" ] && [ -z "${URL:-}" ]; then
-  echo "No ${ARCH} .dmg in ${VERSION:-the latest release} of $REPO." >&2
-  echo "See https://github.com/$REPO/releases" >&2
+  echo "No ${ARCH} .dmg in ${VERSION:-the latest release} at $UPDATE_URL." >&2
   exit 1
 fi
 
@@ -120,7 +135,7 @@ fi
 APP_NAME=$(basename "$APP_SRC")
 
 # Replacing a bundle out from under a running process leaves it half-swapped,
-# and the pty daemon it spawned holds a socket in ~/.vsclaude that a new
+# and the pty daemon it spawned holds a socket in ~/.veystudio that a new
 # build would then talk to.
 quit_app() {
   if pgrep -qx "$1"; then
@@ -134,15 +149,16 @@ quit_app() {
 }
 quit_app "${APP_NAME%.app}"
 
-# The same app under the name it had before it was Visual Studio Claude. Left
-# in place it would be a second copy, still on the old version, that the Dock
-# and Spotlight keep offering.
-LEGACY_APP="Yasuo.app"
-if [ "$APP_NAME" != "$LEGACY_APP" ] && [ -d "$APPLICATIONS/$LEGACY_APP" ]; then
-  quit_app "${LEGACY_APP%.app}"
-  echo "Removing $LEGACY_APP, which this replaces…"
-  rm -rf "$APPLICATIONS/$LEGACY_APP"
-fi
+# The same app under the names it had before it was Vey Studio. Left in place
+# either would be a second copy, still on an old version, that the Dock and
+# Spotlight keep offering.
+for LEGACY_APP in "Visual Studio Claude.app" "Yasuo.app"; do
+  if [ "$APP_NAME" != "$LEGACY_APP" ] && [ -d "$APPLICATIONS/$LEGACY_APP" ]; then
+    quit_app "${LEGACY_APP%.app}"
+    echo "Removing $LEGACY_APP, which this replaces…"
+    rm -rf "$APPLICATIONS/$LEGACY_APP"
+  fi
+done
 
 rm -rf "$APPLICATIONS/$APP_NAME"
 # `ditto` rather than `cp -R`: it is the macOS tool for copying a bundle, and it

@@ -124,7 +124,7 @@ async function main() {
 
   section("writeImageFile")
 
-  const dir = await mkdtemp(path.join(tmpdir(), "vsclaude-image-edit-"))
+  const dir = await mkdtemp(path.join(tmpdir(), "veystudio-image-edit-"))
   try {
     const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3])
     const png = path.join(dir, "a.png")

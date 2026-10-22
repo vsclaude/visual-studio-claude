@@ -53,7 +53,7 @@ export const CLAUDE_PROFILES_FILE = "claude-profiles.json"
  * And the directories those profiles point at, one per profile: the CLI's own
  * login, settings and history, written by `claude` and read by nobody here.
  *
- * Beside the list rather than at the top of `~/.vsclaude`, because a profile is a
+ * Beside the list rather than at the top of `~/.veystudio`, because a profile is a
  * record **of the workspace** — the same reason its list is a workspace file.
  * A second workspace will have profiles of its own, and two of them named
  * `Personal` must not be one login.

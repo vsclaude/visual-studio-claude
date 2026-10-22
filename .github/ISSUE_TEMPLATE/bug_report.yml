@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in VS Claude behaves wrongly
+description: Something in Vey Studio behaves wrongly
 labels: [bug]
 body:
   - type: markdown
@@ -45,7 +45,7 @@ body:
     id: os
     attributes:
       label: OS
-      description: VS Claude is developed on macOS; Linux and Windows are far less travelled.
+      description: Vey Studio is developed on macOS; Linux and Windows are far less travelled.
       options:
         - macOS (Apple Silicon)
         - macOS (Intel)

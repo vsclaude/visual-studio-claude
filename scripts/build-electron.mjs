@@ -84,10 +84,17 @@ const main = {
   },
   // A URL, not a secret: anything defined here is readable in the bundle.
   // Read back by `freeAiUrl`, where the variable at launch still wins.
+  // `VSCLAUDE_AI_URL` is the same variable under the app's old name, still
+  // read so a `.env` or a CI variable written before the rename keeps working.
   define: {
     "import.meta.url": "__importMetaUrl",
-    "process.env.VSCLAUDE_BUILD_AI_URL": JSON.stringify(
-      process.env.VSCLAUDE_AI_URL ?? ""
+    "process.env.VEYSTUDIO_BUILD_AI_URL": JSON.stringify(
+      process.env.VEYSTUDIO_AI_URL ?? process.env.VSCLAUDE_AI_URL ?? ""
+    ),
+    // Where `updater.ts` looks for `latest.json`. The same URL-not-a-secret
+    // reasoning as above, and the same reason it is read here: no `.env` at launch.
+    "process.env.VEYSTUDIO_BUILD_UPDATE_URL": JSON.stringify(
+      process.env.VEYSTUDIO_UPDATE_URL ?? ""
     ),
   },
 }

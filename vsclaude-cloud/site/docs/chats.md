@@ -50,7 +50,7 @@ Press `Enter` to send and `Shift+Enter` for a new line.
 | **Read only**   | Reads and answers. No edits, no shell.                             |
 | **Ask**         | Asks exactly what the `claude` CLI would, under your own settings. |
 | **Edits**       | Edits files and runs commands in this folder. The default.         |
-| **Full access** | Nothing is asked, including tools VS Claude has not listed.        |
+| **Full access** | Nothing is asked, including tools Vey Studio has not listed.       |
 
 ![The permission menu: Plan, Read only, Ask, Edits and Full access](/screenshots/chat-permissions.png)
 
@@ -130,7 +130,7 @@ on a second screen. A popped-out chat can be pinned on top of other windows.
 
 Right-click a chat for **Copy as Markdown**, **Export as Markdown…** and
 **Export as HTML…**, or **Delete chat…**. Deleting a chat removes the
-conversation from VS Claude, with no undo; it does not touch your files.
+conversation from Vey Studio, with no undo; it does not touch your files.
 
 ![A chat's right-click menu: Rename, Copy as Markdown, Export as Markdown, Export as HTML, Delete chat](/screenshots/chat-menu.png)
 

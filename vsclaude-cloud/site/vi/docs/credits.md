@@ -56,7 +56,7 @@ mỗi lần. Khi dùng credit, chat sẽ tự được thu gọn (compact) trư�
 
 ## Yêu cầu của bạn đi đâu
 
-Khi dùng credit, yêu cầu đi qua server của VS Claude đến Anthropic, đó là cách
+Khi dùng credit, yêu cầu đi qua server của Vey Studio đến Anthropic, đó là cách
 chúng được tính phí. Thông tin đăng nhập của bạn không bao giờ được chuyển tiếp.
 Khi dùng tài khoản riêng, yêu cầu đi thẳng từ ứng dụng đến Anthropic, không qua
 server.

@@ -14,7 +14,7 @@
 //   - background@2x.png is picked up on its own and folded into a multi-
 //     representation TIFF with tiffutil. There is no config for it.
 //
-// Deliberately wordless. Finder already draws "Visual Studio Claude" and "Applications"
+// Deliberately wordless. Finder already draws "Vey Studio" and "Applications"
 // under the two icons; an arrow between them is the whole instruction.
 //
 //   bun apps/desktop/scripts/dmg-background.mjs [--theme light|dark]

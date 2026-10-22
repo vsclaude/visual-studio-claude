@@ -477,7 +477,7 @@ function permitting(allowed: string[] | undefined): (name: string) => boolean {
  * `yasuo-*` tools were attached to, and there are no such tools now.
  */
 const SYSTEM_PROMPT =
-  "You are a chat in a project inside VS Claude, a desktop studio: this directory is the user's own working tree on whatever branch they have checked out, so edits and commands here change the files they are working in. There is no isolation to fall back on — prefer the smallest change that does the job, and say what you are about to do before doing anything wide-reaching."
+  "You are a chat in a project inside Vey Studio, a desktop studio: this directory is the user's own working tree on whatever branch they have checked out, so edits and commands here change the files they are working in. There is no isolation to fall back on — prefer the smallest change that does the job, and say what you are about to do before doing anything wide-reaching."
 
 export class Chats {
   /** A turn per chat, keyed by chat id. Several chats can be answering at once,
@@ -889,7 +889,7 @@ export class Chats {
     // missing token is "Not logged in · Please run /login" — the wrong login.
     if (options.profileId === FREE_PROFILE_ID && !freeAiReady()) {
       this.setBusy(id, false)
-      this.endTurn(id, "Sign in to VS Claude to pay with credits.")
+      this.endTurn(id, "Sign in to Vey Studio to pay with credits.")
       return
     }
 

@@ -18,7 +18,7 @@ khi chạy lệnh.
   về lỗi mà không phải chép tay.
 - **Restart shell** mở shell mới trong cùng tab.
 
-Các shell kết thúc khi VS Claude thoát.
+Các shell kết thúc khi Vey Studio thoát.
 
 ## Tìm kiếm
 

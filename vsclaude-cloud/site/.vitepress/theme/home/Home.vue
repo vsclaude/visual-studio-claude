@@ -12,7 +12,7 @@ import css from "./home.css?inline"
 import { coin, METHOD_ICON, packsForSale, type PaymentMethod } from "./packs.ts"
 
 /*
- * The home page: what VS Claude is, what credits cost, and where to download
+ * The home page: what Vey Studio is, what credits cost, and where to download
  * it. The words are `copy.ts`', one set per language; the prices are
  * `CREDIT_PACKS`' (`packs.ts`).
  *
@@ -279,7 +279,7 @@ onBeforeUnmount(() => seen?.disconnect())
         <div class="brand">
           <a class="logo" :href="home" v-html="LOGO"></a>
           <p>{{ t.footer.tagline }}</p>
-          <p class="copy">© {{ year }} VS Claude</p>
+          <p class="copy">© {{ year }} Vey Studio</p>
         </div>
         <div>
           <h4>{{ t.footer.product }}</h4>

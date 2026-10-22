@@ -119,7 +119,7 @@ function MachineUsage({ usage }: { usage: SystemUsage }) {
       <Divider />
       <span className={ITEM} title={appTitle(usage)}>
         <VsGlyph className="h-2.5 w-auto shrink-0" />
-        <span className="sr-only">VS Claude</span>
+        <span className="sr-only">Vey Studio</span>
         <span>{formatPercent(usage.appCpuPercent)}</span>
         <span className="text-muted-foreground/60">
           {bytes(usage.appMemory)}
@@ -348,7 +348,7 @@ function memoryTitle(usage: SystemUsage): string {
 
 function appTitle(usage: SystemUsage): string {
   return [
-    `VS Claude across ${usage.appProcesses} ${
+    `Vey Studio across ${usage.appProcesses} ${
       usage.appProcesses === 1 ? "process" : "processes"
     }`,
     `CPU ${formatPercent(usage.appCpuPercent)} of the machine — ${formatPercent(

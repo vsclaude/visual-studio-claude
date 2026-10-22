@@ -202,7 +202,7 @@ async function readShellEnv(): Promise<Record<string, string> | null> {
   // Fenced by a marker rather than read as the whole output: an interactive rc
   // file is free to print anything. NUL-separated, since a value may hold a
   // newline and no value can hold a NUL.
-  const marker = "__vsclaude_env__"
+  const marker = "__veystudio_env__"
   const { file, args } = shell(`printf '${marker}'; env -0; printf '${marker}'`)
 
   try {

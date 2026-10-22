@@ -1,4 +1,4 @@
-# VS Claude — design
+# Vey Studio — design
 
 An Electron studio for running several `claude` conversations against a project
 at once and reading what they did. A workspace points at real directories on
@@ -26,7 +26,7 @@ nothing is written into them that you did not ask for; the manifest records an
 absolute path.
 
 ```
-~/.vsclaude/
+~/.veystudio/
   manifest.json              the workspace, its folders, settings
   workspace/
     chats.json      the chats, listed
@@ -588,7 +588,7 @@ editor**, **Chats**, **Claude**, **Plugins**, **Updates**.
 **Claude** holds named profiles, each a `CLAUDE_CONFIG_DIR`. Adding one is a
 name, a click and a login: the app names the directory
 (`workspace/claude-profiles/<slug>`, in main, because the renderer cannot see
-`VSCLAUDE_DATA_DIR`) and runs `claude auth login` in a pty with that directory
+`VEYSTUDIO_DATA_DIR`) and runs `claude auth login` in a pty with that directory
 set — on the command line too, since a `.zshrc` export would otherwise win.
 Every row says whether it is signed in and as whom, **asked of the CLI**
 (`claude auth status --json`); a missing directory is never spawned into, since
@@ -619,11 +619,11 @@ somebody already spending their own plan is not moved onto the server. It
 starts on Haiku, the cheapest on credits, and the picker offers the
 rest. The server is
 `FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
-whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
+whole thing), or `VEYSTUDIO_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
 loads, so it need not be typed in each shell's own syntax. A packaged app reads
 no `.env` and is launched with none of the builder's variables, so
-`scripts/build-electron.mjs` bakes the `VSCLAUDE_AI_URL` the build saw into
+`scripts/build-electron.mjs` bakes the `VEYSTUDIO_AI_URL` the build saw into
 `main.cjs` — from `.env` locally, from the repository variable of that name in
 `release.yml` — and the variable at launch still wins over it.
 
@@ -700,7 +700,7 @@ and leaves a session token it signed itself in D1 (`sign_ins`, five minutes at
 most), which it hands out once. The callback URL has to be among the OAuth
 client's **authorized redirect URIs** — the server's own, and
 `http://localhost:3000/signin/callback` for one on this machine
-(`VSCLAUDE_AI_URL`).
+(`VEYSTUDIO_AI_URL`).
 
 The studio's own session needs none of this after the first time: the
 renderer keeps the ninety-day session token in `app://studio`'s
@@ -1279,9 +1279,14 @@ nobody pays.
 
 ## Updating
 
-A pill in the status bar when GitHub has a newer release. **Not
-`electron-updater`**: Squirrel.Mac will not replace an unsigned bundle. Instead,
-`main/updater.ts` checks `releases/latest` (at launch, then every six hours),
+A pill in the status bar when the release server has a newer release. **Not
+`electron-updater`**: Squirrel.Mac will not replace an unsigned bundle. The
+installers are built and published by `release.yml` on a tag, to a Cloudflare
+R2 bucket rather than GitHub Releases: `v<version>/` holds the files and a
+`manifest.json`, and `latest.json` is the same manifest, written last. Its
+address is the `VEYSTUDIO_UPDATE_URL` variable, baked into the app at build
+time like the free AI's. `main/updater.ts` reads `latest.json` (at launch, then
+every six hours),
 downloads the `.dmg` itself with a progress bar, and runs the bundled
 `install.sh` **detached**, since the script quits the app. `isNewer` is numeric
 and strictly newer (`test/updates.ts`). Nothing pops up; skipping is per
@@ -1307,14 +1312,34 @@ absolute paths point — re-points profile directories, and renames Electron's
 from a build still called Yasuo installs beside it and has to be opened by hand
 once.
 
-It is now written **VS Claude**, with the VS drawn rather than typed
+It was then written **VS Claude**, with the VS drawn rather than typed
 (`resources/vs-mark.svg`: the S run through the V's right arm). The app icon
 is that glyph in white on the plate, where code brackets around a spark used to
 be — an icon saying one thing beside a name written as another was two brands.
-Only the words changed: `productName`, `app.setName` and
-the `/Applications` path are still "Visual Studio Claude", because renaming the
-bundle is the Yasuo move again — an update that installs beside the old app,
-and Electron's `userData` in a new directory unless it is migrated.
+Only the words changed then: `productName`, `app.setName` and the
+`/Applications` path stayed "Visual Studio Claude".
+
+It is now **Vey Studio**, all the way down, because a release to people who
+are not its author cannot carry two trademarks that are not its own —
+"Visual Studio" and "Claude" — in its name. The VS glyph stays: it is Vey
+Studio's initials, and the wordmark is it followed by the name. Done before
+there were users to speak of, so the bundle moved too rather than keeping a
+third name underneath: `productName`, `app.setName`, `/Applications/Vey
+Studio.app`, the `Vey-Studio-…` installers, `~/.veystudio` and `VEYSTUDIO_*`.
+The first run moves `~/.vsclaude` (or a `~/.yasuo` that never became one) to
+`~/.veystudio` and renames `userData` from either old name, the same way as
+before, worktrees again left where they are; the old variables are still read.
+`install.sh` removes `Visual Studio Claude.app` and `Yasuo.app`. An update
+from a build still called Visual Studio Claude is run by **that** build's
+script, which knows neither, so on macOS it installs Vey Studio beside it,
+reopens the old one and has to be opened by hand once — the Yasuo move again.
+
+What did **not** move, because each is written somewhere the app cannot
+rewrite or would sign everybody out for nothing: `appId` (`vn.app.vsclaude` —
+a new one is a new app to macOS's permissions and a second install to
+Windows'), the `vsclaude-free` profile id and its `vsclaude-token`, the
+renderer's `vsclaude.*` storage keys, the server's token issuer, the D1
+database, the `vsclaude-cloud` directory and the GitHub repository.
 
 ## The launch screen
 

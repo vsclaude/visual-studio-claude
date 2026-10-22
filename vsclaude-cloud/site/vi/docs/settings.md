@@ -35,7 +35,7 @@ Mở **Settings** bằng `⌘,` hoặc biểu tượng bánh răng ở cuối d�
 
 ## Plugins
 
-Plugin bổ sung tính năng cho VS Claude. Có sẵn hai plugin, đều đang bật:
+Plugin bổ sung tính năng cho Vey Studio. Có sẵn hai plugin, đều đang bật:
 
 - **Chat export** — chép chat dưới dạng Markdown, hoặc lưu thành file Markdown
   hay HTML, từ menu chuột phải của chat.
@@ -51,6 +51,6 @@ của bạn. Chỉ bật plugin bạn tin tưởng.
 
 ## Updates
 
-Hiện phiên bản VS Claude và Claude Code của bạn, và có bản VS Claude mới hơn hay
+Hiện phiên bản Vey Studio và Claude Code của bạn, và có bản Vey Studio mới hơn hay
 không. Cài bản cập nhật sẽ khởi động lại app, và các phiên terminal đang mở sẽ
 kết thúc. Trên Linux, nút này mở trang release.

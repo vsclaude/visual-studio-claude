@@ -1,6 +1,6 @@
 # Bắt đầu
 
-VS Claude là ứng dụng desktop để chạy các cuộc chat Claude Code trên những thư
+Vey Studio là ứng dụng desktop để chạy các cuộc chat Claude Code trên những thư
 mục đã có sẵn trong máy bạn, và xem lại chúng đã thay đổi gì: chat, editor,
 diff, commit và terminal trong cùng một cửa sổ.
 
@@ -27,7 +27,7 @@ File tải bằng trình duyệt sẽ bị macOS cách ly, và macOS báo ứng 
 lệnh này một lần sau khi cài:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/VS Claude.app"
+xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
 ```
 
 :::
@@ -44,8 +44,8 @@ x64. Tải file AppImage từ
 [Releases](https://github.com/vsclaude/visual-studio-claude/releases), rồi:
 
 ```bash
-chmod +x Visual-Studio-Claude-*-x64.AppImage
-./Visual-Studio-Claude-*-x64.AppImage
+chmod +x Vey-Studio-*.AppImage
+./Vey-Studio-*.AppImage
 ```
 
 Cần có FUSE (`sudo apt install libfuse2` trên Debian và Ubuntu).
@@ -60,7 +60,7 @@ Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/
 
 1. **Thêm project.** Bấm **+** cạnh **Projects**, chọn một thư mục (hoặc kéo
    thả từ Finder) rồi bấm **Add folder**. Project là một thư mục đã có trong
-   máy: VS Claude làm việc ngay tại chỗ, không bao giờ sao chép nó. Tab
+   máy: Vey Studio làm việc ngay tại chỗ, không bao giờ sao chép nó. Tab
    **From template** dùng để tạo project mới.
 
    ![Hộp thoại Add a folder, với hai tab Existing folder và From template](/screenshots/add-project.png)

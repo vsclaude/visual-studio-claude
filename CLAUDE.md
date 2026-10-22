@@ -13,7 +13,7 @@ area's behaviour. When the two disagree, `design.md` is the fuller account.
 
 ## What this is
 
-**VS Claude**: an Electron studio for running several `claude` conversations
+**Vey Studio**: an Electron studio for running several `claude` conversations
 against a project at once and reading what they did — its folders, its chats,
 its diffs and the chats that made them, in one tab strip.
 
@@ -89,7 +89,7 @@ notifications — is `main/host.ts`, implemented by `electron-ipc.ts`. A handler
 that needs one of those asks `host`; nothing under `src/main/` that `ipc.ts`
 imports may reach `electron`.
 
-- **`store.ts`** — all state on disk under `~/.vsclaude`: `manifest.json` for the
+- **`store.ts`** — all state on disk under `~/.veystudio`: `manifest.json` for the
   workspace and its settings, `workspace/` for the panels' own files. A
   folder's own files are never under here — the manifest records an absolute
   path and they are read where they are. The manifest also carries a
@@ -97,7 +97,7 @@ imports may reach `electron`.
   records, kept because a manifest is rewritten whole and dropping the key would
   delete somebody's saved connections. A **Claude profile's `CLAUDE_CONFIG_DIR`** is one of those workspace files —
   `workspace/claude-profiles/<slug>`, named by `claude-profiles.ts` because the
-  renderer cannot see `VSCLAUDE_DATA_DIR`, created by the `claude auth login` that
+  renderer cannot see `VEYSTUDIO_DATA_DIR`, created by the `claude auth login` that
   `IPC.claudeLogin` runs in a pty. Settings has no path field: a profile is a
   name, and `saveClaudeProfiles` answers with the directory it was given.
 - **`daemon.ts` + `daemon-client.ts`** — ptys live in a detached, per-machine

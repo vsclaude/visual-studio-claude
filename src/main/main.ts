@@ -28,26 +28,29 @@ const DEV_ICON = path.join(__dirname, "..", "resources", "icon.png")
 
 /**
  * Packaging sets this from `build.productName`, but a dev run reads
- * `package.json` straight from disk, where the app is called
- * `visual-studio-claude`. Naming it here is what puts "Visual Studio Claude" in
- * the macOS menu bar, the About panel and the window title instead of
- * Electron's own name. It has to happen before `whenReady`: the default menu is
- * built from `app.name`, and `userData` is derived from it.
+ * `package.json` straight from disk, where the app is called `veystudio`.
+ * Naming it here is what puts "Vey Studio" in the macOS menu bar, the About
+ * panel and the window title instead of Electron's own name. It has to happen
+ * before `whenReady`: the default menu is built from `app.name`, and
+ * `userData` is derived from it.
  */
-app.setName("Visual Studio Claude")
+app.setName("Vey Studio")
 
 /**
- * The app was called Yasuo, and `userData` is named after the app — so the
- * rename would otherwise start Chromium on an empty profile beside the old
- * one. Moved once, before anything opens it; a failure only costs that
- * profile, never the start.
+ * The app was called Visual Studio Claude, and Yasuo before that, and
+ * `userData` is named after the app — so the rename would otherwise start
+ * Chromium on an empty profile beside the old one, signed out and with every
+ * saved search gone. Moved once, before anything opens it, from the newest old
+ * name there is; a failure only costs that profile, never the start.
  */
 try {
-  const legacy = path.join(app.getPath("appData"), "Yasuo")
   const current = app.getPath("userData")
-  if (!existsSync(current) && existsSync(legacy)) renameSync(legacy, current)
+  const legacy = ["Visual Studio Claude", "Yasuo"]
+    .map((name) => path.join(app.getPath("appData"), name))
+    .find((dir) => existsSync(dir))
+  if (!existsSync(current) && legacy) renameSync(legacy, current)
 } catch (error) {
-  console.error("Could not move the old Yasuo profile:", error)
+  console.error("Could not move the old profile:", error)
 }
 
 /**

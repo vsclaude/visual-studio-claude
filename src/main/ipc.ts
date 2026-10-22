@@ -148,7 +148,7 @@ const MAX_LOG_PAGE = 1000
  * so reopening where *this* one lives could open the build that was just
  * replaced — or, from a dev run, an Electron binary in `node_modules`.
  */
-const APP_DIR = "/Applications/Visual Studio Claude.app"
+const APP_DIR = "/Applications/Vey Studio.app"
 
 /**
  * An image on disk as a data URL.
@@ -175,7 +175,7 @@ async function imageDataUrl(filePath: string): Promise<string> {
 /**
  * The clipboard's image spilled to a file, so a terminal can paste a path.
  *
- * `tmpdir()` rather than anywhere under `~/.vsclaude`: this is a scratch copy of
+ * `tmpdir()` rather than anywhere under `~/.veystudio`: this is a scratch copy of
  * something the user still holds in their clipboard, the OS already knows to
  * clean the directory out, and it is where the system terminals put the same
  * file — the `/var/folders/…` path a pasted screenshot turns into there.
@@ -188,7 +188,7 @@ async function clipboardImagePath(
 ): Promise<string | null> {
   if (!png || png.length === 0) return null
 
-  const file = path.join(tmpdir(), `vsclaude-paste-${Date.now()}.png`)
+  const file = path.join(tmpdir(), `veystudio-paste-${Date.now()}.png`)
   await writeFile(file, png)
   return file
 }
@@ -565,8 +565,8 @@ export function createIpc(host: Host): {
       allChats.closeProfile(
         FREE_PROFILE_ID,
         next
-          ? "The VS Claude sign-in changed — this turn was stopped."
-          : "Signed out of VS Claude — this turn was stopped."
+          ? "The Vey Studio sign-in changed — this turn was stopped."
+          : "Signed out of Vey Studio — this turn was stopped."
       )
     }
     freeSession = next
@@ -1012,7 +1012,7 @@ export function createIpc(host: Host): {
       const free = profileId === FREE_PROFILE_ID
       if (free && !freeAiReady()) {
         return {
-          error: "Sign in to VS Claude to pay with credits.",
+          error: "Sign in to Vey Studio to pay with credits.",
         }
       }
 

@@ -6,7 +6,7 @@ The build is unsigned and the file was quarantined by the browser that
 downloaded it. Run this once:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/VS Claude.app"
+xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
 ```
 
 Or install with the one-line script in [Getting started](/docs/getting-started#macos),
@@ -14,7 +14,7 @@ which does not have this problem.
 
 ## "Could not find `claude`"
 
-VS Claude runs your own Claude Code CLI, and looks for it the way your login
+Vey Studio runs your own Claude Code CLI, and looks for it the way your login
 shell would. If it is installed somewhere your shell's `PATH` does not reach,
 set `CLAUDE_BIN` to the full path of the `claude` executable before starting
 the app. **Settings › Updates** shows which version was found.
@@ -49,13 +49,13 @@ out by hand.
 
 ## A chat on credits says the prompt is too long
 
-On credits, a request is limited to 100K tokens. VS Claude has Claude Code
+On credits, a request is limited to 100K tokens. Vey Studio has Claude Code
 compact the conversation before it gets there, so this should be rare; if it
 happens, start a new chat or ask Claude to summarise first.
 
 ## Where is my data?
 
-Your projects stay where they are. VS Claude's own data — the list of projects,
-your settings, chats and Claude account logins — is under `~/.vsclaude` on your
+Your projects stay where they are. Vey Studio's own data — the list of projects,
+your settings, chats and Claude account logins — is under `~/.veystudio` on your
 machine. Requests from your own Claude accounts go straight to Anthropic; only
-chats on credits go through VS Claude's server.
+chats on credits go through Vey Studio's server.

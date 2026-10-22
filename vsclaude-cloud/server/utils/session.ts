@@ -141,7 +141,7 @@ function reasonOf(error: unknown): string {
     return "the token is not signed by this server"
   }
   if (error instanceof errors.JOSEError) {
-    return "the token is not a VS Claude sign-in"
+    return "the token is not a Vey Studio sign-in"
   }
   return error instanceof Error ? error.message : String(error)
 }

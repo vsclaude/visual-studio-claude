@@ -99,7 +99,7 @@ export default defineHandler(async (event) => {
     htmlResponse(
       paymentDocument({
         lang: "vi",
-        title: "Thanh toán — VS Claude",
+        title: "Thanh toán — Vey Studio",
         secure: "Chuyển khoản ngân hàng",
         css: PAY_CSS,
         main,
@@ -114,7 +114,7 @@ export default defineHandler(async (event) => {
       html`<section class="panel">
         <p class="kicker">${code || "—"}</p>
         <h1>Không tìm thấy đơn hàng</h1>
-        <p class="lede">Hãy bắt đầu lại từ menu tài khoản trong VS Claude.</p>
+        <p class="lede">Hãy bắt đầu lại từ menu tài khoản trong Vey Studio.</p>
       </section>`
     )
   }
@@ -174,7 +174,7 @@ export default defineHandler(async (event) => {
       ${raw(
         arrivalCard({
           title: "Đã cộng credits",
-          note: "Credits không bao giờ hết hạn. Quay lại VS Claude để tiếp tục.",
+          note: "Credits không bao giờ hết hạn. Quay lại Vey Studio để tiếp tục.",
           button: "Đóng",
         })
       )}`,
@@ -204,7 +204,7 @@ export default defineHandler(async (event) => {
           const answer = await (await fetch("/api/orders/" + code)).json()
           if (answer.paid) {
             statusText.textContent =
-              "Đã nhận thanh toán. Quay lại VS Claude — credits đã được cộng vào tài khoản."
+              "Đã nhận thanh toán. Quay lại Vey Studio — credits đã được cộng vào tài khoản."
             status.classList.remove("warn")
             status.classList.add("done")
             showArrival(answer.credits)

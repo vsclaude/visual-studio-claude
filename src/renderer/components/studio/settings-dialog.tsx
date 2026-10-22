@@ -727,8 +727,8 @@ function UpdatesSection() {
           !check
             ? "Checking…"
             : check.status === "current"
-              ? `VS Claude ${check.current} — the latest release.`
-              : `VS Claude ${check.current}.`
+              ? `Vey Studio ${check.current} — the latest release.`
+              : `Vey Studio ${check.current}.`
         }
       >
         <Button
@@ -758,7 +758,7 @@ function UpdatesSection() {
 
       {update ? (
         <Row
-          title={`VS Claude ${update.version} is available`}
+          title={`Vey Studio ${update.version} is available`}
           description={
             installing ? (
               // The bar takes the description's place rather than sitting under
@@ -817,7 +817,7 @@ function UpdatesSection() {
       {error && (
         <p className="px-4 pb-3 text-xs leading-relaxed text-destructive">
           {error} The installer&rsquo;s own output is in{" "}
-          <code className="font-mono">~/.vsclaude/update.log</code>.
+          <code className="font-mono">~/.veystudio/update.log</code>.
         </p>
       )}
     </Card>

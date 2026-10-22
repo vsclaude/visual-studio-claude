@@ -49,7 +49,7 @@ Nhấn `Enter` để gửi, `Shift+Enter` để xuống dòng.
 | **Read only**   | Đọc và trả lời. Không sửa file, không chạy shell.                  |
 | **Ask**         | Hỏi đúng những gì `claude` CLI sẽ hỏi, theo cài đặt của chính bạn. |
 | **Edits**       | Sửa file và chạy lệnh trong thư mục này. Mặc định.                 |
-| **Full access** | Không hỏi gì cả, kể cả với công cụ VS Claude chưa liệt kê.         |
+| **Full access** | Không hỏi gì cả, kể cả với công cụ Vey Studio chưa liệt kê.        |
 
 ![Menu quyền: Plan, Read only, Ask, Edits và Full access](/screenshots/chat-permissions.png)
 
@@ -128,7 +128,7 @@ màn hình thứ hai. Cửa sổ tách ra có thể ghim nằm trên các cửa 
 
 Chuột phải vào chat để chọn **Copy as Markdown**, **Export as Markdown…**,
 **Export as HTML…**, hoặc **Delete chat…**. Xoá chat sẽ xoá cuộc trò chuyện khỏi
-VS Claude, không hoàn tác được; file của bạn không bị ảnh hưởng.
+Vey Studio, không hoàn tác được; file của bạn không bị ảnh hưởng.
 
 ![Menu chuột phải của chat: Rename, Copy as Markdown, Export as Markdown, Export as HTML, Delete chat](/screenshots/chat-menu.png)
 

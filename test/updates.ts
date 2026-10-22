@@ -10,6 +10,7 @@
  * to whoever is running one.
  */
 import {
+  assetUrl,
   installerAsset,
   isNewer,
   versionParts,
@@ -57,49 +58,40 @@ section("installerAsset")
 
 const release = {
   assets: [
-    {
-      name: "Visual Studio Claude-1.0.24-x64.dmg",
-      browser_download_url: "x64",
-      size: 120,
-    },
-    {
-      name: "Visual Studio Claude-1.0.24-arm64.dmg",
-      browser_download_url: "arm",
-      size: 130,
-    },
-    {
-      name: "Visual Studio Claude-1.0.24-arm64.zip",
-      browser_download_url: "zip",
-      size: 90,
-    },
-    {
-      name: "Visual-Studio-Claude-1.0.24-x64.exe",
-      browser_download_url: "exe",
-      size: 110,
-    },
-    {
-      name: "Visual-Studio-Claude-1.0.24-x64.exe.blockmap",
-      browser_download_url: "blockmap",
-      size: 1,
-    },
+    { name: "Visual Studio Claude-1.0.24-x64.dmg", size: 120 },
+    { name: "Visual Studio Claude-1.0.24-arm64.dmg", size: 130 },
+    { name: "Visual Studio Claude-1.0.24-arm64.zip", size: 90 },
+    { name: "Visual-Studio-Claude-1.0.24-x64.exe", size: 110 },
+    { name: "Visual-Studio-Claude-1.0.24-x64.exe.blockmap", size: 1 },
   ],
 }
 
 check(
   "picks this arch's dmg",
-  installerAsset(release, "darwin", "arm64")?.url === "arm"
+  installerAsset(release, "darwin", "arm64")?.name ===
+    "Visual Studio Claude-1.0.24-arm64.dmg"
 )
 check(
   "and the other one",
-  installerAsset(release, "darwin", "x64")?.url === "x64"
+  installerAsset(release, "darwin", "x64")?.name ===
+    "Visual Studio Claude-1.0.24-x64.dmg"
 )
 check(
   "Windows gets the .exe, not a .dmg of the same arch",
-  installerAsset(release, "win32", "x64")?.url === "exe"
+  installerAsset(release, "win32", "x64")?.name ===
+    "Visual-Studio-Claude-1.0.24-x64.exe"
 )
 check(
   "a blockmap beside the .exe is not the installer",
-  installerAsset({ assets: [release.assets[4]] }, "win32", "x64") === null
+  installerAsset(
+    {
+      assets: [
+        { name: "Visual-Studio-Claude-1.0.24-x64.exe.blockmap", size: 1 },
+      ],
+    },
+    "win32",
+    "x64"
+  ) === null
 )
 check(
   "Linux has no installer to run",
@@ -107,7 +99,11 @@ check(
 )
 check(
   "a .zip of the right arch is not a .dmg",
-  installerAsset({ assets: [release.assets[2]] }, "darwin", "arm64") === null
+  installerAsset(
+    { assets: [{ name: "Visual Studio Claude-1.0.24-arm64.zip", size: 90 }] },
+    "darwin",
+    "arm64"
+  ) === null
 )
 check(
   "an arch with no build is null, not the first asset going",
@@ -118,16 +114,28 @@ check(
   installerAsset({ assets: [] }, "darwin", "arm64") === null
 )
 check(
-  "and one that is not a release at all",
-  installerAsset(null, "darwin", "arm64") === null
-)
-check(
   "a missing size reads as unknown rather than throwing",
   installerAsset(
-    { assets: [{ name: "a-arm64.dmg", browser_download_url: "u" }] },
+    { assets: [{ name: "a-arm64.dmg", size: 0 }] },
     "darwin",
     "arm64"
   )?.size === 0
+)
+
+section("assetUrl")
+
+check(
+  "a file lives under its version",
+  assetUrl("https://dl.example", "1.0.24", "Vey-Studio-1.0.24-arm64.dmg") ===
+    "https://dl.example/v1.0.24/Vey-Studio-1.0.24-arm64.dmg"
+)
+check(
+  "a name with spaces is encoded, not sent raw",
+  assetUrl(
+    "https://dl.example",
+    "1.0.24",
+    "Visual Studio Claude-1.0.24-arm64.dmg"
+  ) === "https://dl.example/v1.0.24/Visual%20Studio%20Claude-1.0.24-arm64.dmg"
 )
 
 section("WINDOWS_INSTALLER_ARGS")

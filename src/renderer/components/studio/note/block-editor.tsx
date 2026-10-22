@@ -74,7 +74,7 @@ export type Editor = typeof schema.BlockNoteEditor
 /**
  * Exported for the Explorer's `.md` files, which are the same editor over a
  * file in one of the workspace's folders rather than over a note
- * in `~/.vsclaude` — see `files/file-blocks.tsx`. It takes its blocks already
+ * in `~/.veystudio` — see `files/file-blocks.tsx`. It takes its blocks already
  * read, which is what that pane has: the files store holds the text.
  */
 export function BlockEditor({

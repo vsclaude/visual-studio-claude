@@ -47,12 +47,14 @@ export function freeAiDir(): string | null {
 }
 
 /** The server, or null for none configured — which hides the free AI.
- * `VSCLAUDE_BUILD_AI_URL` is no variable at runtime: esbuild replaces it with
- * the `VSCLAUDE_AI_URL` the build saw (`scripts/build-electron.mjs`). */
+ * `VEYSTUDIO_BUILD_AI_URL` is no variable at runtime: esbuild replaces it with
+ * the `VEYSTUDIO_AI_URL` the build saw (`scripts/build-electron.mjs`).
+ * `VSCLAUDE_AI_URL` is that variable under the app's old name. */
 export function freeAiUrl(): string | null {
   return normalizeAiUrl(
-    process.env.VSCLAUDE_AI_URL ||
-      process.env.VSCLAUDE_BUILD_AI_URL ||
+    process.env.VEYSTUDIO_AI_URL ||
+      process.env.VSCLAUDE_AI_URL ||
+      process.env.VEYSTUDIO_BUILD_AI_URL ||
       FREE_AI_URL
   )
 }
@@ -195,7 +197,7 @@ async function writeToken(next: string | null): Promise<void> {
 /**
  * A call to the free AI's server as the signed-in user, answered as its JSON —
  * or why not, in words the credits dialog can show. Main makes these rather
- * than the renderer because main is what knows the server (`VSCLAUDE_AI_URL`
+ * than the renderer because main is what knows the server (`VEYSTUDIO_AI_URL`
  * is its environment's) and already holds the token.
  */
 async function serverCall(
@@ -205,7 +207,7 @@ async function serverCall(
 ): Promise<{ ok: true; json: unknown } | { ok: false; error: string }> {
   const url = freeAiUrl()
   if (!url || !token) {
-    return { ok: false, error: "Sign in to VS Claude first." }
+    return { ok: false, error: "Sign in to Vey Studio first." }
   }
   let response: Response
   try {

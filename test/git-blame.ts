@@ -36,7 +36,7 @@ async function git(dir: string, ...args: string[]): Promise<string> {
 
 section("blame")
 
-const root = await mkdtemp(path.join(tmpdir(), "vsclaude-blame-"))
+const root = await mkdtemp(path.join(tmpdir(), "veystudio-blame-"))
 try {
   await git(root, "init", "-b", "main")
   await git(root, "config", "user.email", "ada@example.com")

@@ -578,7 +578,7 @@ function WelcomeStep() {
         id="claude-setup-title"
         className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-center font-heading text-2xl font-medium tracking-tight text-transparent"
       >
-        Welcome to VS Claude
+        Welcome to Vey Studio
       </h2>
       <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
         You are all set. A short tour of the window comes next.

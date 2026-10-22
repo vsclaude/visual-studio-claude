@@ -6,7 +6,7 @@
  * its language with nothing to flicker and a search engine can read both. It
  * was `/?lang=vi` while the Worker drew the page; `config.ts` sends that on.
  *
- * **The page leads with the three problems VS Claude exists for**: many Claude
+ * **The page leads with the three problems Vey Studio exists for**: many Claude
  * accounts, one menu; a conversation that survives the switch between them;
  * and credits past the plan's 5-hour limit. Running chats side by side and
  * reading their diffs is the studio around that, and comes second. What the
@@ -114,7 +114,7 @@ const en: Copy = {
   htmlLang: "en",
   short: "EN",
   title:
-    "VS Claude — switch Claude accounts mid-chat, keep working past the 5-hour limit",
+    "Vey Studio — switch Claude accounts mid-chat, keep working past the 5-hour limit",
   description:
     "The desktop studio for Claude Code. Sign in to all your Claude accounts, move a conversation between them without losing it, and keep going on credits when every plan is out of its 5-hour window.",
   ogDescription:
@@ -138,9 +138,9 @@ const en: Copy = {
   },
   fine: "macOS · Windows · Linux \u00a0—\u00a0 free with your own Claude accounts, credits when you need them",
   pillars: {
-    kicker: "Why VS Claude",
+    kicker: "Why Vey Studio",
     title: "Built so a limit never ends your work",
-    body: "Plain Claude Code ties a conversation to one login and stops it at that login's limit. VS Claude takes both away.",
+    body: "Plain Claude Code ties a conversation to one login and stops it at that login's limit. Vey Studio takes both away.",
     items: [
       {
         title: "Every Claude account, one menu",
@@ -273,7 +273,7 @@ const vi: Copy = {
   htmlLang: "vi",
   short: "VI",
   title:
-    "VS Claude — đổi tài khoản Claude giữa cuộc chat, làm tiếp khi đã chạm giới hạn 5 giờ",
+    "Vey Studio — đổi tài khoản Claude giữa cuộc chat, làm tiếp khi đã chạm giới hạn 5 giờ",
   description:
     "Studio desktop cho Claude Code. Đăng nhập mọi tài khoản Claude của bạn, chuyển một cuộc chat sang tài khoản khác mà không mất ngữ cảnh, và làm tiếp bằng credit khi mọi gói đều đã hết hạn mức 5 giờ.",
   ogDescription:
@@ -297,9 +297,9 @@ const vi: Copy = {
   },
   fine: "macOS · Windows · Linux \u00a0—\u00a0 miễn phí với tài khoản Claude của bạn, credit khi bạn cần",
   pillars: {
-    kicker: "Vì sao chọn VS Claude",
+    kicker: "Vì sao chọn Vey Studio",
     title: "Giới hạn không bao giờ làm gián đoạn công việc",
-    body: "Claude Code gốc gắn mỗi cuộc chat với một tài khoản và dừng lại khi tài khoản đó chạm giới hạn. VS Claude loại bỏ cả hai ràng buộc đó.",
+    body: "Claude Code gốc gắn mỗi cuộc chat với một tài khoản và dừng lại khi tài khoản đó chạm giới hạn. Vey Studio loại bỏ cả hai ràng buộc đó.",
     items: [
       {
         title: "Mọi tài khoản Claude, một menu",

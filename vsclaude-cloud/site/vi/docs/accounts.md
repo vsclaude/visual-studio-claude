@@ -1,7 +1,7 @@
 # Tài khoản Claude
 
 Claude Code gốc gắn mỗi cuộc chat với một tài khoản và dừng lại khi tài khoản đó
-chạm giới hạn. VS Claude cho bạn đăng nhập bao nhiêu tài khoản Claude cũng được,
+chạm giới hạn. Vey Studio cho bạn đăng nhập bao nhiêu tài khoản Claude cũng được,
 và chuyển chat giữa chúng mà không mất gì.
 
 ## Thêm tài khoản
@@ -9,7 +9,7 @@ và chuyển chat giữa chúng mà không mất gì.
 1. Mở **Settings** (`⌘,`) › **Claude**.
 2. Bấm **Add account** và đặt tên: _Công việc_, _Cá nhân_, _Team_…
 3. Đăng nhập. Đây là màn hình login của chính Claude Code, nên mật khẩu của bạn
-   không bao giờ đi qua VS Claude.
+   không bao giờ đi qua Vey Studio.
 
 ![Settings › Claude: Pay with credits, các tài khoản và nút Add account](/screenshots/settings-claude.png)
 
@@ -33,7 +33,7 @@ Nếu mọi tài khoản đều hết hạn mức, chọn **Pay with credits** t
 Xem [Credit](/vi/docs/credits).
 
 ::: info
-Việc đổi tài khoản luôn do bạn quyết định. VS Claude không bao giờ tự chuyển chat
+Việc đổi tài khoản luôn do bạn quyết định. Vey Studio không bao giờ tự chuyển chat
 sang tài khoản khác hay sang credit.
 :::
 

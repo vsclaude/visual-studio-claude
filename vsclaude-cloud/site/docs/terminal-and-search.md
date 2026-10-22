@@ -19,7 +19,7 @@ after running something in it.
   an error without copying it by hand.
 - **Restart shell** starts a fresh one in the same tab.
 
-Shells end when VS Claude quits.
+Shells end when Vey Studio quits.
 
 ## Search
 

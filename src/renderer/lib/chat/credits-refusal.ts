@@ -19,10 +19,10 @@ export function creditsRefusalOf(text: string): CreditsRefusal | null {
   if (/no credits left/i.test(text)) return "no-credits"
   // Every name and wording the refusal has had stays matched, because a
   // transcript keeps the sentence it was written with: "Visual Studio Claude"
-  // before the app was VS Claude, and "the Studio AI" before credits had
-  // that name.
+  // and then "VS Claude" before the app was Vey Studio, and "the Studio AI"
+  // before credits had that name.
   if (
-    /sign in to (vs|visual studio) claude to (pay with credits|use the studio ai)/i.test(
+    /sign in to (vey studio|vs claude|visual studio claude) to (pay with credits|use the studio ai)/i.test(
       text
     )
   ) {

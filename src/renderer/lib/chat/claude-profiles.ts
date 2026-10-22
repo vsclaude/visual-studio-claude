@@ -47,7 +47,7 @@ type ClaudeProfilesState = {
    *
    * Its directory is main's to name (`main/claude-profiles.ts`), which is why
    * this does not take one and there is no setter for it below: the path is
-   * under the store's own workspace directory, and `VSCLAUDE_DATA_DIR` can move
+   * under the store's own workspace directory, and `VEYSTUDIO_DATA_DIR` can move
    * that somewhere this side cannot see.
    */
   create: (name: string) => void

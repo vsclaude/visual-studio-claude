@@ -128,7 +128,7 @@ function cardOf(view: SignInView): SafeHtml {
     return html`<section class="panel center">
       <div class="badge ok">${CHECK}</div>
       <h1>You're signed in</h1>
-      <p class="lede">Head back to VS Claude. You can close this tab.</p>
+      <p class="lede">Head back to Vey Studio. You can close this tab.</p>
     </section>`
   }
   if (view.kind === "failed") {
@@ -138,13 +138,13 @@ function cardOf(view: SignInView): SafeHtml {
       <p class="status warn" role="status">
         <span class="dot"></span><span>${view.reason}</span>
       </p>
-      <p class="lede">Close this tab and try again from VS Claude.</p>
+      <p class="lede">Close this tab and try again from Vey Studio.</p>
     </section>`
   }
   // Links rather than a script: the whole flow is Google's redirect, and a
   // page with nothing to run has nothing to break.
   return html`<section class="panel center">
-    <h1>Sign in to VS Claude</h1>
+    <h1>Sign in to Vey Studio</h1>
     <p class="lede">Use the Google account you signed up with.</p>
     <a class="google" href="${view.google}"
       >${raw(GOOGLE_MARK)}Continue with Google</a
@@ -157,11 +157,11 @@ function cardOf(view: SignInView): SafeHtml {
 export function signInPage(view: SignInView): string {
   return paymentDocument({
     lang: "en",
-    title: "VS Claude — Sign in",
+    title: "Vey Studio — Sign in",
     secure: "Secure sign-in",
     css: SIGN_IN_CSS,
     narrow: true,
     main: cardOf(view),
-    foot: "Sign-in is handled by Google. VS Claude never sees your password.",
+    foot: "Sign-in is handled by Google. Vey Studio never sees your password.",
   }).value
 }

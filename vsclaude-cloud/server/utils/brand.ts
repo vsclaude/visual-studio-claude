@@ -39,11 +39,12 @@ export const VS_MARK = `<svg class="vs" viewBox="8.85 -0.05 64.5 60.1" fill="non
 </svg>`
 
 /**
- * "VS Claude" as the brand writes it, for a page's own CSS to size: the
- * lettermark at the cap height of the text around it, sat on its baseline.
- * Read aloud as the name — the glyph alone says nothing to a screen reader.
+ * "Vey Studio" as the brand writes it, for a page's own CSS to size: the
+ * lettermark — the name's initials — at the cap height of the text around it,
+ * sat on its baseline, then the name. Read aloud as the name — the glyph alone
+ * says nothing to a screen reader.
  */
-export const WORDMARK = `<span class="wordmark" role="img" aria-label="VS Claude">${VS_MARK}<span aria-hidden="true">Claude</span></span>`
+export const WORDMARK = `<span class="wordmark" role="img" aria-label="Vey Studio">${VS_MARK}<span aria-hidden="true">Vey Studio</span></span>`
 
 /** What a page needs to draw `WORDMARK`. */
 export const WORDMARK_CSS = `.wordmark { display: inline-flex; align-items: baseline; gap: 0.22em; white-space: nowrap; }

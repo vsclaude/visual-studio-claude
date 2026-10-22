@@ -2,7 +2,7 @@
 
 ## Project
 
-Project là một thư mục đã có trong máy bạn. VS Claude làm việc ngay tại chỗ —
+Project là một thư mục đã có trong máy bạn. Vey Studio làm việc ngay tại chỗ —
 không bao giờ sao chép, di chuyển hay tải nó lên đâu cả. Thêm bao nhiêu cũng
 được; tất cả nằm trong cột **Projects** bên trái, mỗi project kèm các chat của
 nó.
@@ -10,7 +10,7 @@ nó.
 - **Thêm thư mục** — bấm **+** cạnh **Projects**, chọn thư mục hoặc kéo thả vào,
   rồi bấm **Add folder**.
 - **From template** — tab thứ hai của hộp thoại để tạo project mới: Next.js,
-  Nuxt, Vite + React, Vite + Vue, Vite + Svelte hoặc Vite thuần. VS Claude tạo
+  Nuxt, Vite + React, Vite + Vue, Vite + Svelte hoặc Vite thuần. Vey Studio tạo
   thư mục rồi chạy công cụ `create-*` của chính framework đó trong terminal, nên
   bạn nhận đúng những gì công cụ đó tạo ra ở thời điểm hiện tại.
 
@@ -46,7 +46,7 @@ Nó thu gọn thành một dải hẹp khi bạn cần thêm chỗ.
 Trong **All files**, file được tô màu theo trạng thái git, và file đã thay đổi
 có dấu `M`. Chuột phải vào file để mở dạng văn bản hoặc dạng diff (**Open
 with**), **Copy** hay **Cut**, **Copy path** hay **Copy relative path**,
-**Reveal in file manager**, **Rename** hoặc **Move to trash…** — VS Claude không
+**Reveal in file manager**, **Rename** hoặc **Move to trash…** — Vey Studio không
 bao giờ xoá hẳn một file. Thư mục còn có thêm **New file** và **New folder**.
 
 ![Menu chuột phải của file trong Explorer: Open with Text editor hoặc Diff, Copy, Cut, Copy path, Copy relative path, Reveal in file manager, Rename, Move to trash](/screenshots/file-menu.png)

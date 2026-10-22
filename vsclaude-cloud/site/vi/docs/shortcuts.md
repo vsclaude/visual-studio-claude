@@ -2,7 +2,7 @@
 
 Viết cho macOS. Trên Windows và Linux, đọc `⌘` thành `Ctrl`. Trong terminal trên
 các hệ điều hành đó, các phím `Ctrl` + chữ thuộc về shell (`Ctrl+W` xoá một từ),
-nên VS Claude không chiếm chúng.
+nên Vey Studio không chiếm chúng.
 
 ## Cửa sổ
 

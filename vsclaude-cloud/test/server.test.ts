@@ -78,7 +78,7 @@ describe("session and access tokens", () => {
   test("not a JWT is nobody", async () => {
     expect(await verifyAccess("sk-ant-something", SECRET)).toEqual({
       ok: false,
-      reason: "the token is not a VS Claude sign-in",
+      reason: "the token is not a Vey Studio sign-in",
     })
   })
 

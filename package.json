@@ -1,7 +1,7 @@
 {
-  "name": "visual-studio-claude",
-  "productName": "Visual Studio Claude",
-  "version": "1.0.9",
+  "name": "veystudio",
+  "productName": "Vey Studio",
+  "version": "1.0.10",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -91,7 +91,7 @@
   "//build.extraResources": "install.sh is carried in the bundle so the in-app update button runs this build's own installer rather than a script fetched at the moment it is pressed. Outside the asar because bash has to execute a real file. This note lives out here because electron-builder validates the `build` object against a schema and rejects any key it does not know, `//`-prefixed or not.",
   "build": {
     "appId": "vn.app.vsclaude",
-    "productName": "Visual Studio Claude",
+    "productName": "Vey Studio",
     "files": [
       "dist-electron/**/*",
       "dist-renderer/**/*"
@@ -122,7 +122,7 @@
           ]
         }
       ],
-      "artifactName": "Visual-Studio-Claude-${version}-${arch}.${ext}",
+      "artifactName": "Vey-Studio-${version}-${arch}.${ext}",
       "notarize": false
     },
     "dmg": {
@@ -147,12 +147,12 @@
     },
     "win": {
       "target": "nsis",
-      "artifactName": "Visual-Studio-Claude-${version}-${arch}.${ext}"
+      "artifactName": "Vey-Studio-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": "AppImage",
       "category": "Development",
-      "artifactName": "Visual-Studio-Claude-${version}-${arch}.${ext}"
+      "artifactName": "Vey-Studio-${version}-${arch}.${ext}"
     }
   },
   "//overrides": "One @codemirror/view for the whole renderer. Milkdown already depends on the CodeMirror packages and resolves them at 6.43.8, so the app's own direct dependency resolving one patch newer put two copies in node_modules — which is not merely wasteful: a CodeMirror extension is identified by the class it was built from, so a keymap from one copy is not a keymap to the other, and tsc says so before the editor does. Pinned exact, and the direct dependency is pinned to match.",

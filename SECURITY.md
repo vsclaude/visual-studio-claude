@@ -12,22 +12,22 @@ acknowledgement within a few days. This is a small project maintained in spare
 time; please say so in your report if you have a disclosure deadline in mind,
 so it can be planned around rather than missed.
 
-## What VS Claude is, in security terms
+## What Vey Studio is, in security terms
 
-VS Claude is a desktop developer tool. It is not multi-tenant, it has no server
+Vey Studio is a desktop developer tool. It is not multi-tenant, it has no server
 side, and it has no accounts. Everything below is about a single user's own
 machine, and that framing is what most of the design decisions follow from.
 
 **Database credentials.** Passwords are encrypted with Electron's
 `safeStorage`, which is backed by the OS keystore — Keychain on macOS, DPAPI on
-Windows, libsecret on Linux — and stored in the manifest under `~/.vsclaude`.
+Windows, libsecret on Linux — and stored in the manifest under `~/.veystudio`.
 They are stripped field by field before any database record crosses to the
 renderer, so a password never reaches the page. See `src/main/encryption.ts`
 and `src/main/store.ts`.
 
 Note the limit of this: `safeStorage` protects the manifest against another
 _user_ on the machine, not against code running as you. Anything you can run,
-VS Claude can run.
+Vey Studio can run.
 
 **The pty daemon.** Terminal sessions run in a detached per-machine daemon
 spoken to over a Unix socket (a named pipe on Windows). Anything that can open
@@ -49,7 +49,7 @@ path, or a command without passing through something that knows what is valid.
 ## Out of scope
 
 - Anything requiring an attacker to already run code as your user.
-- The contents of a project you opened. VS Claude reads and runs what you point it
+- The contents of a project you opened. Vey Studio reads and runs what you point it
   at, the same as an editor or a shell.
 - Unsigned builds. `make dmg` produces an unsigned artifact unless `SIGN=1`;
   that is a packaging default, not a defect.

@@ -1,6 +1,6 @@
 # Getting started
 
-VS Claude is a desktop app for running Claude Code conversations against the
+Vey Studio is a desktop app for running Claude Code conversations against the
 folders already on your machine, and reading what they changed — chats,
 editor, diffs, commits and a terminal in one window.
 
@@ -26,7 +26,7 @@ from [Releases](https://github.com/vsclaude/visual-studio-claude/releases), run
 this once after installing it:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/VS Claude.app"
+xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
 ```
 
 :::
@@ -43,8 +43,8 @@ x64. Download the AppImage from
 [Releases](https://github.com/vsclaude/visual-studio-claude/releases), then:
 
 ```bash
-chmod +x Visual-Studio-Claude-*-x64.AppImage
-./Visual-Studio-Claude-*-x64.AppImage
+chmod +x Vey-Studio-*.AppImage
+./Vey-Studio-*.AppImage
 ```
 
 It needs FUSE (`sudo apt install libfuse2` on Debian and Ubuntu).
@@ -59,7 +59,7 @@ Claude account at all, you can chat on [credits](/docs/credits) instead.
 
 1. **Add a project.** Click **+** beside **Projects**, choose a folder (or drag
    one in from Finder) and click **Add folder**. A project is a folder already
-   on your machine: VS Claude works on it where it is, and never copies it.
+   on your machine: Vey Studio works on it where it is, and never copies it.
    **From template** starts a new project instead.
 
    ![The Add a folder dialog, with Existing folder and From template tabs](/screenshots/add-project.png)

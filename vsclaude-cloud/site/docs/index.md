@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: VS Claude
+  name: Vey Studio
   text: The user's guide
   tagline: Every Claude account in one menu, a chat that survives the switch, and credits for when every plan is out of its 5-hour window.
   image:
     src: /logo.svg
-    alt: VS Claude
+    alt: Vey Studio
   actions:
     - theme: brand
       text: Get started

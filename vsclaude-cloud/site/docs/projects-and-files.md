@@ -2,7 +2,7 @@
 
 ## Projects
 
-A project is a folder already on your machine. VS Claude works on it where it
+A project is a folder already on your machine. Vey Studio works on it where it
 is — it never copies, moves or uploads it. Add as many as you like; they are
 all listed in the **Projects** column on the left, each with its chats under
 it.
@@ -46,7 +46,7 @@ The panel on the right has two tabs: **All files** and **Git** (see
 In **All files**, files are coloured by their git status, and a changed file
 is marked `M`. Right-click a file to open it as text or as its diff (**Open
 with**), **Copy** or **Cut** it, **Copy path** or **Copy relative path**,
-**Reveal in file manager**, **Rename** it or **Move to trash…** — VS Claude
+**Reveal in file manager**, **Rename** it or **Move to trash…** — Vey Studio
 never erases a file outright. A folder also offers **New file** and **New
 folder**.
 

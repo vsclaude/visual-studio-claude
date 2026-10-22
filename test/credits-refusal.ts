@@ -28,6 +28,11 @@ check(
 )
 check(
   "the refusal under the app's current name",
+  creditsRefusalOf("Sign in to Vey Studio to pay with credits.") ===
+    "signed-out"
+)
+check(
+  "the refusal under the name before it",
   creditsRefusalOf("Sign in to VS Claude to pay with credits.") === "signed-out"
 )
 check(

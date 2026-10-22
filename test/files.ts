@@ -298,7 +298,7 @@ async function main() {
     "null is what sends the tree back to its own glyphs"
   )
 
-  const root = await mkdtemp(path.join(tmpdir(), "vsclaude-files-"))
+  const root = await mkdtemp(path.join(tmpdir(), "veystudio-files-"))
   try {
     section("listDirectory")
 
@@ -431,7 +431,7 @@ async function main() {
     )
 
     // A repository of its own, so the `.gitignore` is git's to read.
-    const repo = await mkdtemp(path.join(tmpdir(), "vsclaude-ignored-"))
+    const repo = await mkdtemp(path.join(tmpdir(), "veystudio-ignored-"))
     try {
       await run("git", ["init", "-q"], { cwd: repo })
       await writeFile(path.join(repo, ".gitignore"), "out/\n*.log\n!keep.log\n")
@@ -560,8 +560,8 @@ async function main() {
 
   section("copyInto")
 
-  const outside = await mkdtemp(path.join(tmpdir(), "vsclaude-drop-"))
-  const into = await mkdtemp(path.join(tmpdir(), "vsclaude-into-"))
+  const outside = await mkdtemp(path.join(tmpdir(), "veystudio-drop-"))
+  const into = await mkdtemp(path.join(tmpdir(), "veystudio-into-"))
   try {
     await writeFile(path.join(outside, "a.txt"), "dropped")
     await mkdir(path.join(outside, "pkg.d", "src"), { recursive: true })
@@ -622,8 +622,8 @@ async function main() {
 
   section("moveInto")
 
-  const from = await mkdtemp(path.join(tmpdir(), "vsclaude-cut-"))
-  const to = await mkdtemp(path.join(tmpdir(), "vsclaude-paste-"))
+  const from = await mkdtemp(path.join(tmpdir(), "veystudio-cut-"))
+  const to = await mkdtemp(path.join(tmpdir(), "veystudio-paste-"))
   const exists = (target: string) =>
     stat(target).then(
       () => true,

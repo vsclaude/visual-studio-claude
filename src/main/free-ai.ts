@@ -46,9 +46,15 @@ export function freeAiDir(): string | null {
   return freeDir
 }
 
-/** The server, or null for none configured — which hides the free AI. */
+/** The server, or null for none configured — which hides the free AI.
+ * `VSCLAUDE_BUILD_AI_URL` is no variable at runtime: esbuild replaces it with
+ * the `VSCLAUDE_AI_URL` the build saw (`scripts/build-electron.mjs`). */
 export function freeAiUrl(): string | null {
-  return normalizeAiUrl(process.env.VSCLAUDE_AI_URL || FREE_AI_URL)
+  return normalizeAiUrl(
+    process.env.VSCLAUDE_AI_URL ||
+      process.env.VSCLAUDE_BUILD_AI_URL ||
+      FREE_AI_URL
+  )
 }
 
 /** Whether a turn on the free AI can run right now. */

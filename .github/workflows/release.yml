@@ -63,7 +63,12 @@ jobs:
             exit 1
           fi
 
+      # Baked into main.cjs by scripts/build-electron.mjs, since the installed
+      # app has no .env. A repository variable, not a secret: the URL is
+      # readable in the bundle anyway. Unset, the free AI is hidden.
       - run: bun run build
+        env:
+          VSCLAUDE_AI_URL: ${{ vars.VSCLAUDE_AI_URL }}
 
       # Both are gitignored — the source art is committed and what is derived
       # from it is not — so a fresh checkout has neither until this runs.

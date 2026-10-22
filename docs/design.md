@@ -621,7 +621,11 @@ rest. The server is
 `FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
 whole thing), or `VSCLAUDE_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
-loads, so it need not be typed in each shell's own syntax.
+loads, so it need not be typed in each shell's own syntax. A packaged app reads
+no `.env` and is launched with none of the builder's variables, so
+`scripts/build-electron.mjs` bakes the `VSCLAUDE_AI_URL` the build saw into
+`main.cjs` — from `.env` locally, from the repository variable of that name in
+`release.yml` — and the variable at launch still wins over it.
 
 **What the server is sent is an access token of its own**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it

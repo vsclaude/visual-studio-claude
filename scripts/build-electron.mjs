@@ -1,3 +1,4 @@
+import path from "node:path"
 import { parseArgs } from "node:util"
 
 import * as esbuild from "esbuild"
@@ -18,6 +19,16 @@ const { values } = parseArgs({
     minify: { type: "boolean", default: false },
   },
 })
+
+// A packaged app never reads `.env` and is launched from Finder or the Start
+// menu with none of the builder's variables, so what it needs is baked in here
+// — from `.env` on this machine, from the workflow's `env:` on CI. What the
+// shell already set wins, since `loadEnvFile` does not override.
+try {
+  process.loadEnvFile(path.join(import.meta.dirname, "..", ".env"))
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error
+}
 
 /** Everything the three bundles agree on. @type {import("esbuild").BuildOptions} */
 const shared = {
@@ -71,7 +82,14 @@ const main = {
   banner: {
     js: `const __importMetaUrl = require("node:url").pathToFileURL(__filename).href;`,
   },
-  define: { "import.meta.url": "__importMetaUrl" },
+  // A URL, not a secret: anything defined here is readable in the bundle.
+  // Read back by `freeAiUrl`, where the variable at launch still wins.
+  define: {
+    "import.meta.url": "__importMetaUrl",
+    "process.env.VSCLAUDE_BUILD_AI_URL": JSON.stringify(
+      process.env.VSCLAUDE_AI_URL ?? ""
+    ),
+  },
 }
 
 /** @type {import("esbuild").BuildOptions} */

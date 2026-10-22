@@ -25,7 +25,13 @@ import {
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import { blockOf, blocksOf, replyOf, splitSubagents } from "@/lib/chat/activity"
+import {
+  blockOf,
+  blocksOf,
+  replyOf,
+  splitSubagents,
+  type ChatBlock,
+} from "@/lib/chat/activity"
 import { editedAfter } from "@/lib/chat/edit"
 import { useComposerBus } from "@/lib/chat/composer-bus"
 import { clearFind, paintFind, rectOfHit } from "@/lib/chat/find-marks"
@@ -207,6 +213,20 @@ function heldUntil(): number {
   return Date.now() + RESTORE_MS
 }
 
+/**
+ * Whether a block arrived after `since` — its first line's stamp, which is
+ * main's clock. A line with no stamp is history from before stamps existed.
+ */
+function arrivedSince(block: ChatBlock, since: number): boolean {
+  const at = block.kind === "activity" ? block.lines[0]?.at : block.line.at
+  return at !== undefined && Date.parse(at) >= since
+}
+
+/** The clock, read here rather than in a component body — see `heldUntil`. */
+function nowMs(): number {
+  return Date.now()
+}
+
 function Conversation({
   chatId,
   title,
@@ -227,6 +247,10 @@ function Conversation({
   const sending = useChats((state) => state.sending.includes(chatId))
   const startedAt = useChats((state) => state.startedAt[chatId])
   const agents = useChats((state) => state.agents[chatId])
+  // When this chat came on screen — one `Conversation` per chat, so this is
+  // when its transcript was drawn. A line stamped after it arrived while the
+  // chat was up and rises; the history it opened with is drawn still.
+  const [since] = useState(nowMs)
   const context = useChats((state) => state.context[chatId])
   const live = useChats((state) => state.live[chatId])
   // This run's measurement, else the one kept on the record — without the
@@ -955,6 +979,7 @@ function Conversation({
                          */
                         className={cn(
                           "rounded-lg",
+                          arrivedSince(block, since) && "animate-rise",
                           block.kind === "activity" &&
                             foundBlocks.has(block.id) &&
                             "ring-1 ring-ring/25 ring-offset-4 ring-offset-background",

@@ -29,7 +29,7 @@ export function ChatWelcome({ place }: { place: ChatPlace | null }) {
   if (!folder) return null
 
   return (
-    <div className="space-y-3">
+    <div className="animate-settle space-y-3">
       <div className="rounded-lg bg-muted px-4 py-3 text-sm">
         You are in <span className="font-medium">{folder.name}</span> itself —
         the working tree you have checked out

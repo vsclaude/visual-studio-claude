@@ -80,7 +80,7 @@ export function ChatFind({
        * opened, which is the reader losing their place to a search they have not
        * typed yet.
        */
-      className="absolute top-2 right-4 z-30 flex items-center gap-1 rounded-md border bg-popover/95 py-1 pr-1 pl-2 shadow-md backdrop-blur-sm"
+      className="absolute top-2 right-4 z-30 flex animate-rise items-center gap-1 rounded-md border bg-popover/95 py-1 pr-1 pl-2 shadow-md backdrop-blur-sm"
       role="search"
     >
       <input

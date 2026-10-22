@@ -50,7 +50,7 @@ export function AskCard({
   return (
     // Always running: the card is only drawn while the turn waits on it.
     <div
-      className="border-run rounded-lg border border-primary/40 bg-primary/5 p-2.5"
+      className="border-run animate-rise rounded-lg border border-primary/40 bg-primary/5 p-2.5"
       data-running
     >
       <p className="flex items-baseline gap-1.5 text-xs">
@@ -188,7 +188,7 @@ function Questions({
 
   return (
     <div
-      className="border-run space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-2.5"
+      className="border-run animate-rise space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-2.5"
       data-running
     >
       {ask.questions.map((question) => (

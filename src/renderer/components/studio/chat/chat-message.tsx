@@ -709,7 +709,7 @@ function ToolRow({
           its own: what the call was made with, then — for a subagent — the
           transcript it ran. One shape for everything that opens. */}
       {open && (panel || steps.length > 0) && (
-        <div className={cn(OPENED, "space-y-2")}>
+        <div className={cn(OPENED, "animate-fade space-y-2")}>
           {panel && <ToolDetail of={detail} />}
           {steps.length > 0 && (
             <div className="space-y-3">

@@ -67,7 +67,8 @@ Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/
 
 2. **Thêm tài khoản Claude** trong **Settings › Claude › Add account**. Xem
    [Tài khoản Claude](/vi/docs/accounts).
-3. **Bấm `+`** trên hàng của project để mở chat, rồi gõ tin nhắn.
+3. **Bấm `+`** trên hàng của project để mở chat, rồi gõ tin nhắn. Xem
+   [Chat](/vi/docs/chats) để biết mọi thứ khung soạn tin làm được.
 
 ## Cập nhật
 

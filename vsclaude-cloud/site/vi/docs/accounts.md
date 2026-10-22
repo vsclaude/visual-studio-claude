@@ -41,3 +41,5 @@ sang tài khoản khác hay sang credit.
 
 Cạnh khung soạn tin có một thanh đo cho biết tài khoản đã dùng bao nhiêu hạn mức
 5 giờ. Bấm vào để xem mọi hạn mức, kể cả hạn mức theo tuần.
+
+![Plan usage: hạn mức 5 giờ đã dùng 19%, hạn mức 7 ngày đã dùng 40%, kèm thời điểm reset](/screenshots/plan-usage.png)

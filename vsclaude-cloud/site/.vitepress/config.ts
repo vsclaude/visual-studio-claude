@@ -69,12 +69,10 @@ export default defineConfig({
     pageData.frontmatter.head = [
       ["meta", { property: "og:title", content: "VS Claude" }],
       ["meta", { property: "og:description", content: t.ogDescription }],
-      ...LANGS.map(
-        (l): HeadConfig => [
-          "link",
-          { rel: "alternate", hreflang: COPY[l].htmlLang, href: pathOf(l) },
-        ]
-      ),
+      ...LANGS.map((l): HeadConfig => [
+        "link",
+        { rel: "alternate", hreflang: COPY[l].htmlLang, href: pathOf(l) },
+      ]),
       ["link", { rel: "alternate", hreflang: "x-default", href: "/" }],
     ]
   },
@@ -99,13 +97,34 @@ export default defineConfig({
               { text: "Credits", link: "/docs/credits" },
             ],
           },
+          {
+            text: "Using the studio",
+            items: [
+              { text: "Chats", link: "/docs/chats" },
+              { text: "Projects and files", link: "/docs/projects-and-files" },
+              { text: "Git", link: "/docs/git" },
+              {
+                text: "Terminal and search",
+                link: "/docs/terminal-and-search",
+              },
+              { text: "Settings and plugins", link: "/docs/settings" },
+            ],
+          },
+          {
+            text: "Reference",
+            items: [
+              { text: "Keyboard shortcuts", link: "/docs/shortcuts" },
+              { text: "Troubleshooting", link: "/docs/troubleshooting" },
+            ],
+          },
         ],
       },
     },
     vi: {
       label: "Tiếng Việt",
       lang: "vi",
-      description: "Hướng dẫn sử dụng VS Claude, studio desktop cho Claude Code.",
+      description:
+        "Hướng dẫn sử dụng VS Claude, studio desktop cho Claude Code.",
       themeConfig: {
         sidebar: [
           {
@@ -114,6 +133,26 @@ export default defineConfig({
               { text: "Bắt đầu", link: "/vi/docs/getting-started" },
               { text: "Tài khoản Claude", link: "/vi/docs/accounts" },
               { text: "Credit", link: "/vi/docs/credits" },
+            ],
+          },
+          {
+            text: "Dùng studio",
+            items: [
+              { text: "Chat", link: "/vi/docs/chats" },
+              { text: "Project và file", link: "/vi/docs/projects-and-files" },
+              { text: "Git", link: "/vi/docs/git" },
+              {
+                text: "Terminal và tìm kiếm",
+                link: "/vi/docs/terminal-and-search",
+              },
+              { text: "Cài đặt và plugin", link: "/vi/docs/settings" },
+            ],
+          },
+          {
+            text: "Tham khảo",
+            items: [
+              { text: "Phím tắt", link: "/vi/docs/shortcuts" },
+              { text: "Xử lý sự cố", link: "/vi/docs/troubleshooting" },
             ],
           },
         ],

@@ -150,7 +150,7 @@ const en: Copy = {
       },
       {
         title: "Past the 5-hour limit, on credits",
-        body: "When every plan is out of its window, switch the chat to credits and keep going on Haiku, Sonnet or Opus. Pay once, no subscription — credits never expire.",
+        body: "When every plan is out of its window, switch the chat to credits and keep going. Pay once, no subscription — credits never expire.",
       },
     ],
   },
@@ -188,7 +188,7 @@ const en: Copy = {
   pricing: {
     kicker: "Pricing",
     title: ["Pay with ", "credits"],
-    body: "The app is free. Out of your 5-hour window, or no Claude subscription at all? Buy a pack once and use it on Haiku, Sonnet or Opus — it never expires.",
+    body: "The app is free. Out of your 5-hour window, or no Claude subscription at all? Buy a pack once — it never expires.",
     popular: "Most popular",
     credits: "in credits",
     bonus: (percent) => `+${percent}% bonus`,
@@ -234,10 +234,6 @@ const en: Copy = {
       {
         q: "Do credits expire?",
         a: "Never. A pack is bought once and stays on your account until it is spent — there is no monthly fee.",
-      },
-      {
-        q: "Which models can I use?",
-        a: "Haiku, Sonnet and Opus. Credits are dollars of Anthropic's own list price, and each model is charged at its own rate — Sonnet 20× and Opus 40× Haiku — so a dollar buys the same amount of work whichever model spends it.",
       },
       {
         q: "How far does a pack go?",
@@ -308,7 +304,7 @@ const vi: Copy = {
       },
       {
         title: "Vượt giới hạn 5 giờ bằng credit",
-        body: "Khi mọi gói đều hết hạn mức, chuyển chat sang credit và làm tiếp với Haiku, Sonnet hay Opus. Trả một lần, không đăng ký gói hàng tháng. Credit không bao giờ hết hạn.",
+        body: "Khi mọi gói đều hết hạn mức, chuyển chat sang credit và làm tiếp. Trả một lần, không đăng ký gói hàng tháng. Credit không bao giờ hết hạn.",
       },
     ],
   },
@@ -346,7 +342,7 @@ const vi: Copy = {
   pricing: {
     kicker: "Bảng giá",
     title: ["Trả bằng ", "credit"],
-    body: "Ứng dụng miễn phí. Hết hạn mức 5 giờ, hoặc chưa có gói Claude nào? Mua credit một lần và dùng cho Haiku, Sonnet hay Opus. Credit không bao giờ hết hạn.",
+    body: "Ứng dụng miễn phí. Hết hạn mức 5 giờ, hoặc chưa có gói Claude nào? Mua credit một lần. Credit không bao giờ hết hạn.",
     popular: "Phổ biến nhất",
     credits: "credit",
     bonus: (percent) => `tặng thêm ${percent}%`,
@@ -392,10 +388,6 @@ const vi: Copy = {
       {
         q: "Credit có hết hạn không?",
         a: "Không. Bạn mua một lần, credit nằm trong tài khoản cho đến khi dùng hết, và không có phí hàng tháng.",
-      },
-      {
-        q: "Tôi dùng được model nào?",
-        a: "Haiku, Sonnet và Opus. Credit tính bằng đô la theo đúng bảng giá niêm yết của Anthropic, và mỗi model trừ theo giá riêng: Sonnet gấp 20 lần Haiku, Opus gấp 40 lần. Nhờ vậy, một đô la mua được cùng một lượng việc dù chạy model nào.",
       },
       {
         q: "Một gói dùng được bao lâu?",

@@ -41,3 +41,5 @@ account, or onto credits, by itself.
 
 Beside the composer, a meter shows how much of the account's five-hour window
 has been used. Click it for every window, including the weekly one.
+
+![Plan usage: the 5-hour window at 19% and the 7-day window at 40%, each with when it resets](/screenshots/plan-usage.png)

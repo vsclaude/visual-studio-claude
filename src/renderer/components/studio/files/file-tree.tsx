@@ -95,19 +95,6 @@ import { CommitsList } from "./commits-list"
  * `RootMenu`. */
 type MenuTarget = { kind: "entry"; entry: FileEntry }
 
-/** A pending "name this" dialog: a new file or folder inside `dir`. */
-type Creating = { dir: string; kind: "file" | "directory" }
-
-/** What the dialog says for each kind — the wording is the only thing that
- * differs between them. */
-const CREATING_WORDS: Record<
-  Creating["kind"],
-  { title: string; label: string }
-> = {
-  file: { title: "New file", label: "File name" },
-  directory: { title: "New folder", label: "Folder name" },
-}
-
 /**
  * The directory a drag from outside the app would land in, or null.
  *
@@ -183,7 +170,6 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
   const refresh = useFiles((state) => state.refresh)
 
   const [menuTarget, setMenuTarget] = useState<MenuTarget | null>(null)
-  const [creating, setCreating] = useState<Creating | null>(null)
   const [trashing, setTrashing] = useState<FileEntry | null>(null)
   const menuFocus = useMenuFocusHandoff()
   const [dropDir, setDropDir] = useState<string | null>(null)
@@ -486,35 +472,6 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
           </ContextMenuTrigger>
         )}
 
-        {creating && (
-          <RenameDialog
-            title={CREATING_WORDS[creating.kind].title}
-            description={
-              <>
-                Inside <code className="font-mono">{creating.dir}</code>.
-              </>
-            }
-            label={CREATING_WORDS[creating.kind].label}
-            currentName=""
-            submitLabel="Create"
-            pendingLabel="Creating…"
-            onRename={async (name) => {
-              const { create, createFolder } = useFiles.getState()
-              try {
-                if (creating.kind === "directory") {
-                  await createFolder(creating.dir, name)
-                } else {
-                  await create(creating.dir, name)
-                }
-                return null
-              } catch (error) {
-                return failureOf(error, "Could not create that.")
-              }
-            }}
-            onClose={() => setCreating(null)}
-          />
-        )}
-
         {renamingFolder && (
           <RenameDialog
             title="Rename folder"
@@ -557,7 +514,11 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             folder={folder}
             path={shown.path}
             expanded={expanded.length > 1}
-            onCreate={(kind) => setCreating({ dir: shown.path, kind })}
+            onCreate={(kind) => {
+              menuFocus.handOff()
+              useFiles.getState().beginCreate(shown.path, kind)
+            }}
+            finalFocus={menuFocus.finalFocus}
             onRename={() => setRenamingFolder(folder)}
             onRemove={() => setRemovingFolder(folder)}
             onAddFolder={onAddFolder}
@@ -596,20 +557,24 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
           {menuTarget.entry.kind === "directory" && (
             <>
               <ContextMenuItem
-                onClick={() =>
-                  setCreating({ dir: menuTarget.entry.path, kind: "file" })
-                }
+                onClick={() => {
+                  menuFocus.handOff()
+                  useFiles.getState().beginCreate(menuTarget.entry.path, "file")
+                }}
               >
                 <FilePlus />
-                New file…
+                New file
               </ContextMenuItem>
               <ContextMenuItem
-                onClick={() =>
-                  setCreating({ dir: menuTarget.entry.path, kind: "directory" })
-                }
+                onClick={() => {
+                  menuFocus.handOff()
+                  useFiles
+                    .getState()
+                    .beginCreate(menuTarget.entry.path, "directory")
+                }}
               >
                 <FolderPlus />
-                New folder…
+                New folder
               </ContextMenuItem>
               {/* In the folder the tree is showing, so the shell's directory is
                   inside a root main already knows; `openAt` only ever gets a
@@ -932,6 +897,7 @@ function RootMenu({
   onRemove,
   onAddFolder,
   onPaste,
+  finalFocus,
 }: {
   folder: WorkspaceFolder
   /** The directory being read — the project folder's own path. */
@@ -940,22 +906,24 @@ function RootMenu({
    * to do. The root itself is always in the set — it is read without being a
    * row — so the count rather than the set is what the panel hands down. */
   expanded: boolean
-  onCreate: (kind: Creating["kind"]) => void
+  onCreate: (kind: "file" | "directory") => void
   onRename: () => void
   onRemove: () => void
   onAddFolder: () => void
   /** Absent while nothing has been copied. */
   onPaste?: () => void
+  /** New file and New folder hand focus to the field they open. */
+  finalFocus: () => boolean
 }) {
   return (
-    <ContextMenuContent className="w-52">
+    <ContextMenuContent className="w-52" finalFocus={finalFocus}>
       <ContextMenuItem onClick={() => onCreate("file")}>
         <FilePlus />
-        New file…
+        New file
       </ContextMenuItem>
       <ContextMenuItem onClick={() => onCreate("directory")}>
         <FolderPlus />
-        New folder…
+        New folder
       </ContextMenuItem>
       {onPaste && (
         <ContextMenuItem onClick={onPaste}>
@@ -1019,6 +987,9 @@ function Directory({
   const entries = useFiles((state) => state.entries[dir])
   const error = useFiles((state) => state.errors[dir])
   const loading = useFiles((state) => state.loading.includes(dir))
+  const creating = useFiles((state) =>
+    state.creating?.dir === dir ? state.creating.kind : null
+  )
 
   if (error) {
     return (
@@ -1028,6 +999,21 @@ function Directory({
       >
         {error}
       </p>
+    )
+  }
+
+  // At the top of the rows, the way the editors do it, and drawn whether or not
+  // the listing has landed: the folder may have been opened by this very click.
+  if (creating) {
+    return (
+      <ul>
+        <li>
+          <CreateRow dir={dir} kind={creating} depth={depth} />
+        </li>
+        {entries?.map((entry) => (
+          <Row key={entry.path} entry={entry} depth={depth} onMenu={onMenu} />
+        ))}
+      </ul>
     )
   }
 
@@ -1055,6 +1041,59 @@ function Directory({
         <Row key={entry.path} entry={entry} depth={depth} onMenu={onMenu} />
       ))}
     </ul>
+  )
+}
+
+/**
+ * A new file or folder being named, as a row in the directory it will land in.
+ *
+ * It was a dialog, which asked for a name in a box over the tree and said where
+ * the thing would go in a line of path — the row says that by where it is. It
+ * is `RenameRow` with nothing to start from, so it keeps that row's rules: Enter
+ * creates, Escape and an empty field leave nothing behind, and a refused name
+ * stays in the field with the reason under it.
+ */
+function CreateRow({
+  dir,
+  kind,
+  depth,
+}: {
+  dir: string
+  kind: "file" | "directory"
+  depth: number
+}) {
+  const directory = kind === "directory"
+  return (
+    <RenameRow
+      name=""
+      indent={depth}
+      label={directory ? "Folder name" : "File name"}
+      lead={
+        directory ? (
+          <>
+            <ChevronRight className="size-3.5 shrink-0" />
+            <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+          </>
+        ) : (
+          <>
+            <span aria-hidden className="size-3.5 shrink-0" />
+            <File className="size-3.5 shrink-0 text-muted-foreground" />
+          </>
+        )
+      }
+      onRename={async (name) => {
+        const { create, createFolder, endCreate } = useFiles.getState()
+        try {
+          if (directory) await createFolder(dir, name)
+          else await create(dir, name)
+          endCreate()
+          return null
+        } catch (error) {
+          return failureOf(error, "Could not create that.")
+        }
+      }}
+      onCancel={() => useFiles.getState().endCreate()}
+    />
   )
 }
 

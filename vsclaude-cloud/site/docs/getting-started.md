@@ -66,7 +66,8 @@ Claude account at all, you can chat on [credits](/docs/credits) instead.
 
 2. **Add a Claude account** in **Settings › Claude › Add account** — see
    [Claude accounts](/docs/accounts).
-3. **Press `+`** on the project's row to open a chat, and type.
+3. **Press `+`** on the project's row to open a chat, and type. See
+   [Chats](/docs/chats) for everything the composer can do.
 
 ## Updating
 

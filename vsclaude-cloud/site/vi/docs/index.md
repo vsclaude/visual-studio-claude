@@ -24,6 +24,6 @@ features:
     details: Chuyển cuộc chat sang tài khoản khác, tin nhắn tiếp theo vẫn nhớ mọi điều đã nói.
     link: /vi/docs/accounts#doi-tai-khoan
   - title: Vượt giới hạn 5 giờ bằng credit
-    details: Làm tiếp với Haiku, Sonnet hay Opus. Trả một lần, không đăng ký hàng tháng. Credit không bao giờ hết hạn.
+    details: Chat tiếp khi mọi tài khoản đều hết hạn mức. Trả một lần, không đăng ký hàng tháng. Credit không bao giờ hết hạn.
     link: /vi/docs/credits
 ---

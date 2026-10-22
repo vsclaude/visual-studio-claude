@@ -325,6 +325,14 @@ type FilesState = {
   beginRename: (target: string) => void
   endRename: () => void
 
+  /** A new file or folder being named in place, at the top of `dir`'s rows, or
+   * null. In the store for the reason `renaming` is: the menu that asks is at
+   * the top of the recursion and the row that draws the field at the bottom. */
+  creating: { dir: string; kind: "file" | "directory" } | null
+  /** Opens `dir` too, since the field is drawn among its rows. */
+  beginCreate: (dir: string, kind: "file" | "directory") => void
+  endCreate: () => void
+
   create: (dir: string, name: string) => Promise<string>
   createFolder: (dir: string, name: string) => Promise<string>
   rename: (target: string, name: string) => Promise<string>
@@ -575,6 +583,7 @@ export const useFiles = create<FilesState>((set, get) => {
     selectedId: null,
     previewId: null,
     renaming: null,
+    creating: null,
     index: [],
     indexing: false,
 
@@ -584,6 +593,15 @@ export const useFiles = create<FilesState>((set, get) => {
 
     endRename() {
       set({ renaming: null })
+    },
+
+    beginCreate(dir, kind) {
+      if (!get().expanded.includes(dir)) get().toggle(dir)
+      set({ creating: { dir, kind } })
+    },
+
+    endCreate() {
+      set({ creating: null })
     },
 
     loadIndex(force = false) {

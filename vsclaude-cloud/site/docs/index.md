@@ -24,6 +24,6 @@ features:
     details: Move a conversation to another account and the next message carries on with everything said so far.
     link: /docs/accounts#switching-a-chat-to-another-account
   - title: Past the 5-hour limit, on credits
-    details: Keep going on Haiku, Sonnet or Opus. Pay once, no subscription — credits never expire.
+    details: Keep chatting when every account is out of its window. Pay once, no subscription — credits never expire.
     link: /docs/credits
 ---

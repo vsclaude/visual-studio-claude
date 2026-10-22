@@ -1,8 +1,8 @@
 # Credits
 
-Credits let you chat on **Haiku, Sonnet or Opus** without a Claude account of
-your own, or keep going when every one of your accounts is out of its 5-hour
-window. There is no subscription: you buy a pack once and it **never expires**.
+Credits let you chat without a Claude account of your own, or keep going when
+every one of your accounts is out of its 5-hour window. There is no
+subscription: you buy a pack once and it **never expires**.
 
 Your own Claude accounts stay free. Credits are only spent by chats you put
 on them.
@@ -23,12 +23,12 @@ Click **Buy credits** in the account menu, pick a pack and a way to pay:
 - **Bank transfer (VietQR)** — scan the QR code in your banking app.
 - **Card** — any international card.
 
-| You pay   | You get in credits | Notes                |
-| --------- | ------------------ | -------------------- |
-| 20.000 ₫  | $10                | Bank transfer only   |
-| 50.000 ₫  | $25                |                      |
-| 100.000 ₫ | $55                | +10% bonus           |
-| 200.000 ₫ | $120               | +20% bonus           |
+| You pay   | You get in credits | Notes              |
+| --------- | ------------------ | ------------------ |
+| 20.000 ₫  | $10                | Bank transfer only |
+| 50.000 ₫  | $25                |                    |
+| 100.000 ₫ | $55                | +10% bonus         |
+| 200.000 ₫ | $120               | +20% bonus         |
 
 Credits arrive as soon as the payment does, and the app tells you when they
 land.

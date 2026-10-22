@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,10 +22,9 @@ import { Input } from "@/components/ui/input"
  * name seeds the field once, on mount, rather than being kept in sync with a
  * value the user is in the middle of editing.
  *
- * Also the "name this new thing" dialog, with `currentName=""` and its own
- * verb: asking for a name and asking for a different name are the same field,
- * the same validation and the same way of reporting that the name is taken —
- * see the Explorer's New file. Only the button says which one it is.
+ * It can also ask for a new thing's name, with `currentName=""` and its own
+ * verb. The Explorer's New file and New folder did, and name a row in the tree
+ * instead now (`CreateRow` in `files/file-tree.tsx`).
  *
  * The name opens **selected**, so the first keystroke replaces it: this is asking
  * for a different name, and a caret at one end of the old one leaves it to be
@@ -65,21 +64,6 @@ export function RenameDialog({
 
   const field = useRef<HTMLInputElement>(null)
 
-  // Once, on mount, and not through `autoFocus` alone: that gives the field the
-  // caret and leaves the old name to be selected by hand. The attribute stays
-  // because it is also what tells the dialog's own focus management which
-  // control this dialog is for.
-  useEffect(() => {
-    const input = field.current
-    if (!input) return
-    input.focus()
-    input.setSelectionRange(0, currentName.length)
-    // The name it opened with is the one being replaced, so this runs for that
-    // name and no other: re-selecting on a later render would swallow what has
-    // been typed since.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (busy || !name.trim() || name === currentName) return
@@ -98,7 +82,10 @@ export function RenameDialog({
         if (!next) onClose()
       }}
     >
-      <DialogContent>
+      {/* The field is named here rather than focused in an effect: the popup
+       * is portalled, so the field is not in the DOM yet when this mounts, and
+       * the dialog's own focus would land on the popup instead. */}
+      <DialogContent initialFocus={field}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
@@ -106,8 +93,11 @@ export function RenameDialog({
         <form onSubmit={submit} className="space-y-3">
           <Input
             ref={field}
-            autoFocus
             value={name}
+            // Selected when the dialog takes focus, so the old name is what the
+            // first keystroke replaces. Focus happens once on open, so typing
+            // after that is not swallowed.
+            onFocus={(event) => event.currentTarget.select()}
             onChange={(event) => setName(event.target.value)}
             spellCheck={false}
             aria-label={label}

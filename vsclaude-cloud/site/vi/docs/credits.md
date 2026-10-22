@@ -1,8 +1,8 @@
 # Credit
 
-Credit cho phép bạn chat với **Haiku, Sonnet hay Opus** mà không cần tài khoản
-Claude riêng, hoặc làm tiếp khi mọi tài khoản của bạn đều hết hạn mức 5 giờ.
-Không có gói đăng ký: bạn mua một lần và credit **không bao giờ hết hạn**.
+Credit cho phép bạn chat mà không cần tài khoản Claude riêng, hoặc làm tiếp khi
+mọi tài khoản của bạn đều hết hạn mức 5 giờ. Không có gói đăng ký: bạn mua một
+lần và credit **không bao giờ hết hạn**.
 
 Dùng tài khoản Claude của bạn thì vẫn miễn phí. Credit chỉ bị trừ cho những chat
 bạn chuyển sang credit.
@@ -23,12 +23,12 @@ Bấm **Buy credits** trong menu tài khoản, chọn gói và cách thanh toán
 - **Chuyển khoản (VietQR)**: quét mã QR bằng app ngân hàng.
 - **Thẻ**: thẻ quốc tế bất kỳ.
 
-| Bạn trả   | Nhận được (credit) | Ghi chú           |
-| --------- | ------------------ | ----------------- |
-| 20.000 ₫  | $10                | Chỉ chuyển khoản  |
-| 50.000 ₫  | $25                |                   |
-| 100.000 ₫ | $55                | Tặng thêm 10%     |
-| 200.000 ₫ | $120               | Tặng thêm 20%     |
+| Bạn trả   | Nhận được (credit) | Ghi chú          |
+| --------- | ------------------ | ---------------- |
+| 20.000 ₫  | $10                | Chỉ chuyển khoản |
+| 50.000 ₫  | $25                |                  |
+| 100.000 ₫ | $55                | Tặng thêm 10%    |
+| 200.000 ₫ | $120               | Tặng thêm 20%    |
 
 Credit được cộng ngay khi thanh toán xong, và ứng dụng sẽ báo cho bạn.
 

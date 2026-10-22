@@ -135,7 +135,9 @@ const url = await new Promise((resolve, reject) => {
 
 // Anything else on the command line is Electron's — `--remote-debugging-port=9222`
 // to drive the window from Playwright, say.
-const electronArgs = process.argv.slice(2).filter((arg) => arg !== "--hmr=false")
+const electronArgs = process.argv
+  .slice(2)
+  .filter((arg) => arg !== "--hmr=false")
 
 const electron = start(bin("electron"), [".", ...electronArgs], {
   cwd: root,

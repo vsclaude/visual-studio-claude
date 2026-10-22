@@ -7,13 +7,7 @@ import { COPY, LANGS, langOf, pathOf } from "../copy.ts"
 import InlineStyle from "../InlineStyle.ts"
 import { ICON, RELEASES_URL } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
-import {
-  demoCss,
-  FEATURE_ORDER,
-  nth,
-  PILLAR_ORDER,
-  SPARKLE,
-} from "./demo.ts"
+import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
 import css from "./home.css?inline"
 import { packsForSale } from "./packs.ts"
 
@@ -107,10 +101,12 @@ onBeforeUnmount(() => seen?.disconnect())
         <p class="lede enter" style="--d: 0.16s">{{ t.lede }}</p>
         <div class="ctas enter" style="--d: 0.24s">
           <a class="button primary download" :href="RELEASES_URL"
-            ><span>{{ downloadLabel }}</span><i v-html="ICON.download"></i
+            ><span>{{ downloadLabel }}</span
+            ><i v-html="ICON.download"></i
           ></a>
           <a class="button ghost" href="#credits"
-            ><span>{{ t.cta.pricing }}</span><i v-html="ICON.arrow"></i
+            ><span>{{ t.cta.pricing }}</span
+            ><i v-html="ICON.arrow"></i
           ></a>
         </div>
         <p class="fine enter" style="--d: 0.3s">{{ t.fine }}</p>
@@ -137,7 +133,7 @@ onBeforeUnmount(() => seen?.disconnect())
           <h2>{{ t.pillars.title }}</h2>
           <p>{{ t.pillars.body }}</p>
         </div>
-        <div class="grid pillars">
+        <div class="pillars grid">
           <article
             v-for="(item, i) in t.pillars.items"
             :key="i"
@@ -177,11 +173,12 @@ onBeforeUnmount(() => seen?.disconnect())
         <div class="head reveal">
           <span class="kicker">{{ t.pricing.kicker }}</span>
           <h2>
-            {{ t.pricing.title[0] }}<em class="accent">{{ t.pricing.title[1] }}</em>
+            {{ t.pricing.title[0]
+            }}<em class="accent">{{ t.pricing.title[1] }}</em>
           </h2>
           <p>{{ t.pricing.body }}</p>
         </div>
-        <div class="grid packs">
+        <div class="packs grid">
           <article
             v-for="(pack, i) in packs"
             :key="pack.id"
@@ -213,7 +210,7 @@ onBeforeUnmount(() => seen?.disconnect())
           <span class="kicker">{{ t.steps.kicker }}</span>
           <h2>{{ t.steps.title }}</h2>
         </div>
-        <div class="grid steps">
+        <div class="steps grid">
           <div
             v-for="(step, i) in t.steps.items"
             :key="i"
@@ -241,17 +238,14 @@ onBeforeUnmount(() => seen?.disconnect())
       </section>
 
       <section class="closing">
-        <div
-          class="stack reveal"
-          aria-hidden="true"
-          v-html="STACK"
-        ></div>
+        <div class="stack reveal" aria-hidden="true" v-html="STACK"></div>
         <h2 class="reveal">
           {{ t.closing[0] }}<em class="accent">{{ t.closing[1] }}</em>
         </h2>
         <div class="ctas reveal">
           <a class="button primary download" :href="RELEASES_URL"
-            ><span>{{ downloadLabel }}</span><i v-html="ICON.download"></i
+            ><span>{{ downloadLabel }}</span
+            ><i v-html="ICON.download"></i
           ></a>
         </div>
       </section>

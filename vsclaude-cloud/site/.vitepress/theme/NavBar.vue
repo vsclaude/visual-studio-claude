@@ -50,7 +50,8 @@ const slug = computed(() => slugOf(page.value.relativePath))
         >
       </div>
       <a class="button ghost download" :href="RELEASES_URL"
-        ><span>{{ t.download }}</span><i v-html="ICON.arrow"></i
+        ><span>{{ t.download }}</span
+        ><i v-html="ICON.arrow"></i
       ></a>
     </div>
   </nav>

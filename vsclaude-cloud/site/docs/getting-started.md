@@ -53,14 +53,14 @@ It needs FUSE (`sudo apt install libfuse2` on Debian and Ubuntu).
 
 Chats run on your own `claude` — the Claude Code CLI. The app opens without
 it, but you need it to chat with your own Claude accounts. If you have no
-Claude account at all, you can chat on [credits](/credits) instead.
+Claude account at all, you can chat on [credits](/docs/credits) instead.
 
 ## Your first chat
 
 1. **Add a project.** A project is a folder already on your machine; VS Claude
    works on it where it is, and never copies it.
 2. **Add a Claude account** in **Settings › Claude › Add account** — see
-   [Claude accounts](/accounts).
+   [Claude accounts](/docs/accounts).
 3. **Press `+`** on the project's row to open a chat, and type.
 
 ## Updating

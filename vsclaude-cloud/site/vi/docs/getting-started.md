@@ -54,14 +54,14 @@ Cần có FUSE (`sudo apt install libfuse2` trên Debian và Ubuntu).
 
 Chat chạy trên chính `claude` của bạn, tức Claude Code CLI. Ứng dụng vẫn mở
 được khi chưa có CLI, nhưng bạn cần nó để chat bằng tài khoản Claude của mình.
-Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/vi/credits).
+Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/vi/docs/credits).
 
 ## Cuộc chat đầu tiên
 
 1. **Thêm project.** Project là một thư mục đã có trong máy. VS Claude làm việc
    ngay tại chỗ, không bao giờ sao chép nó.
 2. **Thêm tài khoản Claude** trong **Settings › Claude › Add account**. Xem
-   [Tài khoản Claude](/vi/accounts).
+   [Tài khoản Claude](/vi/docs/accounts).
 3. **Bấm `+`** trên hàng của project để mở chat, rồi gõ tin nhắn.
 
 ## Cập nhật

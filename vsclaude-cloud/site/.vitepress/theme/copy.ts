@@ -1,9 +1,10 @@
 /**
  * Every word of the home page, in each language it is written in.
  *
- * English is the default (`/`), Vietnamese is `/?lang=vi`: a URL each rather
- * than a script swapping text, so the page arrives in its language with
- * nothing to flicker and a search engine can read both.
+ * English is the default (`/`), Vietnamese is `/vi/` — VitePress's locales,
+ * one page each rather than a script swapping text, so the page arrives in
+ * its language with nothing to flicker and a search engine can read both. It
+ * was `/?lang=vi` while the Worker drew the page; `config.ts` sends that on.
  *
  * **The page leads with the three problems VS Claude exists for**: many Claude
  * accounts, one menu; a conversation that survives the switch between them;
@@ -27,14 +28,25 @@ export type Lang = "en" | "vi"
 
 export const LANGS: Lang[] = ["en", "vi"]
 
-/** The language a request asked for, or English. */
+/** A locale's language, or English. */
 export function langOf(value: unknown): Lang {
   return value === "vi" ? "vi" : "en"
 }
 
-/** Where a language's page lives. English keeps the bare root. */
+/** Where a language's home page lives. English keeps the bare root. */
 export function pathOf(lang: Lang): string {
-  return lang === "en" ? "/" : `/?lang=${lang}`
+  return lang === "en" ? "/" : `/${lang}/`
+}
+
+/** Where a language's guide lives. */
+export function docsPathOf(lang: Lang): string {
+  return `${pathOf(lang)}docs/`
+}
+
+/** Where the bar's Docs link goes: the guide's first page rather than its
+ * index, which is a cover with nothing to read on it. */
+export function docsStartOf(lang: Lang): string {
+  return `${docsPathOf(lang)}getting-started`
 }
 
 type Section = {
@@ -56,7 +68,7 @@ export type Copy = {
     features: string
     pricing: string
     faq: string
-    /** The user's guide, `/docs/` (VitePress, `docs/`). */
+    /** The user's guide, `docsPathOf`. */
     docs: string
     download: string
     language: string
@@ -67,7 +79,7 @@ export type Copy = {
   lede: string
   cta: { download: string; downloadFor: string; pricing: string }
   fine: string
-  /** The three problems — in the order of `PILLAR_ORDER` in `landing.ts`. */
+  /** The three problems — in the order of `PILLAR_ORDER` in `home/demo.ts`. */
   pillars: Section
   /** The studio's main parts — in the order of `FEATURE_ORDER`. */
   features: Section
@@ -122,7 +134,7 @@ const en: Copy = {
     downloadFor: "Download for ",
     pricing: "See pricing",
   },
-  fine: "macOS · Windows · Linux &nbsp;—&nbsp; free with your own Claude accounts, credits when you need them",
+  fine: "macOS · Windows · Linux \u00a0—\u00a0 free with your own Claude accounts, credits when you need them",
   pillars: {
     kicker: "Why VS Claude",
     title: "Built so a limit never ends your work",
@@ -280,7 +292,7 @@ const vi: Copy = {
     downloadFor: "Tải cho ",
     pricing: "Xem bảng giá",
   },
-  fine: "macOS · Windows · Linux &nbsp;—&nbsp; miễn phí với tài khoản Claude của bạn, credit khi bạn cần",
+  fine: "macOS · Windows · Linux \u00a0—\u00a0 miễn phí với tài khoản Claude của bạn, credit khi bạn cần",
   pillars: {
     kicker: "Vì sao chọn VS Claude",
     title: "Giới hạn không bao giờ làm gián đoạn công việc",

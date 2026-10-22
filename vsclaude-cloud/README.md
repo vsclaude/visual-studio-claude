@@ -20,7 +20,7 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 
 | Route                            | What                                                                                             |
 | -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `GET /`                          | The home page, in English; `?lang=vi` for Vietnamese.                                            |
+| `GET /`, `/vi/`, `/docs/…`       | The home page and the user's guide: static, built from `site/` (VitePress) into `public/`.       |
 | `POST /v1/messages`              | Passed through, streamed; charged to the user's credits.                                         |
 | `POST /v1/messages/count_tokens` | Passed through; not counted (free at Anthropic).                                                 |
 | `GET /v1/models`                 | The models served, in Anthropic's list shape.                                                    |

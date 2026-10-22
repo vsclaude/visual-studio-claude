@@ -26,7 +26,7 @@ another one. The conversation moves with it: your next message carries on with
 everything said so far — no pasting, no starting over.
 
 If every account is out of its window, pick **Pay with credits** in the same
-menu. See [Credits](/credits).
+menu. See [Credits](/docs/credits).
 
 ::: info
 Switching is always your choice. VS Claude never moves a chat to another

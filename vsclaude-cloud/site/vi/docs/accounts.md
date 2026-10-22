@@ -26,7 +26,7 @@ khác. Cuộc trò chuyện đi theo: tin nhắn tiếp theo vẫn nhớ mọi �
 không phải dán lại, không phải làm lại từ đầu.
 
 Nếu mọi tài khoản đều hết hạn mức, chọn **Pay with credits** trong cùng menu đó.
-Xem [Credit](/vi/credits).
+Xem [Credit](/vi/docs/credits).
 
 ::: info
 Việc đổi tài khoản luôn do bạn quyết định. VS Claude không bao giờ tự chuyển chat

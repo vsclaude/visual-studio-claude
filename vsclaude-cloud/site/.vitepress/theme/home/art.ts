@@ -1,9 +1,9 @@
 /**
  * The home page's illustrations, one per feature — inline SVG, so they are
- * part of the one response and take the page's own CSS.
+ * part of the page and take its own CSS.
  *
  * Every one is drawn in its **finished** state, and the motion is keyframes
- * that start from somewhere else and arrive there (`landing.ts`'s `.a-*`
+ * that start from somewhere else and arrive there (`home.css`'s `.a-*`
  * classes). So with motion reduced, or before the card has scrolled into view,
  * what shows is the picture complete rather than half of it: an animation
  * removed takes nothing with it.

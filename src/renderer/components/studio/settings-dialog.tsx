@@ -506,6 +506,12 @@ function ChatsSection() {
 }
 
 /**
+ * Off for now: the install buttons are hidden rather than deleted, so the
+ * install path in the store and main still compiles and tests the same.
+ */
+const SHOW_PLUGIN_INSTALL = false
+
+/**
  * The plugins: the built-in ones, then the ones installed from a folder or a
  * `.zip` — the way in for a plugin made outside the app until there is a
  * marketplace, which will install through the same `installPlugin`.
@@ -563,40 +569,42 @@ function PluginsSection() {
         app; switch on others only if you wrote or trust them.
       </p>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={installing}
-            onClick={() => void installFrom("folder")}
-          >
-            <FolderOpen className="size-3.5" />
-            Install from folder…
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={installing}
-            onClick={() => void installFrom("zip")}
-          >
-            <FileArchive className="size-3.5" />
-            Install from .zip…
-          </Button>
-        </div>
-        {/* `polite` so a screen reader hears how the install went, which is
+      {SHOW_PLUGIN_INSTALL && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={installing}
+              onClick={() => void installFrom("folder")}
+            >
+              <FolderOpen className="size-3.5" />
+              Install from folder…
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={installing}
+              onClick={() => void installFrom("zip")}
+            >
+              <FileArchive className="size-3.5" />
+              Install from .zip…
+            </Button>
+          </div>
+          {/* `polite` so a screen reader hears how the install went, which is
             otherwise a dialog closing and nothing else. */}
-        <p
-          aria-live="polite"
-          className={cn(
-            "text-xs",
-            outcome?.failed ? "text-destructive" : "text-muted-foreground"
-          )}
-        >
-          {outcome?.text ??
-            "A plugin is a folder with a manifest.json and a main.js. Installing the same id again updates it."}
-        </p>
-      </div>
+          <p
+            aria-live="polite"
+            className={cn(
+              "text-xs",
+              outcome?.failed ? "text-destructive" : "text-muted-foreground"
+            )}
+          >
+            {outcome?.text ??
+              "A plugin is a folder with a manifest.json and a main.js. Installing the same id again updates it."}
+          </p>
+        </div>
+      )}
 
       {plugins.length === 0 ? null : (
         <Card>

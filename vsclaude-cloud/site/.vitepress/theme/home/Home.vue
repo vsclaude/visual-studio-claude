@@ -13,7 +13,6 @@ import {
   nth,
   PILLAR_ORDER,
   SPARKLE,
-  WINDOW,
 } from "./demo.ts"
 import css from "./home.css?inline"
 import { packsForSale } from "./packs.ts"
@@ -51,9 +50,16 @@ const downloadLabel = computed(() =>
 )
 
 const root = ref<HTMLElement>()
+const demo = ref<HTMLVideoElement>()
 let seen: IntersectionObserver | undefined
 
 onMounted(() => {
+  // Autoplay ignores the stylesheet's reduced-motion rule, so the video
+  // is held on its first frame here instead.
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    demo.value?.pause()
+  }
+
   const ua = navigator.userAgent
   os.value = /Mac/.test(ua)
     ? "macOS"
@@ -110,7 +116,17 @@ onBeforeUnmount(() => seen?.disconnect())
         <p class="fine enter" style="--d: 0.3s">{{ t.fine }}</p>
 
         <figure class="window-frame enter" style="--d: 0.4s">
-          <div class="window" aria-hidden="true" v-html="WINDOW"></div>
+          <video
+            ref="demo"
+            class="window"
+            src="/demo/vs-claude-demo-v3.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            aria-hidden="true"
+          ></video>
           <figcaption>{{ t.windowCaption }}</figcaption>
         </figure>
       </header>

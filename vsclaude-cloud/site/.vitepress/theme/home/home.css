@@ -42,6 +42,7 @@ figure.window-frame { width: min(1240px, 100vw - 3rem); margin: 4rem 0 0 50%; tr
   border-radius: 12px; overflow: hidden; text-align: left; border: 1px solid var(--edge-strong); background: #09090b;
   box-shadow: 0 30px 80px rgb(0 0 0 / 0.5); font-size: 0.86rem; line-height: 1.45; color: #d4d4d8;
 }
+video.window { display: block; width: 100%; height: auto; }
 figcaption { margin-top: 0.9rem; color: var(--faint); font-size: 0.78rem; }
 .window .i { width: 0.9rem; height: 0.9rem; flex: none; }
 .titlebar { display: flex; justify-content: center; padding: 0.4rem; }

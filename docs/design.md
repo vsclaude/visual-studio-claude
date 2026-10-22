@@ -409,6 +409,18 @@ CLI with the profile's `CLAUDE_CONFIG_DIR`, held a minute per account). The
 request is experimental in the SDK, so the answer is narrowed field by field and
 a missing method is not an error. Nothing is drawn for API-key accounts.
 
+### Moving a chat to another account
+
+Picking another account in the composer writes an `account` line into the
+transcript — `You moved this chat to work@example.com` — in main's
+`setOptions`, so it is on disk and in the export, not only on screen. A line
+for the reason the compaction rule is one: the turns above it ran on another
+login, and somebody scrolling back past a limit is owed the boundary. It keeps
+the profile's **name at the time**; the pane draws the address instead when
+this run has already checked that login, and never starts a `claude` to find
+out. A move before the first message writes nothing — there is nothing above it
+to divide.
+
 ### Finding a line in the chat on screen
 
 `⌘F` is a find bar over the transcript (`chat-find.tsx`,

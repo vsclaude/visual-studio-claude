@@ -99,6 +99,8 @@ function blockOf(line: AssistantMessage): string | null {
     }
     case "compact":
       return `---\n\n_${compactLine(line)}_`
+    case "account":
+      return quote(`⇄ You moved this chat to ${line.name}`)
   }
 }
 

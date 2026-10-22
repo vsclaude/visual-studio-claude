@@ -1362,14 +1362,40 @@ export class Chats {
    * those are picked up by the next message, which opens a new one.
    */
   async setOptions(id: string, options: ChatOptions): Promise<void> {
-    await this.editChats((chats) =>
-      chats.some((chat) => chat.id === id)
-        ? chats.map((chat) => (chat.id === id ? { ...chat, options } : chat))
-        : null
-    )
+    let moved = false
+    await this.editChats((chats) => {
+      const existing = chats.find((chat) => chat.id === id)
+      if (!existing) return null
+      moved =
+        (existing.options?.profileId ?? null) !== (options.profileId ?? null)
+      return chats.map((chat) => (chat.id === id ? { ...chat, options } : chat))
+    })
 
     const live = this.live.get(id)
     if (live) this.retune(live, options)
+
+    // Only a chat with something above the line: a move before the first
+    // message divides nothing.
+    if (moved && (await this.read(id)).length > 0) {
+      const profileId = options.profileId ?? null
+      await this.append(id, {
+        id: lineId(),
+        role: "account",
+        profileId,
+        name: await this.profileName(profileId),
+      })
+    }
+  }
+
+  /** What the composer's picker calls a profile, for the `account` line. */
+  private async profileName(profileId: string | null): Promise<string> {
+    if (profileId === null) return "This account"
+    if (profileId === FREE_PROFILE_ID) return "Credits"
+    const profiles = await this.source.claudeProfiles()
+    return (
+      profiles.find((profile) => profile.id === profileId)?.name ??
+      "another account"
+    )
   }
 
   /**
@@ -2081,7 +2107,14 @@ export class Chats {
                         postTokens: message.postTokens,
                         durationMs: message.durationMs,
                       }
-                    : { chatId: id, type: "text", text: message.text }
+                    : message.role === "account"
+                      ? {
+                          chatId: id,
+                          type: "account",
+                          profileId: message.profileId,
+                          name: message.name,
+                        }
+                      : { chatId: id, type: "text", text: message.text }
       )
     }
 

@@ -353,13 +353,15 @@ function firstStampOf(block: ChatBlock): string | undefined {
  * everything above it is something the model now knows only as a summary, so it
  * is the one line whose whole meaning is *where in the transcript it sits*.
  * Folded into a run of tool calls it would be a divider inside a fold, dividing
- * nothing a reader can see.
+ * nothing a reader can see. A **move to another account** is a boundary of the
+ * same kind, and shown for the same reason.
  */
 function alwaysShown(line: AssistantMessage): boolean {
   return (
     line.role === "error" ||
     line.role === "usage" ||
     line.role === "compact" ||
+    line.role === "account" ||
     (line.role === "ask" && refused(line))
   )
 }

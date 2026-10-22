@@ -1200,7 +1200,14 @@ export const useChats = create<ChatState>((set, get) => ({
                           postTokens: event.postTokens,
                           durationMs: event.durationMs,
                         }
-                      : null
+                      : event.type === "account"
+                        ? {
+                            id: `s${Date.now()}-${Math.random()}`,
+                            role: "account",
+                            profileId: event.profileId,
+                            name: event.name,
+                          }
+                        : null
 
       if (!line) return
       set({

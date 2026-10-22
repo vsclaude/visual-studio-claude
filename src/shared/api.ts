@@ -584,6 +584,23 @@ type AssistantLine =
       postTokens?: number
       durationMs?: number
     }
+  /**
+   * The chat was moved to another account, written down where it happened.
+   *
+   * A line for the reason `compact` is one: the turns above it ran on one
+   * login and the turns below on another, and a reader scrolling back — after
+   * a limit, say — is owed the boundary. `name` is the profile's name **at the
+   * time**, because a profile can be renamed or deleted afterwards and the
+   * line is still about the one it was; the pane draws the address instead
+   * when it knows it (`lib/chat/claude-profiles.ts`).
+   */
+  | {
+      id: string
+      role: "account"
+      /** `ChatOptions.profileId` after the move — null for the default login. */
+      profileId: string | null
+      name: string
+    }
 
 /**
  * What one turn spent, in the numbers that explain the spending.
@@ -800,6 +817,9 @@ export type AssistantEvent =
       postTokens?: number
       durationMs?: number
     }
+  /** The chat was moved to another account — the `account` line, paired the
+   * way `compact` is. */
+  | { type: "account"; profileId: string | null; name: string }
   /**
    * How full the context window is, as of the reply that just arrived.
    *

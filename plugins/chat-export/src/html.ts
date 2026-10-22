@@ -103,6 +103,8 @@ function blockOf(
       }</div>`
     case "compact":
       return `<div class="compact"><span>${escape(compactLine(line))}</span></div>`
+    case "account":
+      return `<div class="note">⇄ You moved this chat to ${escape(line.name)}</div>`
   }
 }
 

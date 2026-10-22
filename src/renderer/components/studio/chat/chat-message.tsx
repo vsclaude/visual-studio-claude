@@ -8,6 +8,7 @@ import {
 } from "react"
 import {
   Archive,
+  ArrowLeftRight,
   Brain,
   Check,
   ChevronDown,
@@ -49,6 +50,7 @@ import { rowOf, splitStat } from "@/lib/chat/tool-row"
 import { toolMark } from "./chat-marks"
 import { creditsRefusalOf } from "@/lib/chat/credits-refusal"
 import { CreditsRefusalCard } from "./chat-credits-refusal"
+import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
 
 /**
  * One line of an agent conversation.
@@ -323,6 +325,8 @@ function OtherMessage({
     )
   }
 
+  if (of.role === "account") return <AccountMove line={of} />
+
   if (of.role === "error") {
     // Want of credits is drawn as the way to buy some, not as one more red
     // line — see `creditsRefusalOf` for why the sentence is the signal.
@@ -367,6 +371,43 @@ function OtherMessage({
  * before `at` existed — `undefined` so no `title` attribute is drawn at all. */
 function stampOf(line: AssistantMessage): string | undefined {
   return line.at ? dateTimeOf(line.at) || undefined : undefined
+}
+
+/**
+ * The chat was moved to another account: a band across the transcript, since
+ * the turns below it ran on a different login from the ones above.
+ *
+ * Who it was moved to is the address when this run has checked that login —
+ * the picker's own answer, so nothing here starts a `claude` — and otherwise the
+ * name main wrote down at the time.
+ */
+function AccountMove({
+  line,
+}: {
+  line: Extract<AssistantMessage, { role: "account" }>
+}) {
+  const email = useClaudeProfiles((state) => {
+    const dir =
+      line.profileId === null
+        ? ""
+        : state.profiles
+            .find((profile) => profile.id === line.profileId)
+            ?.configDir.trim()
+    const account = dir === undefined ? undefined : state.accounts[dir]
+    return account?.state === "signedIn" ? account.email : undefined
+  })
+
+  return (
+    <div
+      title={stampOf(line)}
+      className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-1.5 text-[0.75rem] text-emerald-600 dark:text-emerald-400"
+    >
+      <ArrowLeftRight className="size-3.5 shrink-0" />
+      <span className="truncate">
+        You moved this chat to {email ?? line.name}
+      </span>
+    </div>
+  )
 }
 
 /**

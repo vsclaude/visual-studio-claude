@@ -154,6 +154,7 @@ const api: DesktopApi = {
   claudeLogin: (configDir, cols, rows) =>
     ipcRenderer.invoke(IPC.claudeLogin, configDir, cols, rows),
   listChats: () => ipcRenderer.invoke(IPC.listChats),
+  busyChats: () => ipcRenderer.invoke(IPC.busyChats),
   createChat: (place, seed) => ipcRenderer.invoke(IPC.createChat, place, seed),
   readChat: (id) => ipcRenderer.invoke(IPC.readChat, id),
   chatSpend: () => ipcRenderer.invoke(IPC.chatSpend),

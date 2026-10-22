@@ -7,3 +7,5 @@ dist
 .env
 .env.local
 .wrangler
+public/docs
+docs/.vitepress/cache

@@ -497,6 +497,7 @@ export function createIpc(host: Host): {
   )
 
   handle(IPC.listChats, () => allChats.list())
+  handle(IPC.busyChats, () => allChats.busy())
 
   handle(IPC.createChat, (_event, place: ChatPlace, seed?: ChatSeed) =>
     allChats.create(place, seed)

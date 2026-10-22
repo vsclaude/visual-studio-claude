@@ -67,7 +67,12 @@ export function ChatWindow({ chatId }: { chatId: string }) {
     return useSettings.subscribe(applyAppearance)
   }, [])
 
-  useEffect(() => useChats.getState().listen(), [])
+  // `busy` is sent on a change only, and this window may open mid-turn.
+  useEffect(() => {
+    const stop = useChats.getState().listen()
+    void useChats.getState().syncBusy()
+    return stop
+  }, [])
 
   // The chat's name in the OS's own title too, for the window switcher.
   useEffect(() => {

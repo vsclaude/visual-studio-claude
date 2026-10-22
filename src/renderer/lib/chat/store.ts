@@ -347,6 +347,12 @@ type ChatState = {
   /** Subscribes to turns. Called once from the workbench: a turn outlives the
    * pane being switched away from, and its lines have to land either way. */
   listen: () => () => void
+  /**
+   * Asks main which chats are working, for a window opened after their turn
+   * started — a popped-out chat. Called after `listen`, so a `busy` sent while
+   * the answer is on its way lands after it rather than being lost.
+   */
+  syncBusy: () => Promise<void>
 }
 
 export const useChats = create<ChatState>((set, get) => ({
@@ -892,6 +898,22 @@ export const useChats = create<ChatState>((set, get) => ({
 
     void window.desktop.setChatOptions(id, options).catch((error: unknown) => {
       console.error("Could not save that chat's options", error)
+    })
+  },
+
+  async syncBusy() {
+    const busy = await window.desktop.busyChats()
+    const fresh = busy.filter((id) => !get().sending.includes(id))
+    if (fresh.length === 0) return
+    // The clock starts at the asking: the turn's own start is main's alone,
+    // and an elapsed time too short beats one that is made up.
+    const now = Date.now()
+    set({
+      sending: [...get().sending, ...fresh],
+      startedAt: {
+        ...get().startedAt,
+        ...Object.fromEntries(fresh.map((id) => [id, now])),
+      },
     })
   },
 

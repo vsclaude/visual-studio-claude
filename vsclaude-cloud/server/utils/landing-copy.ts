@@ -56,6 +56,8 @@ export type Copy = {
     features: string
     pricing: string
     faq: string
+    /** The user's guide, `/docs/` (VitePress, `docs/`). */
+    docs: string
     download: string
     language: string
   }
@@ -108,6 +110,7 @@ const en: Copy = {
     features: "Features",
     pricing: "Pricing",
     faq: "FAQ",
+    docs: "Docs",
     download: "Download",
     language: "Language",
   },
@@ -265,6 +268,7 @@ const vi: Copy = {
     features: "Tính năng",
     pricing: "Bảng giá",
     faq: "Hỏi đáp",
+    docs: "Hướng dẫn",
     download: "Tải về",
     language: "Ngôn ngữ",
   },

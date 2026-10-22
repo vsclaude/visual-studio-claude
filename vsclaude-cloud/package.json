@@ -2,7 +2,9 @@
   "name": "vsclaude-cloud",
   "type": "module",
   "scripts": {
-    "build": "nitro build",
+    "build": "vitepress build docs && nitro build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
     "deploy": "bunx wrangler deploy --config .output/server/wrangler.json",
     "dev": "nitro dev",
     "preview": "nitro preview",
@@ -16,7 +18,8 @@
     "@types/bun": "^1.4.3",
     "@types/node": "latest",
     "nitro": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitepress": "^1.6.4"
   },
   "dependencies": {
     "jose": "^6.2.12",

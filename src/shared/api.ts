@@ -2504,6 +2504,12 @@ export type DesktopApi = {
    * at a time. */
   listChats: () => Promise<Chat[]>
   /**
+   * The chats whose CLI is working right now. `busy` is an event sent on each
+   * change, so a window opened mid-turn — a popped-out chat — would otherwise
+   * hear nothing until the turn ended and draw no loader for it.
+   */
+  busyChats: () => Promise<string[]>
+  /**
    * A chat in a project's own working tree, written down.
    *
    * **Called on the first thing said in a chat, not on the `+` that opened it.**
@@ -2981,6 +2987,7 @@ export const IPC = {
   claudeVersions: "claude:versions",
   claudeLogin: "claude-profiles:login",
   listChats: "chats:list",
+  busyChats: "chats:busy",
   createChat: "chats:create",
   readChat: "chats:read",
   chatSpend: "chats:spend",

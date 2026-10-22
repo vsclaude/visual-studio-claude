@@ -1744,6 +1744,11 @@ export class Chats {
     live.idle?.unref?.()
   }
 
+  /** The chats `setBusy` last said were working — see `IPC.busyChats`. */
+  busy(): string[] {
+    return [...this.live].flatMap(([id, live]) => (live.busy ? [id] : []))
+  }
+
   /**
    * Closes a session that has had nothing to do for `IDLE_MS`.
    *

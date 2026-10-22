@@ -1,0 +1,96 @@
+/*
+ * The home page's look on VitePress's layout. The palette and the bar's own
+ * styles are `server/utils/site-nav.ts`', put in the head by `config.ts`;
+ * what is here maps them onto VitePress's variables and puts the bar where
+ * VitePress's own was. Dark only, like the home page (`appearance`).
+ */
+:root {
+  /* The home page's bar: 1.1rem above and below a 36px button. Everything
+     VitePress positions — the sidebar, the outline, the hero — reads this. */
+  --vp-nav-height: 72px;
+  --vp-layout-max-width: 1280px;
+
+  --vp-font-family-base: var(--sans);
+  --vp-font-family-mono: var(--mono);
+}
+
+.dark {
+  --vp-c-bg: var(--page);
+  --vp-c-bg-alt: var(--page);
+  --vp-c-bg-elv: var(--raised);
+  --vp-c-bg-soft: var(--raised);
+  --vp-c-divider: var(--edge);
+  --vp-c-border: var(--edge-strong);
+  --vp-c-gutter: var(--page);
+
+  --vp-c-text-1: var(--ink);
+  --vp-c-text-2: var(--body);
+  --vp-c-text-3: var(--faint);
+
+  --vp-c-brand-1: var(--accent-soft);
+  --vp-c-brand-2: var(--accent);
+  --vp-c-brand-3: var(--accent);
+  --vp-c-brand-soft: rgb(139 92 246 / 0.16);
+  --vp-button-brand-bg: var(--accent);
+  --vp-button-brand-hover-bg: var(--accent-hover);
+  --vp-button-brand-active-bg: var(--accent-hover);
+
+  --vp-code-block-bg: var(--raised);
+  --vp-code-bg: rgb(255 255 255 / 0.07);
+
+  /* The logo's gradient is the logo's and nothing else's (landing.ts). */
+  --vp-home-hero-name-color: var(--ink);
+}
+
+/* VitePress's own bar gives way to the home page's. */
+.VPNav {
+  display: none !important;
+}
+
+.site-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: var(--vp-z-index-nav);
+  height: var(--vp-nav-height);
+  /* Translucent, so the haze shows through it as it does on the home page. */
+  background: rgb(9 9 12 / 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.site-header .site-nav {
+  height: 100%;
+  padding: 0;
+  width: min(1080px, 100% - 3rem);
+  margin-inline: auto;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.site-header a {
+  text-decoration: none;
+}
+/* The halves are HTML strings; their contents are the flex items. */
+.site-header .parts {
+  display: contents;
+}
+.site-header .site-search {
+  flex-grow: 0;
+  padding-left: 0;
+}
+
+/* Over the haze rather than under a slab of colour, past the phone layout
+   where the sidebar is a drawer and has to be opaque. */
+@media (min-width: 960px) {
+  .VPSidebar {
+    background: transparent !important;
+  }
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.vp-doc h2 {
+  border-top-color: var(--edge);
+}

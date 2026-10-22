@@ -1206,8 +1206,19 @@ export const useChats = create<ChatState>((set, get) => ({
                             role: "account",
                             profileId: event.profileId,
                             name: event.name,
+                            resumed: event.resumed,
                           }
-                        : null
+                        : event.type === "limit"
+                          ? {
+                              id: `s${Date.now()}-${Math.random()}`,
+                              role: "limit",
+                              profileId: event.profileId,
+                              name: event.name,
+                              window: event.window,
+                              resetsAt: event.resetsAt,
+                              text: event.text,
+                            }
+                          : null
 
       if (!line) return
       set({

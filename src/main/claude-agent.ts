@@ -2,6 +2,7 @@ import {
   query,
   type Options,
   type SDKMessage,
+  type SDKRateLimitInfo,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk"
 import { randomUUID, type UUID } from "node:crypto"
@@ -10,6 +11,7 @@ import type {
   AssistantMessage,
   ChatAgent,
   ChatImage,
+  ChatLimit,
   ChatTodo,
   ChatWindow,
   ChatWindowSlice,
@@ -373,8 +375,9 @@ export type AgentHandlers = {
    */
   onDequeued: () => void
   /** One turn is over. `error` is null when it succeeded. The session is not
-   * over: another message may already be queued behind this one. */
-  onTurn: (error: string | null) => void
+   * over: another message may already be queued behind this one. `limit` is
+   * set when what stopped it was the account's plan limit — see `ChatLimit`. */
+  onTurn: (error: string | null, limit: ChatLimit | null) => void
   /**
    * The session is over — the CLI exited, or `close` was called.
    *
@@ -823,6 +826,17 @@ export async function startAgentSession(
   /** Whether a turn is in flight, so `send` knows which of the two above it
    * is. */
   let answering = true
+  /**
+   * The account's limits as the CLI last reported them, and the sentence it
+   * stopped the turn with when one was hit.
+   *
+   * Two messages because the CLI sends two: a `rate_limit_event` saying which
+   * window and until when, and an assistant message flagged `rate_limit`
+   * carrying its own sentence for the transcript. That sentence is held here
+   * rather than drawn — the turn's `limit` line says it, with the reset in it.
+   */
+  let rateLimit: SDKRateLimitInfo | null = null
+  let limitText: string | null = null
   /** The uuids of messages sent mid-turn that the CLI has not taken in yet —
    * see `onDequeued`. A message sent to an idle chat is not in here: nothing
    * on screen says it is waiting, so there is nothing to take back. */
@@ -1037,6 +1051,19 @@ export async function startAgentSession(
          * final counts — but they all carry the same request's prompt, which is
          * all but a rounding error of the number here.
          */
+        if (message.type === "rate_limit_event") {
+          rateLimit = message.rate_limit_info
+          continue
+        }
+        if (
+          message.type === "assistant" &&
+          message.error === "rate_limit" &&
+          !message.parent_tool_use_id
+        ) {
+          limitText = textOf(message.message.content) || "Usage limit reached."
+          continue
+        }
+
         if (message.type === "assistant" && !message.parent_tool_use_id) {
           const at = contextOf(message.message.usage)
           if (at !== null && at !== context) {
@@ -1091,8 +1118,13 @@ export async function startAgentSession(
             handlers.onBusy(false)
             forgetAgents()
           }
-          handlers.onTurn(errorOf(message, interrupted))
+          const error = errorOf(message, interrupted)
+          const limit = interrupted
+            ? null
+            : limitOf(rateLimit, limitText, error !== null)
+          handlers.onTurn(limit ? (error ?? limit.text) : error, limit)
           interrupted = false
+          limitText = null
           /*
            * The window, measured rather than counted — see `onWindow`.
            *
@@ -1197,6 +1229,47 @@ type ReplyUsage = {
 type EffortLevel = Parameters<
   ReturnType<typeof query>["applyFlagSettings"]
 >[0]["effortLevel"]
+
+/**
+ * The limit that stopped a turn, or null when none did.
+ *
+ * The flagged assistant message is the CLI saying so outright. A failed turn
+ * while the last event said `rejected` is the same thing from a CLI that sent
+ * only the event — a turn that failed for some other reason under an account
+ * already over its limit is rare enough to read as the limit.
+ */
+export function limitOf(
+  info: SDKRateLimitInfo | null,
+  text: string | null,
+  failed: boolean
+): ChatLimit | null {
+  const rejected = info?.status === "rejected"
+  if (text === null && !(failed && rejected)) return null
+  return {
+    window: rejected ? (info.rateLimitType ?? null) : null,
+    resetsAt:
+      rejected && info.resetsAt !== undefined
+        ? new Date(
+            // Seconds on the wire; a figure already in milliseconds is left
+            // alone rather than read as a date fifty thousand years out.
+            info.resetsAt < 1e12 ? info.resetsAt * 1000 : info.resetsAt
+          ).toISOString()
+        : null,
+    text: text ?? "Usage limit reached.",
+  }
+}
+
+/** The text blocks of an assistant message, run together. */
+function textOf(content: readonly { type: string }[]): string {
+  return content
+    .flatMap((block) =>
+      block.type === "text" && "text" in block && typeof block.text === "string"
+        ? [block.text.trim()]
+        : []
+    )
+    .join(" ")
+    .trim()
+}
 
 /**
  * Why the turn stopped, or null.

@@ -600,7 +600,39 @@ type AssistantLine =
       /** `ChatOptions.profileId` after the move — null for the default login. */
       profileId: string | null
       name: string
+      /** The move was off a turn a limit had stopped, and that turn was
+       * carried on under the new account without anybody sending anything. */
+      resumed?: boolean
     }
+  /**
+   * The turn stopped because the account ran into a plan limit.
+   *
+   * Its own line rather than an `error`, because it is not a failure of the
+   * turn: the work is fine, the account is out, and what somebody does next is
+   * move the chat to another one — which, off this line, carries the turn on
+   * (`Chats.setOptions`). Who ran out is named like `account` names who it
+   * moved to: the profile at the time, the address when the pane knows it.
+   */
+  | ({
+      id: string
+      role: "limit"
+      profileId: string | null
+      name: string
+    } & ChatLimit)
+
+/**
+ * Which plan limit stopped a turn, off the CLI's `rate_limit_event`. Either
+ * half can be missing — the CLI says a turn was refused for a limit before it
+ * says which, and an older one never says — so a line still draws without.
+ */
+export type ChatLimit = {
+  /** The CLI's window id — `five_hour`, `seven_day`, … */
+  window: string | null
+  /** ISO. */
+  resetsAt: string | null
+  /** What the CLI itself said, the sentence drawn when neither half came. */
+  text: string
+}
 
 /**
  * What one turn spent, in the numbers that explain the spending.
@@ -819,7 +851,14 @@ export type AssistantEvent =
     }
   /** The chat was moved to another account — the `account` line, paired the
    * way `compact` is. */
-  | { type: "account"; profileId: string | null; name: string }
+  | {
+      type: "account"
+      profileId: string | null
+      name: string
+      resumed?: boolean
+    }
+  /** The turn stopped on a plan limit — the `limit` line. */
+  | ({ type: "limit"; profileId: string | null; name: string } & ChatLimit)
   /**
    * How full the context window is, as of the reply that just arrived.
    *

@@ -18,6 +18,7 @@ import {
   type ChatAskQuestion,
   type ChatEffort,
   type ChatImage,
+  type ChatLimit,
   type ChatPermission,
   type ChatPlace,
   type ChatSearchResult,
@@ -172,6 +173,32 @@ type Live = {
  * and five minutes is generous for that.
  */
 const IDLE_MS = 5 * 60 * 1000
+
+/**
+ * What the CLI is told when a chat a limit stopped is moved to another account.
+ *
+ * Said rather than drawn — the `account` line is what the transcript shows —
+ * and said at all because a resumed session waits for a message: the CLI's own
+ * record of the stopped turn ends on its limit sentence, which the model does
+ * not see, so without this it would not know the work was cut short.
+ */
+const CARRY_ON =
+  "Your previous turn was stopped by a usage limit before it finished. Carry on from where you stopped."
+
+/**
+ * Whether the chat's last turn ended on a plan limit — the `limit` line with
+ * nothing after it but the bookkeeping a stopped turn writes: its cost, and an
+ * earlier move that did not carry it on (a move to a profile with no
+ * directory, say).
+ */
+export function stoppedOnLimit(lines: AssistantMessage[]): boolean {
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const line = lines[index]!
+    if (line.role === "usage" || line.role === "account") continue
+    return line.role === "limit"
+  }
+  return false
+}
 
 export type ChatSource = {
   /** The directory a project names, or null when it has left the workspace —
@@ -820,7 +847,10 @@ export class Chats {
   async send(
     id: string,
     prompt: string,
-    images: ChatImage[] = []
+    images: ChatImage[] = [],
+    /** Said to the CLI without a line of its own — the turn `setOptions`
+     * carries on, which nobody typed. */
+    { quiet = false }: { quiet?: boolean } = {}
   ): Promise<void> {
     const chats = await this.source.chats()
     const chat = chats.find((entry) => entry.id === id)
@@ -869,12 +899,14 @@ export class Chats {
     const files = images.flatMap((image) =>
       image.fileName ? [image.fileName] : []
     )
-    await this.append(id, {
-      id: lineId(),
-      role: "user",
-      text: prompt,
-      ...(files.length > 0 && { images: files }),
-    })
+    if (!quiet) {
+      await this.append(id, {
+        id: lineId(),
+        role: "user",
+        text: prompt,
+        ...(files.length > 0 && { images: files }),
+      })
+    }
     await this.deliver(id, cwd, options, prompt, images)
   }
 
@@ -1376,15 +1408,36 @@ export class Chats {
 
     // Only a chat with something above the line: a move before the first
     // message divides nothing.
-    if (moved && (await this.read(id)).length > 0) {
-      const profileId = options.profileId ?? null
-      await this.append(id, {
-        id: lineId(),
-        role: "account",
-        profileId,
-        name: await this.profileName(profileId),
-      })
-    }
+    const messages = moved ? await this.read(id) : []
+    if (messages.length === 0) return
+
+    // Off a turn a limit stopped, the move is the answer to it: the turn is
+    // carried on under the new account at once, the way the interactive CLI
+    // carries on after `/login`, rather than waiting for somebody to think of
+    // typing "continue". Not while a turn is running — nothing has stopped.
+    const resumed = !live?.busy && stoppedOnLimit(messages)
+    const profileId = options.profileId ?? null
+    await this.append(id, {
+      id: lineId(),
+      role: "account",
+      profileId,
+      name: await this.profileName(profileId),
+      ...(resumed && { resumed }),
+    })
+    if (resumed) await this.send(id, CARRY_ON, [], { quiet: true })
+  }
+
+  /** The `limit` line, naming the account the chat was on when it stopped. */
+  private async appendLimit(id: string, limit: ChatLimit): Promise<void> {
+    const record = (await this.source.chats()).find((chat) => chat.id === id)
+    const profileId = record?.options?.profileId ?? null
+    await this.append(id, {
+      id: lineId(),
+      role: "limit",
+      profileId,
+      name: await this.profileName(profileId),
+      ...limit,
+    })
   }
 
   /** What the composer's picker calls a profile, for the `account` line. */
@@ -1573,8 +1626,8 @@ export class Chats {
         onDequeued: () => {
           if (current()) this.emit({ chatId: id, type: "dequeued" })
         },
-        onTurn: (error) => {
-          if (current()) this.endTurn(id, error)
+        onTurn: (error, limit) => {
+          if (current()) this.endTurn(id, error, limit)
         },
         onExit: (error) => {
           exited = true
@@ -1882,7 +1935,11 @@ export class Chats {
    * without anybody sending anything, and only the session knows whether one is.
    * See `onBusy`.
    */
-  private endTurn(id: string, error: string | null): void {
+  private endTurn(
+    id: string,
+    error: string | null,
+    limit: ChatLimit | null = null
+  ): void {
     /*
      * Any question this chat was holding goes with the turn.
      *
@@ -1908,7 +1965,12 @@ export class Chats {
      * and once from this one — and left two of them in the chat's file for the
      * next open. The agent no longer draws its own; this is it.
      */
-    if (error) {
+    if (limit) {
+      // Instead of the error line, not as well: it is the same stop, said with
+      // the reset in it. `done` still carries the sentence, so the
+      // notification and the unread mark treat it as the failure it is.
+      void this.appendLimit(id, limit)
+    } else if (error) {
       void this.append(id, { id: lineId(), role: "error", text: error })
     }
     /*
@@ -2113,8 +2175,19 @@ export class Chats {
                           type: "account",
                           profileId: message.profileId,
                           name: message.name,
+                          resumed: message.resumed,
                         }
-                      : { chatId: id, type: "text", text: message.text }
+                      : message.role === "limit"
+                        ? {
+                            chatId: id,
+                            type: "limit",
+                            profileId: message.profileId,
+                            name: message.name,
+                            window: message.window,
+                            resetsAt: message.resetsAt,
+                            text: message.text,
+                          }
+                        : { chatId: id, type: "text", text: message.text }
       )
     }
 

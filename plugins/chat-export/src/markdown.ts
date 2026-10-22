@@ -100,7 +100,13 @@ function blockOf(line: AssistantMessage): string | null {
     case "compact":
       return `---\n\n_${compactLine(line)}_`
     case "account":
-      return quote(`⇄ You moved this chat to ${line.name}`)
+      return quote(
+        `⇄ You moved this chat to ${line.name}${line.resumed ? " · picking up where it stopped" : ""}`
+      )
+    case "limit":
+      // The CLI's own sentence, which carries its reset as a time of day — the
+      // pane's countdown means nothing in a file read tomorrow.
+      return quote(`⏱ **Stopped.** ${line.name}: ${line.text}`)
   }
 }
 

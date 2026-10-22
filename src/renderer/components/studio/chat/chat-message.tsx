@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -17,6 +18,7 @@ import {
   Circle,
   CircleCheck,
   CircleDot,
+  Clock,
   Coins,
   Copy,
   FileText,
@@ -51,6 +53,7 @@ import { toolMark } from "./chat-marks"
 import { creditsRefusalOf } from "@/lib/chat/credits-refusal"
 import { CreditsRefusalCard } from "./chat-credits-refusal"
 import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
+import { limitSentence } from "@/lib/chat/plan-usage"
 
 /**
  * One line of an agent conversation.
@@ -326,6 +329,7 @@ function OtherMessage({
   }
 
   if (of.role === "account") return <AccountMove line={of} />
+  if (of.role === "limit") return <LimitStop line={of} />
 
   if (of.role === "error") {
     // Want of credits is drawn as the way to buy some, not as one more red
@@ -374,28 +378,35 @@ function stampOf(line: AssistantMessage): string | undefined {
 }
 
 /**
+ * The address a profile is signed in as, when this run has already checked
+ * that login — the picker's own answer, so nothing here starts a `claude`.
+ * Undefined otherwise, and the lines fall back on the name main wrote down.
+ */
+function useAccountEmail(profileId: string | null): string | undefined {
+  return useClaudeProfiles((state) => {
+    const dir =
+      profileId === null
+        ? ""
+        : state.profiles
+            .find((profile) => profile.id === profileId)
+            ?.configDir.trim()
+    const account = dir === undefined ? undefined : state.accounts[dir]
+    return account?.state === "signedIn"
+      ? (account.email ?? undefined)
+      : undefined
+  })
+}
+
+/**
  * The chat was moved to another account: a band across the transcript, since
  * the turns below it ran on a different login from the ones above.
- *
- * Who it was moved to is the address when this run has checked that login —
- * the picker's own answer, so nothing here starts a `claude` — and otherwise the
- * name main wrote down at the time.
  */
 function AccountMove({
   line,
 }: {
   line: Extract<AssistantMessage, { role: "account" }>
 }) {
-  const email = useClaudeProfiles((state) => {
-    const dir =
-      line.profileId === null
-        ? ""
-        : state.profiles
-            .find((profile) => profile.id === line.profileId)
-            ?.configDir.trim()
-    const account = dir === undefined ? undefined : state.accounts[dir]
-    return account?.state === "signedIn" ? account.email : undefined
-  })
+  const email = useAccountEmail(line.profileId)
 
   return (
     <div
@@ -405,6 +416,39 @@ function AccountMove({
       <ArrowLeftRight className="size-3.5 shrink-0" />
       <span className="truncate">
         You moved this chat to {email ?? line.name}
+        {line.resumed && " · picking up where it stopped"}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * The turn stopped on the account's plan limit. Amber rather than the error's
+ * red: nothing is wrong with the work, and the way on is the Account menu
+ * under it. The reset is counted down from the clock, so it is redrawn once a
+ * minute rather than left saying what it said when the line arrived.
+ */
+function LimitStop({
+  line,
+}: {
+  line: Extract<AssistantMessage, { role: "limit" }>
+}) {
+  const email = useAccountEmail(line.profileId)
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    if (!line.resetsAt) return
+    const tick = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(tick)
+  }, [line.resetsAt])
+
+  return (
+    <div
+      title={stampOf(line)}
+      className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.75rem] text-amber-700 dark:text-amber-300"
+    >
+      <Clock className="size-3.5 shrink-0" />
+      <span className="truncate">
+        {limitSentence(email ?? line.name, line, now)}
       </span>
     </div>
   )

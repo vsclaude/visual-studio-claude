@@ -1131,7 +1131,7 @@ export function ToolbarButton({
         "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-[0.7rem]",
         "transition-colors hover:bg-accent hover:text-foreground",
         "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
-        "[&_svg]:size-3.5 [&_svg]:shrink-0",
+        "[&>svg]:size-3.5 [&>svg]:shrink-0",
         on ? "text-foreground" : "text-muted-foreground",
         className
       )}

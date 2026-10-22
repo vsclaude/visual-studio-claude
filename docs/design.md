@@ -421,6 +421,25 @@ this run has already checked that login, and never starts a `claude` to find
 out. A move before the first message writes nothing — there is nothing above it
 to divide.
 
+### A turn a plan limit stopped
+
+The CLI says it twice — a `rate_limit_event` naming the window and its reset,
+and an assistant message flagged `rate_limit` with a sentence of its own.
+`limitOf` in `claude-agent.ts` reads them into one `limit` line (amber, `Stopped.
+you@example.com reached its 5-hour limit · resets in 3h 8m`) **in place of** the
+red error line, and the CLI's sentence is not drawn as a reply. `done` still
+carries it as an error, so the notification and the unread mark behave as for
+any failure.
+
+Moving a chat **that is sitting on that line** to another account carries the
+turn on at once (`stoppedOnLimit`, `Chats.setOptions`): the session reopens
+under the new `CLAUDE_CONFIG_DIR` with the transcript carried, and the CLI is
+told the last turn was cut short (`CARRY_ON`) — a message with no line of its
+own, since nobody typed it; the `account` line says `· picking up where it
+stopped` instead. Only off a limit, and only while nothing is running: an
+ordinary move still waits for the next message, because carrying on a turn
+that had finished would be a turn nobody asked for.
+
 ### Finding a line in the chat on screen
 
 `⌘F` is a find bar over the transcript (`chat-find.tsx`,

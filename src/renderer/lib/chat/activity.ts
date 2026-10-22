@@ -354,7 +354,8 @@ function firstStampOf(block: ChatBlock): string | undefined {
  * is the one line whose whole meaning is *where in the transcript it sits*.
  * Folded into a run of tool calls it would be a divider inside a fold, dividing
  * nothing a reader can see. A **move to another account** is a boundary of the
- * same kind, and shown for the same reason.
+ * same kind, and shown for the same reason; a **plan limit** is the turn
+ * stopping short, like an error.
  */
 function alwaysShown(line: AssistantMessage): boolean {
   return (
@@ -362,6 +363,7 @@ function alwaysShown(line: AssistantMessage): boolean {
     line.role === "usage" ||
     line.role === "compact" ||
     line.role === "account" ||
+    line.role === "limit" ||
     (line.role === "ask" && refused(line))
   )
 }

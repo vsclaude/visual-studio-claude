@@ -80,6 +80,27 @@ export function resetLabel(resetsAt: string | null, now: Date): string | null {
   return `resets ${day} ${time}`
 }
 
+/**
+ * The `limit` line: `Stopped. you@example.com reached its 5-hour limit ·
+ * resets in 3h 8m`. Without a window, the CLI's own sentence after `Stopped.`
+ * — it is the only account there is of which limit — and the reset only when
+ * it is still ahead: a line read back the next day is about a limit long gone,
+ * and "resets now" under it would read as a promise.
+ */
+export function limitSentence(
+  who: string,
+  limit: { window: string | null; resetsAt: string | null; text: string },
+  now: Date
+): string {
+  const what = limit.window
+    ? `${who} reached its ${windowLabel(limit.window)} limit`
+    : `${who}: ${limit.text}`
+  const reset = limit.resetsAt ? resetLabel(limit.resetsAt, now) : null
+  return reset && reset !== "resets now"
+    ? `Stopped. ${what} · ${reset}`
+    : `Stopped. ${what}`
+}
+
 /** A plan's name, capitalised — `max` → `Max`. */
 export function planName(subscription: string | null): string | null {
   if (!subscription) return null

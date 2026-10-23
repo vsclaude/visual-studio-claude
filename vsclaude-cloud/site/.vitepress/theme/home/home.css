@@ -100,6 +100,13 @@ h1 em.accent {
   font-size: 0.72rem;
   letter-spacing: 0.02em;
 }
+.fine a {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.fine a:hover {
+  color: var(--ink);
+}
 
 /* The studio in miniature, laid out the way the app is (docs/screenshots):
    a palette field alone in the title bar, then cards on a dark canvas —

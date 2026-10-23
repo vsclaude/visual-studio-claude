@@ -4,7 +4,7 @@ Vey Studio là ứng dụng desktop để chạy các cuộc chat Claude Code tr
 mục đã có sẵn trong máy bạn, và xem lại chúng đã thay đổi gì: chat, editor,
 diff, commit và terminal trong cùng một cửa sổ.
 
-## Cài đặt
+## Cài đặt {#install}
 
 ### macOS
 

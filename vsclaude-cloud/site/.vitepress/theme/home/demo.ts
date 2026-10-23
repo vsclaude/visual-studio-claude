@@ -150,7 +150,7 @@ const COUNT = `<small class="count"><i style="animation-name:count1">1</i><i sty
 export const FEATURE_ORDER: FeatureArt[] = [
   "chats",
   "diff",
-  "worktrees",
+  "rewind",
   "modes",
   "terminal",
   "search",

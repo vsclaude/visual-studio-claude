@@ -1,4 +1,4 @@
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref, toValue, type MaybeRefOrGetter } from "vue"
 
 import { RELEASES_URL } from "./links.ts"
 
@@ -89,18 +89,18 @@ export function useBuild(build: Build) {
   return { href }
 }
 
-/** The OS this page is being read on, and where its download button goes. */
-export function useDownload() {
+/**
+ * The OS this page is being read on, and where its download button goes:
+ * the file, or — before it is known, or if it never is — `fallback`, the
+ * guide's list of every build.
+ */
+export function useDownload(fallback: MaybeRefOrGetter<string>) {
   const os = ref<Os | null>(null)
-  const href = ref(RELEASES_URL)
-  const direct = ref(false)
+  const url = ref<string | null>(null)
+  const href = computed(() => url.value ?? toValue(fallback))
   onMounted(async () => {
     os.value = osOf(navigator.userAgent)
-    if (!os.value) return
-    const url = await urlOf(await buildOf(os.value))
-    if (!url) return
-    href.value = url
-    direct.value = true
+    if (os.value) url.value = await urlOf(await buildOf(os.value))
   })
-  return { os, href, direct }
+  return { os, href, direct: computed(() => url.value !== null) }
 }

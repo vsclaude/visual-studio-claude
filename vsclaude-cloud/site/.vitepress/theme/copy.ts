@@ -78,7 +78,10 @@ export type Copy = {
   h1: [plain: string, accent: string]
   lede: string
   cta: { download: string; downloadFor: string; pricing: string }
-  fine: string
+  /** Under the buttons: the platforms, linking to the guide's downloads —
+   * every build, for whoever the button's guess was wrong for — then the
+   * rest of the line. */
+  fine: [platforms: string, rest: string]
   /** The three problems — in the order of `PILLAR_ORDER` in `home/demo.ts`. */
   pillars: Section
   /** The studio's main parts — in the order of `FEATURE_ORDER`. */
@@ -107,7 +110,7 @@ export type Copy = {
   closing: [plain: string, accent: string]
   /** Under the picture of the app in the hero. */
   windowCaption: string
-  footer: { releases: string; product: string; tagline: string }
+  footer: { download: string; product: string; tagline: string }
 }
 
 const en: Copy = {
@@ -136,7 +139,10 @@ const en: Copy = {
     downloadFor: "Download for ",
     pricing: "See pricing",
   },
-  fine: "macOS · Windows · Linux \u00a0—\u00a0 free with your own Claude accounts, credits when you need them",
+  fine: [
+    "macOS · Windows · Linux",
+    "free with your own Claude accounts, credits when you need them",
+  ],
   pillars: {
     kicker: "Why Vey Studio",
     title: "Built so a limit never ends your work",
@@ -170,8 +176,8 @@ const en: Copy = {
         body: "Changes, diffs, commits and push, with a commit message drafted for you.",
       },
       {
-        title: "Worktrees as projects",
-        body: "A git worktree per chat, cut from the project's row.",
+        title: "Edit a message, rewind the files",
+        body: "Change what you asked, and the files its replies wrote go back too.",
       },
       {
         title: "Five permission modes",
@@ -214,7 +220,7 @@ const en: Copy = {
       },
       {
         title: "Add your Claude accounts",
-        body: "Settings › Claude › Add account, once for each. Every one signs in through the CLI's own login.",
+        body: "With Claude Code installed: Settings › Claude › Add account, once for each. Every one signs in through the CLI's own login.",
       },
       {
         title: "Switch when a limit hits",
@@ -239,6 +245,10 @@ const en: Copy = {
         a: "No. With credits, the studio runs every chat without a Claude account of your own. If you have accounts, it uses them directly and credits cost you nothing.",
       },
       {
+        q: "Do I need Claude Code installed?",
+        a: "For your own Claude accounts, yes — the studio runs your own claude CLI and signs each account in through it. To chat on credits alone, no.",
+      },
+      {
         q: "Do credits expire?",
         a: "Never. A pack is bought once and stays on your account until it is spent — there is no monthly fee.",
       },
@@ -256,14 +266,14 @@ const en: Copy = {
       },
       {
         q: "Which platforms?",
-        a: "macOS, Windows and Linux. The app updates itself when a new release is out.",
+        a: "macOS 12 or newer, on Apple Silicon or Intel; Windows and Linux on x64. The app updates itself when a new release is out.",
       },
     ],
   },
   closing: ["Your limit isn't ", "your deadline."],
   windowCaption: "One conversation, any account.",
   footer: {
-    releases: "Releases",
+    download: "Download",
     product: "Product",
     tagline: "The desktop studio for Claude Code.",
   },
@@ -295,7 +305,10 @@ const vi: Copy = {
     downloadFor: "Tải cho ",
     pricing: "Xem bảng giá",
   },
-  fine: "macOS · Windows · Linux \u00a0—\u00a0 miễn phí với tài khoản Claude của bạn, credit khi bạn cần",
+  fine: [
+    "macOS · Windows · Linux",
+    "miễn phí với tài khoản Claude của bạn, credit khi bạn cần",
+  ],
   pillars: {
     kicker: "Vì sao chọn Vey Studio",
     title: "Giới hạn không bao giờ làm gián đoạn công việc",
@@ -329,8 +342,8 @@ const vi: Copy = {
         body: "Thay đổi, diff, commit và push, có sẵn commit message soạn trước.",
       },
       {
-        title: "Mỗi worktree là một project",
-        body: "Mỗi chat một git worktree, tạo ngay từ hàng của project.",
+        title: "Sửa tin nhắn, file quay về",
+        body: "Sửa câu đã hỏi, và các file mà những câu trả lời sau đó đã ghi cũng trở về như cũ.",
       },
       {
         title: "Năm chế độ quyền",
@@ -373,7 +386,7 @@ const vi: Copy = {
       },
       {
         title: "Thêm các tài khoản Claude",
-        body: "Settings › Claude › Add account, mỗi tài khoản một lần. Tài khoản nào cũng đăng nhập bằng chính lệnh login của CLI.",
+        body: "Khi đã cài Claude Code: Settings › Claude › Add account, mỗi tài khoản một lần. Tài khoản nào cũng đăng nhập bằng chính lệnh login của CLI.",
       },
       {
         title: "Đổi khi chạm giới hạn",
@@ -398,6 +411,10 @@ const vi: Copy = {
         a: "Không. Với credit, studio chạy mọi chat mà không cần tài khoản Claude riêng. Nếu bạn có tài khoản, studio dùng chính tài khoản đó và bạn không tốn credit.",
       },
       {
+        q: "Tôi có cần cài Claude Code không?",
+        a: "Có, nếu dùng tài khoản Claude riêng — studio chạy chính claude CLI của bạn và đăng nhập từng tài khoản qua nó. Nếu chỉ chat bằng credit thì không cần.",
+      },
+      {
         q: "Credit có hết hạn không?",
         a: "Không. Bạn mua một lần, credit nằm trong tài khoản cho đến khi dùng hết, và không có phí hàng tháng.",
       },
@@ -415,14 +432,14 @@ const vi: Copy = {
       },
       {
         q: "Chạy được trên nền tảng nào?",
-        a: "macOS, Windows và Linux. Ứng dụng tự cập nhật khi có bản mới.",
+        a: "macOS 12 trở lên, chip Apple Silicon hoặc Intel; Windows và Linux bản x64. Ứng dụng tự cập nhật khi có bản mới.",
       },
     ],
   },
   closing: ["Giới hạn không phải ", "là điểm dừng."],
   windowCaption: "Một cuộc trò chuyện, tài khoản nào cũng được.",
   footer: {
-    releases: "Bản phát hành",
+    download: "Tải về",
     product: "Sản phẩm",
     tagline: "Studio desktop cho Claude Code.",
   },

@@ -93,30 +93,6 @@ function diff(): string {
   )
 }
 
-/** A branch for each chat, cut from the same trunk. */
-function worktrees(): string {
-  const chip = (
-    x: number,
-    y: number,
-    label: string,
-    color: string,
-    d: string
-  ) =>
-    `<g class="a-pop" style="--d:${d}"><rect x="${x}" y="${y - 10}" width="${label.length * 6.2 + 18}" height="20" rx="10" fill="${color}" fill-opacity="0.14" stroke="${color}" stroke-opacity="0.5"/><text x="${x + 9}" y="${y + 3.5}" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="${color}">${label}</text></g>`
-  return svg(`
-    <path d="M16 70H304" stroke="${FAINT}" stroke-width="3" stroke-linecap="round"/>
-    <path class="a-draw" style="--d:.2s" pathLength="1" d="M70 70C100 70 100 30 132 30H176" stroke="${VIOLET}" stroke-width="3" stroke-linecap="round"/>
-    <path class="a-draw" style="--d:.6s" pathLength="1" d="M110 70C140 70 140 110 172 110H210" stroke="${AMBER}" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="70" cy="70" r="6" fill="#26262e" stroke="${FAINT}" stroke-width="2.5"/>
-    <circle cx="110" cy="70" r="6" fill="#26262e" stroke="${FAINT}" stroke-width="2.5"/>
-    <circle cx="250" cy="70" r="6" fill="#26262e" stroke="${FAINT}" stroke-width="2.5"/>
-    <circle class="a-pop" style="--d:.9s" cx="176" cy="30" r="6.5" fill="${VIOLET}"/>
-    <circle class="a-pop" style="--d:1.3s" cx="210" cy="110" r="6.5" fill="${AMBER}"/>
-    ${chip(188, 30, "feat/webhook", LILAC, "1s")}
-    ${chip(222, 110, "fix/totals", AMBER, "1.4s")}
-    <text x="16" y="94" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="${FAINT}">main</text>`)
-}
-
 /** Five modes, one knob — moved mid-conversation. */
 function modes(): string {
   const labels = ["Plan", "Read", "Ask", "Edits", "Full"]
@@ -258,10 +234,38 @@ function search(): string {
     ${row(116, "Add VietQR webhook", 168, "2", 1.5)}`)
 }
 
+/** A message edited, and the files its turns wrote going back with it. */
+function rewind(): string {
+  const file = (y: number, name: string, d: number) =>
+    `<g class="a-slide" style="--d:${d}s">
+      <text x="186" y="${y + 4}" font-size="10" ${MONO} fill="#e4e4e7">${name}</text>
+      <g class="a-pop" style="--d:${d + 0.3}s"><rect x="252" y="${y - 7}" width="48" height="15" rx="7.5" fill="rgb(74 222 128 / 0.14)"/><text x="276" y="${y + 3.5}" text-anchor="middle" font-size="9" ${MONO} fill="${GREEN}">↺ back</text></g>
+    </g>`
+  return svg(`
+    <rect x="12" y="8" width="150" height="124" rx="10" fill="${PANEL}" stroke="${LINE}"/>
+    <rect x="70" y="18" width="80" height="14" rx="7" fill="rgb(139 92 246 / 0.35)"/>
+    <rect x="22" y="40" width="110" height="5" rx="2.5" fill="${INK}"/>
+    <rect x="22" y="51" width="84" height="5" rx="2.5" fill="${INK}"/>
+    <rect class="a-pop" style="--d:.2s" x="54" y="66" width="96" height="16" rx="8" fill="rgb(139 92 246 / 0.35)" stroke="${LILAC}" stroke-width="1.4"/>
+    <g class="a-pop" style="--d:.45s"><rect x="20" y="66" width="28" height="16" rx="8" fill="rgb(0 0 0 / 0.3)" stroke="${LINE}"/><path d="M29 77.5l1-3.4 5.6-5.6 2.4 2.4-5.6 5.6z" stroke="${LILAC}" stroke-width="1.3" stroke-linejoin="round"/></g>
+    <g opacity="0.35">
+      <rect x="22" y="92" width="104" height="5" rx="2.5" fill="${FAINT}"/>
+      <rect x="22" y="103" width="76" height="5" rx="2.5" fill="${FAINT}"/>
+      <rect x="22" y="114" width="92" height="5" rx="2.5" fill="${FAINT}"/>
+    </g>
+    <path class="a-draw" style="--d:.6s" pathLength="1" d="M176 112C164 112 164 74 152 74" stroke="${AMBER}" stroke-width="2" stroke-linecap="round"/>
+    <path class="a-pop" style="--d:1.1s" d="M157 70l-5 4 5 4" stroke="${AMBER}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="176" y="8" width="132" height="124" rx="10" fill="${PANEL}" stroke="${LINE}"/>
+    <text x="186" y="27" font-size="9" ${SANS} fill="${FAINT}" letter-spacing="0.08em">FILES</text>
+    ${file(50, "orders.ts", 0.9)}
+    ${file(76, "sepay.ts", 1.1)}
+    ${file(102, "totals.ts", 1.3)}`)
+}
+
 export const FEATURE_ART = {
   chats,
   diff,
-  worktrees,
+  rewind,
   modes,
   terminal,
   accounts,

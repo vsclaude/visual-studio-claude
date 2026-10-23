@@ -3,10 +3,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useData } from "vitepress"
 
 import { APP_MARK, WORDMARK } from "../../../../server/utils/brand.ts"
-import { COPY, LANGS, langOf, pathOf } from "../copy.ts"
+import { COPY, LANGS, docsStartOf, langOf, pathOf } from "../copy.ts"
 import InlineStyle from "../InlineStyle.ts"
 import { useDownload } from "../download.ts"
-import { ICON, RELEASES_URL } from "../links.ts"
+import { ICON } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
 import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
 import css from "./home.css?inline"
@@ -33,6 +33,8 @@ import { coin, METHOD_ICON, packsForSale, type PaymentMethod } from "./packs.ts"
 const { lang } = useData()
 const t = computed(() => COPY[langOf(lang.value)])
 const home = computed(() => pathOf(langOf(lang.value)))
+// Every build, named — for a Mac the button guessed wrong for, or another OS.
+const downloads = computed(() => `${docsStartOf(langOf(lang.value))}#install`)
 const METHODS: PaymentMethod[] = ["bank", "card"]
 const method = ref<PaymentMethod>("bank")
 const packs = computed(() => packsForSale(method.value))
@@ -41,7 +43,7 @@ const style = css + "\n" + demoCss()
 const LOGO = APP_MARK + WORDMARK
 const STACK = "<span></span><span></span>" + APP_MARK
 
-const { os, href: downloadHref } = useDownload()
+const { os, href: downloadHref } = useDownload(downloads)
 const downloadLabel = computed(() =>
   os.value ? t.value.cta.downloadFor + os.value : t.value.cta.download
 )
@@ -103,7 +105,10 @@ onBeforeUnmount(() => seen?.disconnect())
             ><i v-html="ICON.arrow"></i
           ></a>
         </div>
-        <p class="fine enter" style="--d: 0.3s">{{ t.fine }}</p>
+        <p class="fine enter" style="--d: 0.3s">
+          <a :href="downloads">{{ t.fine[0] }}</a
+          >&nbsp;—&nbsp;{{ t.fine[1] }}
+        </p>
 
         <figure class="window-frame enter" style="--d: 0.4s">
           <video
@@ -284,7 +289,7 @@ onBeforeUnmount(() => seen?.disconnect())
               <a href="#faq">{{ t.nav.faq }}</a>
             </li>
             <li>
-              <a :href="RELEASES_URL">{{ t.footer.releases }}</a>
+              <a :href="downloads">{{ t.footer.download }}</a>
             </li>
           </ul>
         </div>

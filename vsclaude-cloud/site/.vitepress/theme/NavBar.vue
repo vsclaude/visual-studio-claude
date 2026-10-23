@@ -24,7 +24,9 @@ const t = computed(() => COPY[current.value].nav)
 const home = computed(() => pathOf(current.value))
 const at = computed(() => (props.onHome ? "" : home.value))
 const slug = computed(() => slugOf(page.value.relativePath))
-const { href: downloadHref, direct } = useDownload()
+const { href: downloadHref, direct } = useDownload(
+  () => `${docsStartOf(current.value)}#install`
+)
 </script>
 
 <template>

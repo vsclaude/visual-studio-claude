@@ -69,6 +69,11 @@ export default defineConfig({
     pageData.frontmatter.head = [
       ["meta", { property: "og:title", content: "Vey Studio" }],
       ["meta", { property: "og:description", content: t.ogDescription }],
+      ["meta", { property: "og:type", content: "website" }],
+      // Relative, because the site does not know its own domain at build
+      // time; Slack, Discord and X resolve it, Facebook wants it absolute.
+      ["meta", { property: "og:image", content: "/screenshots/chat.png" }],
+      ["meta", { name: "twitter:card", content: "summary_large_image" }],
       ...LANGS.map((l): HeadConfig => [
         "link",
         { rel: "alternate", hreflang: COPY[l].htmlLang, href: pathOf(l) },

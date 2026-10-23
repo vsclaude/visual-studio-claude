@@ -15,6 +15,10 @@ release/
 # writes `.wrangler/` the same way.
 vsclaude-cloud/.output/
 vsclaude-cloud/.wrangler/
+# The site's `vitepress build` output and `vitepress dev` dependency cache,
+# both gitignored there.
+vsclaude-cloud/public/
+vsclaude-cloud/site/.vitepress/cache/
 
 # The VS Code extension is its own package with its own build; its source is
 # formatted like the rest of the repo, its output is not.

@@ -33,6 +33,15 @@ export default [
        */
       "vsclaude-cloud/.output/**",
       /*
+       * The site is the same story: `vitepress build` writes minified chunks
+       * into `public/`, and `vitepress dev` pre-bundles Vue and minisearch into
+       * its cache. Both are gitignored, so one local run of either failed
+       * `--max-warnings 0` on a clean tree.
+       */
+      "vsclaude-cloud/public/**",
+      "vsclaude-cloud/.wrangler/**",
+      "vsclaude-cloud/site/.vitepress/cache/**",
+      /*
        * The VS Code extension in `vscode-notes/` is a package of its own — its
        * own `package.json`, its own `tsconfig`, its own dependencies, and a
        * different runtime on both sides of it (an extension host, and a webview

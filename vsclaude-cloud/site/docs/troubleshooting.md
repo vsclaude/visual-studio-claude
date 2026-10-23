@@ -1,17 +1,5 @@
 # Troubleshooting
 
-## macOS says the app is "damaged"
-
-The build is unsigned and the file was quarantined by the browser that
-downloaded it. Run this once:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
-```
-
-Or install with the one-line script in [Getting started](/docs/getting-started#macos),
-which does not have this problem.
-
 ## "Could not find `claude`"
 
 Vey Studio runs your own Claude Code CLI, and looks for it the way your login

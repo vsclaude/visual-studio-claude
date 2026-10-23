@@ -5,7 +5,8 @@ import { VPNavBarSearch } from "vitepress/theme"
 
 import { APP_MARK, WORDMARK } from "../../../server/utils/brand.ts"
 import { COPY, LANGS, docsStartOf, langOf, pathOf } from "./copy.ts"
-import { ICON, RELEASES_URL, slugOf } from "./links.ts"
+import { useDownload } from "./download.ts"
+import { ICON, slugOf } from "./links.ts"
 
 /*
  * The bar across the top of every page, the same on each — search included,
@@ -23,6 +24,7 @@ const t = computed(() => COPY[current.value].nav)
 const home = computed(() => pathOf(current.value))
 const at = computed(() => (props.onHome ? "" : home.value))
 const slug = computed(() => slugOf(page.value.relativePath))
+const { href: downloadHref, direct } = useDownload()
 </script>
 
 <template>
@@ -49,9 +51,9 @@ const slug = computed(() => slugOf(page.value.relativePath))
           >{{ COPY[l].short }}</a
         >
       </div>
-      <a class="button ghost download" :href="RELEASES_URL"
+      <a class="button ghost download" :href="downloadHref"
         ><span>{{ t.download }}</span
-        ><i v-html="ICON.arrow"></i
+        ><i v-html="direct ? ICON.download : ICON.arrow"></i
       ></a>
     </div>
   </nav>

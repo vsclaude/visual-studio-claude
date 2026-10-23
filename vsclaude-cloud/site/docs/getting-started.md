@@ -6,41 +6,30 @@ editor, diffs, commits and a terminal in one window.
 
 ## Install
 
-Every build is **unsigned**, so each operating system warns about it in its own
-way. The last step of each section is how to get past that.
-
 ### macOS
 
-macOS 12 (Monterey) or newer, Apple Silicon or Intel. Run this in Terminal:
+macOS 12 (Monterey) or newer.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/vsclaude/visual-studio-claude/main/install.sh | bash
-```
+<DownloadButton build="mac-arm64">Apple Silicon (M1 and later)</DownloadButton>
+<DownloadButton build="mac-x64">Intel</DownloadButton>
 
-It picks the build for your Mac and copies it into `/Applications`.
-
-::: tip Why not download the .dmg?
-A file downloaded in a browser is quarantined, and macOS then calls the app
-_"damaged"_ — which only means it is unsigned. If you did download the `.dmg`
-from [Releases](https://github.com/vsclaude/visual-studio-claude/releases), run
-this once after installing it:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
-```
-
-:::
+Open the `.dmg` and drag **Vey Studio** into **Applications**.
 
 ### Windows
 
-x64. Download the `.exe` from
-[Releases](https://github.com/vsclaude/visual-studio-claude/releases) and run
-it. When SmartScreen stops it, choose **More info** → **Run anyway**.
+x64.
+
+<DownloadButton build="windows">Windows (.exe)</DownloadButton>
+
+Run the `.exe`.
 
 ### Linux
 
-x64. Download the AppImage from
-[Releases](https://github.com/vsclaude/visual-studio-claude/releases), then:
+x64.
+
+<DownloadButton build="linux">Linux (AppImage)</DownloadButton>
+
+Then:
 
 ```bash
 chmod +x Vey-Studio-*.AppImage

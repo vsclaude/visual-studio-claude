@@ -1,0 +1,106 @@
+import { onMounted, ref } from "vue"
+
+import { RELEASES_URL } from "./links.ts"
+
+/*
+ * The download buttons go straight to this machine's file rather than to the
+ * releases page. The asset names carry the version (and have changed with the
+ * product's name), so the file is looked up in the latest release rather than
+ * spelled out here; until that answers, or if it never does, a button is the
+ * releases page it always was.
+ *
+ * The guide names its builds outright (`useBuild`); only the home page and
+ * the bar guess one from the browser (`useDownload`).
+ */
+
+const LATEST_API =
+  "https://api.github.com/repos/vsclaude/visual-studio-claude/releases/latest"
+
+export type Os = "macOS" | "Windows" | "Linux"
+
+type Asset = { name: string; browser_download_url: string }
+
+function osOf(ua: string): Os | null {
+  if (/Mac/.test(ua)) return "macOS"
+  if (/Win/.test(ua)) return "Windows"
+  if (/Linux/.test(ua) && !/Android/.test(ua)) return "Linux"
+  return null
+}
+
+// Only Chromium says which CPU a Mac has; Safari and Firefox report "Intel" on
+// Apple Silicon too, so the user agent is no evidence and arm64 — what every
+// Mac sold since 2020 is — is the guess.
+async function macArch(): Promise<"arm64" | "x64"> {
+  const data = (
+    navigator as Navigator & {
+      userAgentData?: {
+        getHighEntropyValues(
+          hints: string[]
+        ): Promise<{ architecture?: string }>
+      }
+    }
+  ).userAgentData
+  try {
+    const { architecture } =
+      (await data?.getHighEntropyValues(["architecture"])) ?? {}
+    if (architecture === "x86") return "x64"
+  } catch {
+    // A refused hint is the same as no hint.
+  }
+  return "arm64"
+}
+
+/** One file of a release, as the guide's buttons name them. */
+export type Build = "mac-arm64" | "mac-x64" | "windows" | "linux"
+
+function find(build: Build, assets: Asset[]): Asset | undefined {
+  const named = (end: string) => assets.find((a) => a.name.endsWith(end))
+  if (build === "windows") return named(".exe")
+  if (build === "linux") return named(".AppImage")
+  return named(build === "mac-arm64" ? "-arm64.dmg" : "-x64.dmg")
+}
+
+async function buildOf(os: Os): Promise<Build> {
+  if (os === "Windows") return "windows"
+  if (os === "Linux") return "linux"
+  return (await macArch()) === "x64" ? "mac-x64" : "mac-arm64"
+}
+
+// One request per page load however many buttons ask: the API allows an
+// address sixty an hour.
+let latest: Promise<Asset[]> | undefined
+
+async function urlOf(build: Build): Promise<string | null> {
+  latest ??= fetch(LATEST_API, {
+    headers: { Accept: "application/vnd.github+json" },
+  })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((release: { assets?: Asset[] } | null) => release?.assets ?? [])
+    .catch(() => [])
+  return find(build, await latest)?.browser_download_url ?? null
+}
+
+/** Where one build's button goes: the file itself once the release answers. */
+export function useBuild(build: Build) {
+  const href = ref(RELEASES_URL)
+  onMounted(async () => {
+    href.value = (await urlOf(build)) ?? RELEASES_URL
+  })
+  return { href }
+}
+
+/** The OS this page is being read on, and where its download button goes. */
+export function useDownload() {
+  const os = ref<Os | null>(null)
+  const href = ref(RELEASES_URL)
+  const direct = ref(false)
+  onMounted(async () => {
+    os.value = osOf(navigator.userAgent)
+    if (!os.value) return
+    const url = await urlOf(await buildOf(os.value))
+    if (!url) return
+    href.value = url
+    direct.value = true
+  })
+  return { os, href, direct }
+}

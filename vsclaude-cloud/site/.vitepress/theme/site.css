@@ -96,16 +96,7 @@
 /* The wordmark, sized to the text around it — `WORDMARK_CSS` in
    `server/utils/brand.ts`, which the payment pages draw too. */
 .wordmark {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.22em;
   white-space: nowrap;
-}
-.wordmark .vs {
-  height: 0.86em;
-  width: auto;
-  flex: none;
-  align-self: baseline;
 }
 .pill {
   display: flex;

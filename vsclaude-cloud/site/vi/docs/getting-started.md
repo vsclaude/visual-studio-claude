@@ -6,42 +6,30 @@ diff, commit và terminal trong cùng một cửa sổ.
 
 ## Cài đặt
 
-Các bản build đều **chưa được ký (unsigned)**, nên mỗi hệ điều hành sẽ cảnh báo
-theo cách riêng. Bước cuối của mỗi phần dưới đây là cách vượt qua cảnh báo đó.
-
 ### macOS
 
-macOS 12 (Monterey) trở lên, chip Apple Silicon hoặc Intel. Chạy lệnh này trong
-Terminal:
+macOS 12 (Monterey) trở lên.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/vsclaude/visual-studio-claude/main/install.sh | bash
-```
+<DownloadButton build="mac-arm64">Apple Silicon (M1 trở lên)</DownloadButton>
+<DownloadButton build="mac-x64">Intel</DownloadButton>
 
-Script tự chọn bản build phù hợp với máy và chép vào `/Applications`.
-
-::: tip Sao không tải file .dmg?
-File tải bằng trình duyệt sẽ bị macOS cách ly, và macOS báo ứng dụng _"bị hỏng"_
-(_"damaged"_), thực ra chỉ vì nó chưa được ký. Nếu bạn đã tải `.dmg` từ
-[Releases](https://github.com/vsclaude/visual-studio-claude/releases), hãy chạy
-lệnh này một lần sau khi cài:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
-```
-
-:::
+Mở file `.dmg` rồi kéo **Vey Studio** vào **Applications**.
 
 ### Windows
 
-x64. Tải file `.exe` từ
-[Releases](https://github.com/vsclaude/visual-studio-claude/releases) rồi chạy.
-Khi SmartScreen chặn, chọn **More info** → **Run anyway**.
+x64.
+
+<DownloadButton build="windows">Windows (.exe)</DownloadButton>
+
+Chạy file `.exe`.
 
 ### Linux
 
-x64. Tải file AppImage từ
-[Releases](https://github.com/vsclaude/visual-studio-claude/releases), rồi:
+x64.
+
+<DownloadButton build="linux">Linux (AppImage)</DownloadButton>
+
+Rồi:
 
 ```bash
 chmod +x Vey-Studio-*.AppImage

@@ -5,6 +5,7 @@ import { useData } from "vitepress"
 import { APP_MARK, WORDMARK } from "../../../../server/utils/brand.ts"
 import { COPY, LANGS, langOf, pathOf } from "../copy.ts"
 import InlineStyle from "../InlineStyle.ts"
+import { useDownload } from "../download.ts"
 import { ICON, RELEASES_URL } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
 import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
@@ -40,9 +41,7 @@ const style = css + "\n" + demoCss()
 const LOGO = APP_MARK + WORDMARK
 const STACK = "<span></span><span></span>" + APP_MARK
 
-// Only the label: every button still goes to the releases page, which lists
-// each platform's file — a guess that is wrong costs nothing but a word.
-const os = ref<string | null>(null)
+const { os, href: downloadHref } = useDownload()
 const downloadLabel = computed(() =>
   os.value ? t.value.cta.downloadFor + os.value : t.value.cta.download
 )
@@ -57,15 +56,6 @@ onMounted(() => {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     demo.value?.pause()
   }
-
-  const ua = navigator.userAgent
-  os.value = /Mac/.test(ua)
-    ? "macOS"
-    : /Win/.test(ua)
-      ? "Windows"
-      : /Linux/.test(ua) && !/Android/.test(ua)
-        ? "Linux"
-        : null
 
   // Each section comes up once, as it is reached. No observer, no hiding:
   // everything is shown at once instead.
@@ -104,7 +94,7 @@ onBeforeUnmount(() => seen?.disconnect())
         </h1>
         <p class="lede enter" style="--d: 0.16s">{{ t.lede }}</p>
         <div class="ctas enter" style="--d: 0.24s">
-          <a class="button primary download" :href="RELEASES_URL"
+          <a class="button primary download" :href="downloadHref"
             ><span>{{ downloadLabel }}</span
             ><i v-html="ICON.download"></i
           ></a>
@@ -266,7 +256,7 @@ onBeforeUnmount(() => seen?.disconnect())
           {{ t.closing[0] }}<em class="accent">{{ t.closing[1] }}</em>
         </h2>
         <div class="ctas reveal">
-          <a class="button primary download" :href="RELEASES_URL"
+          <a class="button primary download" :href="downloadHref"
             ><span>{{ downloadLabel }}</span
             ><i v-html="ICON.download"></i
           ></a>

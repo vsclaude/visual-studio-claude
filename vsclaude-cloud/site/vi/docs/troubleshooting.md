@@ -1,17 +1,5 @@
 # Xử lý sự cố
 
-## macOS báo ứng dụng "bị hỏng"
-
-Bản build chưa được ký và file đã bị trình duyệt tải về đánh dấu cách ly. Chạy
-lệnh này một lần:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"
-```
-
-Hoặc cài bằng script một dòng trong [Bắt đầu](/vi/docs/getting-started#macos),
-cách này không gặp vấn đề trên.
-
 ## "Could not find `claude`"
 
 Vey Studio chạy chính Claude Code CLI của bạn, và tìm nó giống như login shell

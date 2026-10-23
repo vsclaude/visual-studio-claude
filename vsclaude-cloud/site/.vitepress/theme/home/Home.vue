@@ -119,7 +119,7 @@ onBeforeUnmount(() => seen?.disconnect())
           <video
             ref="demo"
             class="window"
-            src="/demo/vs-claude-demo-v3.mp4"
+            src="/demo/vey-studio-demo.mp4"
             autoplay
             muted
             loop

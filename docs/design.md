@@ -133,14 +133,17 @@ Each row is the title, one state mark and its age (`since`, coarse: `9h`,
 letter in a hue per profile, the credits coin, a person for the user's own
 login — and the user had it taken off: an icon in front of every title is a
 column of icons to read past, and which account a chat runs on is its
-composer's toolbar. `AccountAvatar` stays on the Accounts foot, where it
-marks the account itself. At the column's foot,
-**every account** with its five-hour window as a bar and when it resets, and
+composer's toolbar. The letter stays where it marks the account itself —
+the Accounts foot, and the composer's account picker and its toolbar button,
+which drew a key glyph per profile until then — as one `ProfileAvatar`, so a
+profile is the same colour wherever it is met. At the column's foot,
+**every account** with its five-hour and weekly windows as two short bars
+stacked at the row's end (`5h`, `w`; when each resets is its tooltip), and
 the credits left (`AccountsFooter`) — asked on mount and again whenever a turn
 ends, main holding a minute per account. It is also where accounts are added,
 signed in, renamed and removed; § Settings has why that left Settings.
-The foot is at most half the column, its list scrolling under a heading that
-stays put; its top edge drags, up to 90% of the column (the composer's
+The foot is at most 70% of the column, its list scrolling under a heading that
+stays put; its top edge drags, up to 95% of the column (the composer's
 handle — a double-click resets)
 and the heading folds it away, both kept in the settings bag
 (`accountsHeight`, `accountsCollapsed`). A dragged height is a **ceiling**,

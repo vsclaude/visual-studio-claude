@@ -18,7 +18,6 @@ import {
   Eye,
   File,
   Folder,
-  KeyRound,
   UserRound,
   Map,
   MessageCircleQuestion,
@@ -131,6 +130,7 @@ import { ImageThumb } from "./chat-images"
 import { McpChip, McpDialog } from "./chat-mcp"
 import { PlanUsageMeter } from "./chat-plan-usage"
 import { CreditsBadge } from "../credits-badge"
+import { ProfileAvatar } from "../profile-avatar"
 import { CreditsMeter } from "./chat-credits-meter"
 
 /**
@@ -1500,10 +1500,10 @@ export function ProfileMenu({
                 // The paid row's own badge, the menu's tile in small: a grey
                 // glyph among grey glyphs is the one thing this must not be.
                 <CreditsBadge size="xs" />
-              ) : profileId === null ? (
-                <UserRound />
+              ) : chosen ? (
+                <ProfileAvatar profile={chosen} />
               ) : (
-                <KeyRound />
+                <UserRound />
               )
             }
             label={free ? "Credits" : (chosen?.name ?? "Account")}
@@ -1574,7 +1574,7 @@ export function ProfileMenu({
             <PickerRow
               key={profile.id}
               onSelect={() => onPick(profile.id)}
-              tile={<PickerTile icon={KeyRound} />}
+              tile={<ProfileAvatar profile={profile} size="sm" />}
               title={profile.name}
               // A profile with no directory yet would otherwise be drawn as
               // the default account, since that is what an empty
@@ -1623,12 +1623,16 @@ function PickerRow({
   return (
     <DropdownMenuItem
       onClick={onSelect}
-      className="cursor-pointer items-center gap-3 px-2 py-2"
+      className="cursor-pointer items-center gap-2.5 px-2 py-1.5"
     >
       {tile}
+      {/* The menu's own sizes (`text-menu`, the chat's) rather than `text-sm`
+          over `text-xs`, which sat a size above every other menu in the app. */}
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">{title}</span>
-        <span className="truncate text-xs text-muted-foreground">{detail}</span>
+        <span className="truncate text-menu font-medium">{title}</span>
+        <span className="truncate text-[0.6875rem] text-muted-foreground">
+          {detail}
+        </span>
       </span>
       {selected && <CheckIcon className="size-4 shrink-0 text-foreground" />}
       {trailing}

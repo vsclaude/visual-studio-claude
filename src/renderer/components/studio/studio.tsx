@@ -329,6 +329,21 @@ function Workbench() {
   }, [activeFolderId, allProjectTabs])
 
   /*
+   * And whenever the strip has tabs while the pane has none to draw.
+   *
+   * Moving the project and closing from the strip (`fillPane`) were the only
+   * two ways back, and they are not the only ways in: a launch restoring the
+   * pane as `chat` while only files came back, a folder leaving the workspace
+   * and pruning the file the pane was on, a panel's own `close` called from
+   * outside the strip. Each left a full strip over `NothingOpen`, which reads
+   * as the tabs being dead. Said once here, as the invariant, rather than at
+   * each of those and the next one.
+   */
+  useEffect(() => {
+    if (hasOpenTabs && activeTabId === null) reconcileScope()
+  }, [hasOpenTabs, activeTabId])
+
+  /*
    * The sidebar's own panel, collapsed rather than unmounted.
    *
    * `collapse()` is the only way to take a `ResizablePanel`'s space back — it

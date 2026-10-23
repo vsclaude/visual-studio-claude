@@ -38,7 +38,7 @@ import {
   nextProfileName,
   useClaudeProfiles,
 } from "@/lib/chat/claude-profiles"
-import { avatarHue, avatarLetter, type AccountChoice } from "@/lib/chat/column"
+import { type AccountChoice } from "@/lib/chat/column"
 import {
   percent,
   resetLabel,
@@ -54,6 +54,7 @@ import { useSettings } from "@/lib/settings"
 import { ClaudeLoginDialog } from "../claude-login-dialog"
 import { CreditsBadge } from "../credits-badge"
 import { IconButton } from "../icon-button"
+import { ProfileAvatar } from "../profile-avatar"
 
 /**
  * The accounts a chat can run on, in the order the column lists them: the
@@ -158,19 +159,7 @@ export function AccountAvatar({
       </span>
     )
   }
-  return (
-    <span
-      aria-hidden
-      title={name}
-      style={{ backgroundColor: `oklch(0.62 0.13 ${avatarHue(profile.id)})` }}
-      className={cn(
-        "flex size-4 shrink-0 items-center justify-center rounded-full text-[0.5625rem] leading-none font-semibold text-white",
-        className
-      )}
-    >
-      {avatarLetter(profile.name)}
-    </span>
-  )
+  return <ProfileAvatar profile={profile} className={className} />
 }
 
 /** A login dialog's subject: which directory, under which name, and whose
@@ -290,7 +279,7 @@ export function AccountsFooter() {
       className={cn(
         "relative flex shrink-0 flex-col border-t px-2 pt-1.5",
         collapsed ? "pb-1.5" : "pb-2",
-        !collapsed && footHeight === null && "max-h-[50%]"
+        !collapsed && footHeight === null && "max-h-[70%]"
       )}
     >
       {!collapsed && (
@@ -445,7 +434,7 @@ export function AccountsFooter() {
 const FOOT_MIN = 72
 
 /** How much of the column a dragged foot may take: the chats keep the rest. */
-const FOOT_MAX_SHARE = 0.9
+const FOOT_MAX_SHARE = 0.95
 
 /**
  * Dragging the foot's top edge, the composer's way: held here while dragging

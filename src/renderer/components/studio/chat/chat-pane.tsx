@@ -53,7 +53,7 @@ import { ChatComposer, type ChatComposerHandle } from "./chat-composer"
 import { ChatActivity, DayDivider } from "./chat-activity"
 import { ChatMessage, type MessageEdit, SubagentSteps } from "./chat-message"
 import { ChatAgents } from "./chat-agents"
-import { ChatSkeleton, ChatTranscriptSkeleton } from "./chat-skeleton"
+import { ChatSkeleton, ChatTranscriptSkeleton, Elapsed } from "./chat-skeleton"
 import { ChatWelcome } from "./chat-welcome"
 
 /**
@@ -1023,12 +1023,13 @@ function Conversation({
                 {/*
               Compaction, which is a state and never a percentage.
 
-              An indeterminate row on purpose: the CLI reports `compacting` and
-              then not, because one summarisation call has no fraction of itself
-              to report. A determinate bar here would be an animation pretending
-              to measure something — what *is* measurable is the window either
-              side, which lands as the `compact` line above and moves the meter
-              in the composer.
+              A clock and no more. One summarisation call has no fraction of
+              itself to report, so a determinate bar here would be an animation
+              pretending to measure something. The CLI's own spinner also says
+              `↓ N tokens` of the summary, but that count (`response_length`)
+              is one of the events the CLI drops before the SDK's stream —
+              checked against 2.1.309 — and the summary's own deltas never
+              reach it either.
 
               Above the turn's own spinner, since compaction happens to the
               conversation rather than as part of the answer.
@@ -1037,6 +1038,7 @@ function Conversation({
                   <div className="flex items-center gap-2 px-1 text-[0.7rem] text-muted-foreground">
                     <Archive className="size-3 shrink-0 animate-pulse" />
                     <span>Compacting the conversation…</span>
+                    <Elapsed startedAt={compacting} />
                   </div>
                 )}
                 {/* Kept until the next compaction starts: a failure that vanished

@@ -397,9 +397,11 @@ ones the toolbar already covers.
 The toolbar meter shows **room left before auto-compaction**, draining, read
 against the auto-compact threshold rather than the window
 (`getContextUsage()`, once a turn). Compaction itself has no progress events,
-so it stays a spinner; its boundary is a rule across the transcript, never
-folded. Every failure to refresh the meter is swallowed — it keeps the last
-number.
+so it stays a spinner with a clock, never a percentage. The CLI's own spinner
+also counts the summary's `↓ tokens`, but it never sends that count, or the
+summary's stream, to the SDK. Its boundary is a rule across the transcript,
+never folded. Every failure to refresh the meter is swallowed — it keeps the
+last number.
 
 ### The plan's own limits
 

@@ -139,9 +139,10 @@ type ChatState = {
    * while nothing is being written.
    */
   agents: Record<string, ChatAgent[]>
-  /** The chats the CLI is compacting right now. A state and not a fraction —
-   * compaction is one summarisation call, so there is no progress to report. */
-  compacting: Record<string, boolean>
+  /** The chats the CLI is compacting right now, and since when. Not a fraction —
+   * compaction is one summarisation call, so there is no progress to report;
+   * a clock is what the row can honestly add. */
+  compacting: Record<string, number>
   /** Why the last compaction failed, for the chats where one did. The CLI's own
    * sentence; cleared by the next compaction that starts. */
   compactError: Record<string, string>
@@ -1034,9 +1035,11 @@ export const useChats = create<ChatState>((set, get) => ({
       // failure is kept beside it so the row can say so rather than simply
       // stopping.
       if (event.type === "compacting") {
+        // The clock starts at the first event; a repeated one keeps it.
+        const since = get().compacting[chatId] ?? Date.now()
         set({
           compacting: event.compacting
-            ? { ...get().compacting, [chatId]: true }
+            ? { ...get().compacting, [chatId]: since }
             : without(get().compacting, chatId),
           compactError: event.error
             ? { ...get().compactError, [chatId]: event.error }

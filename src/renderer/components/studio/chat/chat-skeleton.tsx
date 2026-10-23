@@ -119,7 +119,7 @@ function WorkingMark() {
  * only produce renders that draw the same string. `tabular-nums` keeps a digit
  * changing from nudging the ones beside it.
  */
-function Elapsed({ startedAt }: { startedAt: number }) {
+export function Elapsed({ startedAt }: { startedAt: number }) {
   const [now, setNow] = useState(() => Date.now())
 
   // `now` is an absolute time rather than a duration, so it does not need

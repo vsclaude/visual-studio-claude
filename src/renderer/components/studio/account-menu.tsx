@@ -112,7 +112,7 @@ export function AccountMenu() {
                 <CreditsBadge size="sm" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-medium">Buy credits</span>
+                    <span className="text-menu font-medium">Buy credits</span>
                     {studio && (
                       <span
                         className={cn(

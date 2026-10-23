@@ -11,7 +11,7 @@ import {
 
 import { formatCredits } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
-import type { ClaudeProfile, PlanUsage } from "@shared/api"
+import type { ClaudeProfile, PlanUsage, PlanWindow } from "@shared/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,8 @@ import { avatarHue, avatarLetter, type AccountChoice } from "@/lib/chat/column"
 import {
   percent,
   resetLabel,
+  windowLabel,
+  windowShort,
   usageTone,
   usePlanUsage,
 } from "@/lib/chat/plan-usage"
@@ -344,11 +346,11 @@ export function AccountsFooter() {
         {accounts.map((account) => {
           const key = account.profileId ?? ""
           const plan = usage[key]
-          const window = plan?.available
-            ? plan.windows.find((entry) => entry.id === "five_hour")
-            : undefined
-          const tone = window ? usageTone(window.utilization) : "ok"
-          const reset = window ? resetLabel(window.resetsAt, now) : null
+          const windows = plan?.available
+            ? METER_WINDOWS.flatMap(
+                (id) => plan.windows.find((entry) => entry.id === id) ?? []
+              )
+            : []
 
           if (account.profileId === FREE_PROFILE_ID) {
             return (
@@ -371,13 +373,8 @@ export function AccountsFooter() {
               account={account}
               configDir={profile?.configDir ?? ""}
               renaming={renaming === key}
-              status={
-                window
-                  ? `${percent(window.utilization)}${reset ? ` · ${reset}` : ""}`
-                  : ""
-              }
-              tone={tone}
-              utilization={window?.utilization ?? null}
+              windows={windows}
+              now={now}
               onLogin={() =>
                 setLoggingIn({
                   profileId: account.profileId,
@@ -507,8 +504,8 @@ const ROW =
   "flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-xs outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/50 data-popup-open:bg-accent/60"
 
 /**
- * One login — the user's own or a profile: its name, its five-hour window, and
- * a menu on a click or a right-click.
+ * One login — the user's own or a profile: its name, its five-hour and weekly
+ * windows, and a menu on a click or a right-click.
  *
  * `Sign in` stands on the row itself rather than in the menu when the account
  * is not signed in, since that line is the one place the problem is read and
@@ -519,9 +516,8 @@ function PlanRow({
   account,
   configDir,
   renaming,
-  status,
-  tone,
-  utilization,
+  windows,
+  now,
   onLogin,
   onRename,
   onRenamed,
@@ -530,9 +526,11 @@ function PlanRow({
   account: ColumnAccount
   configDir: string
   renaming: boolean
-  status: string
-  tone: ReturnType<typeof usageTone>
-  utilization: number | null
+  /** The windows to draw, in `METER_WINDOWS` order — none for an account
+   * with no plan to read (an API key), which is a row without meters rather
+   * than with empty ones. */
+  windows: PlanWindow[]
+  now: Date
   onLogin: () => void
   onRename: () => void
   onRenamed: () => void
@@ -576,7 +574,7 @@ function PlanRow({
                 <button
                   type="button"
                   title={caption || undefined}
-                  className={ROW}
+                  className={cn(ROW, "items-start")}
                   onContextMenu={(event) => {
                     event.preventDefault()
                     setOpen(true)
@@ -585,21 +583,24 @@ function PlanRow({
               }
             >
               <AccountAvatar profileId={account.profileId} />
-              <span className="min-w-0 flex-1 truncate">{account.name}</span>
-              {account.usable && !settingUp && (
-                <span
-                  className={cn(
-                    "shrink-0 text-[0.6875rem] tabular-nums",
-                    tone === "high"
-                      ? "text-destructive"
-                      : tone === "warn"
-                        ? "text-amber-600 dark:text-amber-500"
-                        : "text-muted-foreground"
-                  )}
-                >
-                  {checking ? "Checking…" : status}
-                </span>
-              )}
+              <span className="min-w-0 flex-1 truncate leading-4">
+                {account.name}
+              </span>
+              {account.usable &&
+                !settingUp &&
+                (checking ? (
+                  <span className="shrink-0 text-[0.6875rem] leading-4 text-muted-foreground">
+                    Checking…
+                  </span>
+                ) : (
+                  windows.length > 0 && (
+                    <span className="flex shrink-0 flex-col gap-0.5">
+                      {windows.map((window) => (
+                        <Meter key={window.id} window={window} now={now} />
+                      ))}
+                    </span>
+                  )
+                ))}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               <p className="truncate px-1.5 py-1 text-xs text-muted-foreground">
@@ -655,25 +656,70 @@ function PlanRow({
           )
         )}
       </div>
-      {utilization !== null && (
-        <div
-          aria-hidden
-          className="mr-1 mb-1 ml-7 h-1 overflow-hidden rounded-full bg-border"
-        >
-          <div
-            className={cn(
-              "h-full rounded-full transition-[width]",
-              tone === "high"
-                ? "bg-destructive"
-                : tone === "warn"
-                  ? "bg-amber-500"
-                  : "bg-foreground/50"
-            )}
-            style={{ width: `${utilization}%` }}
-          />
-        </div>
-      )}
     </li>
+  )
+}
+
+/**
+ * The windows an account row draws, five-hour over weekly: the one that stops
+ * an afternoon and the one that stops a week. The per-model weekly windows
+ * the CLI may add are the composer's meter's to list; two lines is what a row
+ * beside a name has room for.
+ */
+const METER_WINDOWS = ["five_hour", "seven_day"]
+
+/** What a meter calls its window, after the percent — short enough to sit in
+ * a column of them. */
+function meterLabel(id: string): string {
+  return id === "five_hour" ? "5h" : id === "seven_day" ? "w" : windowShort(id)
+}
+
+/**
+ * One window as a short bar, its percent and its name, on one line — stacked
+ * in a column at the row's end so the bars, the figures and the names each
+ * line up down the list. When it resets is the tooltip: spelled out on the
+ * row, it left the name a few letters wide.
+ */
+function Meter({ window, now }: { window: PlanWindow; now: Date }) {
+  const tone = usageTone(window.utilization)
+  const reset = resetLabel(window.resetsAt, now)
+  return (
+    <span
+      title={`${windowLabel(window.id)} limit: ${percent(window.utilization)} used${reset ? ` · ${reset}` : ""}`}
+      className="flex h-4 items-center gap-1.5 text-[0.625rem] tabular-nums"
+    >
+      <span
+        aria-hidden
+        className="h-1 w-8 overflow-hidden rounded-full bg-border"
+      >
+        <span
+          className={cn(
+            "block h-full rounded-full transition-[width]",
+            tone === "high"
+              ? "bg-destructive"
+              : tone === "warn"
+                ? "bg-amber-500"
+                : "bg-foreground/50"
+          )}
+          style={{ width: `${window.utilization}%` }}
+        />
+      </span>
+      <span
+        className={cn(
+          "w-7 text-right",
+          tone === "high"
+            ? "font-medium text-destructive"
+            : tone === "warn"
+              ? "font-medium text-amber-600 dark:text-amber-500"
+              : "text-muted-foreground"
+        )}
+      >
+        {percent(window.utilization)}
+      </span>
+      <span className="w-3.5 text-muted-foreground/70">
+        {meterLabel(window.id)}
+      </span>
+    </span>
   )
 }
 

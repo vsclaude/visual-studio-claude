@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -20,18 +19,14 @@ import { cn } from "@/lib/utils"
 import {
   ArrowUpCircle,
   Bell,
-  Coins,
   Columns2,
   ExternalLink,
-  KeyRound,
   Palette,
   FileArchive,
   FolderOpen,
-  Plus,
   Puzzle,
   RefreshCw,
   Trash2,
-  UserRound,
   type LucideIcon,
 } from "lucide-react"
 
@@ -52,25 +47,14 @@ import type { ClaudeVersions } from "@shared/api"
 import { isOn, usePlugins, type PluginStatus } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
 import { installLabel, pendingUpdate, useUpdates } from "@/lib/updates"
-import {
-  accountCaption,
-  accountLabel,
-  nextProfileName,
-  useClaudeProfiles,
-} from "@/lib/chat/claude-profiles"
+import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
 import { useAgentModels } from "@/lib/chat/models"
-import { useAccount } from "@/lib/account"
-import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
-import { creditsLeft, formatCredits, type StudioAccount } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
-import { ClaudeLoginDialog } from "./claude-login-dialog"
-import { CREDITS_SURFACE, CreditsBadge, CreditsBar } from "./credits-badge"
 import { IconButton } from "./icon-button"
 import { OfficialBadge } from "./official-badge"
 import { UpdateProgressBar } from "./update-progress"
 import { ModelMenu, ProfileMenu } from "./chat/chat-composer"
-import { StateBadge } from "./chat/chat-mcp"
 
 /**
  * The studio's preferences — **Settings…** in the application menu, ⌘,.
@@ -154,8 +138,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <TabsSection />
             ) : section === "chats" ? (
               <ChatsSection />
-            ) : section === "claude" ? (
-              <ClaudeSection />
             ) : section === "plugins" ? (
               <PluginsSection />
             ) : (
@@ -168,8 +150,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-type SectionId =
-  "appearance" | "tabs" | "chats" | "claude" | "plugins" | "updates"
+type SectionId = "appearance" | "tabs" | "chats" | "plugins" | "updates"
 
 /** The sections, in the order they are listed. Each one is a heading, a line
  * saying what it covers, and the rows below — kept together so adding a
@@ -195,14 +176,8 @@ const SECTIONS: {
   {
     id: "chats",
     label: "Chats",
-    blurb: "Notifications while you are away.",
+    blurb: "Notifications, and the model commit drafts run on.",
     icon: Bell,
-  },
-  {
-    id: "claude",
-    label: "Claude",
-    blurb: "Credits and the accounts a chat can run under.",
-    icon: UserRound,
   },
   {
     id: "plugins",
@@ -482,10 +457,23 @@ function TabsSection() {
  * about how the studio looks: several chats answering at once is the thing this
  * app is for, and what makes that workable is being called back to one. The
  * section is where the rest of that belongs as it arrives.
+ *
+ * The commit-draft row came here from the Claude section when that went: the
+ * accounts it listed are managed in the projects column's Accounts foot now,
+ * and this was the one row of it that was not an account.
  */
 function ChatsSection() {
   const on = useSettings((state) => state.chatNotifications)
   const setOn = useSettings((state) => state.setChatNotifications)
+
+  const profiles = useClaudeProfiles((state) => state.profiles)
+  const models = useAgentModels()
+  const freeReady = useFreeAi((state) => state.ready)
+  const reviewModel = useSettings((state) => state.reviewModel)
+  const reviewEffort = useSettings((state) => state.reviewEffort)
+  const reviewProfileId = useSettings((state) => state.reviewProfileId)
+  const setReviewModel = useSettings((state) => state.setReviewModel)
+  const setReviewProfileId = useSettings((state) => state.setReviewProfileId)
 
   return (
     <Card>
@@ -500,6 +488,35 @@ function ChatsSection() {
         description="When a chat finishes, fails or asks something, while the window is in the background."
       >
         <Switch checked={on} onCheckedChange={setOn} />
+      </Row>
+      {/* The one turn in the app with no toolbar of its own — a drafted
+          commit message runs on whatever is picked here rather than on
+          something asked per turn, since it is not a conversation somebody
+          sits in front of. See `main/one-turn-agent.ts`; the `review*` field
+          names are what is already on disk. */}
+      <Row
+        title="Commit message drafts"
+        description="Model and account the Git tab's Draft button runs on."
+      >
+        <div className="flex items-center gap-1.5">
+          <ModelMenu
+            models={models}
+            model={reviewModel}
+            effort={reviewEffort}
+            onPick={setReviewModel}
+          />
+          {/* The composer's own condition: credits are a choice even for
+              somebody with no profile of their own. */}
+          {(profiles.length > 0 ||
+            freeReady ||
+            reviewProfileId === FREE_PROFILE_ID) && (
+            <ProfileMenu
+              profiles={profiles}
+              profileId={reviewProfileId}
+              onPick={setReviewProfileId}
+            />
+          )}
+        </div>
       </Row>
     </Card>
   )
@@ -821,383 +838,6 @@ function UpdatesSection() {
         </p>
       )}
     </Card>
-  )
-}
-
-/**
- * Named `CLAUDE_CONFIG_DIR`s — separate logins, settings and history for the
- * user's own `claude`, the way pointing that variable at a directory of its
- * own already lets somebody run several identities from one install.
- *
- * Picked per chat, in its own toolbar (`ChatComposer`'s `ProfileMenu`), the way
- * the model and the effort are — this section only holds the list, the same
- * split `EnvironmentDialog` has from the environment picker in the API panel's
- * own toolbar.
- *
- * **Each row says whether that directory is actually signed in, and as whom.**
- * A path is a weak thing to name an identity with — a profile called "Work"
- * pointing at a directory nobody ever logged into looks exactly like one that
- * works, right up until a turn fails — so the account is asked of `claude`
- * itself (`claudeAccount`). Checked on open and on demand rather than watched:
- * nothing here can see a `claude login` run in somebody's own terminal.
- *
- * **Adding one is a name, a click and a login.** There is no path here at all
- * any more: the directory is main's to name (`main/claude-profiles.ts`) and the
- * login is the app's to run (`ClaudeLoginDialog`), because the path was the one
- * thing being asked of the user that they had no way to know the answer to — a
- * row could only be filled in by reading the paragraph at the bottom of this
- * section, and then only in a terminal. `docs/design.md` § Settings has what
- * deleting the field cost.
- */
-function ClaudeSection() {
-  const profiles = useClaudeProfiles((state) => state.profiles)
-  const refresh = useClaudeProfiles((state) => state.refresh)
-  const check = useClaudeProfiles((state) => state.check)
-  const create = useClaudeProfiles((state) => state.create)
-  const rename = useClaudeProfiles((state) => state.rename)
-  const remove = useClaudeProfiles((state) => state.remove)
-
-  // The list is loaded once at launch (`studio.tsx`) for the composer's own
-  // picker; asked again here so a profile added, renamed or removed in another
-  // window of this run is not stale by the time somebody opens Settings.
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  // The default login, checked on open on its own: it is the account every
-  // chat with no profile picked runs under, and the one the rest are being
-  // told apart from. The profiles' own directories are not checked here — that
-  // would be a `claude` per row on every open of Settings, and most of the
-  // time somebody is here for one of them.
-  useEffect(() => {
-    void check("")
-  }, [check])
-
-  const models = useAgentModels()
-  const freeReady = useFreeAi((state) => state.ready)
-  const reviewModel = useSettings((state) => state.reviewModel)
-  const reviewEffort = useSettings((state) => state.reviewEffort)
-  const reviewProfileId = useSettings((state) => state.reviewProfileId)
-  const setReviewModel = useSettings((state) => state.setReviewModel)
-  const setReviewProfileId = useSettings((state) => state.setReviewProfileId)
-
-  return (
-    <div className="space-y-6">
-      {/* First, and on its own: it is the one way to run a chat here that
-          needs no `claude` login at all, and Settings was the one screen in
-          the app that never mentioned it. */}
-      <section className="space-y-2">
-        <SectionHeading title="Credits" />
-        <CreditsCard />
-      </section>
-
-      <section className="space-y-2">
-        <SectionHeading
-          title="Your accounts"
-          description="The Claude logins a chat can run under — each chat picks one from its Account menu."
-        />
-        <Card>
-          <AccountRow />
-          {profiles.map((profile) => (
-            <div key={profile.id} className="flex gap-3 p-4">
-              <AccountTile icon={KeyRound} />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={profile.name}
-                    onChange={(event) => rename(profile.id, event.target.value)}
-                    placeholder="Name"
-                    aria-label="Profile name"
-                    className="h-7 w-48 shrink-0 text-xs md:text-xs"
-                  />
-                  <IconButton
-                    label="Remove account"
-                    className="ml-auto hover:text-destructive"
-                    onClick={() => remove(profile.id)}
-                  >
-                    <Trash2 />
-                  </IconButton>
-                </div>
-                {/* A profile has a directory as soon as main has answered the
-                    save that created it — one round trip, and this is the
-                    frame in between. It is not skipped for tidiness: an empty
-                    `CLAUDE_CONFIG_DIR` is what `claudeAccount` answers for the
-                    *default* login, so a row drawn before the answer arrives
-                    would show somebody else's account as its own. */}
-                {profile.configDir.trim() ? (
-                  <AccountStatus
-                    configDir={profile.configDir}
-                    name={profile.name || "Profile"}
-                  />
-                ) : (
-                  <p className="text-[0.7rem] text-muted-foreground">
-                    Setting up its directory…
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-          {/* The add button lives in the list it adds to, with the sentence
-              saying why anyone would — "No profiles yet." said neither. */}
-          <div className="flex items-center gap-3 p-4">
-            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-              {profiles.length === 0
-                ? "Add another login to keep work and personal accounts apart."
-                : "Each one signs into its own Claude account."}
-            </p>
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={() => create(nextProfileName(profiles.length))}
-            >
-              <Plus data-icon="inline-start" />
-              Add account
-            </Button>
-          </div>
-        </Card>
-      </section>
-
-      <section className="space-y-2">
-        <SectionHeading title="Helpers" />
-        <Card>
-          {/* The one turn in the app with no toolbar of its own — a drafted
-              commit message runs on whatever is picked here rather than on
-              something asked per turn, since it is not a conversation somebody
-              sits in front of. See `main/one-turn-agent.ts`; the `review*`
-              field names are what is already on disk. */}
-          <Row
-            title="Commit message drafts"
-            description="Model and account the Git tab's Draft button runs on."
-          >
-            <div className="flex items-center gap-1.5">
-              <ModelMenu
-                models={models}
-                model={reviewModel}
-                effort={reviewEffort}
-                onPick={setReviewModel}
-              />
-              {/* The composer's own condition: credits are a choice even for
-                  somebody with no profile of their own. */}
-              {(profiles.length > 0 ||
-                freeReady ||
-                reviewProfileId === FREE_PROFILE_ID) && (
-                <ProfileMenu
-                  profiles={profiles}
-                  profileId={reviewProfileId}
-                  onPick={setReviewProfileId}
-                />
-              )}
-            </div>
-          </Row>
-        </Card>
-      </section>
-    </div>
-  )
-}
-
-/** A group's name over its card, and what the group is for when the name
- * alone does not say. */
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string
-  description?: string
-}) {
-  return (
-    <div className="space-y-0.5 px-0.5">
-      <h3 className="text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
-        {title}
-      </h3>
-      {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
-    </div>
-  )
-}
-
-/**
- * The balance and the way to more of it, or the way in for somebody signed
- * out. Drawn in the paid row's colours — the composer's badge and the buy
- * dialog's — so the three read as one thing wherever they turn up.
- */
-function CreditsCard() {
-  const ready = useFreeAi((state) => state.ready)
-  const account = useStudioAccount((state) => state.account)
-  const credits = account?.credits
-  const showCredits = useCreditsDialog((state) => state.show)
-  const busy = useAccount((state) => state.busy)
-  const signIn = useAccount((state) => state.signIn)
-  const broke = ready && credits !== undefined && credits <= 0
-
-  return (
-    <div className={cn("space-y-3 rounded-lg border p-4", CREDITS_SURFACE)}>
-      <div className="flex items-center gap-4">
-        <CreditsBadge size="md" />
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-sm leading-none font-medium">Pay with credits</p>
-          <p
-            className={cn(
-              "text-xs",
-              broke ? "text-destructive" : "text-muted-foreground"
-            )}
-          >
-            {!ready ? (
-              "Sign in to run any chat on every model, paid as you go — never a monthly fee."
-            ) : broke ? (
-              "No credits left — top up to keep going."
-            ) : credits !== undefined ? (
-              <>
-                <span className="font-medium text-foreground tabular-nums">
-                  {formatCredits(credits)}
-                </span>{" "}
-                left · every model, never a monthly fee
-              </>
-            ) : (
-              "Every model, paid as you go — never a monthly fee."
-            )}
-          </p>
-        </div>
-        {ready ? (
-          <Button size="sm" onClick={showCredits}>
-            <Coins data-icon="inline-start" />
-            Buy credits
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void signIn()}
-          >
-            {busy ? "Signing in…" : "Sign in with Google"}
-          </Button>
-        )}
-      </div>
-      {ready && account && <CreditsMeter account={account} />}
-    </div>
-  )
-}
-
-/** The bar and its two figures under the balance. The share and the colour
- * are `creditsLeft`'s, shared with the composer and the account menu. */
-function CreditsMeter({ account }: { account: StudioAccount }) {
-  const { share } = creditsLeft(account)
-  return (
-    <div className="space-y-1.5 pl-14">
-      <CreditsBar account={account} />
-      <div className="flex items-baseline justify-between gap-2 text-[0.7rem] text-muted-foreground tabular-nums">
-        <span>{Math.round(share * 100)}% left</span>
-        {/* 0 is also what a server too old to count spending answers. */}
-        {account.creditsUsed > 0 && (
-          <span>{formatCredits(account.creditsUsed)} used so far</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** The square an account row leads with — the composer menu's tile, so a
- * login looks the same in both places. */
-function AccountTile({ icon: Icon }: { icon: LucideIcon }) {
-  return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-      <Icon className="size-4" />
-    </span>
-  )
-}
-
-/** The default login as a row of its own, named as the composer's menu names
- * it, and the same status line every profile gets. Its directory is
- * `~/.claude` and there is nothing to edit about it, so there are no inputs. */
-function AccountRow() {
-  return (
-    <div className="flex gap-3 p-4">
-      <AccountTile icon={UserRound} />
-      <div className="min-w-0 flex-1 space-y-2">
-        <p className="flex h-7 items-center gap-2 text-sm leading-none font-medium">
-          <span className="truncate">This account</span>
-          <span className="truncate font-mono text-[0.7rem] font-normal text-muted-foreground">
-            ~/.claude
-          </span>
-        </p>
-        <AccountStatus configDir="" name="This account" />
-      </div>
-    </div>
-  )
-}
-
-/**
- * Whether a directory is signed in, the button that asks, and the button that
- * signs it in.
- *
- * **Asked, never assumed**: nothing is drawn as good until `claude` has said
- * so, which is why the unchecked state is its own quiet badge rather than an
- * optimistic one. Neither button runs on a render, and a row is not checked
- * because it was drawn — a section of four profiles opened to rename one is
- * otherwise four `claude` processes.
- *
- * **Log in** is offered on every row, the signed-in ones included: switching
- * which account a directory holds is the same act as filling an empty one, and
- * a button that vanished once it had worked would be missing exactly when
- * somebody's session expired.
- */
-function AccountStatus({
-  configDir,
-  name,
-}: {
-  configDir: string
-  /** What the login dialog calls this account. */
-  name: string
-}) {
-  const key = configDir.trim()
-  const account = useClaudeProfiles((state) => state.accounts[key])
-  const busy = useClaudeProfiles((state) => state.checking.includes(key))
-  const check = useClaudeProfiles((state) => state.check)
-  const [loggingIn, setLoggingIn] = useState(false)
-
-  const { label, tone } = accountLabel(account)
-  const caption = accountCaption(account)
-
-  return (
-    <div className="flex items-center gap-2">
-      {loggingIn && (
-        <ClaudeLoginDialog
-          configDir={key}
-          name={name}
-          onClose={() => setLoggingIn(false)}
-        />
-      )}
-      <StateBadge
-        label={busy ? "Checking" : label}
-        tone={busy ? "waiting" : tone}
-      />
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-[0.7rem]",
-          account?.error ? "text-destructive" : "text-muted-foreground"
-        )}
-        title={account?.error ?? caption}
-      >
-        {account?.error ?? caption}
-      </span>
-      <Button size="xs" variant="ghost" onClick={() => setLoggingIn(true)}>
-        <KeyRound data-icon="inline-start" />
-        Log in
-      </Button>
-      <Button
-        size="xs"
-        variant="ghost"
-        disabled={busy}
-        onClick={() => void check(key)}
-      >
-        <RefreshCw
-          data-icon="inline-start"
-          className={cn(busy && "animate-spin")}
-        />
-        Check
-      </Button>
-    </div>
   )
 }
 

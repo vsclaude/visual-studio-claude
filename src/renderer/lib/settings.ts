@@ -74,6 +74,13 @@ type Stored = {
    * conversation.
    */
   composerHeight: number | null
+  /**
+   * The projects column's Accounts foot, dragged taller or shorter by its top
+   * edge — in pixels, or null for its own height up to a share of the column.
+   */
+  accountsHeight: number | null
+  /** The Accounts foot folded down to its heading. */
+  accountsCollapsed: boolean
 } & Appearance
 
 function isStored(value: unknown): value is Stored {
@@ -114,7 +121,12 @@ function isStored(value: unknown): value is Stored {
       typeof record.allProjectTabs === "boolean") &&
     (record.composerHeight === undefined ||
       record.composerHeight === null ||
-      typeof record.composerHeight === "number")
+      typeof record.composerHeight === "number") &&
+    (record.accountsHeight === undefined ||
+      record.accountsHeight === null ||
+      typeof record.accountsHeight === "number") &&
+    (record.accountsCollapsed === undefined ||
+      typeof record.accountsCollapsed === "boolean")
   )
 }
 
@@ -152,6 +164,8 @@ type SettingsState = Stored & {
   setOnboarded: (onboarded: boolean) => void
   setGitBlame: (on: boolean) => void
   setComposerHeight: (height: number | null) => void
+  setAccountsHeight: (height: number | null) => void
+  setAccountsCollapsed: (collapsed: boolean) => void
   setAllProjectTabs: (on: boolean) => void
   /** Reads the stored preferences. Called once, at launch. */
   restore: () => Promise<void>
@@ -193,6 +207,8 @@ export const useSettings = create<SettingsState>((set, get) => {
       gitBlame,
       allProjectTabs,
       composerHeight,
+      accountsHeight,
+      accountsCollapsed,
     } = get()
     remember(SETTINGS_KEY, {
       diffSideBySide,
@@ -209,6 +225,8 @@ export const useSettings = create<SettingsState>((set, get) => {
       gitBlame,
       allProjectTabs,
       composerHeight,
+      accountsHeight,
+      accountsCollapsed,
     })
   }
 
@@ -228,6 +246,8 @@ export const useSettings = create<SettingsState>((set, get) => {
     gitBlame: true,
     allProjectTabs: false,
     composerHeight: null,
+    accountsHeight: null,
+    accountsCollapsed: false,
     chatNotifications: true,
     loaded: false,
 
@@ -301,6 +321,16 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setComposerHeight(composerHeight) {
       set({ composerHeight })
+      save()
+    },
+
+    setAccountsHeight(accountsHeight) {
+      set({ accountsHeight })
+      save()
+    },
+
+    setAccountsCollapsed(accountsCollapsed) {
+      set({ accountsCollapsed })
       save()
     },
 

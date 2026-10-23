@@ -103,4 +103,49 @@ section("a seed already listed")
   check("returned to both callers", a.id === b.id && a.title === "Seeded")
 }
 
+section("a plan limit marks the listing until the next message")
+{
+  const { chats, listing } = source()
+  const chat = await chats.create({ folderId: "p" })
+  // `append` is the one writer and is private; the projects column reads what
+  // it leaves on the listing, so that is what is checked here.
+  const append = (
+    chats as unknown as {
+      append: (id: string, line: AssistantMessage) => Promise<void>
+    }
+  ).append.bind(chats)
+  const limited = () => listing().find((entry) => entry.id === chat.id)?.limit
+
+  await append(chat.id, {
+    id: "l1",
+    role: "limit",
+    profileId: "work",
+    name: "Work",
+    window: "five_hour",
+    resetsAt: "2026-10-23T14:30:00Z",
+    text: "limit reached",
+  })
+  check(
+    "the limit line marks the chat",
+    limited()?.window === "five_hour" && limited()?.profileId === "work"
+  )
+
+  await append(chat.id, { id: "a1", role: "assistant", text: "…" })
+  check("a later reply leaves the mark", limited() !== undefined)
+
+  await append(chat.id, {
+    id: "u0",
+    role: "user",
+    text: "subagent",
+    parent: "t1",
+  })
+  check(
+    "a subagent's prompt is not somebody moving on",
+    limited() !== undefined
+  )
+
+  await append(chat.id, { id: "u1", role: "user", text: "Continue." })
+  check("the next message clears it", limited() === undefined)
+}
+
 finish()

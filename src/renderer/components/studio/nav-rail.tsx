@@ -1,93 +1,57 @@
 import type { ReactNode } from "react"
-import { MessageSquare, Search, Settings, SquareTerminal } from "lucide-react"
+import { Search, Settings, SquareTerminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useDock } from "@/lib/dock"
 import { useProjects } from "@/lib/projects"
 import { useWorkspaceSearch } from "@/lib/workspace-search"
-import { useChats } from "@/lib/chat/store"
-import { activityOf, activityTitle, isRunning } from "@/lib/chat/running"
-import { unreadIn } from "@/lib/chat/unread"
 import { PLUGIN_ICON_COMPONENTS } from "@/lib/plugins/icons"
 import type { PluginRailButton } from "@/lib/plugins/registry"
 import { usePlugins } from "@/lib/plugins/store"
 import { AccountMenu } from "./account-menu"
 import { IconButton } from "./icon-button"
+import { ProjectRail } from "./project/project-rail"
 
 /**
- * The window's leftmost strip: the ways into the rest of the window, one icon
- * each, and Settings at the foot.
+ * The window's leftmost strip: the workspace's projects at the top, and the
+ * ways into the rest of the window at the foot.
  *
- * It took over from the project column's own 36px rail (`ProjectRail`, deleted).
- * That rail existed so a column collapsed to nothing still left its way back on
- * screen; this strip is on screen whatever the column is doing, so the column
- * can collapse to nothing and the button that reopens it is the first one here.
+ * **The projects are here**, one icon each (`ProjectRail`), and the column
+ * beside the rail is the chats of the one picked. They were a tree in that
+ * column, opened and shut one by one, with a button at the top of this strip
+ * that showed and hid the whole column; picking a project is that button now,
+ * and picking the one already showing hides the column. `docs/design.md`
+ * § Projects and chats has the argument.
  *
- * Its own card rather than part of the column's, because it is not about the
- * workspace's projects — Search, the dock and Settings are the window's.
+ * Its own card rather than part of the column's, so the column can collapse to
+ * nothing and leave the projects — the way back to it — on screen.
  */
-export function NavRail({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function NavRail({
+  onOpenSettings,
+  onAddFolder,
+}: {
+  onOpenSettings: () => void
+  /** The workbench's Add folder dialog, for the `+` under the projects. */
+  onAddFolder: () => void
+}) {
   // "Showing" is the column open *on that view*: Search open hides the
   // projects as surely as a shut column does.
   const column = useProjects((state) => state.sidebar)
   const view = useProjects((state) => state.view)
   const toggleView = useProjects((state) => state.toggleView)
-  const sidebar = column && view === "projects"
   const searching = column && view === "search"
   const dockOpen = useDock((state) => state.open)
   const pluginButtons = usePlugins((state) => state.railButtons)
   const toggleDock = useDock((state) => state.toggle)
-
-  /*
-   * Whether anything is running behind the shut column — the rows are gone, the
-   * counts on them are gone, and a focused window rings no notification, so a
-   * dot on the button that reopens it is what is left to say it.
-   *
-   * Every chat rather than the active project's: a shut column is not showing
-   * which project is which, so a dot that counted one of them would go dark
-   * while another was answering. Drawn only while the column is shut; open, the
-   * rows say it themselves.
-   */
-  const chats = useChats((state) => state.chats)
-  const sending = useChats((state) => state.sending)
-  const asks = useChats((state) => state.asks)
-  const unread = useChats((state) => state.unread)
-  const activity = activityOf(chats, sending, asks)
-  const running = !sidebar && isRunning(activity)
-  // Second to `running`: a chat that has already answered, which leaves nothing
-  // spinning and so is the case a shut column loses hardest.
-  const news = !sidebar && !running && unreadIn(chats, unread) > 0
 
   return (
     <nav
       aria-label="Window"
       className="studio-surface flex w-12 shrink-0 flex-col items-center gap-1 rounded-xl bg-background py-2 outline -outline-offset-1 outline-border"
     >
-      <RailButton
-        label={
-          sidebar
-            ? "Hide projects"
-            : running
-              ? `Show projects — ${activityTitle(activity)}`
-              : news
-                ? "Show projects — a chat has answered"
-                : "Show projects"
-        }
-        pressed={sidebar}
-        onClick={() => toggleView("projects")}
-        tour="projects"
-        dot={
-          running
-            ? activity.waiting > 0
-              ? "animate-pulse bg-primary"
-              : "bg-muted-foreground"
-            : news
-              ? "bg-primary"
-              : undefined
-        }
-      >
-        <MessageSquare />
-      </RailButton>
+      <ProjectRail onAddFolder={onAddFolder} />
+      <div aria-hidden className="my-1 h-px w-6 shrink-0 bg-border" />
+
       {/* The workspace's `Find in files`, in the left column — `⌘P` (the title
           bar's field) is still the way to go to a file or a chat by name. */}
       <RailButton
@@ -100,8 +64,6 @@ export function NavRail({ onOpenSettings }: { onOpenSettings: () => void }) {
       >
         <Search />
       </RailButton>
-
-      <div className="flex-1" />
 
       {/* What plugins add, at the foot beside Settings rather than under
           Search: a plugin's button runs something — the built-in `usage`
@@ -158,15 +120,12 @@ function RailButton({
   label,
   pressed,
   onClick,
-  dot,
   tour,
   children,
 }: {
   label: string
   pressed?: boolean
   onClick: () => void
-  /** The classes of a mark over the button's corner, or nothing. */
-  dot?: string
   /** The name the onboarding tour finds this button by (`data-tour`). */
   tour?: string
   children: ReactNode
@@ -185,17 +144,6 @@ function RailButton({
       >
         {children}
       </IconButton>
-      {/* `pointer-events-none` so it never swallows the click meant for the
-          button under it. */}
-      {dot && (
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute top-1 right-1 size-1.5 rounded-full ring-2 ring-background",
-            dot
-          )}
-        />
-      )}
     </div>
   )
 }

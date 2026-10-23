@@ -861,6 +861,10 @@ export function createIpc(host: Host): {
 
   handle(IPC.removeFolder, (_event, id: string) => store.removeFolder(id))
 
+  handle(IPC.reorderFolders, (_event, ids: string[]) =>
+    store.reorderFolders(ids)
+  )
+
   handle(IPC.gitBranch, async (_event, folderId: string) =>
     currentBranch(await store.resolveFolderDir(folderId))
   )

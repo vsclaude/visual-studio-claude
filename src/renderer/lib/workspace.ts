@@ -39,6 +39,10 @@ export async function removeFolder(id: string): Promise<WorkspaceRecord> {
   return window.desktop.removeFolder(id)
 }
 
+export async function reorderFolders(ids: string[]): Promise<WorkspaceRecord> {
+  return window.desktop.reorderFolders(ids)
+}
+
 /** Opens the system folder picker. Resolves with null when cancelled. */
 export async function pickDirectory(): Promise<string | null> {
   return window.desktop.pickDirectory()

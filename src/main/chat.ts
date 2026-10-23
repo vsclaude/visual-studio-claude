@@ -800,12 +800,15 @@ export class Chats {
     await this.forgetWindow(id)
   }
 
-  /** Drops the kept `window` — the conversation it measured is gone. */
+  /** Drops the kept `window` — the conversation it measured is gone — and the
+   * `limit` mark, which was about a turn that is gone with it. */
   private forgetWindow(id: string): Promise<void> {
     return this.editChats((chats) =>
-      chats.some((chat) => chat.id === id && chat.window)
+      chats.some((chat) => chat.id === id && (chat.window || chat.limit))
         ? chats.map((chat) =>
-            chat.id === id ? { ...chat, window: undefined } : chat
+            chat.id === id
+              ? { ...chat, window: undefined, limit: undefined }
+              : chat
           )
         : null
     )
@@ -2235,11 +2238,27 @@ export class Chats {
         // to write — see `retitle`, which only touches a chat named here.
         if (titled !== existing.title) this.autoTitled.add(id)
 
+        // What the projects column says about a chat stuck on a plan limit —
+        // see `Chat.limit`. A message sent is the way out, whichever account it
+        // went to, so it is what clears the mark.
+        const limit =
+          message.role === "limit"
+            ? {
+                profileId: message.profileId,
+                window: message.window,
+                resetsAt: message.resetsAt,
+                text: message.text,
+              }
+            : message.role === "user" && !message.parent
+              ? undefined
+              : existing.limit
+
         return chats.map((chat) =>
           chat.id === id
             ? {
                 ...chat,
                 title: titled,
+                limit,
                 // Merged in rather than carried through: this listing may have
                 // been read before `markStarted` saved — see `startedIn`.
                 started: chat.started === true || this.startedIn.has(id),

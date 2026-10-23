@@ -38,7 +38,10 @@ export type SidebarView = "projects" | "search"
 
 type RememberedColumn = {
   sidebar: boolean
-  collapsed: string[]
+  /** Which projects a tree drawn by an older build had folded. Read by
+   * nothing: there is no tree any more (`docs/design.md` § Projects and
+   * chats), and it is optional only so a record that still has it is valid. */
+  collapsed?: string[]
   /** Optional: written by a build whose Explorer drew every project at once,
    * and so had none. */
   activeFolderId?: string | null
@@ -52,7 +55,7 @@ function isRememberedColumn(value: unknown): value is RememberedColumn {
   const record = value as Partial<RememberedColumn> | null
   return (
     typeof record?.sidebar === "boolean" &&
-    isStringArray(record?.collapsed) &&
+    (record.collapsed === undefined || isStringArray(record.collapsed)) &&
     (record.activeFolderId === undefined ||
       record.activeFolderId === null ||
       typeof record.activeFolderId === "string") &&
@@ -97,13 +100,16 @@ type ProjectsState = {
   toggleSection: (section: SidebarSection) => void
 
   /**
-   * Which projects are drawn shut.
+   * Whether the column is showing the chats that belong to no project, rather
+   * than `activeFolderId`'s.
    *
-   * Collapsed rather than expanded ids, so a folder added later opens rather
-   * than hiding the chats filed under it.
+   * Beside `activeFolderId` rather than a sentinel inside it: that id is what
+   * Explorer and the dock's shell follow, and `Ungrouped` names no directory
+   * for either of them to point at. Not remembered — it is a place somebody
+   * visits to read an old chat, not one they work in.
    */
-  collapsed: string[]
-  toggleFolder: (folderId: string) => void
+  ungrouped: boolean
+  showUngrouped: () => void
 
   /**
    * The project being worked in, or null before anything has been clicked.
@@ -116,7 +122,7 @@ type ProjectsState = {
    */
   activeFolderId: string | null
 
-  /** Works in a project. The one call the column's rows make. */
+  /** Works in a project. The one call the rail's project icons make. */
   setActive: (folderId: string) => void
 
   /** Reads the remembered column. Idempotent: Strict Mode mounts twice. */
@@ -127,10 +133,9 @@ export const useProjects = create<ProjectsState>((set, get) => {
   let restorePromise: Promise<void> | null = null
 
   function rememberColumn() {
-    const { sidebar, collapsed, activeFolderId, shutSections, view } = get()
+    const { sidebar, activeFolderId, shutSections, view } = get()
     remember(COLUMN_KEY, {
       sidebar,
-      collapsed,
       activeFolderId,
       shutSections,
       view,
@@ -141,13 +146,18 @@ export const useProjects = create<ProjectsState>((set, get) => {
     // Open by default: it is the way to every project and every chat, and
     // closed only because somebody closed it.
     sidebar: true,
-    collapsed: [],
     activeFolderId: null,
+    ungrouped: false,
 
     setActive(folderId) {
+      if (get().ungrouped) set({ ungrouped: false })
       if (get().activeFolderId === folderId) return
       set({ activeFolderId: folderId })
       rememberColumn()
+    },
+
+    showUngrouped() {
+      set({ ungrouped: true })
     },
 
     toggleSidebar() {
@@ -182,23 +192,12 @@ export const useProjects = create<ProjectsState>((set, get) => {
       rememberColumn()
     },
 
-    toggleFolder(folderId) {
-      const { collapsed } = get()
-      set({
-        collapsed: collapsed.includes(folderId)
-          ? collapsed.filter((id) => id !== folderId)
-          : [...collapsed, folderId],
-      })
-      rememberColumn()
-    },
-
     restore() {
       restorePromise ??= (async () => {
         const stored = await recall(COLUMN_KEY, isRememberedColumn)
         if (stored) {
           set({
             sidebar: stored.sidebar,
-            collapsed: stored.collapsed,
             // Not checked against a list here: the folders are read after
             // this, and `shownRoot` falls back to the first project for an id
             // that names nothing. A project removed while the app was shut is

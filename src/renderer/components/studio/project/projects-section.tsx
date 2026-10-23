@@ -1,88 +1,25 @@
-import { useState } from "react"
-import {
-  ChevronRight,
-  ClipboardCopy,
-  ExternalLink,
-  Folder,
-  FolderOpen,
-  Image as ImageIcon,
-  ImageOff,
-  MessageSquare,
-  Pencil,
-  Plus,
-  ShieldQuestion,
-  SquareTerminal,
-  Trash2,
-  X,
-} from "lucide-react"
+import { useState, type ReactNode } from "react"
+import { MoreHorizontal, Plus } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu"
-import { Spinner } from "@/components/ui/spinner"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/lib/projects"
-import {
-  chooseProjectIcon,
-  resetProjectIcon,
-  useProjectIcon,
-} from "@/lib/project-icon"
 import { useStudio } from "@/lib/store"
-import { IconButton } from "../icon-button"
-import { RenameDialog } from "../rename-dialog"
-import { RenameRow, useMenuFocusHandoff } from "../rename-row"
-import { SideRow } from "../side-row"
-import { useShells } from "@/lib/shell/store"
 import { chatsOf, ungroupedChats, useChats } from "@/lib/chat/store"
-import type { WorkspaceFolder, Chat } from "@shared/api"
-import { PLUGIN_ICON_COMPONENTS } from "@/lib/plugins/icons"
-import type { PluginChatMenuItem } from "@/lib/plugins/registry"
-import { usePlugins } from "@/lib/plugins/store"
-import { since } from "@/lib/chat/since"
-import {
-  activityLabel,
-  activityOf,
-  activityTitle,
-  isRunning,
-  type ChatActivity,
-} from "@/lib/chat/running"
-import { unreadIn } from "@/lib/chat/unread"
-
-/**
- * One plugin's chat menu item. A throw is reported in the plugin's name rather
- * than left to the console: the menu has closed by then, and the click would
- * otherwise have done nothing visible.
- */
-async function runChatMenuItem(
-  item: PluginChatMenuItem,
-  chatId: string
-): Promise<void> {
-  try {
-    await item.run(chatId)
-  } catch (error) {
-    console.error(`[plugin ${item.pluginId}]`, error)
-    usePlugins
-      .getState()
-      .notify(
-        item.pluginId,
-        `${item.name} failed: ${error instanceof Error ? error.message : String(error)}`
-      )
-  }
-}
+import { columnSections } from "@/lib/chat/column"
+import type { Chat, WorkspaceFolder } from "@shared/api"
+import { IconButton } from "../icon-button"
+import { SideRow } from "../side-row"
+import { AccountsFooter } from "./accounts"
+import { ChatList } from "./chat-list"
+import { ProjectFailure, ProjectMenuItems } from "./project-actions"
 
 /**
  * The chats this column lists: the ones that are on disk.
@@ -99,901 +36,245 @@ function saved(chats: Chat[], unsaved: string[]): Chat[] {
 }
 
 /**
- * The workspace's projects, and the chats held in each.
+ * **One project's chats**, the project picked in the rail.
  *
- * One of the four sections the left column stacks — see `WorkspaceSidebar` for
- * why the other three are beside it rather than behind tabs on the right. It
- * carries no `Search` row and no settings button any more: those belong to the
- * column, not to this section, and a row that lived in whichever section
- * happened to be first was a row in the wrong place.
- *
- * A project's rows used to be its `git worktree` checkouts, with the chats
- * hidden a level below them — one row per branch, and no way to see from this
- * column what conversations a project actually held. That layer is gone, and
- * what a project opens onto is the thing the column was always navigating to:
- * its chats, listed, so a conversation from last week is one click rather than
- * a tab strip somebody has to remember opening.
- *
- * There was a **task** layer over this — a task was a name and a set of members
- * taken from any panel, listed here with a dashboard behind `Home` — and it is
- * gone, deleted rather than hidden.
- *
- * **The rows are drawn as a file tree rather than a disclosure list.** A folder
- * mark, open or shut, in place of the chevron that was there: what this column
- * lists is projects on disk, and the chevron said only "there is more below",
- * which is the one thing the indent already says. The chats under it carry no
- * mark at all — a column of identical speech bubbles is a column of noise, and
- * the only thing they distinguish is a chat from a chat. What that vacated
- * space is spent on instead is the **age** of each conversation, right-aligned,
- * which is the question actually asked of this list: not what a row is, but
- * which of four similarly-named chats is the one from this afternoon.
+ * It was a tree of every project, each folded open or shut, with a shut
+ * project saying what was inside it as a count. That is the wrong shape for
+ * what this app is for — several chats on several accounts at once — because
+ * the way somebody does that is to start a chat, fold its project away and
+ * start another, and a column of folded projects is a column that says almost
+ * nothing. The projects moved to the rail (`ProjectRail`), each icon carrying
+ * the one badge worth reading, and this column is the chats of the one picked:
+ * what needs somebody, what is running, and the rest — and at its foot, how
+ * much each account has left. `docs/design.md` § Projects and chats.
  */
-export function ProjectsSection() {
-  const collapsed = useProjects((state) => state.collapsed)
-  const toggleFolder = useProjects((state) => state.toggleFolder)
-
+export function ProjectsSection({ onAddFolder }: { onAddFolder: () => void }) {
   const folders = useStudio((state) => state.folders)
+  const branches = useStudio((state) => state.branches)
+  const activeFolderId = useProjects((state) => state.activeFolderId)
+  const showingUngrouped = useProjects((state) => state.ungrouped)
   const chats = useChats((state) => state.chats)
   const unsaved = useChats((state) => state.unsaved)
-  // Read here as well as in `ProjectChats` so a shut project can say what is
-  // happening inside it — see the `activity` prop on `ProjectRow`.
-  const sending = useChats((state) => state.sending)
-  const asks = useChats((state) => state.asks)
-  const unread = useChats((state) => state.unread)
 
   const listed = saved(chats, unsaved)
   const orphans = ungroupedChats(listed)
-  const ungroupedShut = collapsed.includes(UNGROUPED_ID)
+  // Only while there is something in it: the last ungrouped chat deleted leaves
+  // the column on the project rather than on an empty list with no `+`, and
+  // the rail stops drawing the icon that picked it.
+  const ungrouped = showingUngrouped && orphans.length > 0
+  // The active project, or the first one for an id that names nothing — the
+  // same fallback Explorer's `shownRoot` makes, so the two never disagree about
+  // which project is on screen.
+  const folder =
+    folders.find((entry) => entry.id === activeFolderId) ?? folders[0] ?? null
 
-  /**
-   * Which project the confirmation is up for. One dialog for the whole list
-   * rather than one per row: only ever one is open, and a dialog mounted inside
-   * a row is unmounted by the very removal it asked about.
-   */
-  const [removing, setRemoving] = useState<WorkspaceFolder | null>(null)
-  /** Which project is being renamed. One dialog for the whole list, for the
-   * reason above. */
-  const [renaming, setRenaming] = useState<WorkspaceFolder | null>(null)
-  /** Which template-made project is being moved to the Trash. */
-  const [trashing, setTrashing] = useState<WorkspaceFolder | null>(null)
-  /** A failed Trash or icon change, shown against the list: the confirmation
-   * that asked is gone by the time main answers, and there is no field here to
-   * correct anything in. */
-  const [failure, setFailure] = useState<string | null>(null)
-
-  /**
-   * One project's row.
-   *
-   * A function rather than a second component: every handler on it reaches the
-   * dialogs this section owns. `covered` is the chats the row answers for while
-   * it is shut.
-   */
-  function project(folder: WorkspaceFolder, covered: Chat[]) {
+  if (!ungrouped && !folder) {
     return (
-      <ProjectRow
-        name={folder.name}
-        folderId={folder.id}
-        path={folder.path}
-        shut={collapsed.includes(folder.id)}
-        // Only while it is shut: open, the chat rows underneath say this one at
-        // a time and in more detail, and a count repeating what is directly
-        // below it is a number somebody has to check against the rows to trust.
-        activity={
-          covered.length > 0 ? activityOf(covered, sending, asks) : null
-        }
-        // Shut only, for the same reason — open, the rows underneath each carry
-        // their own dot.
-        unread={unreadIn(covered, unread)}
-        onNewChat={() =>
-          void useChats.getState().create({ folderId: folder.id })
-        }
-        // Pointing the dock first is what makes the `+`'s own `add` open the
-        // shell here rather than in whichever project was clicked last.
-        onNewTerminal={() => {
-          const shells = useShells.getState()
-          shells.showFor(folder.id)
-          shells.add()
-        }}
-        onChangeIcon={() => {
-          setFailure(null)
-          void chooseProjectIcon(folder.id).catch((error: unknown) =>
-            setFailure(error instanceof Error ? error.message : String(error))
-          )
-        }}
-        onResetIcon={() => void resetProjectIcon(folder.id)}
-        onRename={() => setRenaming(folder)}
-        onRemove={() => setRemoving(folder)}
-        // Only what this app made: `template` is written by `createProject`
-        // alone, so an added folder never offers to be deleted.
-        onTrash={folder.template ? () => setTrashing(folder) : null}
-        onToggle={() => {
-          toggleFolder(folder.id)
-          // And the dock's shell follows: a project row is the one place this
-          // app says "this project", so a terminal that stayed in the last one
-          // would be a `pwd` nobody asked for. It does not open the dock — see
-          // `showFor`.
-          useShells.getState().showFor(folder.id)
-          // So does Explorer: this row is the app saying "this project", and
-          // the tree draws the one project being worked in.
-          useProjects.getState().setActive(folder.id)
-        }}
-      />
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          A project is a folder on this machine. Its chats run in it.
+        </p>
+        <Button size="sm" onClick={onAddFolder}>
+          <Plus />
+          Add project
+        </Button>
+      </div>
     )
   }
 
+  const own = ungrouped ? orphans : chatsOf(listed, folder!.id)
+
   return (
     <nav
-      aria-label="Projects"
+      aria-label="Chats"
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
+      {ungrouped ? (
+        <Header
+          title="Ungrouped"
+          caption="Chats whose project has left the workspace"
+        />
+      ) : (
+        <ProjectHeader folder={folder!} branch={branches[folder!.id] ?? null} />
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-1">
-        {folders.length === 0 && orphans.length === 0 && (
-          <p className="px-3 py-1 text-xs leading-relaxed text-muted-foreground">
-            No folders yet.
-          </p>
-        )}
-
-        {folders.map((folder) => {
-          const shut = collapsed.includes(folder.id)
-          return (
-            <div key={folder.id}>
-              {project(folder, shut ? chatsOf(listed, folder.id) : [])}
-              {!shut && <ProjectChats folderId={folder.id} />}
-            </div>
-          )
-        })}
-
-        {/*
-          Last, and only when there is something in it: an empty `Ungrouped`
-          would be a row explaining a situation nobody is in.
-        */}
-        {orphans.length > 0 && (
-          <div>
-            <ProjectRow
-              name="Ungrouped"
-              folderId={null}
-              path={null}
-              shut={ungroupedShut}
-              // A chat here has nowhere to run its next turn, so it is never
-              // one of the ones answering, and so never one that has answered.
-              activity={null}
-              unread={0}
-              // No `+`: it needs a project, and this row names the absence of
-              // one.
-              onNewChat={null}
-              onNewTerminal={null}
-              onChangeIcon={null}
-              onResetIcon={null}
-              onRename={null}
-              onRemove={null}
-              onTrash={null}
-              onToggle={() => toggleFolder(UNGROUPED_ID)}
-            />
-            {!ungroupedShut && <ProjectChats folderId={null} />}
-          </div>
-        )}
+        <Sections chats={own} />
       </div>
 
-      <AlertDialog
-        open={removing !== null}
-        onOpenChange={(next) => {
-          if (!next) setRemoving(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this project?</AlertDialogTitle>
-            {/*
-              The same sentence Explorer's own dialog says: this is the same
-              call, and a second wording would leave somebody comparing the two
-              to work out whether their repository is at stake.
-            */}
-            <AlertDialogDescription>
-              The folder stays on disk.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (removing)
-                  void useStudio.getState().removeFolder(removing.id)
-                setRemoving(null)
-              }}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={trashing !== null}
-        onOpenChange={(next) => {
-          if (!next) setTrashing(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Move “{trashing?.name}” to the Trash?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              The folder goes to the Trash with everything in it, and its chats
-              are deleted. Its terminals are closed first.
-            </AlertDialogDescription>
-            <p className="truncate font-mono text-xs text-muted-foreground">
-              {trashing?.path}
-            </p>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                const target = trashing
-                setTrashing(null)
-                if (!target) return
-                setFailure(null)
-                // A shell whose cwd is inside it holds the directory open, and
-                // Windows refuses to move it. Main retries while the ptys end.
-                const shells = useShells.getState()
-                for (const shell of shells.shells) {
-                  if (shell.folderId === target.id) shells.close(shell.id)
-                }
-                void useStudio
-                  .getState()
-                  .trashProject(target.id)
-                  .then(() => useChats.getState().refresh())
-                  .catch((error: unknown) =>
-                    setFailure(
-                      error instanceof Error
-                        ? error.message.replace(
-                            /^Error invoking remote method '[^']+': (?:Error: )?/,
-                            ""
-                          )
-                        : String(error)
-                    )
-                  )
-              }}
-            >
-              Move to Trash
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {renaming && (
-        <RenameDialog
-          title="Rename project"
-          label="Project name"
-          currentName={renaming.name}
-          onRename={async (name) => {
-            try {
-              await useStudio.getState().renameFolder(renaming.id, name)
-              return null
-            } catch (error) {
-              return error instanceof Error
-                ? error.message
-                : "Could not rename that project."
-            }
-          }}
-          onClose={() => setRenaming(null)}
-        />
-      )}
-
-      {/* Under the list rather than in a toast: a refusal is about one of the
-          rows above, and it stays until the next attempt or until it is shut. */}
-      {failure && (
-        <div className="flex shrink-0 items-start gap-1 border-t bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
-          <p className="min-w-0 flex-1">{failure}</p>
-          <IconButton
-            label="Dismiss"
-            onClick={() => setFailure(null)}
-            className="size-5 shrink-0"
-          >
-            <X className="size-3" />
-          </IconButton>
-        </div>
-      )}
+      <ProjectFailure />
+      <AccountsFooter />
     </nav>
   )
 }
 
-/**
- * The `Ungrouped` row's key in `collapsed`.
- *
- * A sentinel among folder ids, which are uuids, so it cannot collide with one.
- * Folding it is remembered the same way a real project's is — the store keeps a
- * list of strings and has no opinion about which of them name folders.
- */
-const UNGROUPED_ID = "ungrouped"
-
-/**
- * The pill an active row is drawn as, in this section only.
- *
- * `SideRow` is full-bleed with a bar down its left edge, which is right for the
- * Explorer's tree and for the three panel lists: those are dense, and a row that
- * inset itself would break the alignment of the guides beside it. This column is
- * not that — it holds a dozen rows with the whole height to themselves — and the
- * shape it wants is Conductor's, a rounded block sitting inside the column with
- * air around it. Overriding at the call site rather than adding a variant to
- * `SideRow`, since one section wanting a different shape is not yet a second
- * kind of row; if a second section asks for it, that is when it becomes one.
- *
- * The inset is `px-1` on the scrolling list rather than a margin on each row,
- * and that is not a matter of taste: a row given `w-auto` to make room for the
- * margin stops being `w-full`, so it sizes to its content, so `truncate` on the
- * title inside it never has a width to truncate against. What that looked like
- * was a column of clipped titles and a horizontal scrollbar under the list.
- */
-const PILL = "rounded-md"
-const PILL_ACTIVE = "shadow-none"
-
-/**
- * One project: the folder's name, a `+` that starts a chat in it, and a menu
- * offering the same.
- *
- * The `+` is Conductor's, and it belongs on the row rather than in a header
- * above the list: it acts on *this* project. `onNewChat` is nullable for the
- * one row that is not a project — see `UNGROUPED_ID`.
- */
-function ProjectRow({
-  name,
-  folderId,
-  path,
-  shut,
-  activity,
-  unread,
-  onToggle,
-  onNewChat,
-  onNewTerminal,
-  onChangeIcon,
-  onResetIcon,
-  onRename,
-  onRemove,
-  onTrash,
+/** A column header: a title, a line under it, and whatever acts on it. */
+function Header({
+  title,
+  caption,
+  children,
 }: {
-  name: string
-  /** Whose icon this row draws. Null for `Ungrouped`, which has none. */
-  folderId: string | null
-  /** The project's directory, for `Copy path` and `Reveal` — which used to be
-   * the title bar crumb's menu, and belong on the row that names the project.
-   * Null for `Ungrouped`, which is no directory. */
-  path: string | null
-  shut: boolean
-  /**
-   * What is happening in this project's chats, or null when the row is not the
-   * one saying so.
-   *
-   * The whole of the argument for it is that a project is normally shut: this
-   * app is for running several chats at once, and the way somebody does that is
-   * by starting one here, folding it away, and starting another somewhere else.
-   * Without this the column goes completely still while three turns are
-   * running, and the only thing that ever said otherwise was a notification —
-   * which by design does not fire while the window is focused.
-   */
-  activity: ChatActivity | null
-  /**
-   * How many of this project's chats have answered since anybody looked, or 0
-   * when the row is not the one saying so.
-   *
-   * Beside `activity` rather than inside it: `ChatActivity` counts what is
-   * *happening*, and a chat that has something unread in it is one where
-   * nothing is happening any more.
-   */
-  unread: number
-  onToggle: () => void
-  onNewChat: (() => void) | null
-  /** Opens a shell in this project's directory, in the dock. Clicking the row
-   * no longer starts one, so this is the way to ask for it by name. Null for
-   * `Ungrouped`, which is no directory. */
-  onNewTerminal: (() => void) | null
-  /** Asks for a picture to draw instead of the favicon or the folder, and
-   * forgets it again. Null on the rows with no icon to change. */
-  onChangeIcon: (() => void) | null
-  onResetIcon: (() => void) | null
-  /** Asks for a new name — the dialog is the section's, like `onRemove`'s.
-   * Null for `Ungrouped`, whose name is not anybody's to change. */
-  onRename: (() => void) | null
-  /**
-   * Asks to take this project out of the workspace. It only asks — the
-   * confirmation and the call itself are the section's, since a dialog owned by
-   * a row would be unmounted by the removal it is confirming. Nullable for the
-   * same row the other two are.
-   */
-  onRemove: (() => void) | null
-  /**
-   * Asks to move this project's directory to the Trash, or null for every
-   * project this app did not make from a template — which is most of them, and
-   * is the point: a second prop rather than a flag on `onRemove`, since one
-   * forgets a folder and the other deletes a directory.
-   */
-  onTrash: (() => void) | null
+  title: string
+  caption: string
+  children?: ReactNode
 }) {
-  // Open and shut rather than one mark rotated: a folder is the thing being
-  // drawn, and its two states are two glyphs rather than two angles.
-  const Mark = shut ? Folder : FolderOpen
-  // The project's own icon — the one chosen for it, or its source's favicon —
-  // says which project this is faster than its name does.
-  const favicon = useProjectIcon(folderId)
-
-  const running = activity !== null && isRunning(activity)
-  // Only where the row has nothing more immediate to say. A project with a turn
-  // running is already drawing that, and it outranks news of one that finished.
-  const news = !running && unread > 0
-
-  const row = (
-    <div className="group/project relative flex items-center">
-      <SideRow
-        onClick={onToggle}
-        title={
-          running
-            ? `${name} — ${activityTitle(activity)}`
-            : news
-              ? `${name} — ${unread} answered since you last looked`
-              : name
-        }
-        className={cn(PILL, "font-medium text-foreground")}
-      >
-        {/*
-          Open and shut, said once for every row. The folder used to say it by
-          itself, but a project's own picture cannot — so the chevron carries
-          it, on the rows with no picture too, or the column would line up two
-          ways. Pulled into the row's inset so the icon moves as little as it
-          can: the chats underneath are indented against it.
-        */}
-        <ChevronRight
-          aria-hidden
-          className={cn(
-            "-ml-2 size-3 shrink-0 text-muted-foreground transition-transform",
-            !shut && "rotate-90"
-          )}
-        />
-        {favicon ? (
-          <img
-            src={favicon}
-            alt=""
-            draggable={false}
-            // Never dimmed: the chevron says open or shut, and a project's own
-            // colours are what make it recognisable at a glance.
-            className="size-4 shrink-0 rounded-sm object-contain"
-          />
-        ) : (
-          <Mark
-            className={cn(
-              "size-4 shrink-0",
-              // The open folder takes the section's own hue, which is what marks
-              // the project being worked in from the ones merely listed. A shut
-              // one is furniture and drawn as furniture.
-              shut ? "text-muted-foreground" : "text-primary"
-            )}
-          />
-        )}
-        <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-
-        {/*
-          The count, at the end the chat rows put their age at, so a shut
-          project and its chats line up on the same right edge.
-
-          `invisible` on hover rather than gone, and for the same reason the
-          Changes list hides its counts that way: the row's buttons are
-          positioned over this exact spot, and a count that unmounted would
-          let the project name reflow as the pointer arrived.
-        */}
-        {running && (
-          <span
-            aria-hidden
-            className={cn(
-              "shrink-0 text-[0.6875rem] tabular-nums transition-opacity group-hover/project:invisible",
-              // Waiting takes the hue, because waiting is the half that is
-              // somebody's to act on. Working is furniture — it will finish
-              // whether or not anybody is looking at it.
-              activity.waiting > 0
-                ? "font-medium text-primary"
-                : "text-muted-foreground"
-            )}
-          >
-            {activityLabel(activity)}
-          </span>
-        )}
-        {/* The spinner is what makes it read as *now* rather than as a badge
-            counting something. Only for the working half: a chat stopped on a
-            question is the opposite of moving. */}
-        {running && activity.waiting === 0 && (
-          <Spinner className="size-3 shrink-0 text-muted-foreground group-hover/project:invisible" />
-        )}
-        {running && activity.waiting > 0 && (
-          <ShieldQuestion className="size-3 shrink-0 animate-pulse text-primary group-hover/project:invisible" />
-        )}
-
-        {/*
-          And the same pair for a project that has been answered in while it was
-          shut, in the same two slots — the count where the count goes, the mark
-          where the spinner goes. Not animated: this is news that has already
-          happened, and a pulse would make a finished chat read as a running one.
-        */}
-        {news && (
-          <>
-            <span
-              aria-hidden
-              className="shrink-0 text-[0.6875rem] font-medium text-muted-foreground tabular-nums transition-opacity group-hover/project:invisible"
-            >
-              {unread}
-            </span>
-            <span
-              aria-hidden
-              className="size-1.5 shrink-0 rounded-full bg-primary group-hover/project:invisible"
-            />
-          </>
-        )}
-      </SideRow>
-
-      {/*
-        Over the row rather than in it: a row is a button, and a button
-        inside a button is neither valid markup nor clickable. Shown on
-        hover, like the ✕ on a tab — a column of projects each wearing a
-        permanent `+` is a column of plus signs.
-      */}
-      {onNewChat && (
-        <div className="absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/project:opacity-100 focus-within:opacity-100">
-          <IconButton
-            label={`New chat in ${name}`}
-            onClick={onNewChat}
-            className="size-5"
-          >
-            <Plus className="size-3" />
-          </IconButton>
-        </div>
-      )}
-    </div>
-  )
-
-  // A menu whose only item would be missing is no menu: `Ungrouped` right-clicks
-  // to nothing rather than to an empty box.
-  if (!onNewChat) return row
-
   return (
-    <ContextMenu>
-      <ContextMenuTrigger render={row} />
-      <ContextMenuContent className="w-52">
-        <ContextMenuItem onClick={onNewChat}>
-          <MessageSquare className="text-muted-foreground" />
-          New chat here
-        </ContextMenuItem>
-        {onNewTerminal && (
-          <ContextMenuItem onClick={onNewTerminal}>
-            <SquareTerminal className="text-muted-foreground" />
-            New terminal here
-          </ContextMenuItem>
-        )}
-        {onRename && (
-          <ContextMenuItem onClick={onRename}>
-            <Pencil className="text-muted-foreground" />
-            Rename…
-          </ContextMenuItem>
-        )}
-        {path && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={() => void navigator.clipboard.writeText(path)}
-            >
-              <ClipboardCopy className="text-muted-foreground" />
-              Copy path
-            </ContextMenuItem>
-            <ContextMenuItem
-              onClick={() => void window.desktop.revealPath(path)}
-            >
-              <ExternalLink className="text-muted-foreground" />
-              Reveal in file manager
-            </ContextMenuItem>
-          </>
-        )}
-        {onChangeIcon && onResetIcon && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={onChangeIcon}>
-              <ImageIcon className="text-muted-foreground" />
-              Change icon…
-            </ContextMenuItem>
-            <ContextMenuItem onClick={onResetIcon}>
-              <ImageOff className="text-muted-foreground" />
-              Reset icon
-            </ContextMenuItem>
-          </>
-        )}
-        {(onRemove || onTrash) && (
-          <>
-            <ContextMenuSeparator />
-            {/* "Remove", not "Delete": the directory is the user's own and
-                stays where it is — only the workspace forgets it. */}
-            {onRemove && (
-              <ContextMenuItem variant="destructive" onClick={onRemove}>
-                <Trash2 />
-                Remove project
-              </ContextMenuItem>
-            )}
-            {/* The one item here that is a deletion, said so: last, below the
-                one that only forgets, and only on a directory this app made
-                from a template. */}
-            {onTrash && (
-              <ContextMenuItem variant="destructive" onClick={onTrash}>
-                <Trash2 />
-                Move to Trash…
-              </ContextMenuItem>
-            )}
-          </>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
+    <div className="flex shrink-0 items-center gap-2 border-b py-2 pr-2 pl-3">
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-[0.8125rem] font-semibold">{title}</h2>
+        <p className="truncate text-[0.6875rem] text-muted-foreground">
+          {caption}
+        </p>
+      </div>
+      {children}
+    </div>
   )
 }
 
-/** How many of a project's chats are listed before `View all`. A project with
- * months of chats in it otherwise pushes every project below it off the column. */
+/**
+ * The picked project: its name, where it is and what is checked out, a `+`
+ * for a chat in it, and its menu — the same items its icon in the rail
+ * right-clicks to.
+ */
+function ProjectHeader({
+  folder,
+  branch,
+}: {
+  folder: WorkspaceFolder
+  branch: string | null
+}) {
+  return (
+    <Header
+      title={folder.name}
+      caption={[tildePath(folder.path), branch].filter(Boolean).join(" · ")}
+    >
+      <Button
+        size="xs"
+        onClick={() => void useChats.getState().create({ folderId: folder.id })}
+        title={`New chat in ${folder.name}`}
+      >
+        <Plus />
+        Chat
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <IconButton label="Project" side="bottom" className="size-6">
+              <MoreHorizontal />
+            </IconButton>
+          }
+        />
+        <DropdownMenuContent align="end" className="w-52">
+          <ProjectMenuItems
+            folder={folder}
+            Item={DropdownMenuItem}
+            Separator={DropdownMenuSeparator}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Header>
+  )
+}
+
+/** `/Users/me/work/app` as `~/work/app`, which is what fits a header. The home
+ * directory is read off the path itself — the renderer cannot ask for it. */
+function tildePath(path: string): string {
+  return path.replace(/^\/(?:Users|home)\/[^/]+(?=\/|$)/, "~")
+}
+
+/** How many of the `Recent` chats are listed before `View all`. A project
+ * with months of chats otherwise pushes the accounts off the column. */
 const CHAT_LIMIT = 20
 
 /**
- * One project's chats, newest first — a chat just started is the top row.
- *
- * The row is the chat's **title**, which is the first thing that was asked in
- * it (`"Untitled"` until there is one). Listed here rather than only in the tab
- * strip because the strip holds what is open in *this* run: a chat is written
- * down as it happens, and the column is where one from last week is found
- * again.
- *
- * `folderId` is null for the `Ungrouped` group, which is the one list here whose
- * rows move nothing else when clicked: there is no project to point the shell
- * and the tree at, and pointing them at whichever project was last active would
- * be this app guessing.
+ * The project's chats in their three sections — see `columnSections`. A
+ * section with nothing in it draws nothing, and `Recent` loses its label when
+ * it is the only section there is, since a label over the whole list names
+ * nothing.
  */
-function ProjectChats({ folderId }: { folderId: string | null }) {
-  /** One level under the project row that holds them. */
-  const indent = 1
-  const chats = useChats((state) => state.chats)
-  const unsaved = useChats((state) => state.unsaved)
-  const selectedId = useChats((state) => state.selectedId)
+function Sections({ chats }: { chats: Chat[] }) {
   const sending = useChats((state) => state.sending)
-  // Which chats are stopped on a question — see the note in `tab-items.tsx`
-  // about why that is not the same thing as one that is working.
   const asks = useChats((state) => state.asks)
-  // Which have answered since anybody looked — see `lib/chat/unread.ts`.
   const unread = useChats((state) => state.unread)
-  const select = useChats((state) => state.select)
-  const remove = useChats((state) => state.remove)
-  const rename = useChats((state) => state.rename)
-  const chatMenuItems = usePlugins((state) => state.chatMenuItems)
-
-  /** Which chat's name is a field right now. In place, the way every other
-   * sidebar in the studio renames — see `RenameRow`. */
-  const [renamingId, setRenamingId] = useState<string | null>(null)
-  /** Which chat the delete confirmation is up for. Here rather than on the
-   * row, for the reason `removing` is on the section: a dialog inside the row
-   * would be unmounted by the deletion it is confirming. */
-  const [deleting, setDeleting] = useState<Chat | null>(null)
-  const menuFocus = useMenuFocusHandoff()
-
-  /** Whether the list runs past `CHAT_LIMIT`. Per project and in memory: a
-   * column that remembered which lists were opened would reopen long. */
+  const selectedId = useChats((state) => state.selectedId)
   const [showAll, setShowAll] = useState(false)
 
-  const listed = saved(chats, unsaved)
-  const own = folderId ? chatsOf(listed, folderId) : ungroupedChats(listed)
-  if (own.length === 0) return null
+  if (chats.length === 0) {
+    return (
+      <p className="px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+        No chats yet. Start one with the button above.
+      </p>
+    )
+  }
 
-  const hidden = own.length - CHAT_LIMIT
-  const shown = showAll || hidden <= 0 ? own : own.slice(0, CHAT_LIMIT)
-  // The selected chat stays in the list even past the cut: a chat picked from
-  // the tab strip with no row lit for it reads as the column having lost it.
-  const selected = own.find((chat) => chat.id === selectedId)
+  const { needsYou, running, recent } = columnSections(
+    chats,
+    sending,
+    asks,
+    unread
+  )
+  const hidden = recent.length - CHAT_LIMIT
+  const shown = showAll || hidden <= 0 ? recent : recent.slice(0, CHAT_LIMIT)
+  // The selected chat stays listed past the cut: a chat picked from the tab
+  // strip with no row lit for it reads as the column having lost it.
+  const selected = recent.find((chat) => chat.id === selectedId)
   const rows =
     selected && !shown.includes(selected) ? [...shown, selected] : shown
+  const alone = needsYou.length === 0 && running.length === 0
 
   return (
     <>
-      {rows.map((chat) => {
-        const isSending = sending.includes(chat.id)
-        const isWaiting = asks[chat.id] !== undefined
-        // Third in the same precedence the other two keep: a chat with
-        // something unread in it is, by the rule that marked it, one that has
-        // stopped working — so this can never be true beside the spinner.
-        const isUnread = unread[chat.id] === true
-
-        // Outside the menu while it is a field: a right-click on a text field
-        // belongs to the field, not to the row it stands in for.
-        if (renamingId === chat.id) {
-          return (
-            <RenameRow
-              key={chat.id}
-              name={chat.title}
-              indent={indent}
-              label="Chat name"
-              onRename={async (name) => {
-                rename(chat.id, name)
-                setRenamingId(null)
-                return null
-              }}
-              onCancel={() => setRenamingId(null)}
-            />
-          )
-        }
-
-        return (
-          <ContextMenu key={chat.id}>
-            <ContextMenuTrigger
-              render={
-                <SideRow
-                  indent={indent}
-                  active={selectedId === chat.id}
-                  title={
-                    isWaiting
-                      ? `${chat.title} — waiting for your answer`
-                      : isUnread
-                        ? `${chat.title} — answered since you last looked`
-                        : chat.title
-                  }
-                  // `text-foreground` because a chat's title is the content of
-                  // this list rather than a label over it — the muted default
-                  // is right for a tree of filenames and wrong for a dozen
-                  // sentences somebody is reading to pick between.
-                  className={cn(
-                    PILL,
-                    "text-foreground",
-                    selectedId === chat.id && PILL_ACTIVE
-                  )}
-                  onClick={() => {
-                    select(chat.id)
-                    // The shell and the tree follow, the way a project row moves
-                    // them: a chat editing this project with a terminal pointed
-                    // at another one is a trap, not an inconvenience. Nothing to
-                    // follow for an ungrouped chat — see the note above.
-                    if (!folderId) return
-                    useShells.getState().showFor(folderId)
-                    useProjects.getState().setActive(folderId)
-                  }}
-                >
-                  {/* Waiting wins over working: both are true while an ask is
-                      up, and only one of them is something to do. */}
-                  {isWaiting ? (
-                    <ShieldQuestion className="size-3 shrink-0 animate-pulse text-primary" />
-                  ) : isSending ? (
-                    <Spinner className="size-3 shrink-0 text-muted-foreground" />
-                  ) : (
-                    isUnread && (
-                      // A dot in the slot the other two marks use, so the
-                      // titles down the column stay on one left edge — a row
-                      // that indented itself only when it had news would make
-                      // the list ripple as chats finished.
-                      <span
-                        aria-hidden
-                        className="size-1.5 shrink-0 rounded-full bg-primary"
-                      />
-                    )
-                  )}
-                  <span
-                    className={cn(
-                      "min-w-0 flex-1 truncate text-left",
-                      // Unread is the one state that says something about the
-                      // *content* of the row rather than about a process beside
-                      // it, so the title itself carries it. Weight rather than
-                      // hue: the hue is spoken for by the shield, and a column
-                      // where the news is a second colour is a column read by
-                      // colour.
-                      isUnread && "font-medium",
-                      // The transcript's `Working…` light over the title, so
-                      // the row says it in words as well as in the mark.
-                      isSending && !isWaiting && "text-shimmer"
-                    )}
-                  >
-                    {chat.title}
-                  </span>
-                  {/*
-                    `tabular-nums` so `9h` and `23h` end on the same pixel: a
-                    right-aligned column that shifts by a digit reads as the
-                    list twitching when a chat is answered.
-                  */}
-                  <span className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
-                    {since(chat.updatedAt)}
-                  </span>
-                </SideRow>
-              }
-            />
-            <ContextMenuContent
-              className="w-52"
-              // Rename hands focus to the field it opens — see
-              // `useMenuFocusHandoff`.
-              finalFocus={menuFocus.finalFocus}
-            >
-              <ContextMenuItem
-                onClick={() => {
-                  menuFocus.handOff()
-                  setRenamingId(chat.id)
-                }}
-              >
-                <Pencil />
-                Rename
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              {/* What plugins add — the transcript as a document is the
-                  built-in `chat-export` plugin's (`plugins/chat-export/`). */}
-              {chatMenuItems.length > 0 && (
-                <>
-                  {chatMenuItems.map((item) => {
-                    const Icon = PLUGIN_ICON_COMPONENTS[item.icon]
-                    return (
-                      <ContextMenuItem
-                        key={item.id}
-                        onClick={() => void runChatMenuItem(item, chat.id)}
-                      >
-                        <Icon />
-                        {item.name}
-                      </ContextMenuItem>
-                    )
-                  })}
-                  <ContextMenuSeparator />
-                </>
-              )}
-              {/* The conversation is on disk, so this is the one way it goes —
-                  and there is no undo, which is why it asks. */}
-              <ContextMenuItem
-                variant="destructive"
-                onClick={() => setDeleting(chat)}
-              >
-                <Trash2 />
-                Delete chat…
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        )
-      })}
-      {hidden > 0 && (
-        <SideRow
-          indent={indent}
-          className={cn(PILL, "text-[0.6875rem]")}
-          onClick={() => setShowAll((all) => !all)}
-        >
-          <span className="min-w-0 flex-1 truncate text-left">
-            {showAll ? "Show less" : `View all (${own.length})`}
-          </span>
-        </SideRow>
+      {needsYou.length > 0 && (
+        <Section label="Needs you" tone="primary">
+          <ChatList chats={needsYou} />
+        </Section>
       )}
-      <AlertDialog
-        open={deleting !== null}
-        onOpenChange={(next) => {
-          if (!next) setDeleting(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
-            <AlertDialogDescription>
-              &ldquo;{deleting?.title}&rdquo; and everything said in it are
-              deleted from Vey Studio, and there is no undo.
-              {/* Said only when it is true: main kills a turn still running
-                  in a chat it deletes, and that is the one part of this that
-                  reaches past the transcript. */}
-              {deleting && sending.includes(deleting.id)
-                ? " It is still working, and the running turn is stopped."
-                : ""}{" "}
-              Files it changed in the project stay as they are.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (deleting) void remove(deleting.id)
-                setDeleting(null)
-              }}
+      {running.length > 0 && (
+        <Section label="Running">
+          <ChatList chats={running} />
+        </Section>
+      )}
+      {recent.length > 0 && (
+        <Section label={alone ? null : "Recent"}>
+          <ChatList chats={rows} />
+          {hidden > 0 && (
+            <SideRow
+              className="rounded-md text-[0.6875rem]"
+              onClick={() => setShowAll((all) => !all)}
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <span className="min-w-0 flex-1 truncate text-left">
+                {showAll ? "Show less" : `View all (${recent.length})`}
+              </span>
+            </SideRow>
+          )}
+        </Section>
+      )}
     </>
+  )
+}
+
+function Section({
+  label,
+  tone,
+  children,
+}: {
+  label: string | null
+  tone?: "primary"
+  children: ReactNode
+}) {
+  return (
+    <section className="mb-2 last:mb-0">
+      {label && (
+        <h3
+          className={cn(
+            "px-3 pt-1.5 pb-1 text-[0.625rem] font-medium tracking-wider uppercase",
+            tone === "primary" ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          {label}
+        </h3>
+      )}
+      {children}
+    </section>
   )
 }

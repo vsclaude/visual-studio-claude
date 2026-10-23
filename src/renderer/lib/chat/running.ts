@@ -9,16 +9,11 @@ import type { ChatActivity } from "@shared/chat-activity"
  * is easy to get wrong in two places at once, and neither way of getting it
  * wrong looks broken.
  *
- * The rule itself, the shape and the two labels live in
- * `@shared/chat-activity` — see the header there. Re-exported so this file is
+ * The rule itself and the shape live in `@shared/chat-activity` — see the
+ * header there. Re-exported so this file is
  * still the one place the sidebar asks about it.
  */
-export {
-  isRunning,
-  activityLabel,
-  activityTitle,
-  type ChatActivity,
-} from "@shared/chat-activity"
+export { type ChatActivity } from "@shared/chat-activity"
 
 /** The counts for one set of chats, read off the store. **Waiting wins over
  * working** — see `ChatActivity`. This is the same precedence the chat row

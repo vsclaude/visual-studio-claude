@@ -1800,6 +1800,18 @@ export type Chat = {
    * by `clear` and `edit`, which are the two things that make it a lie.
    */
   window?: ChatWindow
+  /**
+   * The plan limit this chat's last turn stopped on, until somebody sends to it
+   * again.
+   *
+   * On the listing rather than read off the transcript's last line, because the
+   * projects column has to say it for chats nobody has opened this run — and a
+   * chat stopped on a limit is the one that column exists to surface: it is
+   * stuck until somebody moves it to another account or waits for the reset.
+   * Written by `Chats.append` with the `limit` line, dropped by the next `user`
+   * line (which is the move or the wait being over) and by `clear` / `edit`.
+   */
+  limit?: { profileId: string | null } & ChatLimit
   createdAt: string
   updatedAt: string
 }
@@ -2094,6 +2106,13 @@ export type DesktopApi = {
    * what goes is the studio's record of it, which is all the studio ever had.
    */
   removeFolder: (id: string) => Promise<WorkspaceRecord>
+  /**
+   * Puts the workspace's folders in this order — the rail's icons, dragged.
+   * A folder the list does not name keeps its place after the named ones
+   * (`inOrder` in `shared/folder-order.ts`): a reorder is never how a project
+   * leaves the workspace.
+   */
+  reorderFolders: (ids: string[]) => Promise<WorkspaceRecord>
 
   /** Opens a folder picker and resolves with the chosen path, or null. */
   pickDirectory: () => Promise<string | null>
@@ -2980,6 +2999,7 @@ export const IPC = {
   trashProject: "workspace:trash-project",
   renameFolder: "workspace:rename-folder",
   removeFolder: "workspace:remove-folder",
+  reorderFolders: "workspace:reorder-folders",
   pickDirectory: "workspace:pick-directory",
   pickFiles: "workspace:pick-files",
   clipboardImagePath: "files:clipboard-image-path",

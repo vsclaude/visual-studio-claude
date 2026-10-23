@@ -615,9 +615,8 @@ function offCount(disabled: string[], server: McpServerInfo): number {
   ).length
 }
 
-/** A state in two words, coloured only where the colour means something.
- * Settings' Claude section draws an account's sign-in with the same badge. */
-export function StateBadge({
+/** A state in two words, coloured only where the colour means something. */
+function StateBadge({
   label,
   tone,
 }: {

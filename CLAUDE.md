@@ -98,8 +98,9 @@ imports may reach `electron`.
   delete somebody's saved connections. A **Claude profile's `CLAUDE_CONFIG_DIR`** is one of those workspace files —
   `workspace/claude-profiles/<slug>`, named by `claude-profiles.ts` because the
   renderer cannot see `VEYSTUDIO_DATA_DIR`, created by the `claude auth login` that
-  `IPC.claudeLogin` runs in a pty. Settings has no path field: a profile is a
-  name, and `saveClaudeProfiles` answers with the directory it was given.
+  `IPC.claudeLogin` runs in a pty. The Accounts foot has no path field: a
+  profile is a name, and `saveClaudeProfiles` answers with the directory it was
+  given.
 - **`daemon.ts` + `daemon-client.ts`** — ptys live in a detached, per-machine
   daemon over a Unix socket/named pipe with newline-delimited JSON.
   `TerminalManager.killAll()` is awaited on quit and nothing reattaches.
@@ -386,17 +387,40 @@ dialog`), not by hand. Vite's root is `src/renderer`, so `index.html` and
 
 The shape, in one pass: the **left column** (`workspace-sidebar.tsx`) shows
 either its sections or **Search** (`SidebarView` in `lib/projects.ts`, switched
-by the `NavRail`'s two buttons and `⇧⌘F`; `search-section.tsx`). Its sections are
+by picking a project in the `NavRail`, its Search button and `⇧⌘F`;
+`search-section.tsx`). Its sections are
 `Projects` and nothing else — `SIDEBAR_SECTIONS` in `lib/projects.ts` is
 the one line saying which sections are drawn, and the next to arrive is an id
 added to it. It stacked three once: the **Database and API panels are deleted**,
 and with them the panel windows they were the only users of, so there is one
 window again (`docs/design.md` § Database and API, removed).
-A project's rows say what is happening in them — a spinner, a shield for a chat
-stopped on a question, and a count on the project's own row **while it is shut**
-(`activityOf` in `lib/chat/running.ts`, tested; waiting wins over
-working, since both are true while a card is up). Out of the window, that is a
-notification — see `main/notify.ts`.
+**The projects are icons in the `NavRail`** (`project/project-rail.tsx`) and
+the column is **one project's chats** (`project/projects-section.tsx`) — there
+is no tree any more, and no `collapsed` / `toggleFolder` (`docs/design.md`
+§ Projects and chats has the argument, including the polish of the tree that
+was rejected). Picking an icon moves the column, Explorer and the dock's shell;
+picking the one showing hides the column. Its menu is `ProjectMenuItems`
+(`project-actions.tsx`), on the icon's right-click and the header's `…`, with
+one `ProjectDialogs` mounted by `studio.tsx`. The icons **drag to reorder**
+(and `Move up` / `Move down`), written as the manifest's folder order through
+`IPC.reorderFolders` — `inOrder` / `moveId` in `shared/folder-order.ts`
+(`test/folder-order.ts`). The column is a header (name,
+path, branch, `+ Chat`), the chats in **Needs you / Running / Recent**
+(`columnSections` in `lib/chat/column.ts`, tested), and an **Accounts** foot —
+each account's five-hour bar and the credits left (`project/accounts.tsx`),
+resizable by its top edge and folded by its heading,
+and where accounts are added, signed in, renamed and removed: **there is no
+Settings › Claude** any more, and its commit-draft row is under Chats.
+Each row is its title and one state, `chatStateOf` — no avatar ahead of
+the title, which was tried and taken off:
+waiting over working over **limited** over unread. Limited is
+`Chat.limit`, written on the listing by `Chats.append` with the `limit` line
+and cleared by the next main-loop `user` line, `clear` or `edit`; such a chat is
+a card with **`Continue with …`** (`continueTarget`, tested), which moves it
+to the first other account with room and sends `Continue.`. A project's icon
+carries one badge (`railBadgeOf`). The system bar still counts every chat with
+`activityOf`. Out of the window, that is a notification — see
+`main/notify.ts`.
 Those all say what is happening **now** and go dark together, so a chat that has
 answered while somebody was reading another one is marked **unread** — a dot and
 a heavier title on the row and on the tab, off `marksUnread` in
@@ -433,12 +457,12 @@ taking a key that belongs to CodeMirror everywhere else.
 The **right-hand panel** is Explorer, with `All files` and `Git` tabs, and it
 is the whole height of its column. The window is a **canvas with cards**: a
 full-width title bar (`WindowTitleBar` — no crumb, a centred `Run a command`
-field for the palette), then the `NavRail` (projects toggle with the activity
-dot, Search, Terminal, Settings), the projects column, the pane + dock and the
+field for the palette), then the `NavRail` (the projects, then Search,
+Terminal, Settings), the chats column, the pane + dock and the
 Explorer, each a card (`CARD`, an inward outline so collapsed sizes stay exact)
 with the gaps as resize handles (`Gap`). **Explorer collapses to a 36px rail**
 (`explorer-rail.tsx`, `RAIL_WIDTH`), the same bargain the dock's strip makes;
-the **projects column collapses to nothing**, since the rail's first button is
+the **chats column collapses to nothing**, since the projects in the rail are
 its way back. A rail is **positioned, not laid out**: it takes none of its
 column's width, and the one row it lands on leaves the room (`pr-11` on
 Explorer's header). A shut column is hidden rather than squeezed and never
@@ -462,7 +486,7 @@ signal the `Changes` list is, so a commit in the dock's shell lands without
 Refresh. **There are no comments on a diff** — the `+` column, the
 threads, the `Comments` tab and the badges are deleted (`docs/design.md`
 § Comments, removed); nothing reads `workspace/review.json` any more.
-A project's chat list shows the newest **20** (`CHAT_LIMIT` in
+A project's `Recent` chats show the newest **20** (`CHAT_LIMIT` in
 `projects-section.tsx`) and a `View all` row; the selected chat stays listed
 past the cut.
 
@@ -574,6 +598,8 @@ own `ChatNotices` (`test/notify.ts`),
 `lib/chat/tool-row.ts` — a tool call as `verb · object · outcome`,
 and an open fold's rows with like calls merged (`test/tool-row.ts`),
 `lib/chat/unread.ts` (`test/chat-unread.ts`),
+`lib/chat/column.ts` — the projects column's sections, states, rail badges
+and `Continue with …` target (`test/chat-column.ts`),
 `lib/chat/credits-refusal.ts` — which failed turns are drawn as a way to buy
 credits rather than as an error line (`test/credits-refusal.ts`), with
 `shared/credits.ts`'s `creditsLeft`, the share every credits bar empties by

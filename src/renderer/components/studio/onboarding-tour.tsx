@@ -193,7 +193,7 @@ const STEPS: Step[] = [
   {
     target: "projects",
     title: "Your projects",
-    body: "The folders this workspace points at, with the chats in each one underneath. This button opens and shuts the column; a dot on it means a chat is working while it is shut.",
+    body: "One icon per folder this workspace points at. Pick one and the column beside it lists its chats; pick it again to hide the column. A number on an icon is chats waiting on you, a spinner is one working.",
   },
   {
     target: "palette",

@@ -40,6 +40,7 @@ const api: DesktopApi = {
   trashProject: (folderId) => ipcRenderer.invoke(IPC.trashProject, folderId),
   renameFolder: (id, name) => ipcRenderer.invoke(IPC.renameFolder, id, name),
   removeFolder: (id) => ipcRenderer.invoke(IPC.removeFolder, id),
+  reorderFolders: (ids) => ipcRenderer.invoke(IPC.reorderFolders, ids),
 
   pickDirectory: () => ipcRenderer.invoke(IPC.pickDirectory),
   pickFiles: (directory) => ipcRenderer.invoke(IPC.pickFiles, directory),

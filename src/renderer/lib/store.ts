@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import type { WorkspaceFolder } from "@shared/api"
+import { inOrder, moveId } from "@shared/folder-order"
 import { isStringArray, recall, remember } from "./tab-memory"
 import type { Section } from "./sections"
 import * as repo from "./workspace"
@@ -230,6 +231,13 @@ type StudioState = {
   renameFolder: (id: string, name: string) => Promise<void>
   /** Drops a folder from the workspace. The directory itself is untouched. */
   removeFolder: (id: string) => Promise<void>
+  /**
+   * Moves a folder to `index` in the list — the rail's drag and its
+   * `Move up` / `Move down`. Drawn at once and written after, like a rename:
+   * an icon that only moved once a file had been written would snap back under
+   * the pointer for the length of the write.
+   */
+  moveFolder: (id: string, index: number) => Promise<void>
 }
 
 /**
@@ -407,6 +415,24 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async removeFolder(id) {
       prune((await repo.removeFolder(id)).folders)
+    },
+
+    async moveFolder(id, index) {
+      const { folders } = get()
+      const ids = moveId(
+        folders.map((folder) => folder.id),
+        id,
+        index
+      )
+      set({ folders: inOrder(folders, ids) })
+      try {
+        set({ folders: (await repo.reorderFolders(ids)).folders })
+      } catch (error) {
+        // Back to what is on disk, which is the order that will come back on
+        // the next launch anyway.
+        console.error("Could not reorder the projects", error)
+        set({ folders: (await repo.getWorkspace()).folders })
+      }
     },
   }
 })

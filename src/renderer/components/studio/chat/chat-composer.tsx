@@ -1449,8 +1449,8 @@ function PermissionMenu({
  * Drawn only once a profile exists (see `ChatComposer`): with none configured
  * the only choice is "this account", which is not a choice, and a fourth
  * toolbar button that always says the same thing is one nobody asked for.
- * Adding, naming and pointing a profile at a directory is Settings' own —
- * `SettingsDialog`'s Claude section — this is only the picker.
+ * Adding, naming and signing a profile in is the projects column's Accounts
+ * foot (`project/accounts.tsx`) — this is only the picker.
  *
  * **Each row says which account it actually is**, because a name somebody typed
  * is not one: "Claude Hùng" beside "Claude Personal" tells you nothing about

@@ -33,8 +33,8 @@ const SETUP_DOCS = "https://docs.claude.com/en/docs/claude-code/setup"
  * Whether this machine has a `claude` to chat with, asked once at launch.
  *
  * The login is read through `useClaudeProfiles` under the default directory's
- * key rather than held here, so Settings › Claude and the login dialog's own
- * re-check land on the same answer this screen is waiting for.
+ * key rather than held here, so the column's Accounts foot and the login
+ * dialog's own re-check land on the same answer this screen is waiting for.
  */
 export function useClaudeSetup(): {
   step: SetupStep
@@ -546,7 +546,8 @@ function SignInStep({ versions }: { versions: ClaudeVersions | undefined }) {
         that account.
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        More accounts can be added later in Settings › Claude.
+        More accounts can be added later under Accounts, at the foot of the
+        chats column.
       </p>
     </>
   )

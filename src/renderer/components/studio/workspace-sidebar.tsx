@@ -1,11 +1,8 @@
-import { Plus } from "lucide-react"
-
 import {
   SIDEBAR_SECTIONS,
   useProjects,
   type SidebarSection,
 } from "@/lib/projects"
-import { IconButton } from "./icon-button"
 import { PanelHeader, type Fold } from "./panel-header"
 import { ProjectsSection } from "./project/projects-section"
 import { SearchSection } from "./search-section"
@@ -135,30 +132,11 @@ function Section({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {id === "projects" ? (
-        <>
-          {/* Projects has no panel component of its own to hand the fold to —
-              it is this column's own list — so its header is drawn here. */}
-          <PanelHeader title={TITLES.projects} {...fold}>
-            {/* The `+` every other section's header carries, doing the same
-                thing: `Add a database` opens that panel's dialog, this opens
-                the workbench's Add folder one — the same dialog the Explorer's
-                tree and the File menu ask for, because a project *is* a folder
-                in the workspace and two ways in that behaved differently would
-                be two ideas of what adding one means.
-
-                Only on the open header. A folded section is a header this
-                column draws instead, and a button that adds to a list nobody
-                can see is a button that answers nothing. */}
-            <IconButton label="Add project" onClick={onAddFolder}>
-              <Plus />
-            </IconButton>
-          </PanelHeader>
-          <div className="min-h-0 flex-1">
-            <ProjectsSection />
-          </div>
-        </>
-      ) : null}
+      {/* No `PanelHeader` over Projects any more: the column is one project's
+          chats, and its header is that project's — name, path, branch and a
+          `+` for a chat in it (`ProjectsSection`). Adding a project is the
+          `+` under the projects in the rail. */}
+      {id === "projects" ? <ProjectsSection onAddFolder={onAddFolder} /> : null}
     </div>
   )
 }

@@ -6,8 +6,8 @@ import type { ClaudeAccount, ClaudeProfile } from "@shared/api"
  * The workspace's `CLAUDE_CONFIG_DIR` profiles — see `ClaudeProfile`.
  *
  * A view of `store.ts`'s own file, the same relationship `useApi`'s
- * `environments` has to `environments.json`: this holds the list, Settings'
- * Claude section edits it, and the composer's profile picker reads it. Loaded
+ * `environments` has to `environments.json`: this holds the list, the projects
+ * column's Accounts foot edits it, and the composer's profile picker reads it. Loaded
  * once at launch (`studio.tsx`, beside `useChats.refresh`) rather than
  * per composer mount, since several chats' toolbars read the same list.
  */

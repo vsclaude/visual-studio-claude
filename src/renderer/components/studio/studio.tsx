@@ -33,6 +33,7 @@ import { useChats } from "@/lib/chat/store"
 import { badgeCount } from "@/lib/chat/unread"
 import { Dock } from "./dock"
 import { NavRail } from "./nav-rail"
+import { ProjectDialogs } from "./project/project-actions"
 import { WorkspaceSidebar } from "./workspace-sidebar"
 import { ChatPane } from "./chat/chat-pane"
 import { FileTree } from "./files/file-tree"
@@ -512,7 +513,10 @@ function Workbench() {
       <WindowTitleBar />
 
       <div className="flex min-h-0 flex-1 gap-1.5 px-1.5">
-        <NavRail onOpenSettings={() => setSettingsOpen(true)} />
+        <NavRail
+          onOpenSettings={() => setSettingsOpen(true)}
+          onAddFolder={() => setAdding(true)}
+        />
 
         <ResizablePanelGroup
           orientation="horizontal"
@@ -743,6 +747,9 @@ function Workbench() {
       <PluginNotices />
 
       {adding && <AddFolderDialog onClose={() => setAdding(false)} />}
+      {/* The project menus' confirmations — asked for from the rail and the
+          column's header both, so drawn here rather than by either. */}
+      <ProjectDialogs />
 
       {settingsOpen && (
         <SettingsDialog onClose={() => setSettingsOpen(false)} />

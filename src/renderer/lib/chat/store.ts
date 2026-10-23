@@ -343,7 +343,9 @@ type ChatState = {
    */
   answer: (chatId: string, answer: ChatAnswer) => void
   /** The model, effort and permission for one chat — the composer's toolbar. */
-  setOptions: (id: string, options: ChatOptions) => void
+  /** Resolves once the record has the options — what a caller that sends
+   * right after needs, since main reads the account off the record. */
+  setOptions: (id: string, options: ChatOptions) => Promise<void>
 
   /** Subscribes to turns. Called once from the workbench: a turn outlives the
    * pane being switched away from, and its lines have to land either way. */
@@ -895,11 +897,13 @@ export const useChats = create<ChatState>((set, get) => ({
 
     // Same as `rename`: nothing to write to yet, and `save` carries the toolbar
     // over with the chat. A model picked before the first message is kept.
-    if (get().unsaved.includes(id)) return
+    if (get().unsaved.includes(id)) return Promise.resolve()
 
-    void window.desktop.setChatOptions(id, options).catch((error: unknown) => {
-      console.error("Could not save that chat's options", error)
-    })
+    return window.desktop
+      .setChatOptions(id, options)
+      .catch((error: unknown) => {
+        console.error("Could not save that chat's options", error)
+      })
   },
 
   async syncBusy() {

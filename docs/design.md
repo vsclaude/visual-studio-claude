@@ -65,16 +65,17 @@ is a step in the Firebase console, not in this repository.
 ## The window
 
 A canvas with cards: a full-width title bar (a centred `Run a command` field
-that opens the palette, no crumb), then a 48px **`NavRail`**, the projects
-column, the pane with the dock under it, and the Explorer. The gaps between
+that opens the palette, no crumb), then a 48px **`NavRail`** — the projects
+at its head, the window's own buttons at its foot — the chats column, the pane
+with the dock under it, and the Explorer. The gaps between
 cards are the resize handles; a card's edge is an inward outline (`CARD`) so
 collapsed sizes stay exact.
 
 - **The left column** shows either its sections or **Search** (`SidebarView`,
   `⇧⌘F`). `SIDEBAR_SECTIONS` draws `Projects` and nothing else.
 - **The right column is the Explorer**, its whole height. `⌘B` closes it to a
-  36px rail; the projects column closes to nothing, since the rail's first
-  button is its way back.
+  36px rail; the chats column closes to nothing, since the projects in the
+  rail are its way back.
 - **The dock** is under the pane, spanning its width — not under the Explorer,
   where a 520px cap left a shell ~60 columns wide.
 - The current **branch** is at the head of the status bar along the bottom,
@@ -86,20 +87,91 @@ watches the checkout, and a pty taken out of the React tree ends.
 
 ## Projects and chats
 
-A project's rows are its **chats**; clicking one opens it and points the
-Explorer and the dock's shell at that project too. The `+` on a project row
-starts a chat. The list shows the newest 20 and a `View all` row. Each row carries its age (`since`, coarse: `9h`, `now`).
+**The projects are icons in the rail; the column is one project's chats.**
+Picking an icon (`ProjectRail`) moves the column, Explorer and the dock's
+shell to that project; picking the one already showing hides the column. Its
+menu — new chat, new terminal, rename, path, icon, remove, Trash — is on the
+icon's right-click and on the `…` in the column's header, written once
+(`ProjectMenuItems`), with the dialogs drawn by one `ProjectDialogs` the studio
+mounts. Chats whose project has left the workspace get an `Ungrouped` icon
+while there are any.
+
+The icons are **dragged to reorder**, and the menu's `Move up` / `Move down`
+do the same without a mouse (`moveFolder` in `lib/store.ts`). The order is the
+manifest's own folder order, written through `IPC.reorderFolders`; it is drawn
+at once and written after, like a rename. `inOrder` in
+`shared/folder-order.ts` (tested) keeps any folder the list does not name —
+one added from another window meanwhile — after the named ones, because a
+reorder must never be how a project leaves the workspace. `Ungrouped` is not
+a project and is not dragged.
+
+It was a **tree** of every project, each folded open or shut, a shut one
+saying what was inside it with a count (`2 · 1!`). That is the wrong shape for
+what this app is for — several chats on several accounts at once — because the
+way somebody runs several is to start a chat, fold its project away and start
+another, and a column of folded projects says almost nothing. A first attempt
+at fixing it inside the tree — a flat `Recent` view, a two-line row quoting the
+last reply, one unified status mark — was rejected by the user as changing
+nothing, and rightly: it polished the tree and kept its shape. The rail moves
+the projects out of the list, and gives the column room for what the tree never
+showed at all: **which account** each chat is spending, and **which account
+has anything left**.
+
+The column (`ProjectsSection`) is a header — the project's name, its path,
+its branch, `+ Chat` and the `…` — then the chats in three sections
+(`columnSections` in `lib/chat/column.ts`, tested):
+
+- **Needs you** — a question up, or a plan limit hit. Nothing moves in these
+  until somebody acts.
+- **Running** — what will finish whether or not anybody looks.
+- **Recent** — the rest, newest first by `createdAt` so nothing moves under
+  the cursor; the newest 20 and a `View all`. Its label is dropped when it is
+  the only section.
+
+Each row is the title, one state mark and its age (`since`, coarse: `9h`,
+`now`). It carried the **account's avatar** ahead of the title for a while — a
+letter in a hue per profile, the credits coin, a person for the user's own
+login — and the user had it taken off: an icon in front of every title is a
+column of icons to read past, and which account a chat runs on is its
+composer's toolbar. `AccountAvatar` stays on the Accounts foot, where it
+marks the account itself. At the column's foot,
+**every account** with its five-hour window as a bar and when it resets, and
+the credits left (`AccountsFooter`) — asked on mount and again whenever a turn
+ends, main holding a minute per account. It is also where accounts are added,
+signed in, renamed and removed; § Settings has why that left Settings.
+The foot is at most half the column, its list scrolling under a heading that
+stays put; its top edge drags, up to 90% of the column (the composer's
+handle — a double-click resets)
+and the heading folds it away, both kept in the settings bag
+(`accountsHeight`, `accountsCollapsed`). A dragged height is a **ceiling**,
+not a height, so a foot with fewer rows than when it was dragged never draws
+empty space under them.
+
+### A chat stopped on a plan limit
+
+Drawn as a card in `Needs you`: which limit, when it resets (counted down
+once a minute), and **`Continue with …`**, which moves the chat to the first
+other account that can take a turn and is not itself full (`continueTarget`,
+tested — the user's login, their profiles, credits last) and sends
+`Continue.`; the transcript goes with it (`carryTranscript`). Once the reset
+has passed the button continues on the same account. The column knows a chat
+is stopped without opening it because main writes the mark on the listing:
+`Chat.limit`, set by `Chats.append` with the `limit` line and cleared by the
+next main-loop `user` line, by `clear` and by `edit` (`test/chat-listing.ts`).
 
 ### Saying which chats are working, and calling you back
 
-Three distances:
+One state per chat (`chatStateOf`): **waiting over working over limited over
+unread**. Waiting and working are both true while a question is up and only
+one is something to do; a message sent past a limit makes the chat busy before
+the listing drops the mark, so working outranks it; a limit line arriving is
+an answer, so limited outranks unread.
 
-- **The chat's row**: a spinner while working, a shield while it waits on a
-  question. Waiting wins over working.
-- **A shut project's row**: a count (`2`, `1!`, `2 · 1!`) — drawn only while
-  shut, since open, the rows say it. `activityOf` in
-  `lib/chat/running.ts`, tested.
-- **The rail**: a dot, counting every chat.
+- **The chat's row**: a shield while waiting, a spinner while working, the
+  card while limited, a dot and a heavier title while unread.
+- **The project's icon**: one badge, the most urgent (`railBadgeOf`): a count
+  of what needs you, else a spinner, else a dot for what has answered.
+- **The system bar** counts every chat (`activityOf`, tested).
 
 A chat that answered while you read another is **unread**: a dot and a heavier
 title, on the row and the tab (`marksUnread`, tested). It is marked on
@@ -471,7 +543,7 @@ even from inside a pty.
 
 Any number of shells per project, a tab each, named for the directory the shell
 is in now (asked of the kernel off the pty's pid, once output goes quiet after
-Enter). Clicking a project row points the dock at that project; the pty starts
+Enter). Picking a project in the rail points the dock at it; the pty starts
 only when the tab is shown. A folder in the file tree has `New terminal here`,
 which opens the shell in that directory instead of the project's root (`dir` on
 `terminalCreate`, checked to be inside the folder). Shells are not restored
@@ -585,16 +657,29 @@ strip.
 ## Settings
 
 A dialog (⌘,), applied as picked — no Save. Sections: **Appearance**, **Tabs &
-editor**, **Chats**, **Claude**, **Plugins**, **Updates**.
+editor**, **Chats**, **Plugins**, **Updates**.
 
-**Claude** holds named profiles, each a `CLAUDE_CONFIG_DIR`. Adding one is a
-name, a click and a login: the app names the directory
+**There is no Claude section any more.** It held the named profiles, each a
+`CLAUDE_CONFIG_DIR`, with a status per row, and the Credits card — and the one
+thing anybody did there, signing a profile in after seeing it was not, was a
+dialog away from the projects column's Accounts foot, where `Not signed in` was
+actually being read. So the foot is where accounts are managed
+(`project/accounts.tsx`): `+` beside the heading adds a profile and goes
+straight on to its login; a row that is not signed in carries `Sign in`; a
+click or a right-click on any row gives `Sign in…` / `Sign in as another
+account…`, `Check again`, and for a profile `Rename` (in place) and `Remove…`
+(confirmed — chats on it fall back to the default login). Credits are a row
+there too: a click buys more, and somebody signed out of Vey Studio gets `Sign
+in`. Its last row, the model and account **commit message drafts** run on, moved
+to **Chats**.
+
+What did not change is how an account is added: the app names the directory
 (`workspace/claude-profiles/<slug>`, in main, because the renderer cannot see
 `VEYSTUDIO_DATA_DIR`) and runs `claude auth login` in a pty with that directory
 set — on the command line too, since a `.zshrc` export would otherwise win.
-Every row says whether it is signed in and as whom, **asked of the CLI**
-(`claude auth status --json`); a missing directory is never spawned into, since
-the CLI would create it. The composer's account menu shows each profile's email.
+Whether a directory is signed in and as whom is **asked of the CLI** (`claude
+auth status --json`); a missing directory is never spawned into, since the CLI
+would create it. The composer's account menu shows each profile's email.
 
 **Background** (Appearance) is one picture behind the whole window — the
 canvas the cards sit on. Chosen in the OS picker and **copied** into

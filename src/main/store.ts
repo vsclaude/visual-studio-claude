@@ -18,6 +18,7 @@ import type {
   WorkspaceFolder,
   WorkspaceRecord,
 } from "../shared/api"
+import { inOrder } from "../shared/folder-order"
 import { withConfigDirs } from "./claude-profiles"
 import { dataDir } from "./data-dir"
 
@@ -343,6 +344,19 @@ export class Store {
       manifest.workspace.folders = manifest.workspace.folders.filter(
         (folder) => folder.id !== id
       )
+      await this.writeManifest(manifest)
+      return manifest.workspace
+    })
+  }
+
+  /**
+   * Puts the folders in the order `ids` gives — see `inOrder` for what happens
+   * to a folder it does not name.
+   */
+  reorderFolders(ids: string[]): Promise<WorkspaceRecord> {
+    return this.enqueue(async () => {
+      const manifest = await this.readManifest()
+      manifest.workspace.folders = inOrder(manifest.workspace.folders, ids)
       await this.writeManifest(manifest)
       return manifest.workspace
     })

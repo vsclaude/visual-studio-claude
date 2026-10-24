@@ -1,7 +1,7 @@
 /** What the bar and the home page both link to, and the icons they draw. */
 
 export const RELEASES_URL =
-  "https://github.com/vsclaude/visual-studio-claude/releases/latest"
+  "https://github.com/veystudioapp/vey-studio-releases/releases/latest"
 
 export const ICON = {
   download:

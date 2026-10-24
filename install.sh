@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-REPO="vsclaude/visual-studio-claude"
+REPO="veystudioapp/vey-studio-releases"
 # Overridable so the script can be exercised against a scratch directory.
 APPLICATIONS="${APPLICATIONS:-/Applications}"
 

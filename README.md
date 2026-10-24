@@ -49,7 +49,7 @@ It needs FUSE (`sudo apt install libfuse2` on Debian and Ubuntu), or `--appimage
 
 x64. The `.exe` from [Releases][releases] is an NSIS installer. SmartScreen stops it: _More info_ → _Run anyway_.
 
-[releases]: https://github.com/vsclaude/visual-studio-claude/releases
+[releases]: https://github.com/veystudioapp/vey-studio-releases/releases
 
 Vey Studio is developed and used day to day on macOS; the Linux and Windows builds come out of the same workflow and the tests run on Linux, but assume rough edges. `claude` is needed only for agent sessions and the AI features — not to start the app.
 

@@ -119,13 +119,28 @@ jobs:
           pattern: installers-*
           merge-multiple: true
 
+      # The installers are published to a repository of their own, which is
+      # where the app's updater and install.sh look. `github.token` can write
+      # to this repository only, so the upload takes RELEASES_TOKEN: a
+      # fine-grained token with Contents read/write on that one repository.
+      # The notes are generated here, off this repository's tags and pull
+      # requests — generated over there they would describe a repository
+      # with no code in it.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          RELEASES_REPO: veystudioapp/vey-studio-releases
         run: |
           ls -lh installers
-          gh release create "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
+          if [ -z "$RELEASES_TOKEN" ]; then
+            echo "::error::secret RELEASES_TOKEN is not set"
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$GITHUB_REF_NAME" --jq .body > notes.md
+          GH_TOKEN="$RELEASES_TOKEN" gh release create "$GITHUB_REF_NAME" \
+            --repo "$RELEASES_REPO" \
             --title "Vey Studio ${GITHUB_REF_NAME#v}" \
-            --generate-notes \
+            --notes-file notes.md \
             installers/*

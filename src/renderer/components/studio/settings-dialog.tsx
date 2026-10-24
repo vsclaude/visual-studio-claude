@@ -819,7 +819,7 @@ function UpdatesSection() {
           // version on screen is worth trusting.
           <Row title="Could not check" description={check.error}>
             <a
-              href="https://github.com/vsclaude/visual-studio-claude/releases"
+              href="https://github.com/veystudioapp/vey-studio-releases/releases"
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"

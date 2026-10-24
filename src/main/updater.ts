@@ -31,7 +31,8 @@ import { dataDir } from "./data-dir"
  * the same bargain `git.ts` makes.
  */
 
-const REPO = "vsclaude/visual-studio-claude"
+// The installers' repository, not the source's — `release.yml` publishes there.
+const REPO = "veystudioapp/vey-studio-releases"
 
 const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`
 

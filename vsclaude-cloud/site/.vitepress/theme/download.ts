@@ -14,7 +14,7 @@ import { RELEASES_URL } from "./links.ts"
  */
 
 const LATEST_API =
-  "https://api.github.com/repos/vsclaude/visual-studio-claude/releases/latest"
+  "https://api.github.com/repos/veystudioapp/vey-studio-releases/releases/latest"
 
 export type Os = "macOS" | "Windows" | "Linux"
 

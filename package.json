@@ -2,6 +2,7 @@
   "name": "veystudio",
   "productName": "Vey Studio",
   "version": "1.0.13",
+  "author": "Duong Duong",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -92,6 +93,7 @@
   "build": {
     "appId": "vn.app.vsclaude",
     "productName": "Vey Studio",
+    "copyright": "Copyright © 2026 Vey Studio",
     "files": [
       "dist-electron/**/*",
       "dist-renderer/**/*"

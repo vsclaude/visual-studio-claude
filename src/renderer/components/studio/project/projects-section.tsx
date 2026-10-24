@@ -150,10 +150,12 @@ function ProjectHeader({
     >
       <Button
         size="xs"
+        variant="outline"
+        className="pl-1.5 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground dark:hover:bg-primary/15"
         onClick={() => void useChats.getState().create({ folderId: folder.id })}
         title={`New chat in ${folder.name}`}
       >
-        <Plus />
+        <Plus className="text-primary" />
         Chat
       </Button>
       <DropdownMenu>

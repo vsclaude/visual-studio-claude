@@ -113,6 +113,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The whole history and its tags, for the notes' range below.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: installers
@@ -123,12 +128,14 @@ jobs:
       # where the app's updater and install.sh look. `github.token` can write
       # to this repository only, so the upload takes RELEASES_TOKEN: a
       # fine-grained token with Contents read/write on that one repository.
-      # The notes are generated here, off this repository's tags and pull
-      # requests — generated over there they would describe a repository
-      # with no code in it.
+      # The notes are the commit subjects since the previous tag, written out
+      # in the release itself. Not GitHub's generated notes: those are PR and
+      # compare links into this repository, which a reader of the releases
+      # repository cannot follow. A `(#12)` is dropped for the same reason —
+      # over there it would link to that repository's own issue 12 — and so
+      # is the version-bump commit, which says nothing the title does not.
       - name: Publish
         env:
-          GH_TOKEN: ${{ github.token }}
           RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           RELEASES_REPO: veystudioapp/vey-studio-releases
         run: |
@@ -137,8 +144,13 @@ jobs:
             echo "::error::secret RELEASES_TOKEN is not set"
             exit 1
           fi
-          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-            -f tag_name="$GITHUB_REF_NAME" --jq .body > notes.md
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          range="${prev:+$prev..}$GITHUB_REF_NAME"
+          git log --no-merges --format='%s' "$range" \
+            | grep -Ev '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sed -E 's/ ?\(#[0-9]+\)//g; s/^/- /' > notes.md || true
+          [ -s notes.md ] || echo "Maintenance release." > notes.md
+          cat notes.md
           GH_TOKEN="$RELEASES_TOKEN" gh release create "$GITHUB_REF_NAME" \
             --repo "$RELEASES_REPO" \
             --title "Vey Studio ${GITHUB_REF_NAME#v}" \

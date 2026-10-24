@@ -151,6 +151,9 @@
       "target": "nsis",
       "artifactName": "Vey-Studio-${version}-${arch}.${ext}"
     },
+    "nsis": {
+      "include": "resources/installer.nsh"
+    },
     "linux": {
       "target": "AppImage",
       "category": "Development",

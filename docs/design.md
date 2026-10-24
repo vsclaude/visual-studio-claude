@@ -1388,6 +1388,15 @@ waiting on the app's pid was tried first and does not work: spawned `detached`
 it has no console and exits having run nothing. On Linux it links to the release
 page.
 
+The installer carries one change to electron-builder's template,
+`resources/installer.nsh`: when the old version's uninstaller fails — exit 2,
+its `Abort` on a file still held after five attempts, every file already put
+back — the install goes on over that copy instead of ending on "Failed to
+uninstall old application files". That box has no `/SD`, so it appeared under
+`/S` too, and the update from 1.0.13 to 1.0.14 stopped on it with 1.0.13 still
+installed. Installing over is safe because the extraction already retries a
+busy file and then overwrites regardless. Which file was held was not found.
+
 ## The name
 
 The app was **Yasuo**. The first run moves `~/.yasuo` to `~/.vsclaude`

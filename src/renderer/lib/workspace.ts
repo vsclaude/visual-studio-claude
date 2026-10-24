@@ -28,6 +28,29 @@ export async function trashProject(folderId: string): Promise<WorkspaceRecord> {
   return window.desktop.trashProject(folderId)
 }
 
+/** A `git worktree` of a project, added as a folder of its own. */
+export async function addWorktree(input: {
+  folderId: string
+  branch: string
+  base?: string
+}): Promise<WorkspaceRecord> {
+  return window.desktop.addWorktree(input)
+}
+
+/** The branches `New worktree…` suggests, local and remote. */
+export async function worktreeBranches(
+  folderId: string
+): Promise<{ local: string[]; remote: string[] }> {
+  return window.desktop.worktreeBranches(folderId)
+}
+
+/** A worktree's checkout deleted with `git worktree remove`, and dropped. */
+export async function removeWorktree(
+  folderId: string
+): Promise<WorkspaceRecord> {
+  return window.desktop.removeWorktree(folderId)
+}
+
 export async function renameFolder(
   id: string,
   name: string

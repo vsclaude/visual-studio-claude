@@ -38,6 +38,11 @@ const api: DesktopApi = {
   addFolder: (input) => ipcRenderer.invoke(IPC.addFolder, input),
   createProject: (input) => ipcRenderer.invoke(IPC.createProject, input),
   trashProject: (folderId) => ipcRenderer.invoke(IPC.trashProject, folderId),
+  addWorktree: (input) => ipcRenderer.invoke(IPC.addWorktree, input),
+  removeWorktree: (folderId) =>
+    ipcRenderer.invoke(IPC.removeWorktree, folderId),
+  worktreeBranches: (folderId) =>
+    ipcRenderer.invoke(IPC.worktreeBranches, folderId),
   renameFolder: (id, name) => ipcRenderer.invoke(IPC.renameFolder, id, name),
   removeFolder: (id) => ipcRenderer.invoke(IPC.removeFolder, id),
   reorderFolders: (ids) => ipcRenderer.invoke(IPC.reorderFolders, ids),

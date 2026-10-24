@@ -515,11 +515,18 @@ Such a folder carries `template` on its record, and **only** such a folder
 offers `Move to Trash…` (`IPC.trashProject`) — an added folder is never the
 app's to delete.
 
-**There are no worktrees** — the button beside a project's `+`, its dialogs,
-`main/worktrees.ts`, the row's ahead/behind marks, the renaming of an untitled
-branch and the column's nesting (`lib/project-tree.ts`) are all deleted
-(`docs/design.md` § Worktrees, as projects, removed). A checkout an older build
-made under `workspace/worktrees/` is still a folder in the manifest, so it is an
+**A worktree lives inside its project.** A project's menu has `New worktree…`
+(`project/new-worktree-dialog.tsx`, `main/worktrees.ts`, `IPC.addWorktree` /
+`IPC.removeWorktree`, `test/worktrees.ts`; `Branch` is free text, `Based on`
+the shadcn `Combobox` over `IPC.worktreeBranches` with a typed ref offered as
+`Use “…”`): `git worktree add` under
+`workspace/worktrees/`, added as a folder marked `worktreeOf` the project. The
+rail skips such folders and the column lists the project's and its worktrees'
+chats together, `Recent` grouped under a heading per branch (`byCheckout` in
+`lib/project-checkouts.ts`, `test/project-checkouts.ts`); a heading's menu has
+`Remove worktree…`. No ahead/behind marks, setup command or
+branch renaming (`docs/design.md` § Worktrees, back inside their project). A
+checkout an older build made there has no `worktreeOf`, so it stays an
 ordinary top-level project; nothing deletes it.
 
 ### Constraints that bite

@@ -5,6 +5,7 @@ import {
   ArrowUp,
   ClipboardCopy,
   ExternalLink,
+  GitBranchPlus,
   Image as ImageIcon,
   ImageOff,
   MessageSquare,
@@ -25,12 +26,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { chooseProjectIcon, resetProjectIcon } from "@/lib/project-icon"
+import { isCheckout, projectsIn } from "@/lib/project-checkouts"
+import { useProjects } from "@/lib/projects"
 import { useStudio } from "@/lib/store"
 import { useShells } from "@/lib/shell/store"
 import { useChats } from "@/lib/chat/store"
 import type { WorkspaceFolder } from "@shared/api"
 import { IconButton } from "../icon-button"
 import { RenameDialog } from "../rename-dialog"
+import { NewWorktreeDialog } from "./new-worktree-dialog"
 
 /**
  * Which project a confirmation is up for, and the last refusal.
@@ -44,6 +48,8 @@ type ProjectDialogsState = {
   removing: WorkspaceFolder | null
   renaming: WorkspaceFolder | null
   trashing: WorkspaceFolder | null
+  worktreeOf: WorkspaceFolder | null
+  removingWorktree: WorkspaceFolder | null
   /** A failed Trash or icon change. Shown under the projects column, since
    * the confirmation that asked is gone by the time main answers. */
   failure: string | null
@@ -54,6 +60,8 @@ export const useProjectDialogs = create<ProjectDialogsState>((set) => ({
   removing: null,
   renaming: null,
   trashing: null,
+  worktreeOf: null,
+  removingWorktree: null,
   failure: null,
   set: (patch) => set(patch),
 }))
@@ -89,10 +97,20 @@ export function ProjectMenuItems({
   const dialogs = useProjectDialogs.getState()
   // Read when the menu opens rather than subscribed to: a menu is up for one
   // decision, and the list does not move under it.
-  const folders = useStudio.getState().folders
+  const all = useStudio.getState().folders
+  // A worktree's menu is its checkout chip's: it has no icon to move or
+  // change, and its way out is `Remove worktree…` rather than a forget that
+  // would leave a checkout under the app's data folder nobody can reach.
+  const checkout = isCheckout(all, folder)
+  const folders = projectsIn(all)
   const index = folders.findIndex((entry) => entry.id === folder.id)
+  // `to` is an index among the rail's icons, and the manifest's list also
+  // holds the worktrees: land beside the icon that is there now.
   const move = (to: number) =>
-    void useStudio.getState().moveFolder(folder.id, to)
+    void useStudio.getState().moveFolder(
+      folder.id,
+      all.findIndex((entry) => entry.id === folders[to]?.id)
+    )
   return (
     <>
       <Item
@@ -113,23 +131,31 @@ export function ProjectMenuItems({
         <SquareTerminal className="text-muted-foreground" />
         New terminal here
       </Item>
-      <Item onClick={() => dialogs.set({ renaming: folder })}>
-        <Pencil className="text-muted-foreground" />
-        Rename…
+      <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
+        <GitBranchPlus className="text-muted-foreground" />
+        New worktree…
       </Item>
-      <Separator />
-      {/* The rail's drag, for somebody not holding a mouse. */}
-      <Item disabled={index <= 0} onClick={() => move(index - 1)}>
-        <ArrowUp className="text-muted-foreground" />
-        Move up
-      </Item>
-      <Item
-        disabled={index === -1 || index >= folders.length - 1}
-        onClick={() => move(index + 1)}
-      >
-        <ArrowDown className="text-muted-foreground" />
-        Move down
-      </Item>
+      {!checkout && (
+        <>
+          <Item onClick={() => dialogs.set({ renaming: folder })}>
+            <Pencil className="text-muted-foreground" />
+            Rename…
+          </Item>
+          <Separator />
+          {/* The rail's drag, for somebody not holding a mouse. */}
+          <Item disabled={index <= 0} onClick={() => move(index - 1)}>
+            <ArrowUp className="text-muted-foreground" />
+            Move up
+          </Item>
+          <Item
+            disabled={index === -1 || index >= folders.length - 1}
+            onClick={() => move(index + 1)}
+          >
+            <ArrowDown className="text-muted-foreground" />
+            Move down
+          </Item>
+        </>
+      )}
       <Separator />
       <Item onClick={() => void navigator.clipboard.writeText(folder.path)}>
         <ClipboardCopy className="text-muted-foreground" />
@@ -140,29 +166,41 @@ export function ProjectMenuItems({
         Reveal in file manager
       </Item>
       <Separator />
-      <Item
-        onClick={() => {
-          dialogs.set({ failure: null })
-          void chooseProjectIcon(folder.id).catch((error: unknown) =>
-            dialogs.set({ failure: messageOf(error) })
-          )
-        }}
-      >
-        <ImageIcon className="text-muted-foreground" />
-        Change icon…
-      </Item>
-      <Item onClick={() => void resetProjectIcon(folder.id)}>
-        <ImageOff className="text-muted-foreground" />
-        Reset icon
-      </Item>
-      <Separator />
-      <Item
-        variant="destructive"
-        onClick={() => dialogs.set({ removing: folder })}
-      >
-        <Trash2 />
-        Remove project
-      </Item>
+      {checkout ? (
+        <Item
+          variant="destructive"
+          onClick={() => dialogs.set({ removingWorktree: folder })}
+        >
+          <Trash2 />
+          Remove worktree…
+        </Item>
+      ) : (
+        <>
+          <Item
+            onClick={() => {
+              dialogs.set({ failure: null })
+              void chooseProjectIcon(folder.id).catch((error: unknown) =>
+                dialogs.set({ failure: messageOf(error) })
+              )
+            }}
+          >
+            <ImageIcon className="text-muted-foreground" />
+            Change icon…
+          </Item>
+          <Item onClick={() => void resetProjectIcon(folder.id)}>
+            <ImageOff className="text-muted-foreground" />
+            Reset icon
+          </Item>
+          <Separator />
+          <Item
+            variant="destructive"
+            onClick={() => dialogs.set({ removing: folder })}
+          >
+            <Trash2 />
+            Remove project
+          </Item>
+        </>
+      )}
       {folder.template && (
         <Item
           variant="destructive"
@@ -179,7 +217,8 @@ export function ProjectMenuItems({
 /** The confirmations and the rename, for whichever project asked. Mounted
  * once, by the studio. */
 export function ProjectDialogs() {
-  const { removing, renaming, trashing, set } = useProjectDialogs()
+  const { removing, renaming, trashing, worktreeOf, removingWorktree, set } =
+    useProjectDialogs()
 
   return (
     <>
@@ -230,7 +269,7 @@ export function ProjectDialogs() {
               The folder goes to the Trash with everything in it, and its chats
               are deleted. Its terminals are closed first.
             </AlertDialogDescription>
-            <p className="truncate font-mono text-xs text-muted-foreground">
+            <p className="max-w-full font-mono text-xs break-all text-muted-foreground">
               {trashing?.path}
             </p>
           </AlertDialogHeader>
@@ -268,6 +307,67 @@ export function ProjectDialogs() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog
+        open={removingWorktree !== null}
+        onOpenChange={(next) => {
+          if (!next) set({ removingWorktree: null })
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove the worktree “{removingWorktree?.name}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The checkout is deleted with any changes in it that are not
+              committed. The branch and its commits stay, and its chats are kept
+              under Ungrouped. Its terminals are closed first.
+            </AlertDialogDescription>
+            <p className="max-w-full font-mono text-xs break-all text-muted-foreground">
+              {removingWorktree?.path}
+            </p>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const target = removingWorktree
+                set({ removingWorktree: null, failure: null })
+                if (!target) return
+                // Back to the project first, so the column is not left on a
+                // checkout that is about to stop existing.
+                if (useProjects.getState().activeFolderId === target.id) {
+                  const parent = target.worktreeOf ?? null
+                  if (parent) {
+                    useProjects.getState().setActive(parent)
+                    useShells.getState().showFor(parent)
+                  }
+                }
+                const shells = useShells.getState()
+                for (const shell of shells.shells) {
+                  if (shell.folderId === target.id) shells.close(shell.id)
+                }
+                void useStudio
+                  .getState()
+                  .removeWorktree(target.id)
+                  .then(() => useChats.getState().refresh())
+                  .catch((error: unknown) =>
+                    set({
+                      failure: messageOf(error).replace(
+                        /^Error invoking remote method '[^']+': (?:Error: )?/,
+                        ""
+                      ),
+                    })
+                  )
+              }}
+            >
+              Remove worktree
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {renaming && (
         <RenameDialog
           title="Rename project"
@@ -284,6 +384,13 @@ export function ProjectDialogs() {
             }
           }}
           onClose={() => set({ renaming: null })}
+        />
+      )}
+
+      {worktreeOf && (
+        <NewWorktreeDialog
+          folder={worktreeOf}
+          onClose={() => set({ worktreeOf: null })}
         />
       )}
     </>

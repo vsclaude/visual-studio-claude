@@ -282,6 +282,7 @@ export class Store {
     path: string
     name: string
     template?: string
+    worktreeOf?: string
   }): Promise<WorkspaceRecord> {
     return this.enqueue(async () => {
       let resolved: string
@@ -310,6 +311,7 @@ export class Store {
         path: resolved,
         addedAt: new Date().toISOString(),
         ...(input.template ? { template: input.template } : {}),
+        ...(input.worktreeOf ? { worktreeOf: input.worktreeOf } : {}),
       })
       await this.writeManifest(manifest)
       return manifest.workspace

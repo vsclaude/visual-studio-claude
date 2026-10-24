@@ -228,6 +228,17 @@ type StudioState = {
    * list to show.
    */
   trashProject: (folderId: string) => Promise<void>
+  /**
+   * A `git worktree` of a project, added as a project. Resolves with the new
+   * folder's id, so the dialog can move to it; rejects with git's sentence.
+   */
+  addWorktree: (input: {
+    folderId: string
+    branch: string
+    base?: string
+  }) => Promise<string | null>
+  /** A worktree's checkout deleted and dropped. Rejects with git's sentence. */
+  removeWorktree: (folderId: string) => Promise<void>
   renameFolder: (id: string, name: string) => Promise<void>
   /** Drops a folder from the workspace. The directory itself is untouched. */
   removeFolder: (id: string) => Promise<void>
@@ -407,6 +418,17 @@ export const useStudio = create<StudioState>((set, get) => {
 
     async trashProject(folderId) {
       prune((await repo.trashProject(folderId)).folders)
+    },
+
+    async addWorktree(input) {
+      const had = new Set(get().folders.map((folder) => folder.id))
+      const workspace = await repo.addWorktree(input)
+      await load(workspace.folders)
+      return workspace.folders.find((folder) => !had.has(folder.id))?.id ?? null
+    },
+
+    async removeWorktree(folderId) {
+      prune((await repo.removeWorktree(folderId)).folders)
     },
 
     async renameFolder(id, name) {

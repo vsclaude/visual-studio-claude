@@ -118,6 +118,12 @@ import {
   startWindowsInstaller,
 } from "./updater"
 import { DirectoryWatchers, RootWatchers } from "./watch"
+import {
+  addWorktree,
+  branchesOf,
+  removeWorktree,
+  worktreeDir,
+} from "./worktrees"
 
 /** What `imageDataUrl` recognises as a picture. */
 const IMAGE_MIME_TYPES: Record<string, string> = {
@@ -807,6 +813,81 @@ export function createIpc(host: Host): {
       }
     }
   )
+
+  /*
+   * A second checkout of a project, filed inside it (`main/worktrees.ts`).
+   * Asked of a checkout, it is cut from that checkout's project: a checkout of
+   * a checkout is not a thing git makes, and one level is all the column
+   * draws. Named after the branch alone, since it is only ever shown under its
+   * project's name.
+   */
+  handle(
+    IPC.addWorktree,
+    async (
+      _event,
+      input: { folderId: string; branch: string; base?: string }
+    ) => {
+      const { folders } = await store.getWorkspace()
+      const asked = folders.find((candidate) => candidate.id === input.folderId)
+      if (!asked) throw new Error(`No such folder: ${input.folderId}`)
+      const project =
+        folders.find((candidate) => candidate.id === asked.worktreeOf) ?? asked
+      const repo = await store.resolveFolderDir(project.id)
+      const branch = input.branch.trim()
+
+      const dir = worktreeDir(
+        path.join(dataDir(), WORKSPACE_DIR),
+        project.id,
+        branch
+      )
+      if (await stat(dir).catch(() => null)) {
+        throw new Error(`${dir} already exists.`)
+      }
+      await mkdir(path.dirname(dir), { recursive: true })
+
+      const added = await addWorktree({ repo, dir, branch, base: input.base })
+      if ("error" in added) throw new Error(added.error)
+      return store.addFolder({
+        path: dir,
+        name: branch,
+        worktreeOf: project.id,
+      })
+    }
+  )
+
+  handle(IPC.worktreeBranches, async (_event, folderId: string) =>
+    branchesOf(await store.resolveFolderDir(folderId))
+  )
+
+  /*
+   * What holds the checkout open lets go first, as for `trashProject`: the
+   * tsservers and watchers here, the dock's shells in the renderer before it
+   * asks. Asked of the checkout's own project when there still is one, since
+   * that is the repository the worktree is registered in; git finds it from
+   * the checkout itself otherwise.
+   */
+  handle(IPC.removeWorktree, async (_event, folderId: string) => {
+    const { folders } = await store.getWorkspace()
+    const folder = folders.find((candidate) => candidate.id === folderId)
+    if (!folder) throw new Error(`No such folder: ${folderId}`)
+    if (!folder.worktreeOf) {
+      throw new Error("Only a worktree made from a project can be removed.")
+    }
+    const dir = await store.resolveFolderDir(folderId)
+    const repo = folders.some((candidate) => candidate.id === folder.worktreeOf)
+      ? await store.resolveFolderDir(folder.worktreeOf)
+      : dir
+
+    tsServers.stopUnder(dir)
+    watchers.closeAll()
+    for (let attempt = 0; ; attempt += 1) {
+      const failed = await removeWorktree(repo, dir)
+      if (!failed) break
+      if (attempt >= 3) throw new Error(failed.error)
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+    return store.removeFolder(folderId)
+  })
 
   /*
    * And back out of one: the directory to the Trash, its chats, then the

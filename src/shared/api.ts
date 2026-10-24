@@ -38,6 +38,14 @@ export type WorkspaceFolder = {
    * located on another machine is one this app did not make there.
    */
   template?: string
+  /**
+   * The project this folder is a `git worktree` checkout of, when this app
+   * made it from that project's `New worktree…`. Such a folder is drawn
+   * **inside** its project — a checkout row under the column's header — rather
+   * than as an icon of its own in the rail (`lib/project-checkouts.ts`). One
+   * whose project has left the workspace is a project again.
+   */
+  worktreeOf?: string
 }
 
 /**
@@ -2100,6 +2108,34 @@ export type DesktopApi = {
    * Trash rather than an unlink, as every delete in this app is.
    */
   trashProject: (folderId: string) => Promise<WorkspaceRecord>
+  /**
+   * A `git worktree` of a project's repository on `branch` — created off
+   * `base` (or HEAD) when it does not exist yet, checked out when it does —
+   * made under `workspace/worktrees/` and added as a folder marked
+   * `worktreeOf` the project, so it is drawn inside it. Asked of a checkout,
+   * it cuts from that checkout's project. Rejects with git's sentence for the
+   * dialog.
+   */
+  addWorktree: (input: {
+    folderId: string
+    branch: string
+    base?: string
+  }) => Promise<WorkspaceRecord>
+  /**
+   * `git worktree remove --force` on a folder `addWorktree` made, then the
+   * folder dropped. The branch stays, and so do its chats — they are listed
+   * under `Ungrouped`, as any chat whose folder has gone is. Refused for a
+   * folder with no `worktreeOf`.
+   */
+  removeWorktree: (folderId: string) => Promise<WorkspaceRecord>
+  /**
+   * The branches `New worktree…` suggests for a folder's repository: local,
+   * and remote by short name (`origin/x`), `origin/HEAD` left out. Empty for a
+   * folder that is not a repository.
+   */
+  worktreeBranches: (
+    folderId: string
+  ) => Promise<{ local: string[]; remote: string[] }>
   renameFolder: (id: string, name: string) => Promise<WorkspaceRecord>
   /**
    * Drops a folder from the workspace. The directory itself is untouched —
@@ -2997,6 +3033,9 @@ export const IPC = {
   addFolder: "workspace:add-folder",
   createProject: "workspace:create-project",
   trashProject: "workspace:trash-project",
+  addWorktree: "workspace:add-worktree",
+  removeWorktree: "workspace:remove-worktree",
+  worktreeBranches: "workspace:worktree-branches",
   renameFolder: "workspace:rename-folder",
   removeFolder: "workspace:remove-folder",
   reorderFolders: "workspace:reorder-folders",

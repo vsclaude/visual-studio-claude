@@ -1490,6 +1490,37 @@ manifest, so it is still a project in the column — top-level now, with
 it. Nothing deletes it, and `migrateLegacyDataDir` still leaves
 `workspace/worktrees` in place.
 
+### Worktrees, back inside their project
+
+A project's menu has `New worktree…` again (`main/worktrees.ts`,
+`project/new-worktree-dialog.tsx`, `IPC.addWorktree` / `IPC.removeWorktree`):
+a branch and an optional base, `git worktree add` under
+`workspace/worktrees/<folderId>/<slug>`. An existing branch is checked out
+rather than refused. Asked for by the person using it, which is the answer to
+"it was not used".
+
+The first try added the checkout as a project of its own, an icon in the rail
+beside the one it came from. That read wrong at once — a worktree is the same
+project on another branch, not another project. So the folder carries
+`worktreeOf` (written only by `addWorktree`), the rail draws one icon per
+project and counts its worktrees' chats in its badge, and the column lists the
+project's chats and its worktrees' **together**. `Needs you` and `Running` stay
+one list across them; `Recent` is grouped under a heading per checkout — the
+project's own directory, then each worktree, labelled by branch, each with a
+`+` for a chat there (`byCheckout` in `lib/project-checkouts.ts`,
+`test/project-checkouts.ts`). Each group folds by its chevron, remembered per
+folder id with the rest of the column (`shutCheckouts` in `lib/projects.ts`);
+folded, it shows its count and still lists the selected chat. A row of checkout chips under the header was
+tried first and taken off: it was a switch somebody had to remember was there,
+hiding the other branches' chats behind it. Picking a heading or opening a chat
+picks that folder, so Explorer and the dock's shell follow with nothing taught
+about checkouts. A heading's menu has `Remove worktree…`: `git worktree remove
+--force`, the branch kept, its chats left under Ungrouped. A worktree whose
+project has left the workspace is a project again.
+
+Still not back: ahead/behind marks, `.worktreeinclude`, a setup command, a
+branch renamed after its first chat.
+
 ### Distilling learnings, removed
 
 A read-only turn proposing skills and `CLAUDE.md` lines from a chat. Unused; the

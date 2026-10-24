@@ -47,6 +47,8 @@ type RememberedColumn = {
   activeFolderId?: string | null
   /** Optional for the same reason: the column held only the projects then. */
   shutSections?: string[]
+  /** Optional: there were no checkout groups before. */
+  shutCheckouts?: string[]
   /** Optional: the column had no Search before. */
   view?: string
 }
@@ -60,6 +62,8 @@ function isRememberedColumn(value: unknown): value is RememberedColumn {
       record.activeFolderId === null ||
       typeof record.activeFolderId === "string") &&
     (record.shutSections === undefined || isStringArray(record.shutSections)) &&
+    (record.shutCheckouts === undefined ||
+      isStringArray(record.shutCheckouts)) &&
     (record.view === undefined || typeof record.view === "string")
   )
 }
@@ -100,6 +104,15 @@ type ProjectsState = {
   toggleSection: (section: SidebarSection) => void
 
   /**
+   * Which checkouts' chat groups are folded in the column — by folder id, so
+   * a worktree removed leaves an id that names nothing and folds nothing.
+   * Remembered with the rest of the column: a long-finished branch folded
+   * away is folded because somebody wants it out of the way every launch.
+   */
+  shutCheckouts: string[]
+  toggleCheckout: (folderId: string) => void
+
+  /**
    * Whether the column is showing the chats that belong to no project, rather
    * than `activeFolderId`'s.
    *
@@ -133,11 +146,12 @@ export const useProjects = create<ProjectsState>((set, get) => {
   let restorePromise: Promise<void> | null = null
 
   function rememberColumn() {
-    const { sidebar, activeFolderId, shutSections, view } = get()
+    const { sidebar, activeFolderId, shutSections, shutCheckouts, view } = get()
     remember(COLUMN_KEY, {
       sidebar,
       activeFolderId,
       shutSections,
+      shutCheckouts,
       view,
     })
   }
@@ -192,6 +206,18 @@ export const useProjects = create<ProjectsState>((set, get) => {
       rememberColumn()
     },
 
+    shutCheckouts: [],
+
+    toggleCheckout(folderId) {
+      const { shutCheckouts } = get()
+      set({
+        shutCheckouts: shutCheckouts.includes(folderId)
+          ? shutCheckouts.filter((entry) => entry !== folderId)
+          : [...shutCheckouts, folderId],
+      })
+      rememberColumn()
+    },
+
     restore() {
       restorePromise ??= (async () => {
         const stored = await recall(COLUMN_KEY, isRememberedColumn)
@@ -204,6 +230,7 @@ export const useProjects = create<ProjectsState>((set, get) => {
             // a tree that opens on another one rather than on an error.
             activeFolderId: stored.activeFolderId ?? null,
             shutSections: stored.shutSections ?? [],
+            shutCheckouts: stored.shutCheckouts ?? [],
             view: stored.view === "search" ? "search" : "projects",
           })
         }

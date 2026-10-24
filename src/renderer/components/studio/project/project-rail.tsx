@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/lib/projects"
 import { useProjectIcon } from "@/lib/project-icon"
+import { checkoutsOf, projectOf, projectsIn } from "@/lib/project-checkouts"
 import { useStudio } from "@/lib/store"
 import { useShells } from "@/lib/shell/store"
 import { chatsOf, ungroupedChats, useChats } from "@/lib/chat/store"
@@ -55,9 +56,12 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
   const unread = useChats((state) => state.unread)
 
   const showing = sidebar && view === "projects"
-  // The same fallback the column makes for an id that names nothing.
-  const active =
+  // The same fallback the column makes for an id that names nothing. Lit by
+  // its project when the active folder is one of that project's worktrees.
+  const activeFolder =
     folders.find((folder) => folder.id === activeFolderId) ?? folders[0]
+  const active = activeFolder && projectOf(folders, activeFolder)
+  const shown = projectsIn(folders)
   const orphans = ungroupedChats(chats)
   // The column's own rule: an empty `Ungrouped` falls back to the project.
   const ungrouped = showingUngrouped && orphans.length > 0
@@ -88,7 +92,9 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
     }
     if (folderId === null) {
       projects.showUngrouped()
-    } else {
+    } else if (!already) {
+      // Only when it is another project: the column shown again on the one
+      // it was hidden on stays on whichever of its worktrees was picked.
       projects.setActive(folderId)
       // The dock's shell follows, as it did from the tree: a terminal left in
       // the last project is a `pwd` nobody asked for. It does not open the
@@ -115,12 +121,21 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
       }}
       className="flex min-h-0 w-full flex-1 flex-col items-center gap-2 overflow-y-auto py-1.5"
     >
-      {folders.map((folder) => (
+      {shown.map((folder) => (
         <ProjectIcon
           key={folder.id}
           folder={folder}
           active={!ungrouped && active?.id === folder.id}
-          badge={railBadgeOf(chatsOf(chats, folder.id), sending, asks, unread)}
+          // Its worktrees' chats too: a question waiting in one of them is
+          // the project's to answer, and the worktree has no icon of its own.
+          badge={railBadgeOf(
+            checkoutsOf(folders, folder).flatMap((checkout) =>
+              chatsOf(chats, checkout.id)
+            ),
+            sending,
+            asks,
+            unread
+          )}
           onClick={() => pick(folder.id)}
           drag={{
             dragging: dragging === folder.id,

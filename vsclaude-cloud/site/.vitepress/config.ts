@@ -91,7 +91,7 @@ function homeHead(lang: Lang): HeadConfig[] {
     ["meta", { property: "og:image", content: image }],
     [
       "meta",
-      { property: "og:image:alt", content: `Vey Studio — ${t.windowCaption}` },
+      { property: "og:image:alt", content: `Vey Studio: ${t.windowCaption}` },
     ],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
     ["meta", { name: "twitter:title", content: "Vey Studio" }],

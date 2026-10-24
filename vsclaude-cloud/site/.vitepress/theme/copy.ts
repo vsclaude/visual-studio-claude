@@ -124,9 +124,9 @@ const en: Copy = {
   htmlLang: "en",
   short: "EN",
   title:
-    "Vey Studio — hit your Claude limit, keep working: switch accounts mid-chat",
+    "Vey Studio: hit your Claude limit, keep working by switching accounts mid-chat",
   description:
-    "A free desktop app for Claude Code. Add all your Claude accounts; when one hits its usage limit, continue the same chat on another — or on credits — with one click and nothing lost.",
+    "A free desktop app for Claude Code. Add all your Claude accounts; when one hits its usage limit, continue the same chat on another account or on credits, with one click and nothing lost.",
   ogDescription:
     "Hit your Claude limit? Continue the same chat on another account, or on credits, in one click.",
   nav: {
@@ -140,7 +140,7 @@ const en: Copy = {
   },
   eyebrow: "Free desktop app for Claude Code",
   h1: ["Hit your Claude limit?", "Keep working anyway."],
-  lede: "Add all your Claude accounts to Vey Studio. When one runs out, continue the same chat on another — or on credits — in one click. Nothing to copy, nothing to explain again.",
+  lede: "Add all your Claude accounts to Vey Studio. When one runs out, continue the same chat on another account or on credits in one click. Nothing to copy, nothing to explain again.",
   cta: {
     download: "Download for free",
     downloadFor: "Download for ",
@@ -157,7 +157,7 @@ const en: Copy = {
     items: [
       {
         title: "Add all your accounts",
-        body: "Work, personal, team — sign each in once. The list under your chats shows how much of its 5-hour and weekly limit every account has used, so you know which one has room.",
+        body: "Work, personal, team: sign each in once. The list under your chats shows how much of its 5-hour and weekly limit every account has used, so you know which one has room.",
       },
       {
         title: "Hit a limit? Click “Continue”",
@@ -165,14 +165,14 @@ const en: Copy = {
       },
       {
         title: "Every account used up? Use credits",
-        body: "Switch the chat to “Pay with credits” and keep going — this also works with no Claude plan at all. Pay as you go: no subscription, and credits never expire.",
+        body: "Switch the chat to “Pay with credits” and keep going. This also works with no Claude plan at all. Pay as you go: no subscription, and credits never expire.",
       },
     ],
   },
   features: {
     kicker: "Features",
     title: "Everything around the chat, in one window",
-    body: "See what Claude is doing, check what it changed and commit it — without switching apps.",
+    body: "See what Claude is doing, check what it changed and commit it, all without switching apps.",
     items: [
       {
         title: "Many chats at once",
@@ -203,7 +203,7 @@ const en: Copy = {
   pricing: {
     kicker: "Pricing",
     title: ["Pay with ", "credits"],
-    body: "The app is free, and so is using it with your own Claude accounts. Credits are only for when you run out — or have no Claude plan. Buy a pack once; it never expires.",
+    body: "The app is free, and so is using it with your own Claude accounts. Credits are only for when you run out or have no Claude plan. Buy a pack once; it never expires.",
     popular: "Most popular",
     credits: "in credits",
     bonus: (percent) => `+${percent}% bonus`,
@@ -213,7 +213,7 @@ const en: Copy = {
     },
     buy: "Buy credits",
     pay: {
-      bank: "A page with the VietQR opens in your browser — scan it in your banking app. Credits never expire.",
+      bank: "A page with the VietQR opens in your browser. Scan it in your banking app. Credits never expire.",
       card: "Checkout opens in your browser and is handled by Paddle. Credits never expire.",
     },
   },
@@ -231,7 +231,7 @@ const en: Copy = {
       },
       {
         title: "Chat, and keep going",
-        body: "Ask Claude to do the work. When a limit hits, press “Continue with …” on the chat — the conversation carries on.",
+        body: "Ask Claude to do the work. When a limit hits, press “Continue with …” on the chat and the conversation carries on.",
       },
     ],
   },
@@ -241,7 +241,7 @@ const en: Copy = {
     items: [
       {
         q: "What is Vey Studio?",
-        a: "A free desktop app that runs Claude Code for you, in a window with your projects, several chats at once, your files, git and a terminal. What sets it apart: a chat can move between your Claude accounts — or onto credits — when a usage limit hits.",
+        a: "A free desktop app that runs Claude Code for you, in a window with your projects, several chats at once, your files, git and a terminal. What sets it apart: a chat can move between your Claude accounts, or onto credits, when a usage limit hits.",
       },
       {
         q: "What is the 5-hour limit?",
@@ -249,11 +249,11 @@ const en: Copy = {
       },
       {
         q: "What happens when I hit a limit?",
-        a: "The chat stops on a card saying which limit it hit and when it resets. “Continue with …” moves it to your next account with room — credits last — and sends it on. You can also pick an account yourself in the chat's composer. Either way the next message remembers everything said so far.",
+        a: "The chat stops on a card saying which limit it hit and when it resets. “Continue with …” moves it to your next account with room (credits last) and sends it on. You can also pick an account yourself in the chat's composer. Either way the next message remembers everything said so far.",
       },
       {
         q: "How many Claude accounts can I add?",
-        a: "As many as you have. Each signs in once and stays signed in — any chat can run on any of them.",
+        a: "As many as you have. Each signs in once and stays signed in, so any chat can run on any of them.",
       },
       {
         q: "Do I need a Claude subscription?",
@@ -261,11 +261,11 @@ const en: Copy = {
       },
       {
         q: "Do I need Claude Code installed?",
-        a: "For your own Claude accounts, yes — the app runs your own claude CLI and signs each account in through it. To chat on credits alone, no.",
+        a: "For your own Claude accounts, yes. The app runs your own claude CLI and signs each account in through it. To chat on credits alone, no.",
       },
       {
         q: "Do credits expire?",
-        a: "Never. A pack is bought once and stays on your account until it is spent — there is no monthly fee.",
+        a: "Never. A pack is bought once and stays on your account until it is spent. There is no monthly fee.",
       },
       {
         q: "How far does a pack go?",
@@ -273,7 +273,7 @@ const en: Copy = {
       },
       {
         q: "Where do my requests go?",
-        a: "On credits, through this server to Anthropic, which is how they are charged; your sign-in token is never passed on. On your own accounts, straight from the app to Anthropic — this server is not involved.",
+        a: "On credits, through this server to Anthropic, which is how they are charged; your sign-in token is never passed on. On your own accounts, straight from the app to Anthropic, without this server.",
       },
       {
         q: "How do I pay?",
@@ -298,9 +298,9 @@ const vi: Copy = {
   htmlLang: "vi",
   short: "VI",
   title:
-    "Vey Studio — chạm giới hạn Claude vẫn làm tiếp: đổi tài khoản ngay giữa cuộc chat",
+    "Vey Studio: chạm giới hạn Claude vẫn làm tiếp, đổi tài khoản ngay giữa cuộc chat",
   description:
-    "Ứng dụng desktop miễn phí cho Claude Code. Thêm mọi tài khoản Claude của bạn; khi một tài khoản chạm giới hạn, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác — hoặc bằng credit — không mất gì.",
+    "Ứng dụng desktop miễn phí cho Claude Code. Thêm mọi tài khoản Claude của bạn; khi một tài khoản chạm giới hạn, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác hoặc bằng credit, không mất gì.",
   ogDescription:
     "Chạm giới hạn Claude? Một cú nhấp để tiếp tục cuộc chat trên tài khoản khác, hoặc bằng credit.",
   nav: {
@@ -314,7 +314,7 @@ const vi: Copy = {
   },
   eyebrow: "Ứng dụng desktop miễn phí cho Claude Code",
   h1: ["Chạm giới hạn Claude?", "Công việc vẫn tiếp tục."],
-  lede: "Thêm mọi tài khoản Claude của bạn vào Vey Studio. Khi một tài khoản hết lượt dùng, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác — hoặc bằng credit. Không phải chép lại, không phải giải thích lại.",
+  lede: "Thêm mọi tài khoản Claude của bạn vào Vey Studio. Khi một tài khoản hết lượt dùng, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác hoặc bằng credit. Không phải chép lại, không phải giải thích lại.",
   cta: {
     download: "Tải miễn phí",
     downloadFor: "Tải cho ",
@@ -331,7 +331,7 @@ const vi: Copy = {
     items: [
       {
         title: "Thêm mọi tài khoản",
-        body: "Công việc, cá nhân, team — mỗi tài khoản đăng nhập một lần. Danh sách dưới các chat cho thấy mỗi tài khoản đã dùng bao nhiêu hạn mức 5 giờ và hằng tuần, để bạn biết tài khoản nào còn dư.",
+        body: "Công việc, cá nhân, team: mỗi tài khoản đăng nhập một lần. Danh sách dưới các chat cho thấy mỗi tài khoản đã dùng bao nhiêu hạn mức 5 giờ và hằng tuần, để bạn biết tài khoản nào còn dư.",
       },
       {
         title: "Chạm giới hạn? Bấm “Continue”",
@@ -339,14 +339,14 @@ const vi: Copy = {
       },
       {
         title: "Hết sạch tài khoản? Dùng credit",
-        body: "Chuyển chat sang “Pay with credits” và làm tiếp — kể cả khi bạn không có gói Claude nào. Dùng bao nhiêu trả bấy nhiêu: không đăng ký hàng tháng, credit không bao giờ hết hạn.",
+        body: "Chuyển chat sang “Pay with credits” và làm tiếp, kể cả khi bạn không có gói Claude nào. Dùng bao nhiêu trả bấy nhiêu: không đăng ký hàng tháng, credit không bao giờ hết hạn.",
       },
     ],
   },
   features: {
     kicker: "Tính năng",
     title: "Mọi thứ quanh cuộc chat, trong một cửa sổ",
-    body: "Xem Claude đang làm gì, kiểm tra những gì nó đã sửa và commit — không phải đổi qua ứng dụng khác.",
+    body: "Xem Claude đang làm gì, kiểm tra những gì nó đã sửa và commit mà không phải đổi qua ứng dụng khác.",
     items: [
       {
         title: "Nhiều chat cùng lúc",
@@ -377,7 +377,7 @@ const vi: Copy = {
   pricing: {
     kicker: "Bảng giá",
     title: ["Trả bằng ", "credit"],
-    body: "Ứng dụng miễn phí, dùng với tài khoản Claude của bạn cũng miễn phí. Credit chỉ dành cho lúc bạn hết lượt — hoặc không có gói Claude. Mua một lần, không bao giờ hết hạn.",
+    body: "Ứng dụng miễn phí, dùng với tài khoản Claude của bạn cũng miễn phí. Credit chỉ dành cho lúc bạn hết lượt hoặc không có gói Claude. Mua một lần, không bao giờ hết hạn.",
     popular: "Phổ biến nhất",
     credits: "credit",
     bonus: (percent) => `tặng thêm ${percent}%`,
@@ -387,7 +387,7 @@ const vi: Copy = {
     },
     buy: "Mua credit",
     pay: {
-      bank: "Trang có mã VietQR mở trong trình duyệt — quét bằng ứng dụng ngân hàng. Credit không bao giờ hết hạn.",
+      bank: "Trang có mã VietQR mở trong trình duyệt, bạn quét bằng ứng dụng ngân hàng. Credit không bao giờ hết hạn.",
       card: "Trang thanh toán mở trong trình duyệt, do Paddle xử lý. Credit không bao giờ hết hạn.",
     },
   },
@@ -405,7 +405,7 @@ const vi: Copy = {
       },
       {
         title: "Chat, và cứ thế làm tiếp",
-        body: "Giao việc cho Claude. Khi chạm giới hạn, bấm “Continue with …” trên chat — cuộc trò chuyện vẫn tiếp tục.",
+        body: "Giao việc cho Claude. Khi chạm giới hạn, bấm “Continue with …” trên chat là cuộc trò chuyện vẫn tiếp tục.",
       },
     ],
   },
@@ -415,7 +415,7 @@ const vi: Copy = {
     items: [
       {
         q: "Vey Studio là gì?",
-        a: "Một ứng dụng desktop miễn phí chạy Claude Code cho bạn, trong một cửa sổ có sẵn dự án, nhiều chat cùng lúc, file, git và terminal. Điểm khác biệt: một cuộc chat có thể chuyển giữa các tài khoản Claude của bạn — hoặc sang credit — khi chạm giới hạn sử dụng.",
+        a: "Một ứng dụng desktop miễn phí chạy Claude Code cho bạn, trong một cửa sổ có sẵn dự án, nhiều chat cùng lúc, file, git và terminal. Điểm khác biệt: một cuộc chat có thể chuyển giữa các tài khoản Claude của bạn, hoặc sang credit, khi chạm giới hạn sử dụng.",
       },
       {
         q: "Giới hạn 5 giờ là gì?",
@@ -423,11 +423,11 @@ const vi: Copy = {
       },
       {
         q: "Chuyện gì xảy ra khi tôi chạm giới hạn?",
-        a: "Chat dừng lại với một thẻ báo đã chạm giới hạn nào và khi nào reset. “Continue with …” chuyển nó sang tài khoản tiếp theo còn dư — credit sau cùng — và gửi tiếp. Bạn cũng có thể tự chọn tài khoản trong ô soạn tin của chat. Cách nào thì tin nhắn tiếp theo vẫn nhớ mọi điều đã nói.",
+        a: "Chat dừng lại với một thẻ báo đã chạm giới hạn nào và khi nào reset. “Continue with …” chuyển nó sang tài khoản tiếp theo còn dư (credit để sau cùng) và gửi tiếp. Bạn cũng có thể tự chọn tài khoản trong ô soạn tin của chat. Cách nào thì tin nhắn tiếp theo vẫn nhớ mọi điều đã nói.",
       },
       {
         q: "Tôi thêm được bao nhiêu tài khoản Claude?",
-        a: "Bao nhiêu cũng được. Mỗi tài khoản đăng nhập một lần và giữ nguyên trạng thái đăng nhập — chat nào cũng chạy được trên bất kỳ tài khoản nào.",
+        a: "Bao nhiêu cũng được. Mỗi tài khoản đăng nhập một lần và giữ nguyên trạng thái đăng nhập, nên chat nào cũng chạy được trên bất kỳ tài khoản nào.",
       },
       {
         q: "Tôi có cần gói Claude không?",
@@ -435,7 +435,7 @@ const vi: Copy = {
       },
       {
         q: "Tôi có cần cài Claude Code không?",
-        a: "Có, nếu dùng tài khoản Claude riêng — ứng dụng chạy chính claude CLI của bạn và đăng nhập từng tài khoản qua nó. Nếu chỉ chat bằng credit thì không cần.",
+        a: "Có, nếu dùng tài khoản Claude riêng. Ứng dụng chạy chính claude CLI của bạn và đăng nhập từng tài khoản qua nó. Nếu chỉ chat bằng credit thì không cần.",
       },
       {
         q: "Credit có hết hạn không?",

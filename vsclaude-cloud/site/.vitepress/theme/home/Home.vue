@@ -107,7 +107,7 @@ onBeforeUnmount(() => seen?.disconnect())
         </div>
         <p class="fine enter" style="--d: 0.3s">
           <a :href="downloads">{{ t.fine[0] }}</a
-          >&nbsp;—&nbsp;{{ t.fine[1] }}
+          >&nbsp;·&nbsp;{{ t.fine[1] }}
         </p>
 
         <figure class="window-frame enter" style="--d: 0.4s">

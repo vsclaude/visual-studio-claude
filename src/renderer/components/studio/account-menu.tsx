@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Google } from "@/components/ui/svgs/google"
 import { Spinner } from "@/components/ui/spinner"
 import { useAccount, watchAccount } from "@/lib/account"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
@@ -153,6 +154,7 @@ export function AccountMenu() {
             </>
           ) : (
             <DropdownMenuItem disabled={!ready} onClick={() => void signIn()}>
+              <Google />
               Sign in with Google
             </DropdownMenuItem>
           )}

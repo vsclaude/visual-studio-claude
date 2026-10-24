@@ -73,12 +73,23 @@ export type Host = {
    * launcher's count on Linux. Zero clears it. */
   setBadgeCount: (count: number) => void
 
-  /** Quits the app the ordinary way, `before-quit` and all, and starts `file`
-   * detached once that cleanup is done — the Windows update's installer. */
-  quitAndRun: (file: string, args: string[]) => void
+  /** Quits the app the ordinary way, `before-quit` and all, and calls `task`
+   * once that cleanup is done — the Windows update's installer. */
+  quitAndRun: (task: () => void) => void
+  /**
+   * What to call once the app has quit, whenever and however it is quit — a
+   * staged update's installer — or null for nothing. Called at `will-quit` and
+   * must be synchronous; skipped when the quit is the OS logging off or
+   * shutting down, which would cut an installer off halfway.
+   */
+  setQuitTask: (task: (() => void) | null) => void
 
   /** This build's version, for the update check. */
   version: string
+  /** A packaged build rather than `bun run dev`. Only a packaged one installs
+   * an update unasked: a dev run would otherwise replace the installed app with
+   * the latest release every time it was closed. */
+  packaged: boolean
   /** `install.sh`, or null where this host cannot run it — see
    * `installUpdate` in `ipc.ts`. */
   installerScript: string | null

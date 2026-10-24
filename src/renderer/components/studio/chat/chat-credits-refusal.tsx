@@ -2,6 +2,7 @@ import { Coins } from "lucide-react"
 
 import { formatCredits } from "@shared/credits"
 import { Button } from "@/components/ui/button"
+import { Google } from "@/components/ui/svgs/google"
 import { useAccount } from "@/lib/account"
 import type { CreditsRefusal } from "@/lib/chat/credits-refusal"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
@@ -70,6 +71,7 @@ export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
           disabled={busy}
           onClick={() => void signIn()}
         >
+          {!busy && <Google data-icon="inline-start" />}
           {busy ? "Signing in…" : "Sign in with Google"}
         </Button>
       ) : (

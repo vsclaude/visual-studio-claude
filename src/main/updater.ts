@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process"
-import { closeSync, createWriteStream, openSync } from "node:fs"
+import { closeSync, createWriteStream, mkdirSync, openSync } from "node:fs"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { Readable } from "node:stream"
@@ -17,14 +17,15 @@ import { dataDir } from "./data-dir"
  * costs an Apple Developer membership, which is the same reason `install.sh`
  * exists at all. So the whole of the update story here is: ask GitHub what the
  * latest release is, compare it against this build, and run the very script the
- * README already tells people to paste into a terminal. Nothing is downloaded
- * in the background, nothing is staged, and there is no delta.
+ * README already tells people to paste into a terminal. There is no delta.
  *
- * The one thing this process does fetch is the `.dmg` itself, and only once the
- * button is pressed (`downloadUpdate`) — because the download *is* the wait,
- * about a hundred megabytes of it, and it is the one phase the window is still
- * alive for. `install.sh` quits the app before it copies anything, so a
- * percentage is honest up to there and nothing after it could be drawn at all.
+ * The one thing this process does fetch is the installer itself
+ * (`downloadUpdate`) — when the button is pressed, or ahead of time, in the
+ * background, when automatic updates are on, so that the next ordinary quit
+ * can install it (`stageUpdate` in `ipc.ts`). The download *is* the wait, about
+ * a hundred megabytes of it, and it is the one phase the window is still alive
+ * for. `install.sh` quits the app before it copies anything, so a percentage is
+ * honest up to there and nothing after it could be drawn at all.
  *
  * Free of `electron` — this process's own version, and where the script it runs
  * lives, are arguments — so `test/updates.ts` can import it under plain `bun`,
@@ -312,7 +313,11 @@ export async function downloadUpdate(input: {
 }
 
 /**
- * Runs `install.sh` for a version and reopens the app afterwards.
+ * Runs `install.sh` for a version, and reopens the app afterwards when asked.
+ *
+ * Synchronous, because one of its callers is `will-quit`: the process exits as
+ * soon as that handler returns, and an `await` in front of the spawn would be
+ * an installer that never starts.
  *
  * **Detached, and that is the whole trick.** The script's third act is quitting
  * the app so that a bundle is not replaced out from under a running process —
@@ -324,19 +329,20 @@ export async function downloadUpdate(input: {
  * Output goes to a file for the same reason: by the time anything goes wrong,
  * the window that would have shown it is gone.
  */
-export async function startInstaller(input: {
+export function startInstaller(input: {
   /** The `install.sh` shipped inside the app bundle. */
   script: string
   version: string
   /** The bundle to reopen — where `install.sh` puts it, not where this process
-   * happens to be running from. */
-  appPath: string
+   * happens to be running from. Null for an install at quit: somebody who
+   * quit the app did not ask for it back. */
+  appPath: string | null
   /** The `.dmg` `downloadUpdate` already fetched, so the script skips its own
    * `curl`. The script deletes it on the way out. */
   dmg?: string
-}): Promise<void> {
+}): void {
   const logPath = updateLogPath()
-  await mkdir(path.dirname(logPath), { recursive: true })
+  mkdirSync(path.dirname(logPath), { recursive: true })
   // Truncated rather than appended: what matters is the run that just failed,
   // and this file is read by a person looking for exactly that.
   const log = openSync(logPath, "w")
@@ -347,11 +353,11 @@ export async function startInstaller(input: {
       "-c",
       // Arguments rather than an interpolated string: a version is a value from
       // the network, and this one ends up on a command line.
-      'bash "$1" "$2" && open "$3"',
+      input.appPath ? 'bash "$1" "$2" && open "$3"' : 'bash "$1" "$2"',
       "veystudio-update",
       input.script,
       input.version,
-      input.appPath,
+      ...(input.appPath ? [input.appPath] : []),
     ],
     {
       detached: true,
@@ -375,7 +381,7 @@ export async function startInstaller(input: {
  * What the NSIS installer is run with — the flags electron-updater itself
  * passes to an installer this template built.
  *
- * It is started by `quitAndRun` in `electron-ipc.ts` at `will-quit`, so the
+ * It is started at `will-quit` (`quitTask` in `electron-ipc.ts`), so the
  * app's own quit has already happened: `before-quit` ended the terminals and
  * the chats the way any other quit does. Not from a PowerShell wrapper waiting
  * on this process — a PowerShell spawned `detached` has no console and exits
@@ -391,9 +397,23 @@ export async function startInstaller(input: {
  *   moved aside rather than deleted, so a failed copy can put them back.
  * - `--force-run` — a silent one-click install launches the app afterwards only
  *   when asked to; without it the update would end with nothing on screen.
+ *   Left off for an install at quit, which is somebody closing the app: it
+ *   reopening on its own a few seconds later would be the app overruling them.
  *
  * The `.exe` is left in `updates/`, which the next `downloadUpdate` empties: by
  * the time it could be deleted nothing of this app is running to do it. Nor is
  * there a log — NSIS writes none, and the app reopening is the answer.
  */
-export const WINDOWS_INSTALLER_ARGS = ["/S", "--updated", "--force-run"]
+export function windowsInstallerArgs(reopen: boolean): string[] {
+  return reopen ? ["/S", "--updated", "--force-run"] : ["/S", "--updated"]
+}
+
+/** Starts the NSIS installer, detached — see `windowsInstallerArgs`. */
+export function startWindowsInstaller(file: string, reopen: boolean): void {
+  spawn(file, windowsInstallerArgs(reopen), {
+    detached: true,
+    stdio: "ignore",
+    // Not the install directory, which this is about to replace.
+    cwd: path.dirname(file),
+  }).unref()
+}

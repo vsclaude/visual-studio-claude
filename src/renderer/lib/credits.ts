@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import {
+  CARD_OFFERED,
   creditsArrived,
   formatCredits,
   type CreditPack,
@@ -28,7 +29,10 @@ export const useCreditsDialog = create<CreditsDialogState>()((set) => ({
   // Bank transfer for somebody whose system is in Vietnamese — it is cheaper
   // for them and needs no card. Anybody else is most likely outside Vietnam,
   // where only a card works.
-  method: navigator.language.toLowerCase().startsWith("vi") ? "bank" : "card",
+  method:
+    CARD_OFFERED && !navigator.language.toLowerCase().startsWith("vi")
+      ? "card"
+      : "bank",
   show: () => {
     set({ open: true })
     void useStudioAccount.getState().refresh()

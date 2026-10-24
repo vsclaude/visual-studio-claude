@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process"
 import { writeFile } from "node:fs/promises"
 import path from "node:path"
 
@@ -10,6 +9,7 @@ import {
   ipcMain,
   net,
   Notification,
+  powerMonitor,
   shell,
   type IpcMainInvokeEvent,
   type OpenDialogOptions,
@@ -116,6 +116,41 @@ export function registerIpc(
       : dialog.showOpenDialog(options)
   }
 
+  /**
+   * What runs once the app has quit — an update's installer. `will-quit`
+   * rather than earlier: `before-quit` defers the quit until the terminals and
+   * chats are ended, and this is the first moment after that.
+   *
+   * `atSessionEnd` is false for an update nobody pressed a button for: the OS
+   * logging off or shutting down quits the app too, and an installer started
+   * then is killed with the session somewhere in the middle of its copy.
+   */
+  let quitTask: { run: () => void; atSessionEnd: boolean } | null = null
+  let sessionEnding = false
+  // `session-end` is Windows', on a window; `shutdown` is macOS's and Linux's,
+  // and `powerMonitor` cannot be touched before `ready`.
+  app.on("browser-window-created", (_event, window) => {
+    window.on("session-end", () => {
+      sessionEnding = true
+    })
+  })
+  void app.whenReady().then(() => {
+    powerMonitor.on("shutdown", () => {
+      sessionEnding = true
+    })
+  })
+  app.on("will-quit", () => {
+    const task = quitTask
+    quitTask = null
+    if (!task || (sessionEnding && !task.atSessionEnd)) return
+    try {
+      task.run()
+    } catch (error) {
+      // Nothing is left to show it to, and the quit must go on regardless.
+      console.error("The quit task failed:", error)
+    }
+  })
+
   const host: Host = {
     send(channel, payload) {
       for (const window of BrowserWindow.getAllWindows()) {
@@ -202,20 +237,15 @@ export function registerIpc(
       void shell.openExternal(url)
     },
     fetch: (url, init) => net.fetch(url, init),
-    quitAndRun(file, args) {
-      // `will-quit` rather than now: `before-quit` defers the quit until the
-      // terminals and chats are ended, and this is the first moment after that.
-      app.once("will-quit", () => {
-        spawn(file, args, {
-          detached: true,
-          stdio: "ignore",
-          // Not the install directory, which this is about to replace.
-          cwd: path.dirname(file),
-        }).unref()
-      })
+    quitAndRun(task) {
+      quitTask = { run: task, atSessionEnd: true }
       app.quit()
     },
+    setQuitTask(task) {
+      quitTask = task ? { run: task, atSessionEnd: false } : null
+    },
     version: app.getVersion(),
+    packaged: app.isPackaged,
     installerScript: installerScript(),
     bundledPluginsDir: bundledPluginsDir(),
     appShare: electronShare,

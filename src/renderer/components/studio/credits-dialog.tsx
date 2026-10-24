@@ -3,6 +3,7 @@ import { CreditCard, Landmark, Sparkle } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import {
+  CARD_OFFERED,
   formatCredits,
   formatPrice,
   packsFor,
@@ -30,7 +31,15 @@ import { CreditsBadge } from "./credits-badge"
 
 const METHODS: { id: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { id: "bank", label: "Vietnamese bank · VietQR", icon: Landmark },
-  { id: "card", label: "Card · international", icon: CreditCard },
+  ...(CARD_OFFERED
+    ? [
+        {
+          id: "card" as const,
+          label: "Card · international",
+          icon: CreditCard,
+        },
+      ]
+    : []),
 ]
 
 /**
@@ -84,21 +93,23 @@ function BuyDialog() {
 
         {account && <AccountStrip />}
 
-        <div className="flex justify-center">
-          <Segmented
-            value={method}
-            onChange={setMethod}
-            options={METHODS.map(({ id, label, icon: Icon }) => ({
-              value: id,
-              label: (
-                <>
-                  <Icon className="size-3.5" />
-                  {label}
-                </>
-              ),
-            }))}
-          />
-        </div>
+        {CARD_OFFERED && (
+          <div className="flex justify-center">
+            <Segmented
+              value={method}
+              onChange={setMethod}
+              options={METHODS.map(({ id, label, icon: Icon }) => ({
+                value: id,
+                label: (
+                  <>
+                    <Icon className="size-3.5" />
+                    {label}
+                  </>
+                ),
+              }))}
+            />
+          </div>
+        )}
 
         {/* Four by transfer, three by card — the smallest is `bankOnly`. */}
         <div

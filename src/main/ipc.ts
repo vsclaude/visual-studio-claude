@@ -115,7 +115,7 @@ import {
   checkForUpdate,
   downloadUpdate,
   startInstaller,
-  WINDOWS_INSTALLER_ARGS,
+  startWindowsInstaller,
 } from "./updater"
 import { DirectoryWatchers, RootWatchers } from "./watch"
 
@@ -1611,11 +1611,11 @@ export function createIpc(host: Host): {
     send(IPC.updateProgress, { stage: "installing", version })
     if (platform === "win32") {
       // The app quits itself and the installer starts after — see
-      // `WINDOWS_INSTALLER_ARGS` for why in that order.
-      host.quitAndRun(installer, WINDOWS_INSTALLER_ARGS)
+      // `windowsInstallerArgs` for why in that order.
+      host.quitAndRun(() => startWindowsInstaller(installer, true))
       return
     }
-    await startInstaller({
+    startInstaller({
       script: script!,
       version,
       appPath: APP_DIR,

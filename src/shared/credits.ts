@@ -110,6 +110,14 @@ export function formatPrice(price: number): string {
 export type PaymentMethod = "bank" | "card"
 
 /**
+ * Whether the credits dialog offers the card side at all. Off for now: every
+ * purchase is by bank transfer and the dialog has no switch to a card. The
+ * server's card checkout and the card packs are left as they are, so turning
+ * this back on brings the side back unchanged.
+ */
+export const CARD_OFFERED = false
+
+/**
  * The signed-in user's credits on the server, `GET /api/usage` there, in the
  * integer unit (`CREDITS_PER_USD`). Every Studio AI request is paid for out of
  * them; there is no free allowance.

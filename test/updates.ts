@@ -13,7 +13,7 @@ import {
   installerAsset,
   isNewer,
   versionParts,
-  WINDOWS_INSTALLER_ARGS,
+  windowsInstallerArgs,
 } from "../src/main/updater"
 import { downloadPercent, installLabel } from "../src/renderer/lib/updates"
 import { check, finish, section } from "./harness"
@@ -130,19 +130,23 @@ check(
   )?.size === 0
 )
 
-section("WINDOWS_INSTALLER_ARGS")
+section("windowsInstallerArgs")
 
 check(
   "silent, since the window that asked is gone",
-  WINDOWS_INSTALLER_ARGS.includes("/S")
+  windowsInstallerArgs(true).includes("/S")
 )
 check(
   "closes every running copy without a prompt",
-  WINDOWS_INSTALLER_ARGS.includes("--updated")
+  windowsInstallerArgs(true).includes("--updated")
 )
 check(
   "and reopens the app, which a silent install otherwise does not",
-  WINDOWS_INSTALLER_ARGS.includes("--force-run")
+  windowsInstallerArgs(true).includes("--force-run")
+)
+check(
+  "an install at quit does not reopen what somebody just closed",
+  !windowsInstallerArgs(false).includes("--force-run")
 )
 
 section("downloadPercent")

@@ -1199,45 +1199,8 @@ footer .copy {
     transform: translateX(0);
   }
 }
-.a-switch {
-  animation: toggle 5s cubic-bezier(0.6, 0, 0.3, 1) infinite;
-}
-@keyframes toggle {
-  0%,
-  40% {
-    transform: none;
-  }
-  50%,
-  90% {
-    transform: translateX(14px);
-  }
-  100% {
-    transform: none;
-  }
-}
-/* The account picked moves down the list: a chat changing account. */
-.a-pick {
-  animation: pick 7.5s cubic-bezier(0.6, 0, 0.3, 1) infinite;
-}
-@keyframes pick {
-  0%,
-  28% {
-    transform: none;
-  }
-  34%,
-  62% {
-    transform: translateY(36px);
-  }
-  68%,
-  94% {
-    transform: translateY(72px);
-  }
-  100% {
-    transform: none;
-  }
-}
-/* The limit-hit chip gives way to the fresh account's — its markup is the
-   finished state, so the switched chip is what shows without motion. */
+/* The limit card's button gives way to the chat carrying on — its markup is
+   the finished state, so the carried-on chat is what shows without motion. */
 .a-out {
   animation: out 6s ease infinite;
 }
@@ -1264,37 +1227,35 @@ footer .copy {
     opacity: 1;
   }
 }
-/* The lit card follows the switch: login while it sits left, credits right. */
-.a-left {
-  animation: lit 5s ease-in-out infinite;
+/* The pointer that presses `Continue with …`: in, a press, gone before the
+   card changes — so without motion (and in the markup) it is not there. */
+.a-cursor {
+  animation: cursor 6s ease infinite;
 }
-.a-right {
-  animation: unlit 5s ease-in-out infinite;
-}
-@keyframes lit {
-  0%,
-  40% {
+@keyframes cursor {
+  0% {
+    opacity: 0;
+    transform: translate(60px, 40px);
+  }
+  8% {
     opacity: 1;
   }
-  50%,
-  90% {
-    opacity: 0.4;
+  20% {
+    opacity: 1;
+    transform: none;
   }
+  24% {
+    opacity: 1;
+    transform: scale(0.82);
+  }
+  28% {
+    opacity: 1;
+    transform: none;
+  }
+  34%,
   100% {
-    opacity: 1;
-  }
-}
-@keyframes unlit {
-  0%,
-  40% {
-    opacity: 0.4;
-  }
-  50%,
-  90% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.4;
+    opacity: 0;
+    transform: none;
   }
 }
 

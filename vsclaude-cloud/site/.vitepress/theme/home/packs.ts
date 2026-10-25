@@ -15,10 +15,10 @@ import { formatCredits } from "../../../../server/utils/usage.ts"
  */
 
 const PACK_EXTRAS: Record<CreditItem, { bonus?: number; popular?: boolean }> = {
-  "credits-mini": {},
-  "credits-20k": {},
-  "credits-60k": { bonus: 10, popular: true },
-  "credits-100k": { bonus: 20 },
+  "vnd-20k": {},
+  "vnd-50k": {},
+  "vnd-100k": { bonus: 10, popular: true },
+  "vnd-200k": { bonus: 20 },
 }
 
 const VND = new Intl.NumberFormat("vi-VN", {

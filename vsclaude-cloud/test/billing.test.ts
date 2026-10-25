@@ -22,8 +22,8 @@ import { weighted } from "../server/utils/usage.ts"
  */
 
 const catalog = catalogOf({
-  "credits-60k": "pri_c60",
-  "credits-100k": "",
+  "vnd-100k": "pri_c60",
+  "vnd-200k": "",
 })
 
 function transaction(data: Record<string, unknown> = {}) {
@@ -96,28 +96,28 @@ describe("signatureValid", () => {
 
 describe("items", () => {
   test("the credit packs, and nothing else", () => {
-    expect(isCreditItem("credits-20k")).toBe(true)
-    expect(isCreditItem("credits-mini")).toBe(true)
+    expect(isCreditItem("vnd-50k")).toBe(true)
+    expect(isCreditItem("vnd-20k")).toBe(true)
     expect(isCreditItem("plus")).toBe(false)
     expect(isCreditItem("plus-3m")).toBe(false)
     expect(isCreditItem("pri_c60")).toBe(false)
   })
   test("an unset price is not on sale", () => {
-    expect(Object.values(catalog)).not.toContain("credits-100k")
+    expect(Object.values(catalog)).not.toContain("vnd-200k")
   })
   // Paddle's fixed $0.50 is most of 20.000 ₫, and its floor is 20.276 ₫.
   test("only the smallest pack is bank transfer only", () => {
     const bankOnly = Object.entries(CREDIT_PACKS)
       .filter(([, pack]) => pack.bankOnly)
       .map(([id, pack]) => [id, pack.price])
-    expect(bankOnly).toEqual([["credits-mini", 20_000]])
+    expect(bankOnly).toEqual([["vnd-20k", 20_000]])
   })
 })
 
 describe("credit packs", () => {
   test("a completed one-time transaction adds its credits once", () => {
     const once = accountAfter(transaction())
-    expect(once.credits).toBe(CREDIT_PACKS["credits-60k"].credits)
+    expect(once.credits).toBe(CREDIT_PACKS["vnd-100k"].credits)
     expect(applyWebhook(once, transaction(), catalog).kind).toBe("ignored")
   })
 
@@ -131,7 +131,7 @@ describe("credit packs", () => {
       catalog
     )
     expect(applied.kind === "credits" && applied.purchase).toEqual({
-      item: "credits-60k",
+      item: "vnd-100k",
       amount: 59000,
       currency: "VND",
     })
@@ -140,7 +140,7 @@ describe("credit packs", () => {
   test("a payload without totals still credits, with no amount", () => {
     const applied = applyWebhook(NO_ACCOUNT, transaction(), catalog)
     expect(applied.kind === "credits" && applied.purchase).toEqual({
-      item: "credits-60k",
+      item: "vnd-100k",
       amount: null,
       currency: null,
     })
@@ -150,7 +150,7 @@ describe("credit packs", () => {
     const two = accountAfter(
       transaction({ items: [{ price: { id: "pri_c60" }, quantity: 2 }] })
     )
-    expect(two.credits).toBe(2 * CREDIT_PACKS["credits-60k"].credits)
+    expect(two.credits).toBe(2 * CREDIT_PACKS["vnd-100k"].credits)
   })
 
   test("a price this server does not sell — a plan's — adds nothing", () => {

@@ -9,7 +9,7 @@ import { paddleApi, paddleConfig, paddleCustomerOf } from "../utils/paddle.ts"
  * `POST /api/checkout` `{ item }` — a Paddle card checkout for the signed-in
  * user, the way in from outside Vietnam (bank transfers are `api/orders`),
  * answered as `{ url }` for the studio to open in a browser. `item` is the
- * app's id for the pack bought (`credits-20k`, …), never a price id.
+ * app's id for the pack bought (`vnd-50k`, …), never a price id.
  *
  * A transaction is created here rather than a checkout opened from a page
  * because the uid has to ride on it (`custom_data`), and that is the only thing

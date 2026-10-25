@@ -68,9 +68,9 @@ export default defineConfig({
     paddleClientToken: "",
     /** NITRO_PADDLE_PRICE_<ITEM> — each item's `pri_…` id. An empty one is
      * not on sale. */
-    paddlePriceCredits20k: "",
-    paddlePriceCredits60k: "",
-    paddlePriceCredits100k: "",
+    paddlePriceVnd50k: "",
+    paddlePriceVnd100k: "",
+    paddlePriceVnd200k: "",
     /** NITRO_SEPAY_BANK_ACCOUNT, _BANK_CODE, _ACCOUNT_NAME — the account
      * bank transfers are paid into (the one linked in SePay), SePay's short
      * bank code for it (`qr.sepay.vn/banks.json`, e.g. `MBBank`), and the

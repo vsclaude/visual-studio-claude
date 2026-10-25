@@ -21,7 +21,7 @@ import {
 const NOW = new Date("2026-10-18T00:00:00Z")
 
 function order(
-  item: Order["item"] = "credits-60k",
+  item: Order["item"] = "vnd-100k",
   fields: Partial<Order> = {}
 ): Order {
   return {
@@ -108,7 +108,7 @@ describe("applyTransfer", () => {
     expect(paid.kind).toBe("credits")
     if (paid.kind !== "credits") return
     expect(paid.order.paidBy).toBe(92704)
-    expect(paid.account.credits).toBe(CREDIT_PACKS["credits-60k"].credits + 5)
+    expect(paid.account.credits).toBe(CREDIT_PACKS["vnd-100k"].credits + 5)
   })
 
   test("more than asked still pays it", () => {

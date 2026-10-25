@@ -6,7 +6,7 @@ import { CREDIT_PACKS, type Account, type CreditItem } from "./billing.ts"
  * Paddle's half of `billing.ts`: card payments from anywhere, one credit pack
  * a transaction.
  *
- * What can be bought is named by the app's own ids (`credits-60k`), never by
+ * What can be bought is named by the app's own ids (`vnd-100k`), never by
  * Paddle's price ids: sandbox and live are two Paddle accounts with two sets
  * of them, so they are configuration (`NITRO_PADDLE_PRICE_*`).
  */

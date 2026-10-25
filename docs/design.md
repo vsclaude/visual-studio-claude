@@ -893,11 +893,13 @@ dollars for anybody reconciling against the server.
 
 **Priced against the market, not the list price.** Written as dollars, the
 first table said what it had been hiding: 50.000 ₫ bought $1.00 of usage,
-priced off Anthropic's list price at about 26.300 ₫ to the dollar. API credit
-sells in Vietnam for around 1.500 ₫ to the dollar, so that was twenty-five
-times the going rate. The packs are now $25, $55 and $120 for the same
-50.000, 100.000 and 200.000 ₫ — 2.000 ₫ to the dollar, a third over that
-cost, with the 10% and 20% bonuses kept. A fourth, $10 for 20.000 ₫, makes
+priced off Anthropic's list price at about 26.300 ₫ to the dollar. The packs
+are now $25, $55 and $120 for the same 50.000, 100.000 and 200.000 ₫ —
+2.000 ₫ to the dollar, with the 10% and 20% bonuses kept. That rate was set
+against a claimed market price for API credit of around 1.500 ₫ to the dollar
+which was **never sourced**, and it is far below cost against Anthropic's own
+API: a pack has to be repriced before the server is pointed at
+`api.anthropic.com`. A fourth, $10 for 20.000 ₫, makes
 the four amounts a Vietnamese transfer is made in, and it is **bank transfer
 only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
 charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is

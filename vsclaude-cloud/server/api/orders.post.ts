@@ -9,7 +9,7 @@ import { publicUrlOf, sepayConfig, sepayReady } from "../utils/sepay.ts"
 
 /**
  * `POST /api/orders` `{ item }` — a bank-transfer purchase for the signed-in
- * user (`credits-60k`, …), answered as `{ url }`: this server's
+ * user (`vnd-100k`, …), answered as `{ url }`: this server's
  * `/pay/<code>` page, with the VietQR to scan. The way in from Vietnam; cards
  * are `api/checkout`.
  *

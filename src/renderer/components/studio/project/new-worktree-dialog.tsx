@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Plus } from "lucide-react"
+import { Plus, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -69,6 +69,7 @@ export function NewWorktreeDialog({
     local: [],
     remote: [],
   })
+  const [reloading, setReloading] = useState(false)
   const field = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -82,6 +83,15 @@ export function NewWorktreeDialog({
       current = false
     }
   }, [folder.id])
+
+  // For a branch made after the dialog opened, which the first list missed.
+  function reload() {
+    setReloading(true)
+    worktreeBranches(folder.id)
+      .then(setKnown)
+      .catch(() => {})
+      .finally(() => setReloading(false))
+  }
 
   const baseGroups: BranchGroup[] = [
     { label: "Local", items: known.local.map((value) => ({ value })) },
@@ -129,8 +139,7 @@ export function NewWorktreeDialog({
         <DialogHeader>
           <DialogTitle>New worktree</DialogTitle>
           <DialogDescription>
-            A second checkout of “{folder.name}”, kept inside the project, so a
-            chat there works on its own files and branch.
+            A second checkout of “{folder.name}”, inside the project.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
@@ -154,7 +163,20 @@ export function NewWorktreeDialog({
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="worktree-base">Based on</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="worktree-base">Based on</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={reload}
+                disabled={busy || reloading}
+                aria-label="Reload branches"
+                title="Reload branches"
+              >
+                <RefreshCw className={reloading ? "animate-spin" : undefined} />
+              </Button>
+            </div>
             <BranchCombobox
               id="worktree-base"
               value={base}

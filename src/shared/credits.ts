@@ -53,13 +53,6 @@ export type CreditPack = {
   price: number
   /** What it adds, in the integer unit — `CREDITS_PER_USD` to the dollar. */
   credits: number
-  /** A bonus over the base rate, in percent — drawn as a badge. */
-  bonus?: number
-  /**
-   * The pack the dialog steers toward — raised, ringed and given the filled
-   * button. One at most: two highlights are no highlight.
-   */
-  popular?: boolean
 }
 
 /**

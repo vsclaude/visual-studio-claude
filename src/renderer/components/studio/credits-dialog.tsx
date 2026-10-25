@@ -44,7 +44,7 @@ const METHODS: { id: PaymentMethod; label: string; icon: LucideIcon }[] = [
 ]
 
 /**
- * The credits dialog: the packs and where the user stands, mounted once per
+ * The credits dialog: the pack and where the user stands, mounted once per
  * window and opened through `useCreditsDialog`.
  *
  * Two ways to pay (`PaymentMethod`): a Vietnamese bank transfer by VietQR, or
@@ -73,6 +73,9 @@ function BuyDialog() {
   const awaiting = useStudioAccount((state) => state.awaiting)
   const error = useStudioAccount((state) => state.error)
   const buy = useStudioAccount((state) => state.buy)
+  // The card side buys nothing: the one pack is `bankOnly`.
+  const pack = packsFor(method)[0]
+  const soldOut = pack !== undefined && stockOf(account, pack.id) === 0
 
   return (
     <Dialog
@@ -81,7 +84,7 @@ function BuyDialog() {
         if (!next) close()
       }}
     >
-      <DialogContent className="max-h-[calc(100svh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-4xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-md">
         <DialogHeader className="items-center text-center">
           <CreditsBadge size="md" />
           <DialogTitle className="text-xl font-semibold">
@@ -112,74 +115,48 @@ function BuyDialog() {
           </div>
         )}
 
-        {/* One pack now, so one card centred rather than a grid of four. */}
-        <div className="mx-auto grid w-full max-w-xs gap-3 pt-1">
-          {packsFor(method).map((pack) => {
-            const left = stockOf(account, pack.id)
-            const soldOut = left === 0
-            return (
-              <div
-                key={pack.id}
-                className={cn(
-                  "relative flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center",
-                  // Taller than its neighbours rather than scaled, so it cannot
-                  // spill past the dialog's scroll box sideways.
-                  pack.popular &&
-                    "border-violet-500/60 bg-linear-to-b from-violet-500/10 to-card shadow-lg ring-1 shadow-violet-500/15 ring-violet-500/40 sm:-my-2 sm:py-7"
-                )}
-              >
-                {pack.popular && (
-                  <span className="absolute -top-2.5 inline-flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2.5 py-0.5 text-[0.625rem] font-semibold text-white shadow-sm">
-                    <Sparkle className="size-2.5 fill-current" />
-                    Most popular
-                  </span>
-                )}
-                <Coin size={pack.popular ? 34 : 28} struck />
-                <span className="text-2xl font-semibold tabular-nums">
-                  {formatPrice(pack.price)}
-                </span>
-                <span className="text-xs text-muted-foreground">
+        {/* One pack, so one offer and the button that buys it — not a lone
+            card in a row built for four. */}
+        {pack && (
+          <div className="flex flex-col gap-4 rounded-xl border border-violet-500/40 bg-linear-to-b from-violet-500/10 to-card p-4">
+            <div className="flex items-center gap-3">
+              <Coin size={40} struck />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-base font-semibold tabular-nums">
                   {formatCredits(pack.credits)} in credits
                 </span>
-                {pack.bonus && (
-                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400">
-                    +{pack.bonus}% bonus
-                  </span>
-                )}
-                {/* The count itself is not drawn — only that there is none
-                    left. `soldOut` is false for a server too old to say. */}
-                {soldOut && (
-                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[0.625rem] font-semibold text-destructive">
-                    Sold out
-                  </span>
-                )}
-                <Button
-                  variant={pack.popular ? "default" : "outline"}
-                  className={cn(
-                    "mt-auto w-full",
-                    pack.popular &&
-                      "bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90"
-                  )}
-                  disabled={!ready || pending !== null || soldOut}
-                  onClick={() => void buy(pack.id, method)}
-                >
-                  {pending === pack.id
-                    ? "Opening…"
-                    : !ready
-                      ? "Sign in to buy"
-                      : soldOut
-                        ? "Sold out"
-                        : "Buy credits"}
-                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {method === "bank"
+                    ? "Bank transfer · VietQR"
+                    : "Card · international"}
+                </span>
               </div>
-            )
-          })}
-        </div>
+              <span className="text-xl font-semibold whitespace-nowrap tabular-nums">
+                {formatPrice(pack.price)}
+              </span>
+            </div>
+            <Button
+              size="lg"
+              className="w-full bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90 disabled:opacity-60"
+              disabled={!ready || pending !== null || soldOut}
+              onClick={() => void buy(pack.id, method)}
+            >
+              {pending === pack.id
+                ? "Opening…"
+                : !ready
+                  ? "Sign in to buy"
+                  : soldOut
+                    ? "Sold out"
+                    : `Buy for ${formatPrice(pack.price)}`}
+            </Button>
+          </div>
+        )}
 
-        {/* The server's pool of unsold credits cannot cover a pack — said
-            once under the card, so a disabled button is not left to explain
-            itself. */}
-        {packsFor(method).every((pack) => stockOf(account, pack.id) === 0) && (
+        {/* The server's pool of unsold credits cannot cover the pack — said
+            under it, so a disabled button is not left to explain itself. The
+            count itself is not drawn, and a server too old to keep stock
+            never says sold out. */}
+        {soldOut && (
           <p className="text-center text-xs text-muted-foreground">
             Credits are sold out for now — more will be added soon.
           </p>

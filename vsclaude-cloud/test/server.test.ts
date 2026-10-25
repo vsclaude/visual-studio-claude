@@ -2,12 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { SignJWT } from "jose"
 
 import {
-  allowedModel,
   countBodyOf,
-  listOf,
   mayExceed,
   promptTooLong,
-  upstreamHeaders,
+  requestedModel,
 } from "../server/utils/anthropic.ts"
 import { authorizeUrl, userOfIdToken } from "../server/utils/google.ts"
 import {
@@ -168,34 +166,17 @@ describe("tokenOf", () => {
   })
 })
 
-describe("allowedModel", () => {
-  const allowed = listOf(" claude-haiku-5-5 , ")
-  test("the free model", () => {
-    expect(allowedModel({ model: "claude-haiku-5-5" }, allowed)).toBe(
-      "claude-haiku-5-5"
+describe("requestedModel", () => {
+  test("any model is passed on", () => {
+    expect(requestedModel({ model: "claude-opus-5-5" })).toBe("claude-opus-5-5")
+    expect(requestedModel({ model: "claude-sonnet-4-5" })).toBe(
+      "claude-sonnet-4-5"
     )
   })
-  test("anything else", () => {
-    expect(allowedModel({ model: "claude-opus-5-5" }, allowed)).toBeNull()
-    expect(allowedModel({ model: "haiku" }, allowed)).toBeNull()
-    expect(allowedModel({}, allowed)).toBeNull()
-  })
-})
-
-describe("upstreamHeaders", () => {
-  test("the user's token never goes to Anthropic", () => {
-    const headers = upstreamHeaders(
-      new Headers({
-        authorization: "Bearer user-id-token",
-        "x-api-key": "user-id-token",
-        "anthropic-beta": "prompt-caching-2024-07-31",
-        "anthropic-version": "2023-06-01",
-      }),
-      "sk-server"
-    )
-    expect(headers.get("x-api-key")).toBe("sk-server")
-    expect(headers.get("authorization")).toBeNull()
-    expect(headers.get("anthropic-beta")).toBe("prompt-caching-2024-07-31")
+  test("a body naming none", () => {
+    expect(requestedModel({})).toBeNull()
+    expect(requestedModel({ model: "" })).toBeNull()
+    expect(requestedModel(null)).toBeNull()
   })
 })
 

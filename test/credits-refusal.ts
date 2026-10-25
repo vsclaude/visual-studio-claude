@@ -1,3 +1,4 @@
+import { NO_CREDITS_LEFT } from "../src/main/free-ai"
 import { creditsRefusalOf } from "../src/renderer/lib/chat/credits-refusal"
 import { check, finish, section } from "./harness"
 
@@ -20,6 +21,10 @@ check(
 check(
   "the bare sentence",
   creditsRefusalOf("You have no credits left.") === "no-credits"
+)
+check(
+  "this app's own refusal on a balance last seen empty",
+  creditsRefusalOf(NO_CREDITS_LEFT) === "no-credits"
 )
 check(
   "this app's own refusal before sign-in",

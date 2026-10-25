@@ -106,8 +106,10 @@ sold is **credit packs**, in VND, by the app's own item ids
 
 What credits pay for:
 
-- **Every request, on every model** (`NITRO_ALLOWED_MODELS` — Haiku, Sonnet
-  and Opus), at that model's price. There is no free allowance: a user with no
+- **Every request, on every model**, at that model's family's price — Haiku,
+  Sonnet, and anything else at Opus's (`server/utils/usage.ts`). No model is
+  refused: `NITRO_ALLOWED_MODELS` is removed, and `MODELS` in
+  `server/utils/limits.ts` is only what `/v1/models` lists. There is no free allowance: a user with no
   credits is refused before anything is spent. (There was a daily budget per
   user once; it is withdrawn, and `./.data/quota` is not read any more.)
 - `GET /api/usage` answers what is left (`credits`) and what has been spent
@@ -176,23 +178,62 @@ Setting up Google sign-in:
 All in `nitro.config.ts` › `runtimeConfig`, overridden by environment variables
 (`.env` in development; see `.env.example`):
 
-| Variable                                                         | Default                                              | What                                                                                                                |
-| ---------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `NITRO_ANTHROPIC_API_KEY`                                        | — (required)                                         | A Console API key. Every free request spends it.                                                                    |
-| `NITRO_ALLOWED_MODELS`                                           | `claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5` | The models served, comma-separated. Keep in step with the app's `FREE_AI_MODELS`.                                   |
-| `NITRO_SEPAY_BANK_ACCOUNT` / `_BANK_CODE` / `_ACCOUNT_NAME`      | —                                                    | The account transfers go to, its SePay bank code, and its holder. Without the first two, `/api/orders` answers 500. |
-| `NITRO_SEPAY_CODE_PREFIX`                                        | `VSC`                                                | Order codes are this and eight digits.                                                                              |
-| `NITRO_SEPAY_WEBHOOK_SECRET` / `NITRO_SEPAY_API_KEY`             | —                                                    | The SePay webhook's HMAC secret or API key. With neither, every webhook is refused.                                 |
-| `NITRO_PUBLIC_URL`                                               | the request's origin                                 | This server's public address, for `/pay` links.                                                                     |
-| `NITRO_PADDLE_ENVIRONMENT`                                       | `sandbox`                                            | `sandbox` or `production`; every Paddle value below belongs to that account.                                        |
-| `NITRO_PADDLE_API_KEY`                                           | —                                                    | Checkouts. Without it `/api/checkout` answers 500.                                                                  |
-| `NITRO_PADDLE_WEBHOOK_SECRET`                                    | —                                                    | The notification destination's secret. Without it every webhook is refused.                                         |
-| `NITRO_PADDLE_CLIENT_TOKEN`                                      | —                                                    | Paddle.js's, for `/checkout`.                                                                                       |
-| `NITRO_PADDLE_PRICE_VND50K` / `_VND100K` / `_VND200K`            | —                                                    | The credit packs' `pri_…` ids.                                                                                      |
-| `NITRO_MAX_PROMPT_TOKENS`                                        | `100000`                                             | Largest prompt forwarded (Haiku 5.5 is 5× past 100K). `0` = no limit.                                               |
-| `NITRO_GOOGLE_CLIENT_ID` / `NITRO_GOOGLE_CLIENT_SECRET`          | —                                                    | The Web application OAuth client sign-in goes through. Without them nobody can sign in.                             |
-| `NITRO_SESSION_SECRET`                                           | —                                                    | Signs the session and access tokens. Without it nobody can sign in, and nothing is let through.                     |
-| `NITRO_ANTHROPIC_BASE_URL`                                       | `https://api.anthropic.com`                          |                                                                                                                     |
+| Variable                                                    | Default              | What                                                                                                                |
+| ----------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `NITRO_SEPAY_BANK_ACCOUNT` / `_BANK_CODE` / `_ACCOUNT_NAME` | —                    | The account transfers go to, its SePay bank code, and its holder. Without the first two, `/api/orders` answers 500. |
+| `NITRO_SEPAY_CODE_PREFIX`                                   | `VSC`                | Order codes are this and eight digits.                                                                              |
+| `NITRO_SEPAY_WEBHOOK_SECRET` / `NITRO_SEPAY_API_KEY`        | —                    | The SePay webhook's HMAC secret or API key. With neither, every webhook is refused.                                 |
+| `NITRO_PUBLIC_URL`                                          | the request's origin | This server's public address, for `/pay` links.                                                                     |
+| `NITRO_PADDLE_ENVIRONMENT`                                  | `sandbox`            | `sandbox` or `production`; every Paddle value below belongs to that account.                                        |
+| `NITRO_PADDLE_API_KEY`                                      | —                    | Checkouts. Without it `/api/checkout` answers 500.                                                                  |
+| `NITRO_PADDLE_WEBHOOK_SECRET`                               | —                    | The notification destination's secret. Without it every webhook is refused.                                         |
+| `NITRO_PADDLE_CLIENT_TOKEN`                                 | —                    | Paddle.js's, for `/checkout`.                                                                                       |
+| `NITRO_PADDLE_PRICE_VND50K` / `_VND100K` / `_VND200K`       | —                    | The credit packs' `pri_…` ids.                                                                                      |
+| `NITRO_MAX_PROMPT_TOKENS`                                   | `100000`             | Largest prompt forwarded (Haiku 5.5 is 5× past 100K). `0` = no limit.                                               |
+| `NITRO_GOOGLE_CLIENT_ID` / `NITRO_GOOGLE_CLIENT_SECRET`     | —                    | The Web application OAuth client sign-in goes through. Without them nobody can sign in.                             |
+| `NITRO_SESSION_SECRET`                                      | —                    | Signs the session and access tokens. Without it nobody can sign in, and nothing is let through.                     |
+
+### Providers and failover
+
+The providers a request may go to are rows of D1's `upstreams` table, each
+speaking Anthropic's Messages API at its own `base_url` (everything before
+`/v1/messages`, path prefix included) with its own `api_key`:
+
+| Column       | What                                                            |
+| ------------ | --------------------------------------------------------------- |
+| `name`       | Primary key; what the log calls it.                             |
+| `base_url`   | `https://a.example/api`                                         |
+| `api_key`    | Plain text — whoever can read the database can read it.         |
+| `auth`       | `x-api-key` (default) or `bearer`, for `Authorization: Bearer`. |
+| `priority`   | Lowest is tried first (default `0`; ties go by name).           |
+| `enabled`    | `1` (default) or `0` to take it out without deleting it.        |
+| `credit_usd` | The usage the key was bought with, in dollars (default `0`).    |
+| `note`       | Free text — where it was bought, what is left.                  |
+
+```sh
+wrangler d1 execute vsclaude --remote --command "INSERT INTO upstreams (name, base_url, api_key, priority, credit_usd) VALUES ('provider-a', 'https://a.example/api', 'sk-…', 1, 10)"
+wrangler d1 execute vsclaude --remote --command "UPDATE upstreams SET enabled = 0 WHERE name = 'provider-a'"
+```
+
+**The credits on sale are this table's.** What can still be sold is the sum of
+every row's `credit_usd`, less the credits of every paid transaction ever, less
+what unpaid orders of the last 30 minutes hold (`stockLeft`); short of one
+whole pack, `/api/orders` answers 409 and the studio says sold out. Buying
+another key is inserting its row, which restocks at once — the stock is read
+on every ask, unlike the provider list below. Every row
+counts, `enabled` or not — a used-up key was still bought and its usage still
+sold — so **disable a key rather than delete it**, and write off a key lost
+with balance on it by lowering its `credit_usd`.
+
+The server reads the providers at most every 30 seconds per isolate, so a change
+takes that long to land. The first provider not cooling down gets every request; the next is asked only when it fails in a
+way another could answer differently — unreachable, 401/402/403, a 400 about
+balance or quota, 404, 429, 5xx. A failed provider is skipped for a minute (ten
+for a key or a balance), per isolate. A refusal of the request itself — a bad
+body, `prompt is too long` — goes straight back. Failover happens only before
+the answer starts: a reply already streaming finishes where it began. The log
+names the provider (`upstream=`, and `tried=` when more than one was asked),
+never its key or URL.
 
 ## Logs
 
@@ -201,7 +242,7 @@ One line per request on stdout, `key=value` (`server/plugins/log.ts`), plus a
 and a `usage` line when a streamed answer ends, joined to its request by `rid`:
 
 ```
-2026-10-18T03:50:01.120Z start anthropic_key=set upstream=https://api.anthropic.com google_client=set session_secret=set models=claude-haiku-5-5 max_prompt_tokens=100000
+2026-10-18T03:50:01.120Z start google_client=set session_secret=set max_prompt_tokens=100000
 2026-10-18T03:50:02.410Z request method=POST path=/v1/messages status=200 ms=812 uid=google:1043… model=claude-haiku-5-5 bytes=82422 rid=req_011… upstream_status=200
 2026-10-18T03:50:04.977Z usage uid=google:1043… rid=req_011… in=12 out=180 cache_read=21000 cache_write=0 weighted=3012 credits_charged=3012 ended=done
 2026-10-18T03:51:10.003Z request method=POST path=/v1/messages status=400 ms=2 refused="the token has expired"

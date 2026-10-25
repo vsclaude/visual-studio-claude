@@ -48,7 +48,7 @@ import {
   type AskDecision,
   type AskRequest,
 } from "./claude-agent"
-import { freeAiReady } from "./free-ai"
+import { freeAiReady, NO_CREDITS_LEFT, outOfCredits } from "./free-ai"
 import { expandHome } from "./shell-env"
 
 /**
@@ -909,6 +909,14 @@ export class Chats {
         text: prompt,
         ...(files.length > 0 && { images: files }),
       })
+    }
+    // After the message is written, unlike the sign-in refusal above: it is
+    // what the server's refusal would have left too, and what is sent again
+    // once credits are bought.
+    if (options.profileId === FREE_PROFILE_ID && (await outOfCredits())) {
+      this.setBusy(id, false)
+      this.endTurn(id, NO_CREDITS_LEFT)
+      return
     }
     await this.deliver(id, cwd, options, prompt, images)
   }

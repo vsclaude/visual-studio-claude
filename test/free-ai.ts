@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-import type { ClaudeAccount } from "../src/shared/api"
+import { DEFAULT_CHAT_OPTIONS, type ClaudeAccount } from "../src/shared/api"
 import {
   apiKeyHelperCommand,
   FREE_AI_MAX_PROMPT,
@@ -207,8 +207,9 @@ const signedInLogin: ClaudeAccount = { ...signedOut, state: "signedIn" }
 
 const opening = newChatOptions({ ready: true, login: signedOut, profiles: [] })
 check(
-  "no Claude login of their own: free, starting on Haiku",
-  opening?.profileId === FREE_PROFILE_ID && opening.model === "haiku",
+  "no Claude login of their own: free, on the usual default model",
+  opening?.profileId === FREE_PROFILE_ID &&
+    opening.model === DEFAULT_CHAT_OPTIONS.model,
   opening
 )
 check(

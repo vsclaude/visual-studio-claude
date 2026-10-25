@@ -58,8 +58,8 @@ export async function handFreeAiToken(token: string | null): Promise<void> {
  *
  * **Only when the default login is known to be signed out**, and nobody has a
  * profile: somebody who has run `claude auth login` is spending their own plan
- * on purpose, and a chat that quietly moved them onto Haiku would be a worse
- * answer than the one they already had. An unchecked login (`undefined`) is
+ * on purpose, and a chat that quietly moved them onto credits would be
+ * spending money they did not mean to. An unchecked login (`undefined`) is
  * not "signed out" — the setup screen asks at launch, so this is the moment
  * before it answers.
  */
@@ -71,11 +71,7 @@ export function newChatOptions(input: {
   const signedOut =
     input.login !== undefined && input.login.state !== "signedIn"
   if (!input.ready || !signedOut || input.profiles.length > 0) return undefined
-  // Haiku to start with, the cheapest on credits; the picker
-  // offers every model the server runs.
-  return {
-    ...DEFAULT_CHAT_OPTIONS,
-    model: "haiku",
-    profileId: FREE_PROFILE_ID,
-  }
+  // The same model a chat on a login opens on: credits pay for every model
+  // the server runs, and the picker is where somebody chooses a cheaper one.
+  return { ...DEFAULT_CHAT_OPTIONS, profileId: FREE_PROFILE_ID }
 }

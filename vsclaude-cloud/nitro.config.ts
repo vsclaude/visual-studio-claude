@@ -35,14 +35,11 @@ export default defineConfig({
 
   /*
    * Every key here is overridden by `NITRO_<UPPER_SNAKE>` in the environment —
-   * `.env` in development, the platform's variables in production. Only the
-   * Anthropic key has no usable default.
+   * `.env` in development, the platform's variables in production. The
+   * providers requests go to, and the credits on sale, are not here: they are
+   * rows of D1's `upstreams` table (`server/utils/upstreams.ts`).
    */
   runtimeConfig: {
-    /** NITRO_ANTHROPIC_API_KEY — a Console key; every free request spends it. */
-    anthropicApiKey: "",
-    /** NITRO_ANTHROPIC_BASE_URL */
-    anthropicBaseUrl: "https://api.anthropic.com",
     /** NITRO_GOOGLE_CLIENT_ID / NITRO_GOOGLE_CLIENT_SECRET — the Web
      * application OAuth client the studio signs in through
      * (`server/utils/google.ts`). Without them nobody can sign in. */
@@ -52,10 +49,6 @@ export default defineConfig({
      * (`server/utils/session.ts`). Long and random; changing it signs
      * everybody out. */
     sessionSecret: "",
-    /** NITRO_ALLOWED_MODELS — comma-separated; the app's `FREE_AI_MODELS`.
-     * Every one runs on credits, each at its own price
-     * (`server/utils/usage.ts`). */
-    allowedModels: "claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5",
     /** NITRO_PADDLE_ENVIRONMENT — `sandbox` or `production`. Two separate
      * Paddle accounts: every Paddle value below belongs to the one named here. */
     paddleEnvironment: "sandbox",

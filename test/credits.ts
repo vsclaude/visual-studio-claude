@@ -4,6 +4,7 @@ import {
   creditsOf,
   formatCredits,
   packsFor,
+  stockOf,
   type StudioAccount,
 } from "../src/shared/credits"
 import { check, finish, section } from "./harness"
@@ -61,20 +62,35 @@ check("a dime drops the trailing zero", formatCredits(1_000_000) === "$0.10")
 check("nothing is $0.00", formatCredits(0) === "$0.00")
 check("and an overdraft is not negative", formatCredits(-50) === "$0.00")
 
-// The 20.000 ₫ pack is a bank transfer's alone: Paddle's fixed fee is most of
-// it, and the server refuses a card checkout for it.
+// One pack, 20.000 ₫ for $10.00, and a bank transfer's alone: Paddle's fixed
+// fee is most of it, and the server refuses a card checkout for it.
 section("packsFor")
 check(
-  "a transfer buys all four",
+  "a transfer buys the one pack",
   packsFor("bank")
-    .map((pack) => pack.price)
-    .join() === "20000,50000,100000,200000"
+    .map((pack) => `${pack.price}:${formatCredits(pack.credits)}`)
+    .join() === "20000:$10.00"
+)
+check("a card buys nothing", packsFor("card").length === 0)
+
+section("stockOf")
+const stocked = (stock?: Record<string, number>): StudioAccount => ({
+  ...account(0),
+  stock,
+})
+check(
+  "the count the server sent",
+  stockOf(stocked({ "vnd-20k": 7 }), "vnd-20k") === 7
 )
 check(
-  "a card buys from 50.000 ₫ up",
-  packsFor("card").every((pack) => pack.price >= 50_000) &&
-    packsFor("card").length === 3
+  "sold out is 0, not unknown",
+  stockOf(stocked({ "vnd-20k": 0 }), "vnd-20k") === 0
 )
+check(
+  "a server too old to keep stock says nothing",
+  stockOf(stocked(), "vnd-20k") === null && stockOf(null, "vnd-20k") === null
+)
+check("never below zero", stockOf(stocked({ "vnd-20k": -2 }), "vnd-20k") === 0)
 
 section("creditsLeft")
 const spent = (credits: number, creditsUsed: number): StudioAccount => ({

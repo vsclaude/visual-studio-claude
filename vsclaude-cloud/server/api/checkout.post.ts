@@ -1,7 +1,7 @@
 import { defineHandler } from "nitro"
 
 import { authenticate } from "../utils/auth.ts"
-import { CREDIT_PACKS, isCreditItem } from "../utils/billing.ts"
+import { CREDIT_PACKS, isOnSale } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
 import { paddleApi, paddleConfig, paddleCustomerOf } from "../utils/paddle.ts"
 
@@ -36,8 +36,8 @@ export default defineHandler(async (event) => {
   } catch {
     return Response.json({ error: "The body is not JSON." }, { status: 400 })
   }
-  if (!isCreditItem(item)) {
-    noteRequest(event, { refused: "unknown item" })
+  if (!isOnSale(item)) {
+    noteRequest(event, { refused: "not on sale" })
     return Response.json({ error: "Nothing here sells that." }, { status: 400 })
   }
   if (CREDIT_PACKS[item].bankOnly) {

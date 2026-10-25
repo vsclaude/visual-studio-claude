@@ -15,11 +15,11 @@ import { logLine, notesOf } from "../utils/log.ts"
 export default definePlugin((nitroApp) => {
   const config = useRuntimeConfig()
   logLine("start", {
-    anthropic_key: config.anthropicApiKey ? "set" : "MISSING",
-    upstream: config.anthropicBaseUrl,
+    // The providers are rows in D1 (`upstreams`), not configuration, and there
+    // is no database at start-up to ask; each request's line names the one it
+    // went to, and an empty table is `refused="no upstream configured"`.
     google_client: config.googleClientId ? "set" : "MISSING",
     session_secret: config.sessionSecret ? "set" : "MISSING",
-    models: config.allowedModels,
     max_prompt_tokens: config.maxPromptTokens,
   })
 

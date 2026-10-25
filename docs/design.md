@@ -706,8 +706,9 @@ carries `FREE_PROFILE_ID` as its `profileId`, and main resolves that to a
 `CLAUDE_CONFIG_DIR` of its own, `workspace/claude-free`. A new chat opens on it
 only for somebody whose own `claude` is signed out and who has no profiles —
 somebody already spending their own plan is not moved onto the server. It
-starts on Haiku, the cheapest on credits, and the picker offers the
-rest. The server is
+opens on the same default model a chat on a login does — it used to start on
+Haiku, the cheapest on credits, and that pin is withdrawn: the picker is where
+somebody chooses a cheaper model, not the account. The server is
 `FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
 whole thing), or `VEYSTUDIO_AI_URL` in main's environment for one on this
 machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
@@ -719,8 +720,8 @@ no `.env` and is launched with none of the builder's variables, so
 
 **What the server is sent is an access token of its own**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against its own secret), refuses any model outside `FREE_AI_MODELS`, and
-forwards to Anthropic with a key of its own — so every request is this app's
+(against its own secret) and forwards to Anthropic with a key of its own, on
+whichever model the request names — so every request is this app's
 API spend, charged per uid to that user's credits by the server, and no user credential is ever
 forwarded.
 
@@ -743,8 +744,17 @@ every alias pointed at Haiku); that is withdrawn — a free chat picks any model
 and pays for it at that model's price out of the same credits. What
 stays is `freeAiEnv` pointing the `opus`/`sonnet`/`haiku` aliases at
 `FREE_AI_MODELS`: the CLI asks for models on its own — a subagent, the default
-behind `Inherit` — and an id of its own choosing that the server does not serve
-would be a request refused halfway through a turn.
+behind `Inherit` — and an id of its own choosing would be charged at a price
+the server only guesses from its family.
+
+**The server refuses no model.** It had a list, `NITRO_ALLOWED_MODELS`, and
+refused everything off it — and a production list narrower than the code's
+default was a credits chat stuck on Haiku whatever the picker said. The list is
+removed: a request is forwarded on the model it names and charged at that
+model's family's price (`usage.ts` there), an unknown family at Opus's. The
+cost, accepted: an older model dearer than its 5.5 namesake — a Claude 3 Opus
+at $15/MTok — is charged as Opus 5.5's $4, so the gap is this app's.
+`MODELS` in the server's `limits.ts` is only what `/v1/models` lists.
 
 **The user's own credentials are emptied** — `ANTHROPIC_API_KEY`,
 `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` go over as empty strings.
@@ -831,6 +841,16 @@ are left or that there are none. The point is that the studio is a way to use
 Claude Code **without** a $20 subscription: credits that never expire, paying
 for what is used rather than a fixed month.
 
+**An empty balance is refused in main, not by a `claude` started to hear
+it.** The server refuses at once, but a message went through the CLI first —
+start, bring up the user's MCP servers, send — and that was five or six
+seconds of a spinner ending in the same buy card. `Chats.send` now asks
+`outOfCredits` (`main/free-ai.ts`): a balance last seen at zero is asked of
+the server again, since a purchase may have landed, and only a confirmed zero
+is refused, in the server's own sentence. Anything else goes to the CLI as
+before, so an ordinary message pays no extra round trip; the server stays the
+one that enforces it.
+
 `shared/credits.ts` is the one table of packs, and `credits-dialog.tsx` draws
 it — the copy, not the rules. **The server enforces them**: `vsclaude-cloud`
 learns a user's credits from its payment providers' webhooks (never from the
@@ -876,6 +896,33 @@ sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
 
+**One pack, sold out of a pool.** What is sold now is 20.000 ₫ for $10.00, by
+bank transfer, and no more of it than there is usage behind — the server buys
+its upstream usage in lots. The other three packs are `retired` in the server's
+`CREDIT_PACKS`: not sold, but still credited for an order opened before they
+were withdrawn. What is behind them is the server's `upstreams` table, one row
+per provider key, each carrying `credit_usd` — the usage that key was bought
+with. What can still be sold is their sum less every paid transaction's
+credits, so restocking is inserting the key that was just bought, one
+statement and no deploy. It was a count of packs (`pack_stock`) first, then
+one balance (`credit_pool`) seeded from configuration and counted down by
+each payment; both were a second number to keep in step with the keys by
+hand, where the keys' own rows already say what was bought. Every row counts,
+disabled or not — a used-up key's usage was still sold — so a key is disabled
+rather than deleted. An unpaid
+order holds its pack's worth back for thirty minutes, so the last $10 is not
+shown as a QR to ten people at once — held from everybody but its buyer: the
+first cut held it from them too, so the dialog behind the pay page said
+`Sold out` to the one person the pack was kept for, and a second press of Buy
+was refused. Now their stock leaves their own order out, and Buy again reopens
+that order rather than holding a second pack. A pool short of one whole pack sells
+nothing (`packsAffordable`). Two buyers racing past that check may both pay
+and are both credited — an oversell of one pack, against refusing money
+already sent. `/api/usage` carries how many packs the pool covers, but the
+dialog does not draw the number — it was more than anybody buying needed.
+Only `Sold out`, with the button off and a line saying more is coming, at
+zero; a server too old to send a count draws nothing.
+
 **Written as dollars, counted as before.** Every balance, pack and charge is
 shown as the dollars of Anthropic's list price it is — `$1.00` for the small
 pack, `$8.63` left, `$0.135` under an Opus reply — and never as a count
@@ -895,11 +942,11 @@ dollars for anybody reconciling against the server.
 first table said what it had been hiding: 50.000 ₫ bought $1.00 of usage,
 priced off Anthropic's list price at about 26.300 ₫ to the dollar. The packs
 are now $25, $55 and $120 for the same 50.000, 100.000 and 200.000 ₫ —
-2.000 ₫ to the dollar, with the 10% and 20% bonuses kept. That rate was set
-against a claimed market price for API credit of around 1.500 ₫ to the dollar
-which was **never sourced**, and it is far below cost against Anthropic's own
-API: a pack has to be repriced before the server is pointed at
-`api.anthropic.com`. A fourth, $10 for 20.000 ₫, makes
+2.000 ₫ to the dollar, with the 10% and 20% bonuses kept. That rate is set
+against the gateway the server forwards to, which sells $10.00 of usage for
+15.000 ₫ — 1.500 ₫ to the dollar. It is far below cost against Anthropic's
+own API, where a dollar is about 26.000 ₫: a pack has to be repriced before
+the server is pointed at `api.anthropic.com`. A fourth, $10 for 20.000 ₫, makes
 the four amounts a Vietnamese transfer is made in, and it is **bank transfer
 only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
 charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is

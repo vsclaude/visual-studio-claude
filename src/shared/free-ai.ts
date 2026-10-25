@@ -21,15 +21,15 @@ export const FREE_PROFILE_ID = "vsclaude-free"
  *
  * The server is sent the signed-in user's access token on every request,
  * as `Authorization: Bearer` and as `x-api-key` both (the CLI's own habit with
- * an `apiKeyHelper`), and is expected to verify it, refuse any model outside
- * `FREE_AI_MODELS`, and forward to Anthropic with a key of its own.
+ * an `apiKeyHelper`), and is expected to verify it and forward to Anthropic
+ * with a key of its own, on whichever model the request names.
  */
 export const FREE_AI_URL = ""
 
 /**
  * The models the server runs, by alias — full ids, because they are what every
- * alias is pointed at (`freeAiEnv`). Keep in step with the server's
- * `NITRO_ALLOWED_MODELS`.
+ * alias is pointed at (`freeAiEnv`). Keep in step with the server's `MODELS`
+ * (`limits.ts` there), the ones it prices as 5.5s.
  */
 export const FREE_AI_MODELS = {
   haiku: "claude-haiku-5-5",

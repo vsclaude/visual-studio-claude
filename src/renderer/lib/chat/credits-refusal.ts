@@ -11,7 +11,8 @@
  * since the CLI is free to wrap them in JSON, escape them or prefix them.
  *
  * `signed-out` is this app's own refusal (`Chats.send`), sent before the CLI
- * is ever asked.
+ * is ever asked — and so is `no-credits`, when the balance was last seen
+ * empty (`outOfCredits` in `main/free-ai.ts`), in the server's own sentence.
  */
 export type CreditsRefusal = "no-credits" | "signed-out"
 

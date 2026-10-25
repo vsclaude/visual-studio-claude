@@ -5,7 +5,7 @@
     "build": "vitepress build site && nitro build",
     "site:dev": "vitepress dev site",
     "site:build": "vitepress build site",
-    "deploy": "bunx wrangler deploy --config .output/server/wrangler.json",
+    "deploy": "wrangler deploy --config .output/server/wrangler.json",
     "dev": "nitro dev",
     "preview": "nitro preview",
     "test": "bun test",
@@ -19,7 +19,8 @@
     "@types/node": "latest",
     "nitro": "latest",
     "typescript": "latest",
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "wrangler": "^4.152.0"
   },
   "dependencies": {
     "jose": "^6.2.12",

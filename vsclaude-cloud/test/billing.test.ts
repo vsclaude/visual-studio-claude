@@ -4,7 +4,11 @@ import { describe, expect, test } from "bun:test"
 import {
   CREDIT_PACKS,
   isCreditItem,
+  isOnSale,
   NO_ACCOUNT,
+  ON_SALE,
+  packsAffordable,
+  unsoldCredits,
   type Account,
 } from "../server/utils/billing.ts"
 import {
@@ -13,7 +17,7 @@ import {
   refsOf,
   signatureValid,
 } from "../server/utils/paddle-billing.ts"
-import { weighted } from "../server/utils/usage.ts"
+import { CREDITS_PER_USD, weighted } from "../server/utils/usage.ts"
 
 /**
  * Paddle's webhooks applied to an account, with payloads in the shape its docs
@@ -101,6 +105,55 @@ describe("items", () => {
     expect(isCreditItem("plus")).toBe(false)
     expect(isCreditItem("plus-3m")).toBe(false)
     expect(isCreditItem("pri_c60")).toBe(false)
+  })
+  test("20.000 ₫ for $10.00 is the one pack on sale", () => {
+    expect(ON_SALE).toEqual(["vnd-20k"])
+    expect(CREDIT_PACKS["vnd-20k"]).toMatchObject({
+      price: 20_000,
+      credits: 10 * CREDITS_PER_USD,
+    })
+    expect(isOnSale("vnd-20k")).toBe(true)
+  })
+  test("a retired pack is still a pack, so old orders are credited", () => {
+    expect(isCreditItem("vnd-100k")).toBe(true)
+    expect(isOnSale("vnd-100k")).toBe(false)
+    expect(isOnSale("plus")).toBe(false)
+  })
+  test("the pool is what the keys were bought with, less what was sold", () => {
+    const pack = CREDIT_PACKS["vnd-20k"].credits
+    // Three $10 keys, two packs paid for: one left.
+    expect(unsoldCredits(30, 2 * pack)).toBe(pack)
+    // A REAL sum a hair under the dollar still counts as the dollar.
+    expect(unsoldCredits(0.1 + 0.2, 0)).toBe(3_000_000)
+    // Oversold by a race is out, not negative.
+    expect(unsoldCredits(10, 2 * pack)).toBe(0)
+    expect(unsoldCredits(0, 0)).toBe(0)
+  })
+  test("the pool sells only whole packs", () => {
+    const pack = CREDIT_PACKS["vnd-20k"].credits
+    expect(packsAffordable(3 * pack, {}, ON_SALE)).toEqual({ "vnd-20k": 3 })
+    // $25 behind is two $10 packs, not three.
+    expect(packsAffordable(2.5 * pack, {}, ON_SALE)).toEqual({ "vnd-20k": 2 })
+    // Short of one whole pack is out of credits.
+    expect(packsAffordable(pack - 1, {}, ON_SALE)).toEqual({ "vnd-20k": 0 })
+    expect(packsAffordable(0, {}, ON_SALE)).toEqual({ "vnd-20k": 0 })
+  })
+  test("unpaid orders hold their packs back", () => {
+    const pack = CREDIT_PACKS["vnd-20k"].credits
+    expect(packsAffordable(3 * pack, { "vnd-20k": 2 }, ON_SALE)).toEqual({
+      "vnd-20k": 1,
+    })
+    // An old order for a retired pack holds back what it would add.
+    expect(
+      packsAffordable(
+        CREDIT_PACKS["vnd-50k"].credits + pack,
+        { "vnd-50k": 1 },
+        ON_SALE
+      )
+    ).toEqual({ "vnd-20k": 1 })
+    expect(packsAffordable(pack, { "vnd-20k": 5 }, ON_SALE)).toEqual({
+      "vnd-20k": 0,
+    })
   })
   test("an unset price is not on sale", () => {
     expect(Object.values(catalog)).not.toContain("vnd-200k")

@@ -64,6 +64,7 @@ export function packsForSale(method: PaymentMethod = "bank"): {
   popular: boolean
 }[] {
   return (Object.keys(CREDIT_PACKS) as CreditItem[])
+    .filter((id) => !CREDIT_PACKS[id].retired)
     .filter((id) => method === "bank" || !CREDIT_PACKS[id].bankOnly)
     .sort((a, b) => CREDIT_PACKS[a].price - CREDIT_PACKS[b].price)
     .map((id) => ({

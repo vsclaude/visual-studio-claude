@@ -35,7 +35,11 @@ const t = computed(() => COPY[langOf(lang.value)])
 const home = computed(() => pathOf(langOf(lang.value)))
 // Every build, named — for a Mac the button guessed wrong for, or another OS.
 const downloads = computed(() => `${docsStartOf(langOf(lang.value))}#install`)
-const METHODS: PaymentMethod[] = ["bank", "card"]
+// Only the ways of paying something is sold by — the one pack on sale is
+// `bankOnly`, so the card side would be an empty row of packs.
+const METHODS = (["bank", "card"] as PaymentMethod[]).filter(
+  (m) => packsForSale(m).length > 0
+)
 const method = ref<PaymentMethod>("bank")
 const packs = computed(() => packsForSale(method.value))
 const year = new Date().getFullYear()
@@ -180,7 +184,7 @@ onBeforeUnmount(() => seen?.disconnect())
         <!-- The studio's Buy credits dialog, drawn: the toggle switches the
              packs shown, and nothing here buys — that is the app's. -->
         <div class="buy reveal">
-          <div class="methods" role="radiogroup">
+          <div v-if="METHODS.length > 1" class="methods" role="radiogroup">
             <button
               v-for="m in METHODS"
               :key="m"

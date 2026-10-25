@@ -16,8 +16,7 @@
 
 import { CREDITS_PER_USD } from "./usage.ts"
 
-export type CreditItem =
-  "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
+export type CreditItem = "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
 
 /** A pack's size written as the dollars it is sold as, in `usage.ts`'s unit. */
 function usd(dollars: number): number {
@@ -33,10 +32,15 @@ function usd(dollars: number): number {
  * was short.
  *
  * The rate is $1.00 of usage per 2.000 ₫, then a bonus on the bigger packs.
- * **It is below cost against Anthropic's own API**, where $1.00 is about
- * 26.300 ₫: it was set against a claimed market price of 1.500 ₫ to the
- * dollar that was never sourced, and has to be repriced before this server
- * is pointed at `api.anthropic.com`. The packs are the four amounts a Vietnamese transfer is made in — 20.000,
+ * It is set against the gateway this server forwards to, which sells $10.00
+ * of usage for 15.000 ₫ — 1.500 ₫ to the dollar. **It is below cost against
+ * Anthropic's own API**, where $1.00 is about 26.000 ₫, and has to be
+ * repriced before this server is pointed at `api.anthropic.com`.
+ *
+ * **One pack is sold: 20.000 ₫ for $10.00, in limited stock** — the gateway's
+ * usage is bought in lots, so the server sells no more packs than it has
+ * usage behind (`unsoldCredits`, `accounts.ts`). The other three are `retired`.
+ * The packs were the four amounts a Vietnamese transfer is made in — 20.000,
  * 50.000, 100.000 and 200.000 ₫. The smallest is **`bankOnly`**: Paddle's
  * fixed $0.50 is about 13.000 ₫ of a 20.000 ₫ pack, and Paddle charges no
  * less than 20.276 ₫ in đồng anyway, so a card buys from 50.000 ₫ up. One
@@ -45,16 +49,63 @@ function usd(dollars: number): number {
  */
 export const CREDIT_PACKS: Record<
   CreditItem,
-  { price: number; credits: number; bankOnly?: true }
+  { price: number; credits: number; bankOnly?: true; retired?: true }
 > = {
   "vnd-20k": { price: 20_000, credits: usd(10), bankOnly: true },
-  "vnd-50k": { price: 50_000, credits: usd(25) },
-  "vnd-100k": { price: 100_000, credits: usd(55) },
-  "vnd-200k": { price: 200_000, credits: usd(120) },
+  "vnd-50k": { price: 50_000, credits: usd(25), retired: true },
+  "vnd-100k": { price: 100_000, credits: usd(55), retired: true },
+  "vnd-200k": { price: 200_000, credits: usd(120), retired: true },
 }
 
+/** Whether it is a pack at all — one still sold or one somebody may already
+ * have paid for. A `retired` pack is no longer sold but stays in the table:
+ * an order opened before it was withdrawn is still credited when its transfer
+ * lands, and a Paddle refund still knows what to take back. */
 export function isCreditItem(value: unknown): value is CreditItem {
   return typeof value === "string" && value in CREDIT_PACKS
+}
+
+/** Whether a new purchase of it may be opened — 20.000 ₫ alone now, and
+ * only while the unsold pool covers it (`packsAffordable`). */
+export function isOnSale(value: unknown): value is CreditItem {
+  return isCreditItem(value) && !CREDIT_PACKS[value].retired
+}
+
+/** The packs on sale, which `/api/usage` reports the stock of. */
+export const ON_SALE = (Object.keys(CREDIT_PACKS) as CreditItem[]).filter(
+  (item) => isOnSale(item)
+)
+
+/**
+ * The credits not yet sold: what the providers' keys were bought with — each
+ * `upstreams` row's `credit_usd`, summed — less what every paid purchase has
+ * added. Selling more than that is selling usage nobody bought; never below
+ * zero, since a pool oversold by a race is out, not owed.
+ */
+export function unsoldCredits(boughtUsd: number, sold: number): number {
+  return Math.max(0, usd(boughtUsd) - sold)
+}
+
+/**
+ * How many of each pack the unsold pool still covers, once the unpaid orders
+ * holding some of it (`held`, a count per item) are set aside. A pool short of
+ * one whole pack is 0 of it — the "out of credits" the dialog says — rather
+ * than selling $10 with $7 behind it.
+ */
+export function packsAffordable(
+  pool: number,
+  held: Record<string, number>,
+  items: readonly CreditItem[]
+): Record<string, number> {
+  const reserved = Object.entries(held).reduce(
+    (sum, [item, count]) =>
+      sum + (isCreditItem(item) ? CREDIT_PACKS[item].credits * count : 0),
+    0
+  )
+  const free = Math.max(0, pool - reserved)
+  return Object.fromEntries(
+    items.map((item) => [item, Math.floor(free / CREDIT_PACKS[item].credits)])
+  )
 }
 
 export type Account = {

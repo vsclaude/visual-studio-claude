@@ -42,7 +42,7 @@ function usd(dollars: number): number {
 }
 
 export type CreditPack = {
-  id: "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
+  id: "vnd-20k"
   /**
    * Sold by bank transfer alone, and not offered while the dialog is on card:
    * on 20.000 ₫ Paddle's fixed $0.50 is most of the price, and Paddle charges
@@ -66,30 +66,15 @@ export type CreditPack = {
  * Credits, which every Studio AI request is paid for out of, on any model —
  * they do not expire.
  *
- * $1.00 of usage per 2.000 ₫, plus the bonus the bigger packs are badged
- * with: 100.000 ₫ is $50 and 10% more, 200.000 ₫ is $100 and 20% more, so
- * the badge and the number say the same thing. Four amounts, the ones a
- * Vietnamese transfer is made in; the 20.000 ₫ one is `bankOnly`. Why that rate, and why nothing
- * under 50.000 ₫, is the server's `billing.ts`. An id is its price, and is
- * also the server's item name (`NITRO_PADDLE_PRICE_VND50K`). The same price
- * by bank transfer, so the pack has one price whichever way it is paid.
+ * **One pack: 20.000 ₫ for $10.00, by bank transfer, in limited stock** —
+ * how many are left is the server's (`StudioAccount.stock`). There were four,
+ * up to 200.000 ₫ with a bonus on the bigger ones; the server keeps the other
+ * three as `retired`, only to credit orders opened before they were
+ * withdrawn. Why the rate is the server's `billing.ts`. An id is its price,
+ * and is also the server's item name.
  */
 export const CREDIT_PACKS: CreditPack[] = [
   { id: "vnd-20k", price: 20_000, credits: usd(10), bankOnly: true },
-  { id: "vnd-50k", price: 50_000, credits: usd(25) },
-  {
-    id: "vnd-100k",
-    price: 100_000,
-    credits: usd(55),
-    bonus: 10,
-    popular: true,
-  },
-  {
-    id: "vnd-200k",
-    price: 200_000,
-    credits: usd(120),
-    bonus: 20,
-  },
 ]
 
 const VND = new Intl.NumberFormat("vi-VN", {
@@ -128,6 +113,22 @@ export type StudioAccount = {
   credits: number
   /** Spent so far, ever — 0 from a server too old to count it. */
   creditsUsed: number
+  /** How many more of each pack can be bought, by pack id. Absent from a
+   * server too old to keep stock, which draws no count at all rather than
+   * `0 left` on a pack it would still sell. */
+  stock?: Record<string, number>
+}
+
+/** How many of a pack are left to buy, or null when the server does not
+ * say — which is not the same as none. */
+export function stockOf(
+  account: StudioAccount | null,
+  pack: CreditPack["id"]
+): number | null {
+  const left = account?.stock?.[pack]
+  return typeof left === "number" && Number.isFinite(left)
+    ? Math.max(0, left)
+    : null
 }
 
 /**

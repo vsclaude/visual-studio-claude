@@ -88,6 +88,7 @@ const RETRY_MS = 60_000
 export async function setFreeAiToken(next: string | null): Promise<boolean> {
   clearTimeout(renewal)
   session = next
+  knownCredits = null
   if (!next) {
     await writeToken(null)
     return false
@@ -238,6 +239,10 @@ async function serverCall(
   return { ok: true, json }
 }
 
+/** The balance `/api/usage` last answered with — the renderer asks after every
+ * turn on credits — for `outOfCredits`. Null until asked, and on sign-out. */
+let knownCredits: number | null = null
+
 /** The user's day and credits, or null when there is none to ask. */
 export async function studioAccount(): Promise<StudioAccount | null> {
   const answer = await serverCall("GET", "/api/usage")
@@ -245,8 +250,31 @@ export async function studioAccount(): Promise<StudioAccount | null> {
     return null
   }
   const account = answer.json as StudioAccount
+  knownCredits = Number(account.credits)
   // A server from before `creditsUsed` leaves it out; the dialog draws a sum.
   return { ...account, creditsUsed: Number(account.creditsUsed) || 0 }
+}
+
+/** The server's own sentence for an empty balance, which the transcript draws
+ * as a way to buy credits (`creditsRefusalOf` in the renderer). */
+export const NO_CREDITS_LEFT =
+  "You have no credits left. Buy credits from the account menu in Vey Studio to keep going."
+
+/**
+ * Whether a message on credits would only be refused — answered here, before a
+ * `claude` is started for it. The server's refusal is immediate, but reaching
+ * it is not: the CLI has to start, bring up the user's MCP servers and send,
+ * which was five or six seconds of a spinner ending in the same card.
+ *
+ * Only a balance last seen at zero is asked about, and asked again rather than
+ * trusted: a purchase may have landed since. Anything else — never asked, a
+ * balance left, a server that did not answer — goes to the CLI as before, so
+ * an ordinary message pays no extra round trip.
+ */
+export async function outOfCredits(): Promise<boolean> {
+  if (knownCredits === null || knownCredits > 0) return false
+  const account = await studioAccount()
+  return account !== null && account.credits <= 0
 }
 
 /**

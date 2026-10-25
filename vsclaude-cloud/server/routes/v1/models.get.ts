@@ -1,19 +1,18 @@
 import { defineHandler } from "nitro"
-import { useRuntimeConfig } from "nitro/runtime-config"
 
-import { listOf } from "../../utils/anthropic.ts"
 import { authenticate } from "../../utils/auth.ts"
+import { MODELS } from "../../utils/limits.ts"
 
 /**
- * `GET /v1/models` — the models this server serves, in Anthropic's list shape,
+ * `GET /v1/models` — the models this server offers, in Anthropic's list shape,
  * answered here rather than passed through: Anthropic's list is every model the
- * server's key can reach, and offering those would be offering refusals.
+ * server's key can reach, most of them priced by nothing here.
  */
 export default defineHandler(async (event) => {
   const user = await authenticate(event)
   if (user instanceof Response) return user
 
-  const data = listOf(useRuntimeConfig().allowedModels).map((id) => ({
+  const data = MODELS.map((id) => ({
     type: "model",
     id,
     display_name: id,

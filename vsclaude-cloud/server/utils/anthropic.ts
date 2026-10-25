@@ -12,7 +12,12 @@
  * otherwise retry ten times with backoff, leaving
  * the chat "working" for minutes on an answer that will not change. A 502 —
  * Anthropic unreachable — is the one worth retrying.
+ *
+ * Which provider a request goes to, and the failover between them, is
+ * `upstreams.ts`.
  */
+
+import { send, type Upstream } from "./upstreams.ts"
 
 export function anthropicError(
   status: number,
@@ -34,31 +39,16 @@ export function anthropicError(
 }
 
 /**
- * The model a request asked for, if it is one this server serves.
+ * The model a request asked for, or null for a body that names none.
  *
- * Exact ids only: the CLI resolves its aliases before sending, and the studio
- * pins every alias to the one model (`freeAiEnv` there), so anything else
- * arriving here is somebody calling the server by hand.
+ * Any model is passed on — there is no list of the ones served any more
+ * (`NITRO_ALLOWED_MODELS`, removed). It is charged by its family's price
+ * (`usage.ts`), an unknown family at Opus's.
  */
-export function allowedModel(body: unknown, allowed: string[]): string | null {
+export function requestedModel(body: unknown): string | null {
   if (!body || typeof body !== "object") return null
   const model = (body as Record<string, unknown>).model
-  return typeof model === "string" && allowed.includes(model) ? model : null
-}
-
-/** The request headers Anthropic is sent: the protocol's own, never the
- * client's credentials — those were for this server. */
-export function upstreamHeaders(from: Headers, apiKey: string): Headers {
-  const headers = new Headers({
-    "content-type": "application/json",
-    "x-api-key": apiKey,
-    "anthropic-version": from.get("anthropic-version") ?? "2023-06-01",
-  })
-  const beta = from.get("anthropic-beta")
-  if (beta) headers.set("anthropic-beta", beta)
-  const accept = from.get("accept")
-  if (accept) headers.set("accept", accept)
-  return headers
+  return typeof model === "string" && model ? model : null
 }
 
 /** The response headers the CLI is passed back: what it reads to decide on a
@@ -113,34 +103,39 @@ export function countBodyOf(body: Record<string, unknown>): string {
 }
 
 /**
- * The size of a prompt as Anthropic counts it, or null when it could not say —
- * the caller lets the request through then, since `weighted` charges a long
- * prompt at its real price out of the credits.
+ * The size of a prompt as the providers count it, or null when none could say
+ * — many resellers serve no `count_tokens` at all. The caller lets the request
+ * through then, since `weighted` charges a long prompt at its real price out
+ * of the credits.
  */
 export async function countTokens(
   body: Record<string, unknown>,
   init: {
-    baseUrl: string
+    upstreams: Upstream[]
     search: string
     headers: Headers
     signal: AbortSignal
   }
 ): Promise<number | null> {
   try {
-    const answer = await fetch(
-      new URL(`/v1/messages/count_tokens${init.search}`, init.baseUrl),
-      {
-        method: "POST",
-        headers: init.headers,
-        body: countBodyOf(body),
-        signal: init.signal,
-      }
-    )
-    if (!answer.ok) {
-      console.warn("count_tokens answered", answer.status, await answer.text())
+    const sent = await send(init.upstreams, {
+      path: `/v1/messages/count_tokens${init.search}`,
+      headers: init.headers,
+      body: countBodyOf(body),
+      signal: init.signal,
+    })
+    if (sent.kind !== "answered") return null
+    if (!sent.response.ok) {
+      console.warn(
+        "count_tokens answered",
+        sent.response.status,
+        await sent.response.text()
+      )
       return null
     }
-    const { input_tokens } = (await answer.json()) as { input_tokens?: unknown }
+    const { input_tokens } = (await sent.response.json()) as {
+      input_tokens?: unknown
+    }
     return typeof input_tokens === "number" ? input_tokens : null
   } catch (error) {
     console.warn("count_tokens failed", error)
@@ -159,12 +154,4 @@ export function promptTooLong(tokens: number, max: number): Response {
     "invalid_request_error",
     `prompt is too long: ${tokens} tokens > ${max} maximum`
   )
-}
-
-/** The comma-separated list a runtime config holds, as ids. */
-export function listOf(value: string): string[] {
-  return value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
 }

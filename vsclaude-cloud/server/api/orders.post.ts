@@ -1,15 +1,15 @@
 import { defineHandler } from "nitro"
 
-import { addOrder } from "../utils/accounts.ts"
+import { addOrder, heldOrder, stockLeft } from "../utils/accounts.ts"
 import { authenticate } from "../utils/auth.ts"
-import { CREDIT_PACKS, isCreditItem } from "../utils/billing.ts"
+import { CREDIT_PACKS, isOnSale } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
 import { newOrderCode, type Order } from "../utils/sepay-billing.ts"
 import { publicUrlOf, sepayConfig, sepayReady } from "../utils/sepay.ts"
 
 /**
  * `POST /api/orders` `{ item }` — a bank-transfer purchase for the signed-in
- * user (`vnd-100k`, …), answered as `{ url }`: this server's
+ * user (`vnd-20k`, the one pack on sale), answered as `{ url }`: this server's
  * `/pay/<code>` page, with the VietQR to scan. The way in from Vietnam; cards
  * are `api/checkout`.
  *
@@ -34,9 +34,28 @@ export default defineHandler(async (event) => {
   } catch {
     return Response.json({ error: "The body is not JSON." }, { status: 400 })
   }
-  if (!isCreditItem(item)) {
-    noteRequest(event, { refused: "unknown item" })
+  if (!isOnSale(item)) {
+    noteRequest(event, { refused: "not on sale" })
     return Response.json({ error: "Nothing here sells that." }, { status: 400 })
+  }
+  // An order of theirs still holding this pack is the one to pay: a second
+  // would hold a second pack, and with one left be refused as sold out.
+  const held = await heldOrder(user.uid, item)
+  if (held) {
+    noteRequest(event, { order: held, item, reopened: true })
+    return { url: `${publicUrlOf(event)}/pay/${held}` }
+  }
+  // The unsold pool has to cover a whole pack. Checked before the order is
+  // written rather than in one statement with it: two buyers racing for the
+  // last $10 may both get a QR, and both are credited when they pay
+  // (`payOrder`) — an oversell of one pack, not a refusal of money already
+  // sent.
+  if ((await stockLeft([item]))[item]! <= 0) {
+    noteRequest(event, { refused: "pool short of a pack", item })
+    return Response.json(
+      { error: "Credits are sold out for now. More will be added soon." },
+      { status: 409 }
+    )
   }
 
   const { prefix } = sepayConfig()

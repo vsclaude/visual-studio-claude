@@ -21,21 +21,26 @@ import { slugOf } from "../site/.vitepress/theme/links.ts"
  */
 
 describe("packsForSale", () => {
-  test("every pack on sale is drawn, cheapest first", () => {
+  test("every pack on sale is drawn, cheapest first, retired ones not", () => {
     const packs = packsForSale()
     expect(packs.map((pack): string => pack.id)).toEqual(
       Object.entries(CREDIT_PACKS)
+        .filter(([, pack]) => !pack.retired)
         .sort(([, a], [, b]) => a.price - b.price)
         .map(([id]) => id)
     )
+    expect(packs.map((pack): string => pack.id)).toEqual(["vnd-20k"])
   })
 
   test("shows each pack's credits as the studio writes them", () => {
-    expect(packsForSale().map((pack) => pack.credits)).toEqual(
-      Object.values(CREDIT_PACKS)
-        .sort((a, b) => a.price - b.price)
-        .map((pack) => formatCredits(pack.credits))
+    expect(packsForSale().map((pack) => pack.credits)).toEqual(["$10.00"])
+    expect(packsForSale()[0]!.credits).toBe(
+      formatCredits(CREDIT_PACKS["vnd-20k"].credits)
     )
+  })
+
+  test("nothing is sold by card", () => {
+    expect(packsForSale("card")).toEqual([])
   })
 
   test("one pack, at most, is the popular one", () => {

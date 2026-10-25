@@ -2,14 +2,15 @@ import { defineHandler } from "nitro"
 import { useRuntimeConfig } from "nitro/runtime-config"
 
 import {
-  allowedModel,
   anthropicError,
   countTokens,
   downstreamHeaders,
   mayExceed,
   promptTooLong,
-  upstreamHeaders,
+  requestedModel,
 } from "../../../utils/anthropic.ts"
+import { currentUpstreams } from "../../../utils/upstream-store.ts"
+import { send } from "../../../utils/upstreams.ts"
 import { chargeCredits } from "../../../utils/accounts.ts"
 import { authenticate } from "../../../utils/auth.ts"
 import { limitsOf } from "../../../utils/limits.ts"
@@ -22,8 +23,9 @@ import {
 } from "../../../utils/usage.ts"
 
 /**
- * `POST /v1/messages` — the one call a chat makes, passed through to Anthropic
- * for a signed-in user with credits, on any of the server's models, and paid
+ * `POST /v1/messages` — the one call a chat makes, passed through to the first
+ * provider that answers (`upstreams.ts`) for a signed-in user with credits, on
+ * whatever model it names, and paid
  * for out of those credits (`limits.ts`, `billing.ts`).
  *
  * The body goes on **as the bytes that arrived**: it is parsed only to read the
@@ -37,9 +39,10 @@ import {
  */
 export default defineHandler(async (event) => {
   const config = useRuntimeConfig()
-  if (!config.anthropicApiKey) {
-    noteRequest(event, { refused: "no Anthropic key configured" })
-    return anthropicError(500, "api_error", "The server has no Anthropic key.")
+  const upstreams = await currentUpstreams()
+  if (upstreams.length === 0) {
+    noteRequest(event, { refused: "no upstream configured" })
+    return anthropicError(500, "api_error", "The server has no API key.")
   }
 
   const user = await authenticate(event)
@@ -59,16 +62,16 @@ export default defineHandler(async (event) => {
     model: typeof model === "string" ? model : undefined,
     bytes: text.length,
   })
-  const { models, account } = await limitsOf(user.uid)
-  const allowed = allowedModel(body, models)
-  if (!allowed) {
-    noteRequest(event, { refused: "model not allowed" })
+  const { account } = await limitsOf(user.uid)
+  const requested = requestedModel(body)
+  if (!requested) {
+    noteRequest(event, { refused: "no model" })
     // 400 rather than 403 for the reason `authenticate` gives: the CLI retries
     // a 403 for minutes.
     return anthropicError(
       400,
       "invalid_request_error",
-      `This server runs ${models.join(", ")} only.`
+      "The request names no model."
     )
   }
 
@@ -89,9 +92,9 @@ export default defineHandler(async (event) => {
   const maxPrompt = Number(config.maxPromptTokens)
   if (maxPrompt > 0 && mayExceed(text, maxPrompt)) {
     const tokens = await countTokens(body as Record<string, unknown>, {
-      baseUrl: config.anthropicBaseUrl,
+      upstreams,
       search: event.url.search,
-      headers: upstreamHeaders(event.req.headers, config.anthropicApiKey),
+      headers: event.req.headers,
       signal: event.req.signal,
     })
     noteRequest(event, { prompt_tokens: tokens ?? "uncounted" })
@@ -101,38 +104,38 @@ export default defineHandler(async (event) => {
     }
   }
 
-  const url = new URL(
-    event.url.pathname + event.url.search,
-    config.anthropicBaseUrl
-  )
-  let upstream: Response
-  try {
-    upstream = await fetch(url, {
-      method: "POST",
-      headers: upstreamHeaders(event.req.headers, config.anthropicApiKey),
-      body: text,
-      // A chat the user stopped is a request Anthropic should stop generating.
-      signal: event.req.signal,
-    })
-  } catch (error) {
-    if (event.req.signal.aborted) {
-      noteRequest(event, { refused: "client went away" })
-      return new Response(null, { status: 499 })
-    }
-    noteRequest(event, {
-      refused: "Anthropic unreachable",
-      error: String(error),
-    })
-    return anthropicError(502, "api_error", "Anthropic could not be reached.")
+  const sent = await send(upstreams, {
+    path: event.url.pathname + event.url.search,
+    headers: event.req.headers,
+    body: text,
+    // A chat the user stopped is a request the provider should stop generating.
+    signal: event.req.signal,
+  })
+  if (sent.kind === "aborted") {
+    noteRequest(event, { refused: "client went away" })
+    return new Response(null, { status: 499 })
   }
+  if (sent.kind === "unreachable") {
+    noteRequest(event, {
+      refused: "no upstream reachable",
+      tried: sent.tried.join(","),
+    })
+    return anthropicError(502, "api_error", "No provider could be reached.")
+  }
+  const upstream = sent.response
 
   const headers = downstreamHeaders(upstream.headers)
   const rid = upstream.headers.get("request-id") ?? undefined
-  noteRequest(event, { rid, upstream_status: upstream.status })
+  noteRequest(event, {
+    rid,
+    upstream: sent.upstream.name,
+    tried: sent.tried.length > 1 ? sent.tried.join(",") : undefined,
+    upstream_status: upstream.status,
+  })
   // What a request cost, once it is known: on the request's own line when the
   // answer was read whole, on a line of its own when it streamed.
   const spend = async (usage: Usage, ended?: string) => {
-    const amount = weighted(usage, allowed)
+    const amount = weighted(usage, requested)
     await chargeCredits(user.uid, amount)
     return {
       credits_charged: amount || undefined,
@@ -164,13 +167,14 @@ export default defineHandler(async (event) => {
       // since the CLI shows it to the user and not to whoever runs this.
       noteRequest(event, { upstream_error: answer.slice(0, 300) })
       if (upstream.status === 401 || upstream.status === 403) {
-        // Anthropic refusing this server's key is not the user's credential
-        // failing, and passed on as a 401 it would have the CLI re-run its
-        // helper and retry for minutes. It is the server's fault: say so.
+        // Every provider refusing this server's keys is not the user's
+        // credential failing, and passed on as a 401 it would have the CLI
+        // re-run its helper and retry for minutes. It is the server's fault:
+        // say so.
         return anthropicError(
           500,
           "api_error",
-          "The free AI's server is misconfigured: Anthropic refused its API key."
+          "The free AI's server is misconfigured: its providers refused their API keys."
         )
       }
     }

@@ -10,7 +10,13 @@ import { useDatabase } from "nitro/database"
  * (`accounts.ts`): `users`, one row per person who signed in, with who Google
  * says they are and their balance, and `transactions`, one row per purchase
  * from either provider. `sign_ins` is the third: a sign-in's answer, kept for
- * minutes until the studio collects it (`signin.ts`). No JSON inside a cell —
+ * minutes until the studio collects it (`signin.ts`). `upstreams` is the
+ * providers requests are forwarded to, one row each — its base URL, its key
+ * (in plain text, so a provider can be added with one statement; whoever can
+ * read this database can read the keys), how the key is sent, `priority`
+ * (lowest tried first), `enabled` (`upstream-store.ts`, `upstreams.ts`), and
+ * `credit_usd`, the usage the key was bought with, which is what the packs are
+ * sold against (`stockLeft` in `accounts.ts`). No JSON inside a cell —
  * a payment is a statement about the rows it changes rather than a whole
  * record read, edited and written back.
  */
@@ -19,14 +25,18 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
   `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS upstreams (name TEXT PRIMARY KEY, base_url TEXT NOT NULL, api_key TEXT NOT NULL, auth TEXT NOT NULL DEFAULT 'x-api-key' CHECK (auth IN ('x-api-key', 'bearer')), priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, credit_usd REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
 ]
 
 /** Columns added since a table was first made — added to one made before,
- * which keeps its rows. `users` gained who somebody is when sign-in moved here
- * from Firebase; `transactions` gained the currency a Paddle charge was in. */
+ * which keeps its rows; each is its definition, name first. `users` gained who
+ * somebody is when sign-in moved here from Firebase; `transactions` gained the
+ * currency a Paddle charge was in; `upstreams` gained what a key was bought
+ * with when the stock moved onto it. */
 const ADDED_COLUMNS: Record<string, string[]> = {
-  users: ["email", "name", "picture", "signed_in_at"],
-  transactions: ["currency"],
+  users: ["email TEXT", "name TEXT", "picture TEXT", "signed_in_at TEXT"],
+  transactions: ["currency TEXT"],
+  upstreams: ["credit_usd REAL NOT NULL DEFAULT 0"],
 }
 
 /**
@@ -41,6 +51,11 @@ const RETIRED = [
   "transfer_orders",
   "sepay_transfers",
   "sign_in_answers",
+  // The stock as a count of packs, then as one balance topped up by hand,
+  // before it became the sum of what the `upstreams` keys were bought with.
+  // Nothing was sold against either long enough to be worth carrying over.
+  "pack_stock",
+  "credit_pool",
 ]
 
 type Database = ReturnType<typeof useDatabase>
@@ -79,8 +94,9 @@ async function createTables(db: Database): Promise<void> {
   for (const statement of SCHEMA) await db.exec(statement)
   for (const [table, columns] of Object.entries(ADDED_COLUMNS)) {
     for (const column of columns) {
-      if (!(await hasColumn(db, table, column))) {
-        await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
+      const name = column.split(" ")[0]!
+      if (!(await hasColumn(db, table, name))) {
+        await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column}`)
       }
     }
   }

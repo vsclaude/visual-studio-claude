@@ -416,8 +416,10 @@ the title, which was tried and taken off:
 waiting over working over **limited** over unread. Limited is
 `Chat.limit`, written on the listing by `Chats.append` with the `limit` line
 and cleared by the next main-loop `user` line, `clear` or `edit`; such a chat is
-a card with **`Continue with …`** (`continueTarget`, tested), which moves it
-to the first other account with room and sends `Continue.`. A project's icon
+a card with **`Continue with …`** (`limitWayOut`, tested), which moves it
+to the first other account with room and sends `Continue.` — or, with none,
+offers to buy credits (or sign in for them); the transcript's last limit line
+carries the same action (`chat/chat-limit.tsx`). A project's icon
 carries one badge (`railBadgeOf`). The system bar still counts every chat with
 `activityOf`. Out of the window, that is a notification — see
 `main/notify.ts`.
@@ -506,14 +508,11 @@ ClickUp tasks, removed has the argument. What stays on a user's disk stays:
 nothing reads `workspace/clickup-watches.json` or the `clickup.token` key any
 more, and nothing deletes them either.
 
-`Add project` can also **start one from a template** (`From template` tab,
-`template-project-form.tsx`): `IPC.createProject` makes and adds an empty
-directory, and the framework's own `create-*` CLI runs in a dock shell inside
-it — no starter is bundled (`shared/project-templates.ts`,
-`test/project-templates.ts`; `docs/design.md` § A new project from a template).
-Such a folder carries `template` on its record, and **only** such a folder
-offers `Move to Trash…` (`IPC.trashProject`) — an added folder is never the
-app's to delete.
+**There is no `From template`** — `Add project` adds an existing folder and
+nothing else, and no project is the app's to delete: `createProject`,
+`trashProject`, `shared/project-templates.ts` and the vendored brand logos are
+gone (`docs/design.md` § A new project from a template, removed). A folder
+record still carrying `template` keeps it; nothing reads it.
 
 **A worktree lives inside its project.** A project's menu has `New worktree…`
 (`project/new-worktree-dialog.tsx`, `main/worktrees.ts`, `IPC.addWorktree` /

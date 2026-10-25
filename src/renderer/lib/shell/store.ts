@@ -48,8 +48,8 @@ export type Shell = {
    * tab named `vite` stays `vite` whatever it `cd`s into. Null for the
    * automatic name. */
   name: string | null
-  /** A line typed into the shell once it starts — a template's `create-*`
-   * command — and never again: a restart is a plain shell. */
+  /** A line typed into the shell once it starts — a push that needs a
+   * passphrase — and never again: a restart is a plain shell. */
   command: string | null
 }
 
@@ -92,8 +92,8 @@ type ShellState = {
    * the default one, or the one picked from the menu beside it. */
   add: (shellId?: string) => void
   /** A shell in `folderId` that types `command` as it starts, in the dock and
-   * on screen — a template's `create-*` CLI, run where it can be watched
-   * and stopped rather than behind anybody's back. */
+   * on screen — a push that needs a passphrase, run where it can ask for
+   * one rather than behind anybody's back. */
   run: (folderId: string, command: string) => void
   /** A shell in `dir`, a directory inside `folderId` — the file tree's `New
    * terminal here`. Opened beside the others, like `add`, and in the dock. */

@@ -154,10 +154,25 @@ empty space under them.
 
 Drawn as a card in `Needs you`: which limit, when it resets (counted down
 once a minute), and **`Continue with …`**, which moves the chat to the first
-other account that can take a turn and is not itself full (`continueTarget`,
+other account that can take a turn and is not itself full (`limitWayOut`,
 tested — the user's login, their profiles, credits last) and sends
 `Continue.`; the transcript goes with it (`carryTranscript`). Once the reset
-has passed the button continues on the same account. The column knows a chat
+has passed the button continues on the same account.
+
+With **nowhere to go** — somebody on one plan and nothing else, or whose
+credits are at nothing — the button is **credits**: `Buy credits to keep
+going` for somebody signed in to Vey Studio, `Sign in to use credits` for
+somebody who is not, nothing on a build with no credits server. This was the
+one stopped chat that got no button at all, only the hours to wait, and it is
+the moment somebody is most ready to pay. A purchase needs no step of its own
+afterwards: credits above nothing are `usable`, so the same card becomes
+`Continue with Credits`. The same action (`useLimitWayOut`,
+`chat/chat-limit.tsx`) is drawn **under the transcript's limit line** too —
+the last one, while `Chat.limit` stands — so somebody reading the chat does
+not have to find the column to learn they need not wait; credits get a card
+there rather than a button, since for a user on one plan they are news.
+
+The column knows a chat
 is stopped without opening it because main writes the mark on the listing:
 `Chat.limit`, set by `Chats.append` with the `limit` line and cleared by the
 next main-loop `user` line, by `clear` and by `edit` (`test/chat-listing.ts`).
@@ -239,42 +254,23 @@ one light running down the V and on through the S, in `currentColor` so a filled
 button paints it in its own text colour. It replaced a 3×3 shuffling grid, and
 the last lucide `Loader2`s on buttons went with it.
 
-### A new project from a template
+### A new project from a template, removed
 
-The `Add project` dialog has a second tab, `From template`: Next.js, Nuxt, or
-Vite with React, Vue, Svelte or nothing, under npm, pnpm or bun
-(`shared/project-templates.ts`, tested). **The app holds no template.** Main
-makes an empty `<location>/<name>` and adds it as an ordinary folder
-(`IPC.createProject`, which removes a directory it made if `addFolder` then
-refuses); the framework's own CLI is typed into a **dock shell** inside it —
-`create-next-app`, `nuxi init` or `create-vite`, at `@latest`, aimed at `.`.
+The `Add project` dialog had a second tab, `From template`: Main made an empty
+`<location>/<name>` (`IPC.createProject`), added it, and typed the framework's
+own `create-next-app`, `nuxi init` or `create-vite` into a dock shell inside it.
+A folder made that way carried `template` on its record, and only such a folder
+offered `Move to Trash…` (`IPC.trashProject`).
 
-- **A shell, not a background process**: these CLIs ask questions (ESLint? Tailwind? install
-  now?), the install is worth watching, and a failure is a line in a terminal
-  you can re-run rather than an error dialog with half a directory behind it.
-- **No bundled starters**, because what a starter contains is the framework's
-  call and changes every release; a copy here would be stale by the next one.
-- **The name is held to npm's rule** (`projectNameProblem` — lower case, no
-  spaces, no leading dot), on both sides: each CLI, aimed at `.`, takes the
-  directory's name as the package's and refuses one npm would not publish —
-  after the directory existed.
-- **An empty directory already there is used**; one with anything in it is
-  refused, so a typo cannot scaffold over somebody's work.
-- **A project made this way can be moved to the Trash** from its row's menu
-  (`Move to Trash…`, `IPC.trashProject`), and no other project can. The
-  folder record carries `template`, written by `createProject` alone and
-  checked again by main, so a repository somebody added is never one click
-  from deletion — `Remove project` stays the only way out for those, and
-  forgets rather than deletes. The Trash, not an unlink, as every delete
-  here is. Its chats are deleted with it. On Windows
-  whatever holds the directory open makes the move fail, so the dock's
-  shells in it are closed first, its tsservers stopped and the watchers
-  dropped, and the move is retried while the ptys end; a refusal is shown
-  under the list and the project stays.
-- **The logos are [svgl](https://svgl.app)'s, vendored** into
-  `assets/brand-icons/` (`lib/brand-icons.ts`) rather than asked of its API:
-  the dialog draws offline, and the API is rate-limited. A logo with a
-  dark-theme twin is `<name>_dark.svg` beside it.
+It is deleted at the user's request: starting a project is a one-line command
+in the dock's shell already, and the studio is for working on folders that
+exist. With it went `shared/project-templates.ts` and its test,
+`template-project-form.tsx`, the vendored logos (`assets/brand-icons/`,
+`lib/brand-icons.ts`), both channels and the `Move to Trash…` item — so no
+project is the app's to delete any more, and `Remove project`, which forgets
+rather than deletes, is the only way out for every one. A folder record already
+carrying `template` keeps it on disk; nothing reads it any more, and nothing
+deletes it.
 
 ### Editing a message
 

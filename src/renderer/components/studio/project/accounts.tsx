@@ -268,13 +268,13 @@ export function AccountsFooter() {
     // Dragged to a height of its own it may take more, never all of it.
     <div
       ref={foot}
-      // A ceiling rather than a height: a foot dragged taller than its rows
-      // would draw empty space under them, and one with fewer rows than when
-      // it was dragged still fits them.
+      // A height, not a ceiling: capped at the rows' own height, a foot with
+      // two accounts could not be dragged at all — the edge was already at
+      // its limit. The room under the rows is what was asked for.
       style={
         collapsed || footHeight === null
           ? undefined
-          : { maxHeight: `min(${footHeight}px, ${FOOT_MAX_SHARE * 100}%)` }
+          : { height: `min(${footHeight}px, ${FOOT_MAX_SHARE * 100}%)` }
       }
       className={cn(
         "relative flex shrink-0 flex-col border-t px-2 pt-1.5",
@@ -434,7 +434,7 @@ export function AccountsFooter() {
 const FOOT_MIN = 72
 
 /** How much of the column a dragged foot may take: the chats keep the rest. */
-const FOOT_MAX_SHARE = 0.95
+const FOOT_MAX_SHARE = 0.6
 
 /**
  * Dragging the foot's top edge, the composer's way: held here while dragging
@@ -457,16 +457,10 @@ function useFootResize() {
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       const column = element.parentElement?.clientHeight ?? window.innerHeight
-      // No taller than every row shown: past that the edge would stop
-      // following the pointer, and the height saved would be a lie.
-      const list = element.querySelector("ul")
-      const whole = list
-        ? element.offsetHeight - list.clientHeight + list.scrollHeight
-        : element.offsetHeight
       drag.current = {
         y: event.clientY,
         height: element.offsetHeight,
-        max: Math.max(FOOT_MIN, Math.min(whole, column * FOOT_MAX_SHARE)),
+        max: Math.max(FOOT_MIN, column * FOOT_MAX_SHARE),
       }
     },
     move(event: PointerEvent<HTMLDivElement>) {

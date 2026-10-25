@@ -28,7 +28,7 @@ import {
   TriangleAlert,
 } from "lucide-react"
 
-import type { AssistantMessage, ChatTodo } from "@shared/api"
+import type { AssistantMessage, Chat, ChatTodo } from "@shared/api"
 import { iconFor } from "@/lib/files/icons"
 import { nameOf } from "@/lib/files/paths"
 import { cn } from "@/lib/utils"
@@ -54,6 +54,7 @@ import { creditsRefusalOf } from "@/lib/chat/credits-refusal"
 import { CreditsRefusalCard } from "./chat-credits-refusal"
 import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
 import { limitSentence } from "@/lib/chat/plan-usage"
+import { LimitWayOutCard } from "./chat-limit"
 
 /**
  * One line of an agent conversation.
@@ -80,7 +81,11 @@ export function ChatMessage({
   reply = null,
   edit,
   found = false,
+  stopped,
 }: {
+  /** On the limit line that stopped the chat as it stands, the chat — its way
+   * on is drawn under the line (`LimitWayOutCard`). */
+  stopped?: Chat
   /** Whether `⌘F` has a match in this line — a long user line opens for it,
    * or the find would land on words its own fold is hiding. */
   found?: boolean
@@ -110,7 +115,7 @@ export function ChatMessage({
     return <ToolRow of={of} live={live} />
   }
 
-  return <OtherMessage of={of} reply={reply} />
+  return <OtherMessage of={of} reply={reply} stopped={stopped} />
 }
 
 /** What the user's bubble can do to the conversation — `edit` on `ChatMessage`. */
@@ -261,9 +266,11 @@ function UserMessage({
 function OtherMessage({
   of,
   reply,
+  stopped,
 }: {
   of: AssistantMessage
   reply: string | null
+  stopped?: Chat
 }) {
   if (of.role === "ask") {
     // A row like a tool call rather than a bubble, and for the same reason: it
@@ -329,7 +336,7 @@ function OtherMessage({
   }
 
   if (of.role === "account") return <AccountMove line={of} />
-  if (of.role === "limit") return <LimitStop line={of} />
+  if (of.role === "limit") return <LimitStop line={of} stopped={stopped} />
 
   if (of.role === "error") {
     // Want of credits is drawn as the way to buy some, not as one more red
@@ -424,14 +431,17 @@ function AccountMove({
 
 /**
  * The turn stopped on the account's plan limit. Amber rather than the error's
- * red: nothing is wrong with the work, and the way on is the Account menu
- * under it. The reset is counted down from the clock, so it is redrawn once a
+ * red: nothing is wrong with the work. The way on is under it while the chat
+ * still stands stopped (`stopped`), and nowhere on a line a later message got
+ * past. The reset is counted down from the clock, so it is redrawn once a
  * minute rather than left saying what it said when the line arrived.
  */
 function LimitStop({
   line,
+  stopped,
 }: {
   line: Extract<AssistantMessage, { role: "limit" }>
+  stopped?: Chat
 }) {
   const email = useAccountEmail(line.profileId)
   const [now, setNow] = useState(() => new Date())
@@ -442,14 +452,17 @@ function LimitStop({
   }, [line.resetsAt])
 
   return (
-    <div
-      title={stampOf(line)}
-      className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.75rem] text-amber-700 dark:text-amber-300"
-    >
-      <Clock className="size-3.5 shrink-0" />
-      <span className="truncate">
-        {limitSentence(email ?? line.name, line, now)}
-      </span>
+    <div className="flex flex-col gap-2">
+      <div
+        title={stampOf(line)}
+        className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.75rem] text-amber-700 dark:text-amber-300"
+      >
+        <Clock className="size-3.5 shrink-0" />
+        <span className="truncate">
+          {limitSentence(email ?? line.name, line, now)}
+        </span>
+      </div>
+      {stopped && <LimitWayOutCard chat={stopped} now={now} />}
     </div>
   )
 }

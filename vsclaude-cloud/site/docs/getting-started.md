@@ -49,9 +49,8 @@ Claude account at all, you can chat on [credits](/docs/credits) instead.
 1. **Add a project.** Click **+** beside **Projects**, choose a folder (or drag
    one in from Finder) and click **Add folder**. A project is a folder already
    on your machine: Vey Studio works on it where it is, and never copies it.
-   **From template** starts a new project instead.
 
-   ![The Add a folder dialog, with Existing folder and From template tabs](/screenshots/add-project.png)
+   ![The Add a folder dialog](/screenshots/add-project.png)
 
 2. **Add a Claude account** in **Settings › Claude › Add account** — see
    [Claude accounts](/docs/accounts).

@@ -4,6 +4,7 @@ import {
   FileDiff,
   GitBranch,
   MemoryStick,
+  MessageSquareHeart,
   ShieldQuestion,
 } from "lucide-react"
 
@@ -12,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { activityOf } from "@/lib/chat/running"
 import { useChats } from "@/lib/chat/store"
 import { unreadIn } from "@/lib/chat/unread"
+import { useFeedbackDialog } from "@/lib/feedback"
 import { changeCount, useChanges } from "@/lib/files/changes"
 import { useGitStatus } from "@/lib/files/git-status"
 import { shownRootOf } from "@/lib/files/roots"
@@ -60,6 +62,22 @@ export function SystemBar() {
       {/* The `ml-auto` is on the group rather than on the figures, so an
           update pill appearing beside them moves nothing else in the row. */}
       <div className="ml-auto flex min-w-0 items-stretch gap-0.5">
+        {/* Here rather than on the rail: it is a way out of the app to GitHub,
+            not a view of the workspace, and it is wanted rarely — a quiet
+            word at the edge of the window is enough to be found by. */}
+        <button
+          type="button"
+          // A shade brighter than the figures beside it, and the icon in the
+          // dialog's violet: it is the one thing on this side that is asking
+          // to be clicked, and in plain muted text it read as another reading.
+          className={cn(ACTION, "group font-medium text-foreground/80")}
+          title="Report a bug, request a feature or suggest an improvement"
+          onClick={() => useFeedbackDialog.getState().show()}
+        >
+          <MessageSquareHeart className="size-3 shrink-0 text-violet-500 transition-transform group-hover:scale-110" />
+          Feedback
+        </button>
+        {usage && <Divider />}
         <span className="flex items-center pr-1">
           <UpdatePill />
         </span>

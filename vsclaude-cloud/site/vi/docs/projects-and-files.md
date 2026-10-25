@@ -7,20 +7,15 @@ không bao giờ sao chép, di chuyển hay tải nó lên đâu cả. Thêm bao
 được; tất cả nằm trong cột **Projects** bên trái, mỗi project kèm các chat của
 nó.
 
-- **Thêm thư mục** — bấm **+** cạnh **Projects**, chọn thư mục hoặc kéo thả vào,
-  rồi bấm **Add folder**.
-- **From template** — tab thứ hai của hộp thoại để tạo project mới: Next.js,
-  Nuxt, Vite + React, Vite + Vue, Vite + Svelte hoặc Vite thuần. Vey Studio tạo
-  thư mục rồi chạy công cụ `create-*` của chính framework đó trong terminal, nên
-  bạn nhận đúng những gì công cụ đó tạo ra ở thời điểm hiện tại.
+Để thêm project, bấm **+** cạnh **Projects**, chọn thư mục hoặc kéo thả vào, rồi
+bấm **Add folder**.
 
 Chuột phải vào project để chọn **New chat here**, **New terminal here**,
 **Rename…**, **Copy path**, **Reveal in file manager**, **Change icon…** và
 **Remove project**. Gỡ project chỉ bỏ nó khỏi danh sách; thư mục vẫn nằm nguyên
-trên đĩa. Project tạo từ template còn có thể bỏ vào thùng rác bằng **Move to
-Trash…**.
+trên đĩa.
 
-![Menu chuột phải của project: New chat here, New terminal here, Rename, Copy path, Reveal in file manager, Change icon, Reset icon, Remove project, Move to Trash](/screenshots/project-menu.png)
+![Menu chuột phải của project: New chat here, New terminal here, Rename, Copy path, Reveal in file manager, Change icon, Reset icon, Remove project](/screenshots/project-menu.png)
 
 Mỗi project hiện 20 chat gần nhất; **View all** liệt kê phần còn lại. `⌘B` ẩn
 hoặc hiện cột này.

@@ -281,7 +281,6 @@ export class Store {
   addFolder(input: {
     path: string
     name: string
-    template?: string
     worktreeOf?: string
   }): Promise<WorkspaceRecord> {
     return this.enqueue(async () => {
@@ -310,7 +309,6 @@ export class Store {
         name: input.name.trim() || path.basename(resolved),
         path: resolved,
         addedAt: new Date().toISOString(),
-        ...(input.template ? { template: input.template } : {}),
         ...(input.worktreeOf ? { worktreeOf: input.worktreeOf } : {}),
       })
       await this.writeManifest(manifest)

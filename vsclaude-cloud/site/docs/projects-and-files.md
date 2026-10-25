@@ -7,20 +7,15 @@ is — it never copies, moves or uploads it. Add as many as you like; they are
 all listed in the **Projects** column on the left, each with its chats under
 it.
 
-- **Add a folder** — click **+** beside **Projects**, pick a folder or drag one
-  in, and click **Add folder**.
-- **From template** — the same dialog's second tab starts a new project:
-  Next.js, Nuxt, Vite + React, Vite + Vue, Vite + Svelte or plain Vite. VS
-  Claude makes the folder and runs the framework's own `create-*` tool in a
-  terminal, so you get exactly what that tool makes today.
+To add one, click **+** beside **Projects**, pick a folder or drag one in, and
+click **Add folder**.
 
 Right-click a project for **New chat here**, **New terminal here**,
 **Rename…**, **Copy path**, **Reveal in file manager**, **Change icon…** and
 **Remove project**. Removing a project only takes it out of the list; the
-folder stays on disk. A project started from a template can also be sent to the
-trash with **Move to Trash…**.
+folder stays on disk.
 
-![A project's right-click menu: New chat here, New terminal here, Rename, Copy path, Reveal in file manager, Change icon, Reset icon, Remove project, Move to Trash](/screenshots/project-menu.png)
+![A project's right-click menu: New chat here, New terminal here, Rename, Copy path, Reveal in file manager, Change icon, Reset icon, Remove project](/screenshots/project-menu.png)
 
 A project shows its 20 most recent chats; **View all** lists the rest. `⌘B`
 hides or shows the column.

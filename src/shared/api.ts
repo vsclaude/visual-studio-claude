@@ -31,14 +31,6 @@ export type WorkspaceFolder = {
   path: string
   addedAt: string
   /**
-   * The template this app made the directory from, when it made it — the one
-   * thing that lets a project be moved to the Trash from its menu. Absent on
-   * every folder that was added rather than made, so a repository somebody
-   * pointed the studio at never offers to be deleted. Not synced: a folder
-   * located on another machine is one this app did not make there.
-   */
-  template?: string
-  /**
    * The project this folder is a `git worktree` checkout of, when this app
    * made it from that project's `New worktree…`. Such a folder is drawn
    * **inside** its project — a checkout row under the column's header — rather
@@ -2090,25 +2082,6 @@ export type DesktopApi = {
    */
   addFolder: (input: { path: string; name: string }) => Promise<WorkspaceRecord>
   /**
-   * An empty directory `name` under `parent`, added as a folder — the first
-   * half of a project from a template (`shared/project-templates.ts`). The
-   * starter itself is the framework's CLI, run by the renderer in a dock shell
-   * inside it. Refuses a name npm would not take and a directory that already
-   * has something in it, with a sentence for the dialog.
-   */
-  createProject: (input: {
-    parent: string
-    name: string
-    template: string
-  }) => Promise<WorkspaceRecord>
-  /**
-   * A project made from a template, its directory moved to the Trash and its
-   * chats deleted, then dropped from the workspace. Refused for a folder with
-   * no `template` — one this app did not make is never its to delete. The
-   * Trash rather than an unlink, as every delete in this app is.
-   */
-  trashProject: (folderId: string) => Promise<WorkspaceRecord>
-  /**
    * A `git worktree` of a project's repository on `branch` — created off
    * `base` (or HEAD) when it does not exist yet, checked out when it does —
    * made under `workspace/worktrees/` and added as a folder marked
@@ -3031,8 +3004,6 @@ export type MenuCommand =
 export const IPC = {
   getWorkspace: "workspace:get",
   addFolder: "workspace:add-folder",
-  createProject: "workspace:create-project",
-  trashProject: "workspace:trash-project",
   addWorktree: "workspace:add-worktree",
   removeWorktree: "workspace:remove-worktree",
   worktreeBranches: "workspace:worktree-branches",

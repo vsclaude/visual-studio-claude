@@ -36,8 +36,6 @@ const api: DesktopApi = {
 
   getWorkspace: () => ipcRenderer.invoke(IPC.getWorkspace),
   addFolder: (input) => ipcRenderer.invoke(IPC.addFolder, input),
-  createProject: (input) => ipcRenderer.invoke(IPC.createProject, input),
-  trashProject: (folderId) => ipcRenderer.invoke(IPC.trashProject, folderId),
   addWorktree: (input) => ipcRenderer.invoke(IPC.addWorktree, input),
   removeWorktree: (folderId) =>
     ipcRenderer.invoke(IPC.removeWorktree, folderId),

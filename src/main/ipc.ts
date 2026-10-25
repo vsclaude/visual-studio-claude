@@ -1,17 +1,9 @@
-import {
-  mkdir,
-  readdir,
-  readFile,
-  rmdir,
-  stat,
-  writeFile,
-} from "node:fs/promises"
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 
 import {
   CHAT_NOTIFICATIONS_KEY,
-  chatRootId,
   IPC,
   type ChatImage,
   type ChatPlace,
@@ -29,10 +21,6 @@ import {
 } from "../shared/api"
 import { FREE_PROFILE_ID } from "../shared/free-ai"
 import type { PluginFile, PluginSource } from "../shared/plugins"
-import {
-  PROJECT_TEMPLATES,
-  projectNameProblem,
-} from "../shared/project-templates"
 import { pathFilterOf } from "../shared/search"
 import { agentCommands } from "./agent-commands"
 import { agentModels } from "./agent-models"
@@ -755,63 +743,10 @@ export function createIpc(host: Host): {
   )
 
   // The two fields by name rather than a spread: `store.addFolder` also takes
-  // `template`, the mark that licenses `trashProject`, and a spread would let
-  // the renderer write it onto any folder — `~` included.
+  // `worktreeOf`, the mark that licenses `removeWorktree`, and a spread would
+  // let the renderer write it onto any folder — `~` included.
   handle(IPC.addFolder, (_event, input: { path: string; name: string }) =>
     store.addFolder({ path: expandHome(input.path), name: input.name })
-  )
-
-  /*
-   * The directory a template's CLI will fill, made and added in one handler: a
-   * directory made here and an `addFolder` that then refused would be one
-   * nothing in the app knows about, so a directory this made is taken back on a
-   * refusal. An empty one already there is used
-   * as it is — somebody who made `~/code/my-app` first meant exactly that.
-   */
-  handle(
-    IPC.createProject,
-    async (
-      _event,
-      input: { parent: string; name: string; template: string }
-    ) => {
-      const name = input.name.trim()
-      const problem = projectNameProblem(name)
-      if (problem) throw new Error(problem)
-      // Checked because it is what later licenses `trashProject`: a mark only
-      // this handler can write is what keeps that delete to directories this
-      // app made.
-      if (!PROJECT_TEMPLATES.some((known) => known.id === input.template)) {
-        throw new Error(`No such template: ${input.template}`)
-      }
-
-      const parent = expandHome(input.parent.trim())
-      const parentStats = await stat(parent).catch(() => null)
-      if (!parentStats?.isDirectory()) {
-        throw new Error(`There is no folder at ${input.parent}.`)
-      }
-
-      const dir = path.join(parent, name)
-      const existing = await stat(dir).catch(() => null)
-      if (existing) {
-        if (!existing.isDirectory()) throw new Error(`${dir} is a file.`)
-        if ((await readdir(dir)).length > 0) {
-          throw new Error(`${dir} already has files in it.`)
-        }
-      } else {
-        await mkdir(dir)
-      }
-
-      try {
-        return await store.addFolder({
-          path: dir,
-          name,
-          template: input.template,
-        })
-      } catch (failure) {
-        if (!existing) await rmdir(dir).catch(() => {})
-        throw failure
-      }
-    }
   )
 
   /*
@@ -860,9 +795,10 @@ export function createIpc(host: Host): {
   )
 
   /*
-   * What holds the checkout open lets go first, as for `trashProject`: the
-   * tsservers and watchers here, the dock's shells in the renderer before it
-   * asks. Asked of the checkout's own project when there still is one, since
+   * What holds the checkout open lets go first, or Windows refuses to delete
+   * it: the tsservers and watchers here (the renderer re-sends its watch list
+   * when the folders change), the dock's shells in the renderer before it
+   * asks. A pty's teardown is not instant, hence the retries. Asked of the checkout's own project when there still is one, since
    * that is the repository the worktree is registered in; git finds it from
    * the checkout itself otherwise.
    */
@@ -886,53 +822,6 @@ export function createIpc(host: Host): {
       if (attempt >= 3) throw new Error(failed.error)
       await new Promise((resolve) => setTimeout(resolve, 500))
     }
-    return store.removeFolder(folderId)
-  })
-
-  /*
-   * And back out of one: the directory to the Trash, its chats, then the
-   * project — in that order, so a Trash that refuses leaves the project listed rather than a row gone and a directory nobody can reach
-   * from here.
-   *
-   * What holds the directory open has to let go first, or Windows refuses the
-   * move: the tsservers and the watchers here (the renderer re-sends its
-   * watch list when the folders change), and the dock's shells, which the
-   * renderer closes before asking. A pty's teardown is not instant, hence the
-   * retries.
-   */
-  handle(IPC.trashProject, async (_event, folderId: string) => {
-    const { folders } = await store.getWorkspace()
-    const folder = folders.find((candidate) => candidate.id === folderId)
-    if (!folder) throw new Error(`No such folder: ${folderId}`)
-    if (!folder.template) {
-      throw new Error("Only a project made from a template can be deleted.")
-    }
-    const dir = await store.resolveFolderDir(folderId)
-
-    tsServers.stopUnder(dir)
-    watchers.closeAll()
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        await host.trash(dir)
-        break
-      } catch (failure) {
-        if (attempt >= 3) {
-          const reason =
-            failure instanceof Error ? failure.message : String(failure)
-          throw new Error(
-            `${dir} could not be moved to the Trash — is something still running in it? (${reason})`
-          )
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500))
-      }
-    }
-
-    for (const chat of await allChats.list()) {
-      if (chatRootId(chat) !== folderId) continue
-      notices.forget(chat.id)
-      await allChats.delete(chat.id)
-    }
-
     return store.removeFolder(folderId)
   })
 

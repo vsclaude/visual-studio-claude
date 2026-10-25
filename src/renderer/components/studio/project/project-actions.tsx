@@ -47,10 +47,9 @@ import { NewWorktreeDialog } from "./new-worktree-dialog"
 type ProjectDialogsState = {
   removing: WorkspaceFolder | null
   renaming: WorkspaceFolder | null
-  trashing: WorkspaceFolder | null
   worktreeOf: WorkspaceFolder | null
   removingWorktree: WorkspaceFolder | null
-  /** A failed Trash or icon change. Shown under the projects column, since
+  /** A failed worktree removal or icon change. Shown under the projects column, since
    * the confirmation that asked is gone by the time main answers. */
   failure: string | null
   set: (patch: Partial<Omit<ProjectDialogsState, "set">>) => void
@@ -59,7 +58,6 @@ type ProjectDialogsState = {
 export const useProjectDialogs = create<ProjectDialogsState>((set) => ({
   removing: null,
   renaming: null,
-  trashing: null,
   worktreeOf: null,
   removingWorktree: null,
   failure: null,
@@ -80,10 +78,8 @@ type ItemProps = {
  * The rail's icon right-clicks to a `ContextMenu` and the header's `…` drops a
  * `DropdownMenu`; the two take the same item and separator props, so the list
  * is written once and handed the two components rather than kept twice. The
- * order and the two destructive items' argument are the ones the old project
- * row carried: "Remove", not "Delete", because the directory is the user's own
- * and stays; `Move to Trash…` only on a directory this app made from a
- * template, last, below the one that only forgets.
+ * order is the one the old project row carried, and its destructive item says
+ * "Remove", not "Delete", because the directory is the user's own and stays.
  */
 export function ProjectMenuItems({
   folder,
@@ -201,15 +197,6 @@ export function ProjectMenuItems({
           </Item>
         </>
       )}
-      {folder.template && (
-        <Item
-          variant="destructive"
-          onClick={() => dialogs.set({ trashing: folder })}
-        >
-          <Trash2 />
-          Move to Trash…
-        </Item>
-      )}
     </>
   )
 }
@@ -217,7 +204,7 @@ export function ProjectMenuItems({
 /** The confirmations and the rename, for whichever project asked. Mounted
  * once, by the studio. */
 export function ProjectDialogs() {
-  const { removing, renaming, trashing, worktreeOf, removingWorktree, set } =
+  const { removing, renaming, worktreeOf, removingWorktree, set } =
     useProjectDialogs()
 
   return (
@@ -249,59 +236,6 @@ export function ProjectDialogs() {
               }}
             >
               Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={trashing !== null}
-        onOpenChange={(next) => {
-          if (!next) set({ trashing: null })
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Move “{trashing?.name}” to the Trash?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              The folder goes to the Trash with everything in it, and its chats
-              are deleted. Its terminals are closed first.
-            </AlertDialogDescription>
-            <p className="max-w-full font-mono text-xs break-all text-muted-foreground">
-              {trashing?.path}
-            </p>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                const target = trashing
-                set({ trashing: null, failure: null })
-                if (!target) return
-                // A shell whose cwd is inside it holds the directory open, and
-                // Windows refuses to move it. Main retries while the ptys end.
-                const shells = useShells.getState()
-                for (const shell of shells.shells) {
-                  if (shell.folderId === target.id) shells.close(shell.id)
-                }
-                void useStudio
-                  .getState()
-                  .trashProject(target.id)
-                  .then(() => useChats.getState().refresh())
-                  .catch((error: unknown) =>
-                    set({
-                      failure: messageOf(error).replace(
-                        /^Error invoking remote method '[^']+': (?:Error: )?/,
-                        ""
-                      ),
-                    })
-                  )
-              }}
-            >
-              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -344,6 +278,8 @@ export function ProjectDialogs() {
                     useShells.getState().showFor(parent)
                   }
                 }
+                // A shell whose cwd is inside it holds the directory open, and
+                // Windows refuses to delete it. Main retries while the ptys end.
                 const shells = useShells.getState()
                 for (const shell of shells.shells) {
                   if (shell.folderId === target.id) shells.close(shell.id)

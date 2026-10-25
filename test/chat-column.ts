@@ -5,8 +5,9 @@ import {
   AVATAR_HUES,
   chatStateOf,
   columnSections,
-  continueTarget,
+  limitWayOut,
   railBadgeOf,
+  type AccountChoice,
 } from "../src/renderer/lib/chat/column"
 import { check, finish, section } from "./harness"
 
@@ -102,8 +103,23 @@ section("the rail's badge")
   )
 }
 
-section("continue with")
+section("the way on from a limit")
 {
+  /** The answer as one comparable word: `continue:work`, `buy`, `signIn`. */
+  const wayOut = (
+    current: string | null,
+    accounts: AccountChoice[],
+    {
+      over = false,
+      credits = "ready",
+    }: { over?: boolean; credits?: "ready" | "signedOut" | "none" } = {}
+  ) => {
+    const way = limitWayOut(current, accounts, { over, credits })
+    if (!way) return "nothing"
+    return way.kind === "continue"
+      ? `continue:${way.profileId ?? "login"}`
+      : way.kind
+  }
   const accounts = [
     { profileId: null, utilization: 100, usable: true },
     { profileId: "work", utilization: 40, usable: true },
@@ -111,28 +127,53 @@ section("continue with")
   ]
   check(
     "skips the account it stopped on",
-    continueTarget(null, accounts) === "work"
+    wayOut(null, accounts) === "continue:work"
   )
-  check("skips a full one", continueTarget("work", accounts) === "credits")
+  check("skips a full one", wayOut("work", accounts) === "continue:credits")
   check(
     "skips one that cannot run a turn",
-    continueTarget(null, [
+    wayOut(null, [
       { profileId: null, utilization: 100, usable: true },
       { profileId: "signed-out", utilization: null, usable: false },
       { profileId: "credits", utilization: null, usable: true },
-    ]) === "credits"
+    ]) === "continue:credits"
   )
   check(
     "an account nobody has measured is offered",
-    continueTarget("x", [
-      { profileId: "y", utilization: null, usable: true },
-    ]) === "y"
+    wayOut("x", [{ profileId: "y", utilization: null, usable: true }]) ===
+      "continue:y"
   )
   check(
-    "nowhere to go is null",
-    continueTarget(null, [
-      { profileId: null, utilization: 100, usable: true },
-    ]) === null
+    "the user's own login is offered back",
+    wayOut("work", [
+      { profileId: null, utilization: 20, usable: true },
+      { profileId: "work", utilization: 100, usable: true },
+    ]) === "continue:login"
+  )
+  check(
+    "a reset passed continues where it stopped",
+    wayOut("work", accounts, { over: true }) === "continue:work"
+  )
+
+  const alone = [{ profileId: null, utilization: 100, usable: true }]
+  check(
+    "one plan and nowhere to go buys credits",
+    wayOut(null, alone) === "buy"
+  )
+  check(
+    "credits at nothing are bought, not continued on",
+    wayOut(null, [
+      ...alone,
+      { profileId: "credits", utilization: null, usable: false },
+    ]) === "buy"
+  )
+  check(
+    "signed out of Vey Studio signs in first",
+    wayOut(null, alone, { credits: "signedOut" }) === "signIn"
+  )
+  check(
+    "a build with no credits offers only the wait",
+    wayOut(null, alone, { credits: "none" }) === "nothing"
   )
 }
 

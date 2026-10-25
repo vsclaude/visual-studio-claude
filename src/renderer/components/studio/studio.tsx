@@ -47,6 +47,7 @@ import { PluginNotices } from "./plugin-notices"
 import { NothingOpen } from "./nothing-open"
 import { OnboardingTour } from "./onboarding-tour"
 import { CreditsDialog } from "./credits-dialog"
+import { FeedbackDialog } from "./feedback-dialog"
 import { SettingsDialog } from "./settings-dialog"
 import { SystemBar } from "./system-bar"
 import {
@@ -241,6 +242,7 @@ export function Studio() {
       )}
       {touring && <OnboardingTour onDone={() => setOnboarded(true)} />}
       <CreditsDialog />
+      <FeedbackDialog />
       {/* The launch screen has nothing clickable, so the top of the window is
           its drag handle. Owned here rather than by the splash because it has to
           outlive it: unmounting a drag region leaves macOS holding it, over the

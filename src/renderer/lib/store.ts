@@ -213,22 +213,6 @@ type StudioState = {
   /** Points the workspace at another folder on this machine. */
   addFolder: (input: { path: string; name: string }) => Promise<void>
   /**
-   * An empty directory under `parent`, added as a project, for a template's
-   * CLI to fill. Resolves with the new folder's id, so the dialog can start the
-   * CLI in its shell; rejects for the dialog to show.
-   */
-  createProject: (input: {
-    parent: string
-    name: string
-    template: string
-  }) => Promise<string | null>
-  /**
-   * A project made from a template, its directory moved to the Trash. Rejects
-   * with main's sentence — most often something still running in it — for the
-   * list to show.
-   */
-  trashProject: (folderId: string) => Promise<void>
-  /**
    * A `git worktree` of a project, added as a project. Resolves with the new
    * folder's id, so the dialog can move to it; rejects with git's sentence.
    */
@@ -407,17 +391,6 @@ export const useStudio = create<StudioState>((set, get) => {
       // open, which is the only place a bad path can be corrected.
       const workspace = await repo.addFolder(input)
       await load(workspace.folders)
-    },
-
-    async createProject(input) {
-      const had = new Set(get().folders.map((folder) => folder.id))
-      const workspace = await repo.createProject(input)
-      await load(workspace.folders)
-      return workspace.folders.find((folder) => !had.has(folder.id))?.id ?? null
-    },
-
-    async trashProject(folderId) {
-      prune((await repo.trashProject(folderId)).folders)
     },
 
     async addWorktree(input) {

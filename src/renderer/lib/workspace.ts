@@ -14,20 +14,6 @@ export async function addFolder(input: {
   return window.desktop.addFolder(input)
 }
 
-/** An empty directory, added as a folder, for a template's CLI to fill. */
-export async function createProject(input: {
-  parent: string
-  name: string
-  template: string
-}): Promise<WorkspaceRecord> {
-  return window.desktop.createProject(input)
-}
-
-/** A project made from a template, moved to the Trash and dropped. */
-export async function trashProject(folderId: string): Promise<WorkspaceRecord> {
-  return window.desktop.trashProject(folderId)
-}
-
 /** A `git worktree` of a project, added as a folder of its own. */
 export async function addWorktree(input: {
   folderId: string

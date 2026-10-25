@@ -119,26 +119,48 @@ export type AccountChoice = {
 }
 
 /**
- * Where `Continue with …` on a stopped chat sends it: the first other account
- * that can run a turn and is not itself at its limit.
+ * The way on from a chat its plan limit stopped — the one button the column's
+ * card and the transcript's limit line both offer.
  *
- * In the order given, which is the column's own order of accounts — the
- * user's login, their profiles, credits last — so the button offers the plan
- * somebody is already paying for before the one that costs per turn. An
- * account whose usage nobody has asked yet is offered rather than skipped:
- * not knowing is not the same as full, and the turn says so if it is.
- * Null when there is nowhere to go, and the row offers nothing.
+ * Once the reset has passed, `continue` on the account it stopped on, which is
+ * free again. Before that, the first other account that can run a turn and is
+ * not itself at its limit, in the order given — the column's own: the user's
+ * login, their profiles, credits last, so the plan somebody is already paying
+ * for is offered before the one that costs per turn. An account whose usage
+ * nobody has asked yet is offered rather than skipped: not knowing is not the
+ * same as full, and the turn says so if it is.
+ *
+ * With nowhere to go, credits are the way on rather than a wait of hours:
+ * `buy` for somebody signed in to Vey Studio — credits at nothing are not
+ * `usable`, and once a purchase lands they are, so the same card turns into
+ * `continue` with no step of its own — and `signIn` for somebody who is not,
+ * where credits are not offered at all. A user on one plan and nothing else
+ * was the case that used to get no button, only the time to wait. Null for a
+ * build with no credits server, where there is nothing to offer but the wait.
+ *
+ * `continue` carries `profileId: null` for the user's own login, which is why
+ * this is a union and not a nullable id: the old `continueTarget` answered
+ * null for "nowhere" too, and never offered that login back.
  */
-export function continueTarget(
+export type LimitWayOut =
+  | { kind: "continue"; profileId: string | null }
+  | { kind: "buy" }
+  | { kind: "signIn" }
+
+export function limitWayOut(
   current: string | null,
-  accounts: AccountChoice[]
-): string | null {
+  accounts: AccountChoice[],
+  { over, credits }: { over: boolean; credits: "ready" | "signedOut" | "none" }
+): LimitWayOut | null {
+  if (over) return { kind: "continue", profileId: current }
   for (const account of accounts) {
     if (account.profileId === current) continue
     if (!account.usable) continue
     if (account.utilization !== null && account.utilization >= 95) continue
-    return account.profileId
+    return { kind: "continue", profileId: account.profileId }
   }
+  if (credits === "ready") return { kind: "buy" }
+  if (credits === "signedOut") return { kind: "signIn" }
   return null
 }
 

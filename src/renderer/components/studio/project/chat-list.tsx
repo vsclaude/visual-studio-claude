@@ -24,15 +24,16 @@ import { useProjects } from "@/lib/projects"
 import { useShells } from "@/lib/shell/store"
 import { useChats } from "@/lib/chat/store"
 import { since } from "@/lib/chat/since"
-import { chatStateOf, continueTarget, type ChatState } from "@/lib/chat/column"
+import { chatStateOf, type ChatState } from "@/lib/chat/column"
 import { resetLabel, windowLabel } from "@/lib/chat/plan-usage"
 import { PLUGIN_ICON_COMPONENTS } from "@/lib/plugins/icons"
 import type { PluginChatMenuItem } from "@/lib/plugins/registry"
 import { usePlugins } from "@/lib/plugins/store"
-import { chatOptions, type Chat } from "@shared/api"
+import type { Chat } from "@shared/api"
 import { RenameRow, useMenuFocusHandoff } from "../rename-row"
 import { SideRow } from "../side-row"
-import { useAccountName, useColumnAccounts } from "./accounts"
+import { useLimitWayOut } from "../chat/chat-limit"
+import { CREDITS_GRADIENT } from "../credits-badge"
 
 /**
  * One plugin's chat menu item. A throw is reported in the plugin's name rather
@@ -305,11 +306,8 @@ function titleSuffix(state: ChatState): string {
  * This is the case the app exists for — several accounts, so a limit on one is
  * not the end of the afternoon — and the column used to draw it exactly like a
  * chat that had finished. The card says which limit and when it resets, and
- * `Continue with …` moves the chat to the first other account that can take a
- * turn (`continueTarget`) and sends it on: the transcript goes with it
- * (`carryTranscript` in `main/chat.ts`), so the conversation carries on where
- * it stopped. Once the reset has passed the same button continues on the
- * account it stopped on, which is free again.
+ * its button is `useLimitWayOut`'s: `Continue with …` another account, or
+ * with nowhere to go, credits.
  *
  * A `div` rather than a `SideRow`: the card holds a button, and a button inside
  * a button is neither valid markup nor clickable.
@@ -325,13 +323,9 @@ function LimitedRow({
   now: Date
 }) {
   const limit = chat.limit!
-  const accounts = useColumnAccounts()
-  const current = chatOptions(chat.options).profileId ?? null
   const reset = resetLabel(limit.resetsAt, now)
   const over = reset === "resets now"
-  const target = over ? current : continueTarget(current, accounts)
-  const targetName = useAccountName(target)
-  const [moving, setMoving] = useState(false)
+  const action = useLimitWayOut(chat, now, () => openChat(chat))
 
   return (
     <div
@@ -363,28 +357,20 @@ function LimitedRow({
       </div>
       {/* On a line of its own: the column is narrow, and beside the reason it
           cut the reason off — which is the half that says why. */}
-      {(over || target !== null) && (
+      {action && (
         <div className="mt-1.5 pl-1.5">
           <button
             type="button"
-            disabled={moving}
-            onClick={() => {
-              setMoving(true)
-              const chats = useChats.getState()
-              void chats
-                .setOptions(chat.id, {
-                  ...chatOptions(chat.options),
-                  profileId: target,
-                })
-                .then(() => {
-                  openChat(chat)
-                  return chats.send(chat.id, "Continue.")
-                })
-                .finally(() => setMoving(false))
-            }}
-            className="max-w-full truncate rounded-md bg-primary px-2 py-0.5 text-[0.6875rem] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            disabled={action.busy}
+            onClick={action.run}
+            className={cn(
+              "max-w-full truncate rounded-md px-2 py-0.5 text-[0.6875rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-50",
+              action.way.kind === "continue"
+                ? "bg-primary text-primary-foreground"
+                : cn("text-white", CREDITS_GRADIENT)
+            )}
           >
-            {over ? "Continue" : `Continue with ${targetName}`}
+            {action.label}
           </button>
         </div>
       )}

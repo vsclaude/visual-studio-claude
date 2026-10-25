@@ -260,6 +260,12 @@ function Conversation({
       state.window[chatId] ??
       state.chats.find((chat) => chat.id === chatId)?.window
   )
+  // The listing's record while a plan limit has the chat stopped — cleared by
+  // the next message, which is what retires the way on under the limit line.
+  const stopped = useChats((state) => {
+    const chat = state.chats.find((entry) => entry.id === chatId)
+    return chat?.limit ? chat : undefined
+  })
   const compacting = useChats((state) => state.compacting[chatId])
   const compactError = useChats((state) => state.compactError[chatId])
   const ask = useChats((state) => state.asks[chatId])
@@ -585,6 +591,13 @@ function Conversation({
     const at = new Map<string, number>()
     for (const line of own) if (line.role === "user") at.set(line.id, at.size)
     return at
+  }, [own])
+  /** The limit line that stopped the chat as it stands — the last one. */
+  const stoppedLine = useMemo(() => {
+    for (let index = own.length - 1; index >= 0; index -= 1) {
+      if (own[index]!.role === "limit") return own[index]!.id
+    }
+    return undefined
   }, [own])
 
   /*
@@ -1006,6 +1019,11 @@ function Conversation({
                             found={hits.some(
                               (hit) => hit.messageId === block.line.id
                             )}
+                            stopped={
+                              block.line.id === stoppedLine
+                                ? stopped
+                                : undefined
+                            }
                           />
                         )}
                       </div>

@@ -1442,6 +1442,20 @@ uninstall old application files". That box has no `/SD`, so it appeared under
 installed. Installing over is safe because the extraction already retries a
 busy file and then overwrites regardless. Which file was held was not found.
 
+It was found later, on a 1.0.16 → 1.0.17 update that reported success and
+reopened as 1.0.16: every file in the install directory was new except
+`Vey Studio.exe` and `resources/app.asar`, and the pty daemon — that same
+`.exe` running `daemon.cjs` out of `app.asar` — was still alive from two hours
+before. The installer's running-app check had let it through; why is still not
+known, since the same PowerShell and `tasklist` queries find it when run by
+hand. So the app no longer leaves it to the installer: `endOtherCopies` in
+`updater.ts`, run synchronously just before the installer is spawned, stops
+every process on this executable that is not this one or one of Chromium's
+`--type=` helpers, and waits for each to exit. Since the app that runs it is
+the old version, it takes effect from the update _after_ the one that ships it;
+a machine stuck like this one needs the installer run once by hand with the app
+and the daemon closed.
+
 ## The name
 
 The app was **Yasuo**. The first run moves `~/.yasuo` to `~/.vsclaude`

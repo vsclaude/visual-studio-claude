@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import { closeSync, createWriteStream, mkdirSync, openSync } from "node:fs"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
@@ -391,10 +391,9 @@ export function startInstaller(input: {
  * - `/S` — silent: no wizard to click through, since the window that asked for
  *   the update is gone by the time it would appear.
  * - `--updated` — the running-app check closes whatever copy of the executable
- *   is still about without asking (`taskkill`, then `/F`): the pty daemon, which
- *   runs as the same executable and idles for a minute before it exits, and any
- *   copy of the app opened from somewhere else. The old version's files are
- *   moved aside rather than deleted, so a failed copy can put them back.
+ *   is still about without asking. It is not relied on for the pty daemon —
+ *   see `endOtherCopies`. The old version's files are moved aside rather than
+ *   deleted, so a failed copy can put them back.
  * - `--force-run` — a silent one-click install launches the app afterwards only
  *   when asked to; without it the update would end with nothing on screen.
  *   Left off for an install at quit, which is somebody closing the app: it
@@ -408,8 +407,63 @@ export function windowsInstallerArgs(reopen: boolean): string[] {
   return reopen ? ["/S", "--updated", "--force-run"] : ["/S", "--updated"]
 }
 
+/**
+ * Ends every other process running this app's executable, and waits for them
+ * to go, before the installer is started.
+ *
+ * The pty daemon is the one that matters: it is this same `.exe` running
+ * `daemon.cjs` out of `app.asar`, it outlives the app by a minute at least (for
+ * good while it still holds a session this run did not start), and the
+ * installer's own running-app check let it through. With it alive the old
+ * uninstaller fails, the extraction cannot replace the two files it holds and
+ * overwrites everything else regardless — so the update "succeeds" with the old
+ * `Vey Studio.exe` and `app.asar` still in place, and the app reopens as the
+ * version it was. A TypeScript server is the same executable too.
+ *
+ * Chromium's own helpers (`--type=`) are left alone: they belong to this
+ * process and go when it does.
+ *
+ * Synchronous and attached, not detached: a PowerShell with no console exits
+ * having run nothing. The pid and the path go by environment rather than into
+ * the script, where a quote in a user's name would end the string.
+ */
+function endOtherCopies(): void {
+  const script = [
+    "Get-CimInstance Win32_Process",
+    "| Where-Object { $_.ExecutablePath -eq $env:VEYSTUDIO_EXE -and $_.ProcessId -ne [int]$env:VEYSTUDIO_PID -and $_.CommandLine -notmatch ' --type=' }",
+    "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; Wait-Process -Id $_.ProcessId -Timeout 5 -ErrorAction SilentlyContinue }",
+  ].join(" ")
+  const powershell = path.join(
+    process.env.SystemRoot ?? "C:\\Windows",
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe"
+  )
+  try {
+    execFileSync(
+      powershell,
+      ["-NoProfile", "-NonInteractive", "-Command", script],
+      {
+        env: {
+          ...process.env,
+          VEYSTUDIO_EXE: process.execPath,
+          VEYSTUDIO_PID: String(process.pid),
+        },
+        stdio: "ignore",
+        windowsHide: true,
+        timeout: 20_000,
+      }
+    )
+  } catch (error) {
+    // The installer's own check is still behind this, and the quit goes on.
+    console.error("Could not end the app's other processes:", error)
+  }
+}
+
 /** Starts the NSIS installer, detached — see `windowsInstallerArgs`. */
 export function startWindowsInstaller(file: string, reopen: boolean): void {
+  endOtherCopies()
   spawn(file, windowsInstallerArgs(reopen), {
     detached: true,
     stdio: "ignore",

@@ -2917,6 +2917,16 @@ export type DesktopApi = {
    * function. */
   onUpdateProgress: (listener: (event: UpdateProgress) => void) => () => void
 
+  /** This build's own version — `app.getVersion()`, which a sandboxed preload
+   * cannot ask for itself. */
+  appVersion: () => Promise<string>
+
+  /**
+   * The notes of every release after `since` up to this build, newest first —
+   * `since` null for this build's alone. Throws when GitHub cannot be reached.
+   */
+  releaseNotes: (since: string | null) => Promise<ReleaseNote[]>
+
   /**
    * Every directory under `workspace/plugins/`, each with its manifest or the
    * reason it has none. Which are switched on is a setting, not part of this —
@@ -2964,6 +2974,15 @@ export type UpdateCheck =
       installable: boolean
     }
   | { status: "unknown"; current: string; error: string }
+
+/** One release, as the dialog after an update draws it. */
+export type ReleaseNote = {
+  /** Without the tag's `v`. */
+  version: string
+  /** GitHub's markdown — the commit subjects `release.yml` writes. */
+  notes: string
+  url: string
+}
 
 /**
  * How far an install has got, while the window is still there to say.
@@ -3119,6 +3138,8 @@ export const IPC = {
   checkForUpdate: "update:check",
   installUpdate: "update:install",
   updateProgress: "update:progress",
+  appVersion: "app:version",
+  releaseNotes: "update:notes",
   listPlugins: "plugins:list",
   readPluginData: "plugins:read-data",
   writePluginData: "plugins:write-data",

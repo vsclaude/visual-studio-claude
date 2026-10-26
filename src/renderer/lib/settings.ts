@@ -55,6 +55,12 @@ type Stored = {
    */
   onboarded: boolean
   /**
+   * The build whose release notes were last shown — or, on a fresh install,
+   * the build that was installed. Null on anything written before the notes
+   * existed. `lib/whats-new.ts` reads it.
+   */
+  seenVersion: string | null
+  /**
    * The faint `who, when • why` after the caret's line in a file, and its hover
    * — `lib/editor-git-blame.ts`. On by default: it is the editor saying what
    * it knows about a line, and somebody who finds it noise turns it off once.
@@ -116,6 +122,9 @@ function isStored(value: unknown): value is Stored {
     (record.fontSize === undefined || isFontSize(record.fontSize)) &&
     (record.density === undefined || isDensity(record.density)) &&
     (record.onboarded === undefined || typeof record.onboarded === "boolean") &&
+    (record.seenVersion === undefined ||
+      record.seenVersion === null ||
+      typeof record.seenVersion === "string") &&
     (record.gitBlame === undefined || typeof record.gitBlame === "boolean") &&
     (record.allProjectTabs === undefined ||
       typeof record.allProjectTabs === "boolean") &&
@@ -162,6 +171,7 @@ type SettingsState = Stored & {
   setFontSize: (size: Appearance["fontSize"]) => void
   setDensity: (density: Appearance["density"]) => void
   setOnboarded: (onboarded: boolean) => void
+  setSeenVersion: (version: string) => void
   setGitBlame: (on: boolean) => void
   setComposerHeight: (height: number | null) => void
   setAccountsHeight: (height: number | null) => void
@@ -204,6 +214,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       fontSize,
       density,
       onboarded,
+      seenVersion,
       gitBlame,
       allProjectTabs,
       composerHeight,
@@ -222,6 +233,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       fontSize,
       density,
       onboarded,
+      seenVersion,
       gitBlame,
       allProjectTabs,
       composerHeight,
@@ -243,6 +255,7 @@ export const useSettings = create<SettingsState>((set, get) => {
     // the tour existed, which is read as "show it once" rather than as a
     // preference somebody already made.
     onboarded: false,
+    seenVersion: null,
     gitBlame: true,
     allProjectTabs: false,
     composerHeight: null,
@@ -306,6 +319,11 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setOnboarded(onboarded) {
       set({ onboarded })
+      save()
+    },
+
+    setSeenVersion(seenVersion) {
+      set({ seenVersion })
       save()
     },
 

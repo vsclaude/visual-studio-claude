@@ -102,6 +102,7 @@ import { TsServers } from "./tsserver"
 import {
   checkForUpdate,
   downloadUpdate,
+  releaseNotes,
   startInstaller,
   startWindowsInstaller,
 } from "./updater"
@@ -1542,6 +1543,12 @@ export function createIpc(host: Host): {
 
   handle(IPC.checkForUpdate, () =>
     checkForUpdate(host.version, process.platform)
+  )
+
+  handle(IPC.appVersion, () => host.version)
+
+  handle(IPC.releaseNotes, (_event, since: string | null) =>
+    releaseNotes(typeof since === "string" ? since : null, host.version)
   )
 
   handle(IPC.installUpdate, async (_event, version: string) => {

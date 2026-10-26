@@ -222,6 +222,8 @@ const api: DesktopApi = {
   installUpdate: (version) => ipcRenderer.invoke(IPC.installUpdate, version),
   onUpdateProgress: (listener) =>
     subscribe<UpdateProgress>(IPC.updateProgress, listener),
+  appVersion: () => ipcRenderer.invoke(IPC.appVersion),
+  releaseNotes: (since) => ipcRenderer.invoke(IPC.releaseNotes, since),
 
   listPlugins: () => ipcRenderer.invoke(IPC.listPlugins),
   readPluginData: (id) => ipcRenderer.invoke(IPC.readPluginData, id),

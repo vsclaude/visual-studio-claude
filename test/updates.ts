@@ -1,7 +1,7 @@
 /**
  * The pieces of the updater with an opinion: which of two versions is newer,
- * which asset in a release is this machine's, and what a half-finished install
- * says on the button.
+ * which asset in a release is this machine's, what a half-finished install
+ * says on the button, and which notes the first launch after an update owes.
  *
  * Worth a test rather than a glance, because both ways of getting it wrong are
  * silent. Say `1.0.9` is newer than `1.0.19` — string comparison, the obvious
@@ -11,11 +11,12 @@
  */
 import {
   installerAsset,
-  isNewer,
-  versionParts,
+  notesBetween,
   windowsInstallerArgs,
 } from "../src/main/updater"
 import { downloadPercent, installLabel } from "../src/renderer/lib/updates"
+import { whatsNewOf } from "../src/renderer/lib/whats-new"
+import { isNewer, versionParts } from "../src/shared/version"
 import { check, finish, section } from "./harness"
 
 section("versionParts")
@@ -203,6 +204,66 @@ check(
 check(
   "handed over to the script",
   installLabel(true, { stage: "installing", version: "1" }) === "Installing…"
+)
+
+section("notesBetween")
+
+const listing = [
+  { tag_name: "v1.0.19", body: "- nineteen", html_url: "u19" },
+  { tag_name: "v1.0.17", body: "- seventeen", html_url: "u17" },
+  { tag_name: "v1.0.20", body: "- twenty", html_url: "u20" },
+  { tag_name: "v1.0.18", body: "- eighteen", html_url: "u18" },
+  { body: "no tag" },
+]
+const versionsOf = (since: string | null, current: string) =>
+  notesBetween(listing, since, current)
+    .map((release) => release.version)
+    .join(",")
+
+check(
+  "after the last one seen, up to this build, newest first",
+  versionsOf("1.0.17", "1.0.19") === "1.0.19,1.0.18"
+)
+check(
+  "nothing seen is this build alone, not the whole listing",
+  versionsOf(null, "1.0.19") === "1.0.19"
+)
+check(
+  "a build ahead of every release finds nothing of its own",
+  versionsOf(null, "1.0.21") === ""
+)
+check(
+  "a listing that is not one is empty",
+  notesBetween({}, null, "1").length === 0
+)
+
+section("whatsNewOf")
+
+check(
+  "a first launch is recorded, not announced",
+  whatsNewOf("1.0.19", null, false).kind === "record"
+)
+{
+  const next = whatsNewOf("1.0.19", null, true)
+  check(
+    "an update from before the notes existed announces this build alone",
+    next.kind === "announce" && next.since === null
+  )
+}
+{
+  const next = whatsNewOf("1.0.19", "1.0.17", true)
+  check(
+    "an update announces everything since the last build seen",
+    next.kind === "announce" && next.since === "1.0.17"
+  )
+}
+check(
+  "the same build again says nothing",
+  whatsNewOf("1.0.19", "1.0.19", true).kind === "nothing"
+)
+check(
+  "a downgrade is recorded, so the update back is announced",
+  whatsNewOf("1.0.18", "1.0.19", true).kind === "record"
 )
 
 finish()

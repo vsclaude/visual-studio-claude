@@ -6,7 +6,8 @@ import { Readable } from "node:stream"
 import type { ReadableStream as WebReadableStream } from "node:stream/web"
 import { pipeline } from "node:stream/promises"
 
-import type { UpdateCheck } from "../shared/api"
+import type { ReleaseNote, UpdateCheck } from "../shared/api"
+import { isNewer } from "../shared/version"
 import { dataDir } from "./data-dir"
 
 /**
@@ -35,7 +36,9 @@ import { dataDir } from "./data-dir"
 // The installers' repository, not the source's — `release.yml` publishes there.
 const REPO = "veystudioapp/vey-studio-releases"
 
-const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`
+const RELEASES_API = `https://api.github.com/repos/${REPO}/releases`
+
+const LATEST_RELEASE_API = `${RELEASES_API}/latest`
 
 /** Where "What's new" goes, and the fallback button on anything but macOS. */
 export const RELEASES_PAGE = `https://github.com/${REPO}/releases`
@@ -53,48 +56,7 @@ export function updateLogPath(): string {
   return path.join(dataDir(), "update.log")
 }
 
-/**
- * A version as numbers, for comparing.
- *
- * Anything that is not a run of digits ends the list rather than being coerced,
- * so `1.0.20-beta.1` is `[1, 0, 20]` and its prerelease is handled separately —
- * a `-beta` sorting as a fourth component would make it *newer* than the
- * release it precedes.
- */
-export function versionParts(version: string): number[] {
-  const core = version.replace(/^v/, "").split(/[-+]/, 1)[0] ?? ""
-  return core.split(".").map((part) => {
-    const value = Number.parseInt(part, 10)
-    return Number.isNaN(value) ? 0 : value
-  })
-}
-
-function isPrerelease(version: string): boolean {
-  return /[-+]/.test(version.replace(/^v/, ""))
-}
-
-/**
- * Whether `candidate` is a release worth offering to somebody on `current`.
- *
- * Strictly newer, never merely different: a machine running a build ahead of
- * the latest release — anyone who ran `make app` from a checkout — should be
- * told nothing rather than offered a downgrade dressed up as an update.
- */
-export function isNewer(candidate: string, current: string): boolean {
-  const left = versionParts(candidate)
-  const right = versionParts(current)
-  const length = Math.max(left.length, right.length)
-  for (let index = 0; index < length; index += 1) {
-    const a = left[index] ?? 0
-    const b = right[index] ?? 0
-    if (a !== b) return a > b
-  }
-  // Same numbers: `1.0.20` is newer than `1.0.20-beta.1`, and nothing else
-  // about two prereleases of one version is worth guessing at.
-  return isPrerelease(current) && !isPrerelease(candidate)
-}
-
-type Release = { version: string; notes: string; url: string }
+type Release = ReleaseNote
 
 /** The shape of the one release GitHub is asked for, checked rather than cast:
  * this is JSON off the network. */
@@ -158,6 +120,62 @@ export async function checkForUpdate(
     url: release.url,
     installable: platform === "darwin" || platform === "win32",
   }
+}
+
+/**
+ * How many releases back the notes are looked for. A page of GitHub's listing:
+ * somebody who skipped more updates than this gets the newest thirty, and the
+ * link to the releases page has the rest.
+ */
+const NOTES_PAGE = 30
+
+/**
+ * The releases after `since`, up to and including `current`, newest first —
+ * what somebody who was last on `since` has not been told about yet.
+ *
+ * `since` null is "only this one": a build from before the notes were shown
+ * has no record of what was last seen, and every release in the listing would
+ * be a wall of text about versions they used for months.
+ */
+export function notesBetween(
+  releases: unknown,
+  since: string | null,
+  current: string
+): ReleaseNote[] {
+  if (!Array.isArray(releases)) return []
+  return releases
+    .map(asRelease)
+    .filter((release): release is Release => release !== null)
+    .filter((release) =>
+      since === null
+        ? !isNewer(release.version, current) &&
+          !isNewer(current, release.version)
+        : isNewer(release.version, since) && !isNewer(release.version, current)
+    )
+    .sort((a, b) => (isNewer(a.version, b.version) ? -1 : 1))
+}
+
+/**
+ * What changed between `since` and this build, for the dialog the first launch
+ * after an update opens (`whats-new-dialog.tsx`). Throws when GitHub cannot be
+ * asked — the renderer then says nothing and tries again next launch, since a
+ * dialog announcing an update with no notes in it is not worth the click.
+ */
+export async function releaseNotes(
+  since: string | null,
+  current: string
+): Promise<ReleaseNote[]> {
+  const response = await fetch(`${RELEASES_API}?per_page=${NOTES_PAGE}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "Vey-Studio",
+    },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw new Error(`GitHub answered ${response.status}.`)
+  }
+  return notesBetween(await response.json(), since, current)
 }
 
 /**

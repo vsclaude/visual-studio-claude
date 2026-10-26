@@ -1427,6 +1427,17 @@ downloads the `.dmg` itself with a progress bar, and runs the bundled
 and strictly newer (`test/updates.ts`). Nothing pops up; skipping is per
 version.
 
+**After** an update, one thing does: the first launch on a new build opens
+`whats-new-dialog.tsx` with the notes of every release since the build last
+seen (`seenVersion` in the settings, `whatsNewOf` in `lib/whats-new.ts`,
+`notesBetween` in `updater.ts`, one `releases?per_page=30` request). It is not
+the interruption the rule above refuses: the update was asked for, and this is
+the end of that gesture. A fresh install is recorded, not announced — its
+welcome and tour are the introduction. A failed fetch records nothing, so an
+update installed offline is announced on the next launch that can reach
+GitHub; a build with no release of its own (a checkout ahead of the latest) is
+recorded silently.
+
 On **Windows** the same button downloads the NSIS `.exe`, quits the app the
 ordinary way, and starts the installer at `will-quit` with `/S --updated
 --force-run` (`WINDOWS_INSTALLER_ARGS`): silent, closing any copy of the

@@ -48,6 +48,7 @@ import { NothingOpen } from "./nothing-open"
 import { OnboardingTour } from "./onboarding-tour"
 import { CreditsDialog } from "./credits-dialog"
 import { FeedbackDialog } from "./feedback-dialog"
+import { WhatsNewDialog } from "./whats-new-dialog"
 import { SettingsDialog } from "./settings-dialog"
 import { SystemBar } from "./system-bar"
 import {
@@ -241,6 +242,14 @@ export function Studio() {
         />
       )}
       {touring && <OnboardingTour onDone={() => setOnboarded(true)} />}
+      <WhatsNewDialog
+        ready={
+          launch === "done" &&
+          setup.step !== "checking" &&
+          !settingUp &&
+          !touring
+        }
+      />
       <CreditsDialog />
       <FeedbackDialog />
       {/* The launch screen has nothing clickable, so the top of the window is

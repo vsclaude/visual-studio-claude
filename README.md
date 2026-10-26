@@ -6,9 +6,9 @@
 
 **Claude Code and your editor, in one app.**
 
-[![CI](https://github.com/vsclaude/visual-studio-claude/actions/workflows/ci.yml/badge.svg)](https://github.com/vsclaude/visual-studio-claude/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/veystudioapp/vey-studio-releases?label=release)](https://github.com/veystudioapp/vey-studio-releases/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/veystudioapp/vey-studio-releases/total)](https://github.com/veystudioapp/vey-studio-releases/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Electron](https://img.shields.io/badge/Electron-43-47848F.svg)](https://electronjs.org)
 
 </div>
 
@@ -16,27 +16,40 @@
 
 Claude Code in a terminal, an editor beside it to read what it changed — Vey Studio puts both in one window. Chats, files, diffs, a terminal and the commit are all tabs over the folders you already work in.
 
-https://github.com/user-attachments/assets/11e690e6-e3a0-4d2a-893c-ec053ba308d7
+https://github.com/user-attachments/assets/88739502-55f2-4c27-ad84-6b630d66d701
 
-## Install
+## Download
 
-Every build is **unsigned**, so each OS objects in its own way. That is what the last line of each section is about.
+Every build is on the [latest release][latest]:
+
+| OS      | Architecture  | File                                   |
+| ------- | ------------- | -------------------------------------- |
+| macOS   | Apple Silicon | `Vey-Studio-<version>-arm64.dmg`       |
+| macOS   | Intel         | `Vey-Studio-<version>-x64.dmg`         |
+| Windows | x64           | `Vey-Studio-<version>-x64.exe`         |
+| Linux   | x64           | `Vey-Studio-<version>-x86_64.AppImage` |
+
+Every build is **unsigned**, so each OS objects in its own way. That is what the last line of each section below is about.
 
 ### macOS
 
 macOS 12 (Monterey) or newer, Apple Silicon or Intel.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vsclaude/visual-studio-claude/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/veystudioapp/vey-studio-releases/main/install.sh | bash
 ```
 
-[`install.sh`](install.sh) picks the build for your architecture and copies it into `/Applications`. Run it again to update, or `| bash -s 1.0.0` to pin a version.
+[`install.sh`](install.sh) picks the build for your architecture from this repository's releases and copies it into `/Applications`. Run it again to update, or `| bash -s 1.0.16` to pin a version.
 
-Use `curl` rather than a browser: macOS quarantines a download and Gatekeeper then calls the app _"damaged"_, which only ever means unsigned. A `.dmg` from [Releases][releases] works too, after `xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"` — which skips the check rather than passing it.
+Use `curl` rather than a browser: macOS quarantines a download and Gatekeeper then calls the app _"damaged"_, which only ever means unsigned. A `.dmg` from [Releases][latest] works too, after `xattr -dr com.apple.quarantine "/Applications/Vey Studio.app"` — which skips the check rather than passing it.
+
+### Windows
+
+x64. The `.exe` is an NSIS installer. SmartScreen stops it: _More info_ → _Run anyway_.
 
 ### Linux
 
-x64. The AppImage from [Releases][releases] is the whole install.
+x64. The AppImage is the whole install.
 
 ```bash
 chmod +x Vey-Studio-*.AppImage
@@ -45,35 +58,20 @@ chmod +x Vey-Studio-*.AppImage
 
 It needs FUSE (`sudo apt install libfuse2` on Debian and Ubuntu), or `--appimage-extract-and-run` without it.
 
-### Windows
+## Updating
 
-x64. The `.exe` from [Releases][releases] is an NSIS installer. SmartScreen stops it: _More info_ → _Run anyway_.
+The app checks this repository for a newer release and offers to install it — on macOS by running the same `install.sh`, on Windows by running the new installer silently once the app has quit. Re-running the install above does the same by hand.
 
-[releases]: https://github.com/veystudioapp/vey-studio-releases/releases
+## Requirements
 
-Vey Studio is developed and used day to day on macOS; the Linux and Windows builds come out of the same workflow and the tests run on Linux, but assume rough edges. `claude` is needed only for agent sessions and the AI features — not to start the app.
+Vey Studio is developed and used day to day on macOS; the Linux and Windows builds come out of the same workflow, but assume rough edges. The [`claude`](https://docs.anthropic.com/en/docs/claude-code) CLI is needed only for agent sessions and the AI features — not to start the app.
 
-## From source
+## Feedback
 
-Needs [Bun](https://bun.sh) 1.3+ and Node 20+.
-
-```bash
-git clone https://github.com/vsclaude/visual-studio-claude.git
-cd visual-studio-claude
-bun install
-bun run dev      # bundles the main process, starts Vite, launches Electron at it
-```
-
-`bun run test`, `lint`, `typecheck` and `build` are the rest. A `Makefile` wraps packaging: `make dmg` for this machine's architecture, `make help` for the others. Builds are unsigned unless `SIGN=1`.
-
-## Documentation
-
-- **[`docs/design.md`](docs/design.md)**: what each panel is for and why it behaves as it does. Read this before changing one.
-- **[`CONTRIBUTING.md`](CONTRIBUTING.md)**: the layout, the IPC contract the main process and the renderer talk over, and where the seams are.
-- **[`SECURITY.md`](SECURITY.md)**: the security model, and how to report a vulnerability.
-
-Contributions are welcome. A new agent CLI and a new panel are both designed to be added to. Small fixes need no ceremony; anything structural is worth an issue first.
+Bugs and requests go to [Issues](https://github.com/veystudioapp/vey-studio-releases/issues). Security reports should not: see [`SECURITY.md`](SECURITY.md). Everyone taking part is held to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
 [MIT](LICENSE).
+
+[latest]: https://github.com/veystudioapp/vey-studio-releases/releases/latest

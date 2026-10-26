@@ -273,6 +273,7 @@ export function AccountsFooter() {
     // Dragged to a height of its own it may take more, never all of it.
     <div
       ref={foot}
+      data-tour="accounts"
       // A height, not a ceiling: capped at the rows' own height, a foot with
       // two accounts could not be dragged at all — the edge was already at
       // its limit. The room under the rows is what was asked for.

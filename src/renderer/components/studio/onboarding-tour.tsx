@@ -205,15 +205,19 @@ const STEPS: Step[] = [
     title: "Chats, side by side",
     body: "Each chat is a claude conversation in one project's directory. Several can run at once, and the row in the column says which are answering and which are waiting on you.",
   },
+  // The accounts before the shell: they are what the app is for, and the cap
+  // of five meant one of the panels had to give up its card. The dock is the
+  // one somebody finds on their own — it is a terminal, and the rail has a
+  // button for it.
+  {
+    target: "accounts",
+    title: "Your accounts",
+    body: "Every Claude account you sign in to, with how much of its five-hour window is used. + adds another. A chat stopped by its limit offers to continue on one with room, or on credits.",
+  },
   {
     target: "explorer",
     title: "The Explorer",
     body: "Every file in the checkout, and under Git, what has changed since the last commit and the commits before it.",
-  },
-  {
-    target: "terminal",
-    title: "A shell underneath",
-    body: `The dock under the pane holds a terminal per tab, in the project's own directory. ${IS_MAC ? "⌃`" : "Ctrl+`"} toggles it.`,
   },
 ]
 

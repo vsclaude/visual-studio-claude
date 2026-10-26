@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
+  ArrowLeftRight,
   ArrowRight,
   Check,
+  Coins,
   Copy,
   Download,
-  FolderOpen,
-  GitCompare,
+  Gauge,
   KeyRound,
-  MessagesSquare,
+  Users,
   type LucideIcon,
 } from "lucide-react"
 
@@ -470,7 +471,9 @@ function Chip({
   )
 }
 
-/** The welcome page's picture: the studio itself, in the splash's miniature. */
+/** The welcome page's picture: the studio itself, in the splash's miniature,
+ * with the chips saying what it is for — several accounts, and the five-hour
+ * window the Accounts foot measures for each. */
 function WelcomeHero() {
   return (
     <div
@@ -481,11 +484,11 @@ function WelcomeHero() {
         <StudioMark />
       </div>
       <Chip className="top-0 -left-2">
-        <MessagesSquare />3 chats
+        <Users />3 accounts
       </Chip>
       <Chip className="-right-2 bottom-1 [animation-delay:-2.5s]">
-        <GitCompare />
-        +42 −7
+        <Gauge />
+        5h · 87%
       </Chip>
     </div>
   )
@@ -553,22 +556,33 @@ function SignInStep({ versions }: { versions: ClaudeVersions | undefined }) {
   )
 }
 
-/** What the studio is for, in three lines — the tour after it says where. */
+/**
+ * What the studio is for, in three lines — the tour after it says where.
+ *
+ * The three problems the app exists to solve, not its panels: several chats
+ * and the diffs beside them are what the tour shows anyway. Each line promises
+ * no more than the code does — moving a chat is a button somebody presses
+ * (`limitWayOut`), not a switch made for them, and credits are offered only
+ * by a build with a credits server, hence "can".
+ */
 const WELCOME_POINTS = [
   {
-    icon: MessagesSquare,
-    title: "Several chats at once",
-    detail: "Run claude in any number of conversations against a project.",
+    icon: Users,
+    title: "All your Claude accounts",
+    detail:
+      "Sign in to as many as you have, each with its five-hour window in view.",
   },
   {
-    icon: GitCompare,
-    title: "Read what they did",
-    detail: "Every change lands in Git, diffed beside the chat that made it.",
+    icon: ArrowLeftRight,
+    title: "Switch without starting over",
+    detail:
+      "A chat that hits its limit continues on another account, conversation and all.",
   },
   {
-    icon: FolderOpen,
-    title: "Your folders, where they are",
-    detail: "Add a directory already on this machine; nothing is copied.",
+    icon: Coins,
+    title: "Keep going past the limit",
+    detail:
+      "With every plan used up, a chat can run on credits instead of waiting hours.",
   },
 ]
 

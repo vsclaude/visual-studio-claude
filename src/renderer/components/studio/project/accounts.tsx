@@ -52,7 +52,12 @@ import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
 import { useSettings } from "@/lib/settings"
 import { ClaudeLoginDialog } from "../claude-login-dialog"
-import { CreditsBadge } from "../credits-badge"
+import {
+  CREDITS_GRADIENT,
+  CREDITS_SURFACE,
+  CreditsBadge,
+  CreditsBar,
+} from "../credits-badge"
 import { IconButton } from "../icon-button"
 import { ProfileAvatar } from "../profile-avatar"
 import { useMenuFocusHandoff } from "../rename-row"
@@ -198,7 +203,6 @@ export function AccountsFooter() {
   const checkUnknown = useClaudeProfiles((state) => state.checkUnknown)
   const create = useClaudeProfiles((state) => state.create)
   const remove = useClaudeProfiles((state) => state.remove)
-  const credits = useStudioAccount((state) => state.account?.credits)
   const freeReady = useFreeAi((state) => state.ready)
   const busy = useChats((state) => state.sending.length)
 
@@ -342,17 +346,8 @@ export function AccountsFooter() {
               )
             : []
 
-          if (account.profileId === FREE_PROFILE_ID) {
-            return (
-              <CreditsRow
-                key={key}
-                label={
-                  credits !== undefined ? `${formatCredits(credits)} left` : ""
-                }
-                broke={!account.usable}
-              />
-            )
-          }
+          // Drawn as its own card under the list instead (`CreditsCard`).
+          if (account.profileId === FREE_PROFILE_ID) return null
 
           const profile = profiles.find(
             (entry) => entry.id === account.profileId
@@ -378,11 +373,13 @@ export function AccountsFooter() {
             />
           )
         })}
-        {/* Credits are listed as an account only once they can take a turn
-            (`useColumnAccounts`, which `Continue with …` reads too); until
-            then the row is the way in, which Settings used to be. */}
-        {!freeReady && <CreditsRow label="" broke={false} signIn />}
       </ul>
+      {/* Credits are an account to `useColumnAccounts` (which `Continue with
+          …` reads), but not one more login: listed as a row they read as a
+          profile called "Credits". So a card of their own, pinned under the
+          list and in their own colours — and, until they can take a turn,
+          the way in, which Settings used to be. */}
+      {!collapsed && <CreditsCard signIn={!freeReady} />}
 
       {login && (
         <ClaudeLoginDialog
@@ -720,63 +717,77 @@ function Meter({ window, now }: { window: PlanWindow; now: Date }) {
 }
 
 /**
- * Credits as a row: the balance, and a click to buy more — or, for somebody
- * not signed in to Vey Studio, `Sign in`, the way in Settings' Credits card
- * used to be.
+ * Credits as a card under the accounts: the balance and the bar it empties,
+ * and a click to buy more — or, for somebody not signed in to Vey Studio, a
+ * line on what they are and `Sign in`, the way in Settings' Credits card used
+ * to be. The gradient's wash is what keeps it from reading as a login.
  */
-function CreditsRow({
-  label,
-  broke,
-  signIn = false,
-}: {
-  label: string
-  broke: boolean
-  signIn?: boolean
-}) {
+function CreditsCard({ signIn }: { signIn: boolean }) {
   const showCredits = useCreditsDialog((state) => state.show)
   const busy = useAccount((state) => state.busy)
   const start = useAccount((state) => state.signIn)
+  const account = useStudioAccount((state) => state.account)
+
+  const card = cn(
+    "mt-1.5 flex w-full shrink-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs",
+    CREDITS_SURFACE
+  )
 
   if (signIn) {
     return (
-      <li className="flex items-center gap-1">
-        <div className={cn(ROW, "hover:bg-transparent")}>
-          <CreditsBadge size="xs" />
-          <span className="min-w-0 flex-1 truncate">Credits</span>
+      <div className={card}>
+        <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">Credits</p>
+          <p className="truncate text-[0.6875rem] text-muted-foreground">
+            Every model, pay as you go
+          </p>
         </div>
         <Button
           size="xs"
-          variant="ghost"
-          className="shrink-0"
+          className={cn(
+            "shrink-0 border-0 text-white shadow-sm shadow-violet-500/25 hover:opacity-90",
+            CREDITS_GRADIENT
+          )}
           title="Every model, paid as you go — never a monthly fee"
           disabled={busy}
           onClick={() => void start()}
         >
           {busy ? "Signing in…" : "Sign in"}
         </Button>
-      </li>
+      </div>
     )
   }
+
+  const broke = account !== null && account.credits <= 0
   return (
-    <li>
-      <button
-        type="button"
-        className={ROW}
-        title="Buy credits"
-        onClick={showCredits}
-      >
-        <CreditsBadge size="xs" />
-        <span className="min-w-0 flex-1 truncate">Credits</span>
-        <span
-          className={cn(
-            "shrink-0 text-[0.6875rem] tabular-nums",
-            broke ? "text-destructive" : "text-muted-foreground"
+    <button
+      type="button"
+      title="Buy credits"
+      onClick={showCredits}
+      className={cn(
+        card,
+        "outline-none hover:border-violet-500/45 focus-visible:ring-2 focus-visible:ring-ring/50"
+      )}
+    >
+      <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-baseline gap-2">
+          <span className="min-w-0 flex-1 truncate font-medium">Credits</span>
+          {account && (
+            <span
+              className={cn(
+                "shrink-0 text-[0.6875rem] tabular-nums",
+                broke ? "text-destructive" : "text-muted-foreground"
+              )}
+            >
+              {formatCredits(account.credits)} left
+            </span>
           )}
-        >
-          {label}
-        </span>
-      </button>
-    </li>
+        </div>
+        {account && <CreditsBar account={account} className="h-1" />}
+      </div>
+    </button>
   )
 }
 

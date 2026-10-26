@@ -4,7 +4,11 @@ import type { TerminalShell } from "@shared/api"
 
 import { useDock } from "../dock"
 import { nameOf } from "../files/paths"
+import { shownRootOf } from "../files/roots"
+import { useProjects } from "../projects"
+import { useSettings } from "../settings"
 import { useStudio } from "../store"
+import { projectOf, scopedShells, shownShellId } from "./scope"
 
 /**
  * One shell in the dock: a pty, in a project's directory, and one of the
@@ -19,6 +23,11 @@ import { useStudio } from "../store"
  * another pty and not a `cd` sent into the first — which would land in
  * whatever is half-typed at the prompt and do nothing while a command is
  * running.
+ *
+ * **The strip is the project's.** It held every project's shells at once; it
+ * draws only the active project's (and its worktrees') now, unless
+ * `allProjectTabs` is on — `lib/shell/scope.ts`. The others stay mounted and
+ * running, out of the strip.
  *
  * Not remembered across a launch. A shell here is ad-hoc — something opened
  * beside the work for one command — and replaying five of them on every launch
@@ -55,8 +64,12 @@ export type Shell = {
 
 type ShellState = {
   shells: Shell[]
-  /** The tab the dock is showing, or null when there is none. */
+  /** The tab last selected, or null when there is none. What the dock shows
+   * is `shownShellId` over it, since this may be another project's. */
   activeId: string | null
+  /** The shell last picked in each project, by project id — where the dock
+   * lands on coming back to one. */
+  picked: Record<string, string>
   /**
    * The project last clicked: where the dock looks when it is shown, and where
    * the `+` opens a shell.
@@ -75,12 +88,13 @@ type ShellState = {
    * one, and otherwise only records where the next one goes. */
   showFor: (folderId: string) => void
   /**
-   * Starts a shell in the target project when the dock has none at all.
+   * Starts a shell in the target project when the dock is opened onto none of
+   * that project's.
    *
-   * Only then: it used to start one in every project clicked while the dock
-   * was open, which left a pty per project nobody had typed into. A project
-   * with no shell of its own now keeps the one on screen, and the `+` is what
-   * opens one there.
+   * Only on opening: it used to start one in every project clicked while the
+   * dock was open, which left a pty per project nobody had typed into. A
+   * project clicked with the dock already open shows an empty strip, and the
+   * `+` is what opens one there.
    *
    * Called by the panel while it is on screen, which is what keeps a pty from
    * being started for a dock nobody opened. With nothing clicked yet it falls
@@ -101,9 +115,9 @@ type ShellState = {
   /** Asks main which shells there are, once. */
   loadInstalled: () => void
   select: (id: string) => void
-  /** Ends the shell's pty and drops its tab. The last one closing shuts the
-   * dock, as an editor's panel does — a dock left open onto nothing would start
-   * a shell the moment anything nudged it. */
+  /** Ends the shell's pty and drops its tab. The last one in the strip closing
+   * shuts the dock, as an editor's panel does — a dock left open onto nothing
+   * would start a shell the moment anything nudged it. */
   close: (id: string) => void
   /** Starts a shell's pty over, in the same place. */
   restart: (id: string) => void
@@ -143,7 +157,32 @@ function dirName(cwd: string): string {
   return nameOf(cwd.replace(/[\\/]+$/, "")) || cwd
 }
 
+/** The project the strip is scoped to: the one Explorer is drawing. */
+function currentProject(): string | null {
+  const { folders } = useStudio.getState()
+  const root = shownRootOf(folders, useProjects.getState().activeFolderId)
+  return root ? projectOf(folders, root.id) : null
+}
+
+/** The shells the strip draws right now, read from the stores. */
+function inStrip(shells: Shell[]): Shell[] {
+  return scopedShells(
+    shells,
+    useStudio.getState().folders,
+    currentProject(),
+    useSettings.getState().allProjectTabs
+  )
+}
+
 export const useShells = create<ShellState>((set, get) => {
+  /** Selects a shell and remembers it as its project's. */
+  function pick(id: string): Partial<ShellState> {
+    const shell = get().shells.find((candidate) => candidate.id === id)
+    if (!shell) return { activeId: id }
+    const project = projectOf(useStudio.getState().folders, shell.folderId)
+    return { activeId: id, picked: { ...get().picked, [project]: id } }
+  }
+
   /** Keeps only the shells `alive` accepts, and moves the dock onto a
    * neighbour when the one it was showing went. The pty is not killed here: the
    * pane unmounts with the shell and its own teardown is what ends it. */
@@ -166,14 +205,19 @@ export const useShells = create<ShellState>((set, get) => {
     set({ shells, activeId: next })
   }
 
-  /** Where a shell opens with no project said: the one last clicked, the one
-   * on screen, the first. */
+  /** Where a shell opens with no project said: the one last clicked — while
+   * it is still the project being worked in, since the `+` is on that
+   * project's strip — that project, the one on screen, the first. */
   function place(): string | null {
     const { target, shells, activeId } = get()
+    const { folders } = useStudio.getState()
+    const project = currentProject()
+    if (target && (project === null || projectOf(folders, target) === project))
+      return target
     return (
-      target ??
+      project ??
       shells.find((shell) => shell.id === activeId)?.folderId ??
-      useStudio.getState().folders[0]?.id ??
+      folders[0]?.id ??
       null
     )
   }
@@ -195,7 +239,8 @@ export const useShells = create<ShellState>((set, get) => {
       name: null,
       command,
     }
-    set({ shells: [...get().shells, shell], activeId: shell.id })
+    set({ shells: [...get().shells, shell] })
+    set(pick(shell.id))
   }
 
   // A folder dropped from the workspace takes its shells with it: they run in a
@@ -210,23 +255,29 @@ export const useShells = create<ShellState>((set, get) => {
   return {
     shells: [],
     activeId: null,
+    picked: {},
     target: null,
     installed: null,
 
     showFor(folderId) {
-      const { shells, activeId } = get()
+      const { shells, activeId, picked } = get()
       const showing = shells.find((shell) => shell.id === activeId)
       // Already on one of its shells: stay on the one somebody picked.
       if (showing?.folderId === folderId) {
         set({ target: folderId })
         return
       }
-      const own = shells.find((shell) => shell.folderId === folderId)
-      set({ target: folderId, activeId: own?.id ?? activeId })
+      const project = projectOf(useStudio.getState().folders, folderId)
+      const own =
+        shells.find(
+          (shell) => shell.id === picked[project] && shell.folderId === folderId
+        ) ?? shells.find((shell) => shell.folderId === folderId)
+      set({ target: folderId })
+      if (own) set(pick(own.id))
     },
 
     ensure() {
-      if (get().shells.length > 0) return
+      if (inStrip(get().shells).length > 0) return
       const folderId = place()
       if (folderId) start(folderId)
     },
@@ -259,13 +310,13 @@ export const useShells = create<ShellState>((set, get) => {
     },
 
     select(id) {
-      set({ activeId: id })
+      set(pick(id))
       useDock.getState().show()
     },
 
     close(id) {
       keep((shell) => shell.id !== id)
-      if (get().shells.length === 0) useDock.getState().close()
+      if (inStrip(get().shells).length === 0) useDock.getState().close()
     },
 
     restart(id) {
@@ -312,3 +363,23 @@ export const useShells = create<ShellState>((set, get) => {
     },
   }
 })
+
+/**
+ * The strip as the dock draws it: the project's shells, and which of them is
+ * on screen. A hook rather than a selector because the answer is read off
+ * three stores — the column's project and the `allProjectTabs` setting as
+ * well as the shells.
+ */
+export function useScopedShells(): { scoped: Shell[]; shownId: string | null } {
+  const shells = useShells((state) => state.shells)
+  const activeId = useShells((state) => state.activeId)
+  const picked = useShells((state) => state.picked)
+  const folders = useStudio((state) => state.folders)
+  const activeFolderId = useProjects((state) => state.activeFolderId)
+  const all = useSettings((state) => state.allProjectTabs)
+
+  const root = shownRootOf(folders, activeFolderId)
+  const project = root ? projectOf(folders, root.id) : null
+  const scoped = scopedShells(shells, folders, project, all)
+  return { scoped, shownId: shownShellId(scoped, activeId, picked, project) }
+}

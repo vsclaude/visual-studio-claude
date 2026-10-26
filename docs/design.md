@@ -548,6 +548,17 @@ which opens the shell in that directory instead of the project's root (`dir` on
 `terminalCreate`, checked to be inside the folder). Shells are not restored
 across a launch. ptys live in a detached per-machine daemon (`main/daemon.ts`).
 
+**The strip is the project's.** It used to hold every project's shells at
+once, so a dev server per project was a row of `vite` tabs that said nothing
+about which repository each ran in. It draws only the active project's shells
+and its worktrees' now (`lib/shell/scope.ts`, `test/shell-scope.ts`), scoped
+the way the tab strip is and lifted by the same `allProjectTabs` setting. Only
+the strip: another project's shells stay mounted, their commands running, and
+coming back to a project lands on the tab last picked there. Opening the dock
+onto a project with none starts one; clicking a project while it is open does
+not — the strip is empty and the `+` is the way in, for the same reason a
+click must never start a pty.
+
 A tab can be **renamed** — double-click it, or `Rename` in its right-click
 menu — and a typed name then wins over the cwd; emptying it hands the tab back.
 `⌘K` clears (macOS only: elsewhere `Ctrl+K` is readline's), and `⌃⇧\`` opens

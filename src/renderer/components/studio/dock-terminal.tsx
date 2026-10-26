@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react"
 
 import { cn } from "@/lib/utils"
 import { useDock } from "@/lib/dock"
-import { useShells, type Shell } from "@/lib/shell/store"
+import { useScopedShells, useShells, type Shell } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
 import { TerminalView, type TerminalHandle } from "./terminal-view"
 
@@ -21,8 +21,10 @@ import { TerminalView, type TerminalHandle } from "./terminal-view"
  * the pty would be told a size that is not the one it comes back to.
  */
 export function DockTerminal() {
+  // Every shell is mounted, every project's: only the strip is scoped, and a
+  // pty unmounted is a pty ended.
   const shells = useShells((state) => state.shells)
-  const activeId = useShells((state) => state.activeId)
+  const { shownId: activeId } = useScopedShells()
 
   // The one place a shell is started unasked-for, and only while the dock is
   // on screen and empty: a pty is a process, and clicking a project in the
@@ -38,18 +40,17 @@ export function DockTerminal() {
     if (showing) useShells.getState().ensure()
   }, [showing, anyFolder])
 
-  if (shells.length === 0) {
-    return (
-      <div className="grid h-full place-items-center p-4">
-        <p className="max-w-56 text-center text-xs text-muted-foreground">
-          Add a folder to the workspace and a shell opens in it here.
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="relative h-full min-h-0">
+      {activeId === null && (
+        <div className="absolute inset-0 grid place-items-center p-4">
+          <p className="max-w-56 text-center text-xs text-muted-foreground">
+            {anyFolder
+              ? "No terminal in this project yet — the + opens one."
+              : "Add a folder to the workspace and a shell opens in it here."}
+          </p>
+        </div>
+      )}
       {shells.map((shell) => (
         <div
           key={shell.id}

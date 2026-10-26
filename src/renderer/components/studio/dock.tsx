@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useDock, DOCK_STRIP_HEIGHT } from "@/lib/dock"
-import { shellLabels, useShells } from "@/lib/shell/store"
+import { shellLabels, useScopedShells, useShells } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
 import { IconButton } from "./icon-button"
 import { DockTerminal } from "./dock-terminal"
@@ -57,8 +57,9 @@ export function Dock() {
   const hide = useDock((state) => state.close)
   const show = useDock((state) => state.show)
 
-  const shells = useShells((state) => state.shells)
-  const activeId = useShells((state) => state.activeId)
+  // The active project's shells only — another project's keep running out of
+  // the strip (`lib/shell/scope.ts`).
+  const { scoped: shells, shownId: activeId } = useScopedShells()
   const select = useShells((state) => state.select)
   const close = useShells((state) => state.close)
   const add = useShells((state) => state.add)
@@ -102,12 +103,13 @@ export function Dock() {
 
         <div className="flex min-w-0 [scrollbar-width:none] items-center gap-0.5 overflow-x-auto">
           {shells.length === 0 && (
-            // Nothing started yet: one tab that is the way in, since opening
-            // the dock is what starts the first shell.
+            // Nothing started in this project yet: one tab that is the way in,
+            // since opening the dock is what starts the first shell — and with
+            // the dock already open, opening one is what the click can mean.
             <TabFace
               label="Terminal"
               selected={false}
-              onSelect={() => show()}
+              onSelect={() => (open ? add() : show())}
             />
           )}
           {shells.map((shell) => (

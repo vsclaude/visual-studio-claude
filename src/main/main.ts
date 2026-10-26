@@ -9,6 +9,7 @@ import {
   APP_ORIGIN,
   registerAppScheme,
   serveApp,
+  serveMediaFiles,
   serveNoteFiles,
   servePlugins,
 } from "./protocol"
@@ -144,6 +145,7 @@ const {
   watchers,
   noteFilePath,
   pluginFilePath,
+  mediaFilePath,
 } = registerIpc(
   () => mainWindow,
   (chatId) => openChatWindow(chatId)
@@ -288,6 +290,7 @@ void app.whenReady().then(() => {
   // came from Vite or from `app://`.
   serveNoteFiles(noteFilePath)
   servePlugins(pluginFilePath)
+  serveMediaFiles(mediaFilePath)
   // Before the window, so the menu bar is never Electron's default one.
   installMenu(() => mainWindow)
   createWindow()

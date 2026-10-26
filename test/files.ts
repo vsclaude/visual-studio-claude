@@ -212,6 +212,12 @@ async function main() {
     "a text file has the editor and its diff",
     viewersFor("/w/a.ts").join() === "text,diff"
   )
+  check(
+    "a recording has only the player",
+    viewersFor("/w/media/take.MP3").join() === "media" &&
+      viewersFor("/w/clip.mp4").join() === "media",
+    "as text it is the binary notice, and as a diff nothing"
+  )
 
   check(
     "an html file opens as the page, with its source after it",

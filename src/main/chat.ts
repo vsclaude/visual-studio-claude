@@ -1,3 +1,4 @@
+import type { McpServerConfig } from "@anthropic-ai/claude-agent-sdk"
 import { randomUUID } from "node:crypto"
 import {
   copyFile,
@@ -32,6 +33,7 @@ import {
   type ChatOptions,
 } from "../shared/api"
 import { FREE_PROFILE_ID } from "../shared/free-ai"
+import type { MediaProvider } from "../shared/media"
 import { contentTypeOf, extensionForType } from "../shared/note-files"
 import { spendRows } from "./chat-digest"
 import { forkPointIn, promptIdIn } from "./chat-fork"
@@ -96,15 +98,15 @@ import { expandHome } from "./shell-env"
  * moved to the SDK. `ask` stops for anything unlisted and `edits` for an MCP
  * tool; everywhere else a refusal is named rather than left to stall.
  *
- * **No MCP config goes over at all.** This app used to serve its own panels as
- * three `yasuo-*` servers and hand a turn the config naming them; that whole
- * feature is gone (see `docs/design.md`). What is left is the CLI's own
- * discovery, which is what a turn has always also had: `~/.claude.json`, a
- * repository's own `.mcp.json`, enabled plugins, claude.ai connectors, all
- * merged the way running plain `claude` in this directory would. So a server
- * that works from the dock's Terminal works from a chat here, with nothing to
- * switch on for it — and the composer's MCP dialog is a listing of what that
- * came to, with switches that only take things away.
+ * **The CLI's own MCP discovery, plus one server of this app's.** This app used
+ * to serve its own panels as three `yasuo-*` servers and hand a turn the config
+ * naming them; that whole feature is gone (see `docs/design.md`). What a turn
+ * has is the CLI's own discovery: `~/.claude.json`, a repository's own
+ * `.mcp.json`, enabled plugins, claude.ai connectors, all merged the way
+ * running plain `claude` in this directory would. So a server that works from
+ * the dock's Terminal works from a chat here, with nothing to switch on for it.
+ * The one addition is `media` (`main/media/server.ts`), in this process rather
+ * than on a command line, and only once a media service has a key in Settings.
  *
  * **What the chat's own toolbar decides** is on the record rather than here:
  * `ChatOptions` is a model, an effort and a permission per chat, and a
@@ -219,6 +221,13 @@ export type ChatSource = {
   /** A note file's bytes, or null when it is gone — for the pictures an edited
    * message is sent with again. */
   readImage: (fileName: string) => Promise<Uint8Array | null>
+  /** The media services with a key, asked at send time like the profiles —
+   * see `main/media/`. Optional, with `mediaServer`, so a test's source can
+   * leave the whole feature out. */
+  mediaProviders?: () => Promise<MediaProvider[]>
+  /** A fresh `media` server for one session in `cwd`: an MCP server serves one
+   * transport, so each process the chat opens gets its own. */
+  mediaServer?: (cwd: string, providers: MediaProvider[]) => McpServerConfig
 }
 
 /**
@@ -1146,7 +1155,14 @@ export class Chats {
       : null
     const configDir = profileConfigDir ? expandHome(profileConfigDir) : null
 
-    const signature = signatureOf(cwd, configDir, disabledTools)
+    // Which media services have a key decides which tools the `media` server
+    // offers, and a tool list is fixed for a process — so a key added in
+    // Settings reaches an open chat on its next message, as a new session.
+    // Replacing a key that was already there changes nothing here: the server
+    // reads the key at each call.
+    const media = (await this.source.mediaProviders?.()) ?? []
+
+    const signature = signatureOf(cwd, configDir, disabledTools, media)
 
     const live = this.live.get(id)
     if (live) {
@@ -1247,6 +1263,7 @@ export class Chats {
       options,
       configDir,
       disabledTools,
+      media,
       resume,
       // Headed here rather than inside `open`, so the retry paths there resend
       // the exact message that failed instead of deciding the head twice.
@@ -1484,6 +1501,9 @@ export class Chats {
     /** The chat's switched-off MCP tools — see `AgentSessionOptions.
      * disallowedTools`. */
     disabledTools: string[],
+    /** The media services with a key — what the `media` server is built
+     * with, see `ChatSource.mediaServer`. */
+    media: MediaProvider[],
     resume: boolean,
     /** The message the session is being opened for, queued by
      * `startAgentSession` before it waits for the CLI. */
@@ -1542,6 +1562,11 @@ export class Chats {
         // Not a mode's business and not read per call: the same list for every
         // turn of this session, which is what keeps it inside the cached prefix.
         disallowedTools: disabledTools,
+        // Built here, per process, because a server serves one transport — a
+        // retry below opens a new process and so gets a new one too.
+        ...(media.length > 0 && this.source.mediaServer
+          ? { mcpServers: { media: this.source.mediaServer(cwd, media) } }
+          : {}),
         permissionMode: "manual",
         // The same sentence for every mode. What the mode is goes at the head of
         // each message instead: this one is part of the cached prefix, and one
@@ -1737,6 +1762,7 @@ export class Chats {
         options,
         configDir,
         disabledTools,
+        media,
         true,
         message
       )
@@ -1769,6 +1795,7 @@ export class Chats {
         options,
         configDir,
         disabledTools,
+        media,
         false,
         message
       )
@@ -2448,8 +2475,10 @@ export function said(ask: ChatAsk, answer: ChatAnswer): string {
  * with. A chat whose project moved, whose profile was switched, or whose
  * switched-off MCP tools changed in its menu is a chat the running process is
  * answering *wrongly*, so the next message closes it and opens another rather
- * than being queued into it. (There was a fourth — the MCP config file this app
- * wrote — and it went with the servers it named.) Model, effort and permission
+ * than being queued into it. The fourth is which media services have a key,
+ * since that is which tools the in-process `media` server offers, and a tool
+ * list is fixed for a process. (There was once another — the MCP config file
+ * this app wrote — and it went with the servers it named.) Model, effort and permission
  * are deliberately absent: those move under a live session, which is the point
  * of `retune`.
  *
@@ -2465,9 +2494,15 @@ export function said(ask: ChatAsk, answer: ChatAnswer): string {
 function signatureOf(
   cwd: string,
   configDir: string | null,
-  disabledTools: string[]
+  disabledTools: string[],
+  media: MediaProvider[]
 ): string {
-  return [cwd, configDir ?? "", disabledTools.join("\n")].join("\0")
+  return [
+    cwd,
+    configDir ?? "",
+    disabledTools.join("\n"),
+    media.join("\n"),
+  ].join("\0")
 }
 
 /**

@@ -1,5 +1,6 @@
 import {
   query,
+  type McpServerConfig,
   type Options,
   type SDKMessage,
   type SDKRateLimitInfo,
@@ -154,6 +155,18 @@ export type AgentSessionOptions = {
    * `signatureOf` in `chat.ts`.
    */
   disallowedTools?: string[]
+  /**
+   * The studio's own in-process MCP servers — today only `media`, and only
+   * when a media service has a key (`main/media/server.ts`).
+   *
+   * Added to what the CLI finds for itself, not instead of it: no
+   * `strictMcpConfig`, so `~/.claude.json`, `.mcp.json` and the claude.ai
+   * connectors still load beside it. An SDK server reaches the CLI as a name
+   * and a type on `--mcp-config`; its calls come back over the control channel
+   * to this process, so nothing it holds is on the command line. Fixed for the
+   * session like `disallowedTools`, and in `signatureOf` for the same reason.
+   */
+  mcpServers?: Record<string, McpServerConfig>
   /**
    * How much the turn may do without being asked.
    *
@@ -726,10 +739,13 @@ export async function startAgentSession(
       // callback reachable at all — see `permits`. `disallowedTools` is the one
       // exception and is not a mode's business either; it is the chat's
       // switched-off MCP tools, the same on every turn until somebody flips a
-      // switch. There is no `--mcp-config`: this app configures no MCP
-      // server of its own, so a turn gets what the CLI finds for itself here.
+      // switch. The one server this app adds is its own in-process `media`,
+      // beside — never instead of — what the CLI finds for itself here.
       ...(session.disallowedTools?.length
         ? { disallowedTools: session.disallowedTools }
+        : {}),
+      ...(session.mcpServers && Object.keys(session.mcpServers).length > 0
+        ? { mcpServers: session.mcpServers }
         : {}),
       ...permissionArgs(session.permissionMode),
       ...(session.addDirs?.length

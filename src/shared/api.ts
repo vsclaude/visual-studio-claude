@@ -7,6 +7,7 @@
  */
 
 import type { PluginInfo, PluginInstall, PluginSource } from "./plugins"
+import type { MediaKeyStatus, MediaProvider } from "./media"
 import type {
   CreditPack,
   PaymentMethod,
@@ -2536,6 +2537,22 @@ export type DesktopApi = {
     folderId: string | null
   }) => Promise<void>
   /**
+   * Which media services have an API key — Settings › Media. Never the key:
+   * see `MediaKeyStatus`.
+   */
+  mediaKeys: () => Promise<MediaKeyStatus>
+  /**
+   * Saves a media service's API key, sealed by the OS keychain, or removes it
+   * for null. Answers with the status after. A chat already open picks up a
+   * service that gained or lost its key on its next message, as a new session —
+   * the `media` server's tools are fixed for a process (`signatureOf` in
+   * `main/chat.ts`).
+   */
+  setMediaKey: (
+    provider: MediaProvider,
+    key: string | null
+  ) => Promise<MediaKeyStatus>
+  /**
    * The workspace's `CLAUDE_CONFIG_DIR` profiles, for the composer's picker
    * and the Claude section of Settings — see `ClaudeProfile`.
    */
@@ -3070,6 +3087,8 @@ export const IPC = {
   installedMcpServers: "mcp:installed",
   planUsage: "claude:plan-usage",
   removeMcpServer: "mcp:remove",
+  mediaKeys: "media:keys",
+  setMediaKey: "media:set-key",
   listClaudeProfiles: "claude-profiles:list",
   saveClaudeProfiles: "claude-profiles:save",
   claudeAccount: "claude-profiles:account",

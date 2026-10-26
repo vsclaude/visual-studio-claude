@@ -53,6 +53,7 @@ import {
   FolderPlus,
   NotebookPen,
   Pencil,
+  Play,
   RotateCw,
   Scissors,
   SquareTerminal,
@@ -860,13 +861,15 @@ function ViewerIcon({ viewer }: { viewer: Viewer }) {
   const Icon =
     viewer === "image"
       ? Image
-      : viewer === "markdown"
-        ? BookOpen
-        : viewer === "html"
-          ? Globe
-          : viewer === "blocks"
-            ? NotebookPen
-            : FileCode
+      : viewer === "media"
+        ? Play
+        : viewer === "markdown"
+          ? BookOpen
+          : viewer === "html"
+            ? Globe
+            : viewer === "blocks"
+              ? NotebookPen
+              : FileCode
   return <Icon className="text-muted-foreground" />
 }
 

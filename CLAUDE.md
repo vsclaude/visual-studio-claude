@@ -85,7 +85,7 @@ reaches the contract through the `@shared/*` alias; `@/*` is `src/renderer`.
 `TerminalManager`, `Chats`) as **`createIpc(host)`**, a table keyed by
 channel that **does not import `electron`**, so the tests can import it.
 What needs Electron itself — dialogs, windows, the dock badge, the trash,
-notifications — is `main/host.ts`, implemented by `electron-ipc.ts`. A handler
+notifications, the keychain — is `main/host.ts`, implemented by `electron-ipc.ts`. A handler
 that needs one of those asks `host`; nothing under `src/main/` that `ipc.ts`
 imports may reach `electron`.
 
@@ -163,11 +163,23 @@ imports may reach `electron`.
   it over the SDK's control channel (`mcpServerStatus()`) in a project's own
   directory, for the composer's MCP dialog (`chat/chat-mcp.tsx` — there is
   no Settings › MCP any more), plus `removeMcpServer`, which
-  runs the CLI's own `claude mcp remove`. **This app serves no MCP server of its
-  own**: the three that served the Database, API and Notes panels are deleted —
-  see `docs/design.md`. What it does still say about MCP is which _tools_ a chat
+  runs the CLI's own `claude mcp remove`. **The one MCP server this app serves
+  is `media`**, in-process (below); the three that served the Database, API and
+  Notes panels are deleted — see `docs/design.md`. What it also says about MCP
+  is which _tools_ a chat
   may call — **per chat**, `ChatOptions.disabledTools`, handed over as
   `disallowedTools`.
+
+- **`media/`** — audio a chat generates on the user's own account
+  (ElevenLabs today; Veo next). `server.ts` is an SDK `createSdkMcpServer`
+  **in the main process**, handed to a session as `mcpServers.media` only while
+  a service has a key — the CLI gets a name, the calls come back over the
+  control channel, so the key never leaves main. Which services have a key is
+  in `signatureOf`. `keys.ts` seals keys with `host.sealer` (`safeStorage`)
+  into `workspace/media-keys.json` and refuses one where there is no keychain;
+  `output.ts` writes into the chat's directory (`media/…`, never over a file).
+  The Explorer plays them through `vsc-media://` (`serveMediaFiles`, gated to
+  media extensions inside the roots). `docs/design.md` § Generating audio.
 
 - **`plan-usage.ts`** — how much of the claude.ai plan's five-hour and
   seven-day windows an account has used, for the composer's usage meter
@@ -258,10 +270,11 @@ things are not visible from the option names:
 1. `pathToClaudeCodeExecutable` is the **user's own** `claude` (their login,
    their `CLAUDE_BIN`), located through their login shell — a GUI app inherits
    almost none of their `PATH`.
-2. No `--mcp-config` goes over at all, so a turn gets exactly the servers the
-   CLI finds for itself in that directory. There used to be one, through
-   `extraArgs` rather than the SDK's `mcpServers` option, which serialises a
-   config onto a command line every process on the machine can read.
+2. A turn gets the servers the CLI finds for itself in that directory, plus
+   the in-process `media` server when a media service has a key. There used to
+   be a config of this app's servers, through `extraArgs`, on a command line
+   every process on the machine can read; an SDK server puts only its name
+   there.
 3. `appendSystemPrompt` is an `initialize` frame on stdin, not a flag.
 4. The SDK throws only when the **process** ends, not on an error result — that
    is true of streaming input; with a string prompt it threw after delivering
@@ -360,13 +373,12 @@ toolbar. So a `+` nobody spoke into leaves no row and no file. `create` used to
 take a `save` option for a caller that recorded the id elsewhere — the deleted
 board's `startChat` — and no longer does.
 
-No MCP config is passed, so whatever the user's own `claude` is configured with —
-`~/.claude.json`, a repository's `.mcp.json`, enabled plugins, claude.ai
-connectors — reaches a turn the way it would running plain `claude` in that
-directory, minus whatever that chat's MCP dialog has switched off. The cost is that
-`Plan` and `Read only` cannot refuse a server _by name_, since this app
-configures none and so has no name for one; an unlisted tool is still refused by
-`deciding`.
+Whatever the user's own `claude` is configured with — `~/.claude.json`, a
+repository's `.mcp.json`, enabled plugins, claude.ai connectors — reaches a turn
+the way it would running plain `claude` in that directory, minus whatever that
+chat's MCP dialog has switched off, plus `media`. The cost is that `Plan` and
+`Read only` cannot refuse a server _by name_; an unlisted tool is still refused
+by `deciding`, and `media`'s tools are refused there like any `mcp__*`.
 
 A switched-off tool is a **wire** name (`mcp__claude_ai_ClickUp__clickup_search`),
 not the name the listing shows: the CLI normalises a server's configured name
@@ -644,6 +656,9 @@ naming of a profile's directory (`test/claude-account.ts`),
 `plugins/usage/src/spend.ts` — the usage dashboard's grouping by day, project,
 model and chat (`test/chat-spend.ts`), `plugins/chat-export/src/markdown.ts` — a chat as
 Markdown (`test/chat-export.ts`; `html.ts` is the half that needs the app),
+`main/media/` — the ElevenLabs client, the tools, sealed keys and where a file
+is written (`test/media-elevenlabs.ts`, `test/media-server.ts`,
+`test/media-keys.ts`, `test/media.ts`),
 `lib/appearance.ts` — palettes, fonts, font size and density as root attributes
 and CSS vars (`test/appearance.ts`), `lib/plugins/registry.ts` — what a plugin
 registered and taking it back (`test/plugin-registry.ts`, with `main/plugins.ts`

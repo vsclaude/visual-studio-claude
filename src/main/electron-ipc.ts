@@ -10,6 +10,7 @@ import {
   net,
   Notification,
   powerMonitor,
+  safeStorage,
   shell,
   type IpcMainInvokeEvent,
   type OpenDialogOptions,
@@ -237,6 +238,11 @@ export function registerIpc(
       void shell.openExternal(url)
     },
     fetch: (url, init) => net.fetch(url, init),
+    sealer: {
+      available: () => safeStorage.isEncryptionAvailable(),
+      seal: (text) => safeStorage.encryptString(text),
+      unseal: (bytes) => safeStorage.decryptString(Buffer.from(bytes)),
+    },
     quitAndRun(task) {
       quitTask = { run: task, atSessionEnd: true }
       app.quit()

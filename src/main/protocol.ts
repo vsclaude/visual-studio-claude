@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url"
 
 import { net, protocol } from "electron"
 
+import { MEDIA_FILE_SCHEME, mediaFilePathOf } from "../shared/media"
 import { NOTE_FILE_SCHEME, noteFileNameOf } from "../shared/note-files"
 import { PLUGIN_SCHEME, pluginFileOf, type PluginFile } from "../shared/plugins"
 
@@ -43,6 +44,14 @@ export function registerAppScheme(): void {
      */
     {
       scheme: NOTE_FILE_SCHEME,
+      privileges: { standard: true, secure: true, stream: true },
+    },
+    /*
+     * The workspace's own audio and video, for the Explorer's player — see
+     * `serveMediaFiles`. Privileged like `note-file` and for the same reasons.
+     */
+    {
+      scheme: MEDIA_FILE_SCHEME,
       privileges: { standard: true, secure: true, stream: true },
     },
     /*
@@ -111,6 +120,38 @@ export function serveNoteFiles(pathOf: (fileName: string) => string): void {
     let target: string
     try {
       target = pathOf(name)
+    } catch {
+      return new Response("Forbidden", { status: 403 })
+    }
+
+    const range = request.headers.get("range")
+    return net.fetch(
+      pathToFileURL(target).toString(),
+      range ? { headers: { range } } : undefined
+    )
+  })
+}
+
+/**
+ * Serves an audio or video file from the workspace's folders, for the
+ * Explorer's player.
+ *
+ * `pathOf` is `mediaFilePath` in `ipc.ts`: the `files:*` gate, and only for a
+ * file a player can play — a URL is something any page in the renderer can
+ * build, so this answers for nothing a `files:read` would not, and for much
+ * less. `Range` is passed along for `serveNoteFiles`' reason: a player that
+ * cannot ask for the middle of the file is one that cannot seek.
+ */
+export function serveMediaFiles(
+  pathOf: (target: string) => Promise<string>
+): void {
+  protocol.handle(MEDIA_FILE_SCHEME, async (request) => {
+    const named = mediaFilePathOf(request.url)
+    if (!named) return new Response("Not found", { status: 404 })
+
+    let target: string
+    try {
+      target = await pathOf(named)
     } catch {
       return new Response("Forbidden", { status: 403 })
     }

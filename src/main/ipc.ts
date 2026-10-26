@@ -481,8 +481,13 @@ export function createIpc(host: Host): {
           // is a *login* shell: somebody already running several identities is
           // exactly the person whose own `.zshrc` exports `CLAUDE_CONFIG_DIR`,
           // and that export runs after this env is handed over — it would win,
-          // and sign the wrong directory in.
-          command: dir ? `CLAUDE_CONFIG_DIR=${quote(dir)} ${command}` : command,
+          // and sign the wrong directory in. Windows has no `VAR=value cmd`
+          // form (PowerShell and cmd both read it as a command name), so there
+          // the env above is the only route.
+          command:
+            dir && process.platform !== "win32"
+              ? `CLAUDE_CONFIG_DIR=${quote(dir)} ${command}`
+              : command,
           env: dir ? { CLAUDE_CONFIG_DIR: dir } : {},
         },
         cols,

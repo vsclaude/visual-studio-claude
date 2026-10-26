@@ -55,6 +55,7 @@ import { ClaudeLoginDialog } from "../claude-login-dialog"
 import { CreditsBadge } from "../credits-badge"
 import { IconButton } from "../icon-button"
 import { ProfileAvatar } from "../profile-avatar"
+import { useMenuFocusHandoff } from "../rename-row"
 
 /**
  * The accounts a chat can run on, in the order the column lists them: the
@@ -527,6 +528,7 @@ function PlanRow({
   const rename = useClaudeProfiles((state) => state.rename)
   const load = usePlanUsage((state) => state.load)
   const [open, setOpen] = useState(false)
+  const menuFocus = useMenuFocusHandoff()
 
   // A profile whose directory main has not named yet has nothing to check
   // or sign in — the empty key is the *default* login's.
@@ -585,7 +587,13 @@ function PlanRow({
                   )
                 ))}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuContent
+              align="end"
+              className="w-60"
+              // Rename hands focus to the field it opens — see
+              // `useMenuFocusHandoff`.
+              finalFocus={menuFocus.finalFocus}
+            >
               <p className="truncate px-1.5 py-1 text-xs text-muted-foreground">
                 {caption || accountLabel(known).label}
               </p>
@@ -607,7 +615,12 @@ function PlanRow({
               {onRemove && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onRename}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      menuFocus.handOff()
+                      onRename()
+                    }}
+                  >
                     <Pencil />
                     Rename
                   </DropdownMenuItem>

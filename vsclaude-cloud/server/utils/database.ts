@@ -15,8 +15,8 @@ import { useDatabase } from "nitro/database"
  * (in plain text, so a provider can be added with one statement; whoever can
  * read this database can read the keys), how the key is sent, `priority`
  * (lowest tried first), `enabled` (`upstream-store.ts`, `upstreams.ts`), and
- * `credit_usd`, the usage the key was bought with, which is what the packs are
- * sold against (`stockLeft` in `accounts.ts`). No JSON inside a cell —
+ * `credit_usd`, the usage the key was bought with — a note for whoever keeps
+ * the keys; nothing is sold against it. No JSON inside a cell —
  * a payment is a statement about the rows it changes rather than a whole
  * record read, edited and written back.
  */

@@ -7,7 +7,6 @@ import {
   formatCredits,
   formatPrice,
   packsFor,
-  stockOf,
   type PaymentMethod,
 } from "@shared/credits"
 import { Button } from "@/components/ui/button"
@@ -120,81 +119,60 @@ function BuyDialog() {
             packs.length > 3 ? "sm:grid-cols-4" : "sm:grid-cols-3"
           )}
         >
-          {packs.map((pack) => {
-            const soldOut = stockOf(account, pack.id) === 0
-            return (
-              <div
-                key={pack.id}
+          {packs.map((pack) => (
+            <div
+              key={pack.id}
+              className={cn(
+                "relative flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center",
+                // Taller than its neighbours rather than scaled, so it cannot
+                // spill past the dialog's scroll box sideways.
+                pack.popular &&
+                  "border-violet-500/60 bg-linear-to-b from-violet-500/10 to-card shadow-lg ring-1 shadow-violet-500/15 ring-violet-500/40 sm:-my-2 sm:py-7"
+              )}
+            >
+              {pack.popular && (
+                <span className="absolute -top-2.5 inline-flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2.5 py-0.5 text-[0.625rem] font-semibold text-white shadow-sm">
+                  <Sparkle className="size-2.5 fill-current" />
+                  Most popular
+                </span>
+              )}
+              <Coin size={pack.popular ? 34 : 28} struck />
+              <span className="text-2xl font-semibold tabular-nums">
+                {formatPrice(pack.price)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatCredits(pack.credits)} in credits
+              </span>
+              {pack.bonus && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400">
+                  +{pack.bonus}% bonus
+                </span>
+              )}
+              {pack.bankOnly && (
+                <span className="text-[0.625rem] text-muted-foreground">
+                  Bank transfer only
+                </span>
+              )}
+              <Button
+                variant={pack.popular ? "default" : "outline"}
                 className={cn(
-                  "relative flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center",
-                  // Taller than its neighbours rather than scaled, so it cannot
-                  // spill past the dialog's scroll box sideways.
+                  "mt-auto w-full",
                   pack.popular &&
-                    "border-violet-500/60 bg-linear-to-b from-violet-500/10 to-card shadow-lg ring-1 shadow-violet-500/15 ring-violet-500/40 sm:-my-2 sm:py-7"
+                    "bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90"
                 )}
+                disabled={!ready || pending !== null}
+                onClick={() => void buy(pack.id, method)}
               >
-                {pack.popular && (
-                  <span className="absolute -top-2.5 inline-flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2.5 py-0.5 text-[0.625rem] font-semibold text-white shadow-sm">
-                    <Sparkle className="size-2.5 fill-current" />
-                    Most popular
-                  </span>
-                )}
-                <Coin size={pack.popular ? 34 : 28} struck />
-                <span className="text-2xl font-semibold tabular-nums">
-                  {formatPrice(pack.price)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatCredits(pack.credits)} in credits
-                </span>
-                {pack.bonus && (
-                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400">
-                    +{pack.bonus}% bonus
-                  </span>
-                )}
-                {pack.bankOnly && (
-                  <span className="text-[0.625rem] text-muted-foreground">
-                    Bank transfer only
-                  </span>
-                )}
-                {/* The count itself is not drawn — only that there is none
-                    left. `soldOut` is false for a server too old to say. */}
-                {soldOut && (
-                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[0.625rem] font-semibold text-destructive">
-                    Sold out
-                  </span>
-                )}
-                <Button
-                  variant={pack.popular ? "default" : "outline"}
-                  className={cn(
-                    "mt-auto w-full",
-                    pack.popular &&
-                      "bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90"
-                  )}
-                  disabled={!ready || pending !== null || soldOut}
-                  onClick={() => void buy(pack.id, method)}
-                >
-                  {pending === pack.id
-                    ? "Opening…"
-                    : !ready
-                      ? "Sign in to buy"
-                      : soldOut
-                        ? "Sold out"
-                        : "Buy credits"}
-                </Button>
-              </div>
-            )
-          })}
+                {pending === pack.id
+                  ? "Opening…"
+                  : ready
+                    ? "Buy credits"
+                    : "Sign in to buy"}
+              </Button>
+            </div>
+          ))}
         </div>
 
-        {/* The server's pool of unsold credits cannot cover any pack — said
-            once under the cards, so a disabled button is not left to explain
-            itself. */}
-        {packs.length > 0 &&
-          packs.every((pack) => stockOf(account, pack.id) === 0) && (
-            <p className="text-center text-xs text-muted-foreground">
-              Credits are sold out for now — more will be added soon.
-            </p>
-          )}
         {awaiting && !error && (
           <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Spinner className="size-3.5" />

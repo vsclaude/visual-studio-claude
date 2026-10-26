@@ -4,7 +4,6 @@ import {
   creditsOf,
   formatCredits,
   packsFor,
-  stockOf,
   type StudioAccount,
 } from "../src/shared/credits"
 import { check, finish, section } from "./harness"
@@ -77,25 +76,6 @@ check(
     .map((pack) => pack.price)
     .join() === "50000,100000,200000"
 )
-
-section("stockOf")
-const stocked = (stock?: Record<string, number>): StudioAccount => ({
-  ...account(0),
-  stock,
-})
-check(
-  "the count the server sent",
-  stockOf(stocked({ "vnd-20k": 7 }), "vnd-20k") === 7
-)
-check(
-  "sold out is 0, not unknown",
-  stockOf(stocked({ "vnd-20k": 0 }), "vnd-20k") === 0
-)
-check(
-  "a server too old to keep stock says nothing",
-  stockOf(stocked(), "vnd-20k") === null && stockOf(null, "vnd-20k") === null
-)
-check("never below zero", stockOf(stocked({ "vnd-20k": -2 }), "vnd-20k") === 0)
 
 section("creditsLeft")
 const spent = (credits: number, creditsUsed: number): StudioAccount => ({

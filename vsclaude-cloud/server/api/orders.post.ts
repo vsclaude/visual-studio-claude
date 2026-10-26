@@ -1,6 +1,6 @@
 import { defineHandler } from "nitro"
 
-import { addOrder, heldOrder, stockLeft } from "../utils/accounts.ts"
+import { addOrder, heldOrder } from "../utils/accounts.ts"
 import { authenticate } from "../utils/auth.ts"
 import { CREDIT_PACKS, isOnSale } from "../utils/billing.ts"
 import { noteRequest } from "../utils/log.ts"
@@ -38,24 +38,12 @@ export default defineHandler(async (event) => {
     noteRequest(event, { refused: "not on sale" })
     return Response.json({ error: "Nothing here sells that." }, { status: 400 })
   }
-  // An order of theirs still holding this pack is the one to pay: a second
-  // would hold a second pack, and with one left be refused as sold out.
+  // An unpaid order of theirs for this pack is the one to pay, rather than a
+  // second QR for the same thing.
   const held = await heldOrder(user.uid, item)
   if (held) {
     noteRequest(event, { order: held, item, reopened: true })
     return { url: `${publicUrlOf(event)}/pay/${held}` }
-  }
-  // The unsold pool has to cover a whole pack. Checked before the order is
-  // written rather than in one statement with it: two buyers racing for the
-  // last $10 may both get a QR, and both are credited when they pay
-  // (`payOrder`) — an oversell of one pack, not a refusal of money already
-  // sent.
-  if ((await stockLeft([item]))[item]! <= 0) {
-    noteRequest(event, { refused: "pool short of a pack", item })
-    return Response.json(
-      { error: "Credits are sold out for now. More will be added soon." },
-      { status: 409 }
-    )
   }
 
   const { prefix } = sepayConfig()

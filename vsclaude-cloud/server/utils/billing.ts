@@ -37,10 +37,7 @@ function usd(dollars: number): number {
  * Anthropic's own API**, where $1.00 is about 26.000 ₫, and has to be
  * repriced before this server is pointed at `api.anthropic.com`.
  *
- * **Four packs, in limited stock** — the gateway's usage is bought in lots,
- * so the server sells no more of any pack than it has usage behind
- * (`unsoldCredits`, `accounts.ts`). They are the four amounts a Vietnamese
- * transfer is made in — 20.000, 50.000, 100.000 and 200.000 ₫ — with 10% and
+ * **Four packs**, the four amounts a Vietnamese transfer is made in — 20.000, 50.000, 100.000 and 200.000 ₫ — with 10% and
  * 20% more on the two biggest. For a while only the 20.000 ₫ one was sold and
  * the rest were `retired`; the flag stays for the next pack withdrawn. The
  * smallest is **`bankOnly`**: Paddle's
@@ -67,48 +64,15 @@ export function isCreditItem(value: unknown): value is CreditItem {
   return typeof value === "string" && value in CREDIT_PACKS
 }
 
-/** Whether a new purchase of it may be opened — any pack not `retired`, and
- * only while the unsold pool covers it (`packsAffordable`). */
+/** Whether a new purchase of it may be opened — any pack not `retired`. */
 export function isOnSale(value: unknown): value is CreditItem {
   return isCreditItem(value) && !CREDIT_PACKS[value].retired
 }
 
-/** The packs on sale, which `/api/usage` reports the stock of. */
+/** The packs on sale. */
 export const ON_SALE = (Object.keys(CREDIT_PACKS) as CreditItem[]).filter(
   (item) => isOnSale(item)
 )
-
-/**
- * The credits not yet sold: what the providers' keys were bought with — each
- * `upstreams` row's `credit_usd`, summed — less what every paid purchase has
- * added. Selling more than that is selling usage nobody bought; never below
- * zero, since a pool oversold by a race is out, not owed.
- */
-export function unsoldCredits(boughtUsd: number, sold: number): number {
-  return Math.max(0, usd(boughtUsd) - sold)
-}
-
-/**
- * How many of each pack the unsold pool still covers, once the unpaid orders
- * holding some of it (`held`, a count per item) are set aside. A pool short of
- * one whole pack is 0 of it — the "out of credits" the dialog says — rather
- * than selling $10 with $7 behind it.
- */
-export function packsAffordable(
-  pool: number,
-  held: Record<string, number>,
-  items: readonly CreditItem[]
-): Record<string, number> {
-  const reserved = Object.entries(held).reduce(
-    (sum, [item, count]) =>
-      sum + (isCreditItem(item) ? CREDIT_PACKS[item].credits * count : 0),
-    0
-  )
-  const free = Math.max(0, pool - reserved)
-  return Object.fromEntries(
-    items.map((item) => [item, Math.floor(free / CREDIT_PACKS[item].credits)])
-  )
-}
 
 export type Account = {
   /** Left over from the packs bought, in `usage.ts`'s units. */

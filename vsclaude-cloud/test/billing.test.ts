@@ -7,8 +7,6 @@ import {
   isOnSale,
   NO_ACCOUNT,
   ON_SALE,
-  packsAffordable,
-  unsoldCredits,
   type Account,
 } from "../server/utils/billing.ts"
 import {
@@ -116,49 +114,6 @@ describe("items", () => {
     expect(CREDIT_PACKS["vnd-200k"].credits).toBe(120 * CREDITS_PER_USD)
     expect(isOnSale("vnd-200k")).toBe(true)
     expect(isOnSale("plus")).toBe(false)
-  })
-  test("the pool is what the keys were bought with, less what was sold", () => {
-    const pack = CREDIT_PACKS["vnd-20k"].credits
-    // Three $10 keys, two packs paid for: one left.
-    expect(unsoldCredits(30, 2 * pack)).toBe(pack)
-    // A REAL sum a hair under the dollar still counts as the dollar.
-    expect(unsoldCredits(0.1 + 0.2, 0)).toBe(3_000_000)
-    // Oversold by a race is out, not negative.
-    expect(unsoldCredits(10, 2 * pack)).toBe(0)
-    expect(unsoldCredits(0, 0)).toBe(0)
-  })
-  test("the pool sells only whole packs", () => {
-    const pack = CREDIT_PACKS["vnd-20k"].credits
-    expect(packsAffordable(3 * pack, {}, ON_SALE)).toEqual({
-      "vnd-20k": 3,
-      "vnd-50k": 1,
-      "vnd-100k": 0,
-      "vnd-200k": 0,
-    })
-    // $25 behind is two $10 packs, not three.
-    expect(packsAffordable(2.5 * pack, {}, ["vnd-20k"])).toEqual({
-      "vnd-20k": 2,
-    })
-    // Short of one whole pack is out of credits.
-    expect(packsAffordable(pack - 1, {}, ["vnd-20k"])).toEqual({ "vnd-20k": 0 })
-    expect(packsAffordable(0, {}, ["vnd-20k"])).toEqual({ "vnd-20k": 0 })
-  })
-  test("unpaid orders hold their packs back", () => {
-    const pack = CREDIT_PACKS["vnd-20k"].credits
-    expect(packsAffordable(3 * pack, { "vnd-20k": 2 }, ["vnd-20k"])).toEqual({
-      "vnd-20k": 1,
-    })
-    // An order for another pack holds back what it would add.
-    expect(
-      packsAffordable(
-        CREDIT_PACKS["vnd-50k"].credits + pack,
-        { "vnd-50k": 1 },
-        ["vnd-20k"]
-      )
-    ).toEqual({ "vnd-20k": 1 })
-    expect(packsAffordable(pack, { "vnd-20k": 5 }, ["vnd-20k"])).toEqual({
-      "vnd-20k": 0,
-    })
   })
   test("an unset price is not on sale", () => {
     expect(Object.values(catalog)).not.toContain("vnd-200k")

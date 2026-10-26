@@ -215,15 +215,10 @@ wrangler d1 execute vsclaude --remote --command "INSERT INTO upstreams (name, ba
 wrangler d1 execute vsclaude --remote --command "UPDATE upstreams SET enabled = 0 WHERE name = 'provider-a'"
 ```
 
-**The credits on sale are this table's.** What can still be sold is the sum of
-every row's `credit_usd`, less the credits of every paid transaction ever, less
-what unpaid orders of the last 30 minutes hold (`stockLeft`); short of one
-whole pack, `/api/orders` answers 409 and the studio says sold out. Buying
-another key is inserting its row, which restocks at once — the stock is read
-on every ask, unlike the provider list below. Every row
-counts, `enabled` or not — a used-up key was still bought and its usage still
-sold — so **disable a key rather than delete it**, and write off a key lost
-with balance on it by lowering its `credit_usd`.
+**`credit_usd` is a note, not a stock.** Every pack is sold whatever the
+keys add up to; nothing is refused as sold out. Keeping enough usage behind
+what has been sold is whoever adds the keys' job. **Disable a key rather than
+delete it**, so the record of what was bought stays.
 
 The server reads the providers at most every 30 seconds per isolate, so a change
 takes that long to land. The first provider not cooling down gets every request; the next is asked only when it fails in a

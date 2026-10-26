@@ -1,10 +1,4 @@
-import {
-  NO_ACCOUNT,
-  packsAffordable,
-  unsoldCredits,
-  type Account,
-  type CreditItem,
-} from "./billing.ts"
+import { NO_ACCOUNT, type Account, type CreditItem } from "./billing.ts"
 import { atomically, database, statement } from "./database.ts"
 import type { Purchase } from "./paddle-billing.ts"
 import type { Order } from "./sepay-billing.ts"
@@ -30,11 +24,6 @@ import type { User } from "./session.ts"
  *     and is `paid` by the SePay transfer in `paid_by`. Transfers that fell
  *     short add up in `short_amount`; `short_by` is the last one, so SePay
  *     retrying the same webhook adds it once.
- *
- * What is left to sell is not a table of its own: it is every `upstreams`
- * row's `credit_usd` — what each key was bought with — less the credits of
- * every `paid` transaction (`stockLeft`). Buying another key is inserting its
- * row; nothing here has to be counted down or kept in step.
  *
  * This is money somebody paid. A balance only ever changes by a statement
  * relative to what it is — never by writing back a total read earlier — and a
@@ -195,13 +184,12 @@ export async function payOrder(
   )
 }
 
-/** How long an unpaid order holds its credits back from everybody else —
- * long enough to open a banking app and scan, short enough that an order
- * somebody walked away from does not keep the pool off sale for good. */
+/** How long an unpaid order is reopened by a second press of Buy — long
+ * enough to open a banking app and scan. */
 export const HOLD_MS = 30 * 60_000
 
-/** The user's own unpaid order for the pack still within its hold, if any —
- * what a second press of Buy reopens rather than holding a second pack. */
+/** The user's own unpaid order for the pack within `HOLD_MS`, if any — what
+ * a second press of Buy reopens rather than opening a second order. */
 export async function heldOrder(
   uid: string,
   item: CreditItem
@@ -212,39 +200,4 @@ export async function heldOrder(
     await db.sql`SELECT id FROM transactions WHERE provider = 'sepay' AND status = 'pending' AND uid = ${uid} AND item = ${item} AND created_at >= ${since} ORDER BY created_at DESC LIMIT 1`
   const id = rows[0]?.id
   return typeof id === "string" && id ? id : null
-}
-
-/**
- * How many more of each pack on sale can be bought right now
- * (`packsAffordable`): the unsold pool (`unsoldCredits`), less what the unpaid
- * orders opened within `HOLD_MS` would take. Without the hold, ten people
- * opening orders for the last $10 would all be shown a QR for it.
- *
- * Every key counts, `enabled` or not: a key switched off because it is used up
- * was bought and its usage sold all the same, and leaving it out would take
- * its credits off sale twice. A key lost with balance left on it is written
- * off by lowering its `credit_usd`.
- *
- * Asked for `uid`, that user's own orders hold nothing back from them: the
- * last pack is theirs while they scan for it, and the dialog behind the pay
- * page said `Sold out` to the one person it was held for.
- */
-export async function stockLeft(
-  items: readonly CreditItem[],
-  uid: string | null = null
-): Promise<Record<string, number>> {
-  const db = await database()
-  const since = new Date(Date.now() - HOLD_MS).toISOString()
-  const { rows: pool = [] } =
-    await db.sql`SELECT (SELECT COALESCE(SUM(credit_usd), 0) FROM upstreams) AS bought, (SELECT COALESCE(SUM(credits), 0) FROM transactions WHERE status = 'paid') AS sold`
-  const { rows: pending = [] } =
-    await db.sql`SELECT item, COUNT(*) AS n FROM transactions WHERE provider = 'sepay' AND status = 'pending' AND created_at >= ${since} AND uid IS NOT ${uid} GROUP BY item`
-  const held = Object.fromEntries(
-    pending.map((row) => [String(row.item), Number(row.n)])
-  )
-  const unsold = unsoldCredits(
-    Number(pool[0]?.bought ?? 0),
-    Number(pool[0]?.sold ?? 0)
-  )
-  return packsAffordable(unsold, held, items)
 }

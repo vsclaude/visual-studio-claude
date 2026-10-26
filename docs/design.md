@@ -892,36 +892,26 @@ sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
 
-**Four packs, sold out of a pool.** 20.000 ₫ for $10.00 (bank transfer
-only), 50.000 ₫ for $25, 100.000 ₫ for $55 and 200.000 ₫ for $120 — the 10%
-and 20% bonuses — each by bank transfer, and no more of any than there is
-usage behind: the server buys its upstream usage in lots. For a while only the
-20.000 ₫ pack was sold and the other three were `retired` in the server's
-`CREDIT_PACKS` (still credited for an order opened before, not sold); they are
-back, and the flag stays for the next pack withdrawn. The dialog is the grid
-of four again, each card saying `Sold out` on its own, since the pool can
-cover a $10 pack and not a $120 one. What is behind them is the server's `upstreams` table, one row
-per provider key, each carrying `credit_usd` — the usage that key was bought
-with. What can still be sold is their sum less every paid transaction's
-credits, so restocking is inserting the key that was just bought, one
-statement and no deploy. It was a count of packs (`pack_stock`) first, then
-one balance (`credit_pool`) seeded from configuration and counted down by
-each payment; both were a second number to keep in step with the keys by
-hand, where the keys' own rows already say what was bought. Every row counts,
-disabled or not — a used-up key's usage was still sold — so a key is disabled
-rather than deleted. An unpaid
-order holds its pack's worth back for thirty minutes, so the last $10 is not
-shown as a QR to ten people at once — held from everybody but its buyer: the
-first cut held it from them too, so the dialog behind the pay page said
-`Sold out` to the one person the pack was kept for, and a second press of Buy
-was refused. Now their stock leaves their own order out, and Buy again reopens
-that order rather than holding a second pack. A pool short of one whole pack sells
-nothing (`packsAffordable`). Two buyers racing past that check may both pay
-and are both credited — an oversell of one pack, against refusing money
-already sent. `/api/usage` carries how many packs the pool covers, but the
-dialog does not draw the number — it was more than anybody buying needed.
-Only `Sold out`, with the button off and a line saying more is coming, at
-zero; a server too old to send a count draws nothing.
+**Four packs, never sold out.** 20.000 ₫ for $10.00 (bank transfer only),
+50.000 ₫ for $25, 100.000 ₫ for $55 and 200.000 ₫ for $120 — the 10% and 20%
+bonuses — each by bank transfer. For a while only the 20.000 ₫ pack was sold
+and the other three were `retired` in the server's `CREDIT_PACKS` (still
+credited for an order opened before, not sold); they are back, and the flag
+stays for the next pack withdrawn. The dialog is the grid of four again.
+
+**The stock, removed.** While one pack was sold it was sold out of a pool: the
+sum of the `upstreams` rows' `credit_usd` (what each key was bought with) less
+every paid transaction's credits, with an unpaid order holding its pack back
+for thirty minutes, `/api/orders` answering 409 short of a whole pack and the
+dialog drawing `Sold out`. It was a count of packs (`pack_stock`) before that,
+then one balance (`credit_pool`). With four packs back the check was taken
+out — `stockLeft`, `packsAffordable`, `unsoldCredits`, `StudioAccount.stock`,
+`stockOf` and every `Sold out` — because a buyer refused for a pack the pool
+did not cover was a sale lost to bookkeeping: keeping usage behind what is sold
+is now done by whoever adds the keys, not by the checkout. `credit_usd` stays
+on the table as a note, read by nothing. What is left of the hold is that a
+second press of Buy reopens the user's own unpaid order for that pack
+(`heldOrder`) rather than opening another.
 
 **Written as dollars, counted as before.** Every balance, pack and charge is
 shown as the dollars of Anthropic's list price it is — `$1.00` for the small

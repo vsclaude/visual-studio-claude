@@ -69,9 +69,7 @@ export type CreditPack = {
  * $1.00 of usage per 2.000 ₫, plus the bonus the bigger packs are badged
  * with: 100.000 ₫ is $50 and 10% more, 200.000 ₫ is $100 and 20% more, so
  * the badge and the number say the same thing. Four amounts, the ones a
- * Vietnamese transfer is made in; the 20.000 ₫ one is `bankOnly`. Each is in
- * limited stock — how many are left is the server's (`StudioAccount.stock`).
- * Why the rate is the server's `billing.ts`. An id is its price, and is also
+ * Vietnamese transfer is made in; the 20.000 ₫ one is `bankOnly`. Why the rate is the server's `billing.ts`. An id is its price, and is also
  * the server's item name.
  */
 export const CREDIT_PACKS: CreditPack[] = [
@@ -123,22 +121,6 @@ export type StudioAccount = {
   credits: number
   /** Spent so far, ever — 0 from a server too old to count it. */
   creditsUsed: number
-  /** How many more of each pack can be bought, by pack id. Absent from a
-   * server too old to keep stock, which draws no count at all rather than
-   * `0 left` on a pack it would still sell. */
-  stock?: Record<string, number>
-}
-
-/** How many of a pack are left to buy, or null when the server does not
- * say — which is not the same as none. */
-export function stockOf(
-  account: StudioAccount | null,
-  pack: CreditPack["id"]
-): number | null {
-  const left = account?.stock?.[pack]
-  return typeof left === "number" && Number.isFinite(left)
-    ? Math.max(0, left)
-    : null
 }
 
 /**

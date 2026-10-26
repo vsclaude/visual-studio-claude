@@ -14,6 +14,7 @@ import {
 import { noteFileUrl } from "@shared/note-files"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { iconFor } from "@/lib/files/icons"
 import { nameOf, parentOf, relativeTo } from "@/lib/files/paths"
 import { rootOf } from "@/lib/files/roots"
@@ -23,10 +24,10 @@ import type { ChatMedia, MediaKind } from "@/lib/chat/media"
 import { IconButton } from "../icon-button"
 import { SideColumn } from "./side-column"
 
-const TABS: { kind: MediaKind; label: string }[] = [
-  { kind: "images", label: "Media" },
-  { kind: "files", label: "Files" },
-  { kind: "links", label: "Links" },
+const TABS: { kind: MediaKind; label: MessageKey }[] = [
+  { kind: "images", label: "transcript.media.tabMedia" },
+  { kind: "files", label: "transcript.media.tabFiles" },
+  { kind: "links", label: "transcript.media.tabLinks" },
 ]
 
 /**
@@ -46,11 +47,12 @@ export function ChatMediaColumn({
   onPick: (lineId: string) => void
   onClose: () => void
 }) {
+  const t = useT()
   const [tab, setTab] = useState<MediaKind>("images")
   const [viewing, setViewing] = useState<number | null>(null)
 
   return (
-    <SideColumn label="Shared media">
+    <SideColumn label={t("transcript.media.label")}>
       <div className="flex h-8 shrink-0 items-center gap-0.5 pr-1 pl-1.5">
         {/* The tabs give way before the close button does: each may shrink to
             its count, so a narrow column cuts a word rather than pushing
@@ -68,7 +70,7 @@ export function ChatMediaColumn({
                 tab === kind && "bg-accent text-foreground"
               )}
             >
-              <span className="min-w-0 truncate">{label}</span>
+              <span className="min-w-0 truncate">{t(label)}</span>
               <span className="ml-1 shrink-0 tabular-nums opacity-60">
                 {media[kind].length}
               </span>
@@ -76,7 +78,7 @@ export function ChatMediaColumn({
           ))}
         </div>
         <IconButton
-          label="Close media"
+          label={t("transcript.media.close")}
           side="bottom"
           onClick={onClose}
           className="shrink-0"
@@ -89,10 +91,10 @@ export function ChatMediaColumn({
         {media[tab].length === 0 ? (
           <p className="px-1.5 py-2 text-[0.7rem] text-muted-foreground">
             {tab === "images"
-              ? "No pictures yet."
+              ? t("transcript.media.noImages")
               : tab === "files"
-                ? "No files written yet."
-                : "No links yet."}
+                ? t("transcript.media.noFiles")
+                : t("transcript.media.noLinks")}
           </p>
         ) : tab === "images" ? (
           <ul className="grid grid-cols-3 gap-1">
@@ -100,7 +102,9 @@ export function ChatMediaColumn({
               <li key={`${image.lineId}:${image.file}`}>
                 <button
                   type="button"
-                  aria-label={`Open picture ${index + 1}`}
+                  aria-label={t("transcript.media.openPicture", {
+                    n: index + 1,
+                  })}
                   onClick={() => setViewing(index)}
                   className="block aspect-square w-full overflow-hidden rounded-md border bg-muted/50 transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
@@ -144,7 +148,7 @@ export function ChatMediaColumn({
                   <>
                     <CopyButton text={link.url} />
                     <IconButton
-                      label="Open in browser"
+                      label={t("transcript.media.openInBrowser")}
                       side="left"
                       onClick={() => openLink(link.url)}
                       className="size-6"
@@ -197,6 +201,7 @@ function Row({
   /** Drawn in a link's blue, so a web link reads as one at a glance. */
   link?: boolean
 }) {
+  const t = useT()
   return (
     <li className="group/row flex items-center rounded-md hover:bg-accent">
       <button
@@ -226,7 +231,7 @@ function Row({
       <span className="hidden shrink-0 items-center group-focus-within/row:flex group-hover/row:flex">
         {actions}
         <IconButton
-          label="Show in chat"
+          label={t("transcript.media.showInChat")}
           side="left"
           onClick={onFind}
           className="size-6"
@@ -268,6 +273,7 @@ function openLink(url: string): void {
 /** Copies, and says so for a moment with a tick in the button's place — the
  * one feedback a button this small has room for. */
 function CopyButton({ text }: { text: string }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
   useEffect(() => {
     if (!copied) return
@@ -277,7 +283,7 @@ function CopyButton({ text }: { text: string }) {
 
   return (
     <IconButton
-      label={copied ? "Copied" : "Copy link"}
+      label={copied ? t("common.copied") : t("transcript.media.copyLink")}
       side="left"
       onClick={() =>
         void navigator.clipboard.writeText(text).then(() => setCopied(true))
@@ -305,6 +311,7 @@ function Viewer({
   onAt: (at: number | null) => void
   onFind: (lineId: string) => void
 }) {
+  const t = useT()
   const image = at === null ? undefined : images[at]
   // Newest first, so `←` is back to the newer picture and `→` on to the older:
   // the grid's own reading order.
@@ -334,7 +341,10 @@ function Viewer({
           on nothing. */}
       <DialogContent className="h-[calc(100vh-4rem)] w-[calc(100vw-4rem)] max-w-none grid-rows-[minmax(0,1fr)_auto_auto] gap-2 p-2 sm:max-w-none">
         <DialogTitle className="sr-only">
-          Picture {(at ?? 0) + 1} of {images.length}
+          {t("transcript.media.pictureOf", {
+            n: (at ?? 0) + 1,
+            total: images.length,
+          })}
         </DialogTitle>
         {image && (
           <>
@@ -349,7 +359,7 @@ function Viewer({
                   so a press dropped the arrow by half its height. */}
               <div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
                 <IconButton
-                  label="Newer"
+                  label={t("transcript.media.newer")}
                   side="right"
                   disabled={at === 0}
                   onClick={() => step(-1)}
@@ -360,7 +370,7 @@ function Viewer({
               </div>
               <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
                 <IconButton
-                  label="Older"
+                  label={t("transcript.media.older")}
                   side="left"
                   disabled={at === images.length - 1}
                   onClick={() => step(1)}
@@ -383,7 +393,7 @@ function Viewer({
                 className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-accent hover:text-foreground"
               >
                 <MessageSquareText className="size-3.5" />
-                Show in chat
+                {t("transcript.media.showInChat")}
               </button>
             </div>
           </>
@@ -408,6 +418,7 @@ function ThumbStrip({
   at: number
   onAt: (at: number) => void
 }) {
+  const t = useT()
   const scroller = useRef<HTMLDivElement>(null)
   const [room, setRoom] = useState({ before: false, after: false })
 
@@ -468,7 +479,7 @@ function ThumbStrip({
               <button
                 type="button"
                 data-at={index}
-                aria-label={`Picture ${index + 1}`}
+                aria-label={t("transcript.media.picture", { n: index + 1 })}
                 aria-current={index === at}
                 onClick={() => onAt(index)}
                 className={cn(
@@ -491,7 +502,7 @@ function ThumbStrip({
       {room.before && (
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
           <IconButton
-            label="Scroll back"
+            label={t("transcript.media.scrollBack")}
             side="top"
             onClick={() => page(-1)}
             className="pointer-events-auto size-7 rounded-full bg-background/90 shadow-sm hover:bg-background"
@@ -503,7 +514,7 @@ function ThumbStrip({
       {room.after && (
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
           <IconButton
-            label="Scroll on"
+            label={t("transcript.media.scrollOn")}
             side="top"
             onClick={() => page(1)}
             className="pointer-events-auto size-7 rounded-full bg-background/90 shadow-sm hover:bg-background"

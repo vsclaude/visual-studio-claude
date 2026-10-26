@@ -21,6 +21,7 @@ import { useChanges } from "@/lib/files/changes"
 import { askAboutLoggedCommit, commitUrl } from "@/lib/files/git-blame"
 import { GIT_LETTERS, GIT_TONES, useGitStatus } from "@/lib/files/git-status"
 import type { FileRoot } from "@/lib/files/roots"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { useComposerBus } from "@/lib/chat/composer-bus"
 import { useShells } from "@/lib/shell/store"
@@ -91,6 +92,7 @@ async function readCommits(
  * first page with nothing opened and no filter.
  */
 export function CommitsList({ root }: { root: FileRoot }) {
+  const t = useT()
   const [typed, setTyped] = useState("")
   const [query, setQuery] = useState("")
   useEffect(() => {
@@ -187,14 +189,14 @@ export function CommitsList({ root }: { root: FileRoot }) {
                 setTyped("")
               }
             }}
-            placeholder="Filter by message, author or hash"
+            placeholder={t("files.commits.filterPlaceholder")}
             spellCheck={false}
             className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
           />
           {typed && (
             <button
               type="button"
-              aria-label="Clear filter"
+              aria-label={t("files.commits.clearFilter")}
               onClick={() => setTyped("")}
               className="shrink-0 text-muted-foreground hover:text-foreground"
             >
@@ -210,12 +212,12 @@ export function CommitsList({ root }: { root: FileRoot }) {
       </div>
 
       {read === null ? (
-        <Note>Reading…</Note>
+        <Note>{t("files.reading")}</Note>
       ) : read.commits.length === 0 ? (
         <Note>
           {read.query
-            ? `No commit matches “${read.query}”.`
-            : "No commits here — not a repository, or nothing committed yet."}
+            ? t("files.commits.noMatch", { query: read.query })
+            : t("files.commits.noCommits")}
         </Note>
       ) : (
         <div className={cn("transition-opacity", stale && "opacity-60")}>
@@ -250,7 +252,9 @@ export function CommitsList({ root }: { root: FileRoot }) {
               onClick={() => setPaged({ query, count: count + PAGE })}
               className="mx-3 mt-1 flex h-7 w-[calc(100%-1.5rem)] items-center justify-center rounded-md text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-60"
             >
-              {loading ? "Reading…" : `Show ${PAGE} more`}
+              {loading
+                ? t("files.reading")
+                : t("files.commits.showMore", { count: PAGE })}
             </button>
           )}
         </div>
@@ -273,6 +277,7 @@ function UpstreamLine({
   folderId: string
   onPushed: () => void
 }) {
+  const t = useT()
   const [pushing, setPushing] = useState(false)
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -300,12 +305,20 @@ function UpstreamLine({
     )
     setPushing(false)
     if (result.ok) {
-      setSaid({ ok: true, text: name ? `Pushed to ${name}` : "Pushed" })
+      setSaid({
+        ok: true,
+        text: name
+          ? t("files.commits.pushedTo", { name })
+          : t("files.commits.pushed"),
+      })
       onPushed()
     } else if (result.reason === "auth") {
       useShells.getState().run(folderId, result.command)
     } else {
-      setSaid({ ok: false, text: result.message || "git push failed" })
+      setSaid({
+        ok: false,
+        text: result.message || t("files.commits.pushFailed"),
+      })
     }
   }
 
@@ -315,14 +328,14 @@ function UpstreamLine({
       disabled={pushing}
       title={
         name
-          ? `Push ${aheadCount} commit${aheadCount === 1 ? "" : "s"} to ${name}`
-          : "Push this branch to origin and track it"
+          ? t("files.commits.pushTitle", { count: aheadCount, name })
+          : t("files.commits.pushNewBranch")
       }
       onClick={() => void onPush()}
       className="ml-auto flex h-5 shrink-0 items-center gap-1 rounded px-1.5 text-[0.65rem] text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
     >
       <ArrowUp aria-hidden className="size-3" />
-      {pushing ? "Pushing…" : "Push"}
+      {pushing ? t("files.commits.pushing") : t("files.commits.push")}
     </button>
   )
 
@@ -330,8 +343,10 @@ function UpstreamLine({
     aheadCount === 0 ? null : (
       <p className="flex items-center gap-1.5 px-0.5 text-[0.65rem] text-muted-foreground">
         <span className="min-w-0 truncate">
-          No upstream —{" "}
-          <span className="text-primary">↑{aheadCount} not on any remote</span>
+          {t("files.commits.noUpstream")}{" "}
+          <span className="text-primary">
+            {t("files.commits.notOnRemote", { count: aheadCount })}
+          </span>
         </span>
         {button}
       </p>
@@ -340,19 +355,23 @@ function UpstreamLine({
     <p className="flex items-center gap-1.5 px-0.5 text-[0.65rem] text-muted-foreground">
       <span className="min-w-0 truncate font-mono">{name}</span>
       {aheadCount === 0 && behind === 0 ? (
-        <span>up to date</span>
+        <span>{t("files.commits.upToDate")}</span>
       ) : (
         <span className="flex shrink-0 gap-1.5 tabular-nums">
           {aheadCount > 0 && (
             <span
               className="text-primary"
-              title={`${aheadCount} not pushed to ${name}`}
+              title={t("files.commits.aheadTitle", { count: aheadCount, name })}
             >
               ↑{aheadCount}
             </span>
           )}
           {behind > 0 && (
-            <span title={`${behind} on ${name} not pulled`}>↓{behind}</span>
+            <span
+              title={t("files.commits.behindTitle", { count: behind, name })}
+            >
+              ↓{behind}
+            </span>
           )}
         </span>
       )}
@@ -377,7 +396,7 @@ function UpstreamLine({
           </span>
           <button
             type="button"
-            aria-label="Dismiss"
+            aria-label={t("files.dismiss")}
             onClick={() => setSaid(null)}
             className="shrink-0 text-muted-foreground hover:text-foreground"
           >
@@ -408,6 +427,7 @@ function CommitRow({
   onToggle: () => void
   onMenu: () => void
 }) {
+  const t = useT()
   return (
     <li>
       <button
@@ -445,12 +465,15 @@ function CommitRow({
               <span
                 title={
                   upstreamName
-                    ? `Not pushed to ${upstreamName}`
-                    : "Not on any remote"
+                    ? t("files.commits.notPushedTo", { name: upstreamName })
+                    : t("files.commits.notOnAnyRemote")
                 }
                 className="flex shrink-0 items-center text-primary"
               >
-                <ArrowUp aria-label="Not pushed" className="size-3" />
+                <ArrowUp
+                  aria-label={t("files.commits.notPushed")}
+                  className="size-3"
+                />
               </span>
             )}
             <span className="min-w-0 truncate">{commit.author}</span>
@@ -477,10 +500,11 @@ function CommitFiles({
   files: GitCommitFile[] | undefined
 }) {
   const selected = useChanges((state) => state.commitFile[root.id] ?? null)
+  const t = useT()
 
-  if (files === undefined) return <Note indent>Reading…</Note>
+  if (files === undefined) return <Note indent>{t("files.reading")}</Note>
   if (files.length === 0) {
-    return <Note indent>No files changed against its first parent.</Note>
+    return <Note indent>{t("files.commits.noFiles")}</Note>
   }
 
   return (
@@ -558,6 +582,7 @@ function CommitMenu({
   commit: GitCommit | null
   webUrl: string | null
 }) {
+  const t = useT()
   if (!commit) return null
 
   const forge = webUrl && new URL(webUrl).hostname.replace(/\.(com|org)$/, "")
@@ -568,13 +593,13 @@ function CommitMenu({
         onClick={() => void navigator.clipboard.writeText(commit.hash)}
       >
         <Copy />
-        Copy commit SHA
+        {t("files.commit.copySha")}
       </ContextMenuItem>
       <ContextMenuItem
         onClick={() => void navigator.clipboard.writeText(commit.subject)}
       >
         <Copy />
-        Copy message
+        {t("files.commit.copyMessage")}
       </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem
@@ -587,7 +612,7 @@ function CommitMenu({
         }
       >
         <MessageSquarePlus />
-        Ask in chat
+        {t("files.commit.askInChat")}
       </ContextMenuItem>
       {webUrl && forge && (
         <ContextMenuItem
@@ -598,7 +623,9 @@ function CommitMenu({
           }
         >
           <ExternalLink />
-          Open on {forge[0]!.toUpperCase() + forge.slice(1)}
+          {t("files.commits.openOn", {
+            forge: forge[0]!.toUpperCase() + forge.slice(1),
+          })}
         </ContextMenuItem>
       )}
     </ContextMenuContent>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react"
 
 import { cn } from "@/lib/utils"
+import { t as translate, useT } from "@/lib/i18n"
 import { useDock } from "@/lib/dock"
 import { useScopedShells, useShells, type Shell } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
@@ -36,6 +37,7 @@ export function DockTerminal() {
   // list itself changes on every rename, and each change would drag the dock
   // off a tab somebody picked by hand.
   const anyFolder = useStudio((state) => state.folders.length > 0)
+  const t = useT()
   useEffect(() => {
     if (showing) useShells.getState().ensure()
   }, [showing, anyFolder])
@@ -46,8 +48,8 @@ export function DockTerminal() {
         <div className="absolute inset-0 grid place-items-center p-4">
           <p className="max-w-56 text-center text-xs text-muted-foreground">
             {anyFolder
-              ? "No terminal in this project yet — the + opens one."
-              : "Add a folder to the workspace and a shell opens in it here."}
+              ? t("nav.dock.emptyProject")
+              : t("nav.dock.emptyWorkspace")}
           </p>
         </div>
       )}
@@ -147,7 +149,7 @@ function ShellView({ shell }: { shell: Shell }) {
             terminalId.current = null
             setExited(id, true)
             terminal.write(
-              `\r\n\x1b[90m[exited with ${event.exitCode}]\x1b[0m\r\n`
+              `\r\n\x1b[90m[${translate("nav.dock.exited", { code: event.exitCode })}]\x1b[0m\r\n`
             )
           })
         })

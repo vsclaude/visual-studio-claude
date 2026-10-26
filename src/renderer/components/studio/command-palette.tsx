@@ -3,6 +3,7 @@ import { defaultFilter } from "cmdk"
 import { MessageSquare } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 import {
   Command,
   CommandDialog,
@@ -95,6 +96,7 @@ export function CommandPalette() {
   // key does rather than faking the key — see `lib/palette.ts`.
   const open = usePalette((state) => state.open)
   const setOpen = usePalette((state) => state.setOpen)
+  const t = useT()
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -120,8 +122,8 @@ export function CommandPalette() {
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
-      title="Go to"
-      description="Search the workspace's files and chats."
+      title={t("nav.palette.title")}
+      description={t("nav.palette.description")}
       // At the top of the window rather than a third of the way down, VS
       // Code's way: `top-2` lands it over the title bar's `Run a command`
       // field, so the palette opens where its button is.
@@ -144,6 +146,7 @@ function Palette({ onOpened }: { onOpened: () => void }) {
    * let cmdk score, so they are cut to a shortlist against this first. See
    * `lib/files/search.ts`.
    */
+  const t = useT()
   const [query, setQuery] = useState("")
   const groups = useEntries(query)
   const [notice, setNotice] = useState<Notice | null>(null)
@@ -204,7 +207,7 @@ function Palette({ onOpened }: { onOpened: () => void }) {
      * wait is so the usual case never flashes a line it did not need.
      */
     const waiting = setTimeout(() => {
-      setNotice({ text: `Opening ${entry.label}…` })
+      setNotice({ text: t("nav.palette.opening", { label: entry.label }) })
     }, 150)
 
     await entry.open()
@@ -231,7 +234,7 @@ function Palette({ onOpened }: { onOpened: () => void }) {
     >
       <CommandInput
         autoFocus
-        placeholder="Search files and chats…"
+        placeholder={t("nav.palette.placeholder")}
         // A failure is about the row that was picked, so the next keystroke —
         // which is on the way to picking another one — is what clears it.
         onValueChange={(value) => {
@@ -242,25 +245,27 @@ function Palette({ onOpened }: { onOpened: () => void }) {
 
       {tabs.length > 0 && (
         <div className="no-scrollbar flex items-center gap-1 overflow-x-auto px-1 pt-1.5">
-          {[{ kind: ALL, heading: "All" }, ...tabs].map((group) => (
-            <button
-              key={group.kind}
-              type="button"
-              // The input keeps focus: the arrow keys and Enter are still the
-              // way the list is worked, and a click that stole focus would end
-              // the search that the tab is meant to narrow.
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setTab(group.kind)}
-              className={cn(
-                "shrink-0 rounded-md px-2 py-1 text-xs whitespace-nowrap transition-colors",
-                group.kind === active
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {group.heading}
-            </button>
-          ))}
+          {[{ kind: ALL, heading: t("nav.palette.all") }, ...tabs].map(
+            (group) => (
+              <button
+                key={group.kind}
+                type="button"
+                // The input keeps focus: the arrow keys and Enter are still the
+                // way the list is worked, and a click that stole focus would end
+                // the search that the tab is meant to narrow.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setTab(group.kind)}
+                className={cn(
+                  "shrink-0 rounded-md px-2 py-1 text-xs whitespace-nowrap transition-colors",
+                  group.kind === active
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {group.heading}
+              </button>
+            )
+          )}
         </div>
       )}
 
@@ -271,8 +276,8 @@ function Palette({ onOpened }: { onOpened: () => void }) {
       <CommandList ref={listRef} className="max-h-[min(60vh,24rem)]">
         <CommandEmpty className="text-muted-foreground">
           {tabs.length === 0
-            ? "Nothing to open yet. Add a project and start a chat in it."
-            : "No match."}
+            ? t("nav.palette.emptyWorkspace")
+            : t("nav.palette.noMatch")}
         </CommandEmpty>
 
         {shown.map((group) => (
@@ -366,6 +371,7 @@ function useEntries(query: string): Group[] {
 
   const chats = useChats((state) => state.chats)
   const folders = useStudio((state) => state.folders)
+  const t = useT()
 
   return useMemo(() => {
     const fileEntries: Entry[] = shortlist(files, query).map((entry) => {
@@ -436,18 +442,18 @@ function useEntries(query: string): Group[] {
     const all: Group[] = [
       {
         kind: "files",
-        heading: "Files",
+        heading: t("nav.palette.files"),
         entries: fileEntries,
         available: files.length > 0,
       },
       {
         kind: "chats",
-        heading: "Chats",
+        heading: t("nav.palette.chats"),
         entries: chatEntries,
         available: chatEntries.length > 0,
       },
     ]
 
     return all
-  }, [files, query, chats, folders])
+  }, [files, query, chats, folders, t])
 }

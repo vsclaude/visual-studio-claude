@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /**
@@ -40,6 +41,7 @@ export function AskCard({
   ask: ChatAsk
   onAnswer: (answer: ChatAnswer) => void
 }) {
+  const t = useT()
   if (ask.kind === "questions") {
     // Keyed by ask, so a second question in the same chat gets a fresh set of
     // picks: remounting is how that state is cleared, rather than an effect
@@ -71,7 +73,7 @@ export function AskCard({
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-5">
         <Button size="sm" onClick={() => onAnswer({ kind: "allow" })}>
-          Allow
+          {t("chat.ask.allow")}
         </Button>
         {/* Offered only where accepting it would do something — the SDK does
             not always have a rule to remember. See `ChatAsk.always`. */}
@@ -81,7 +83,7 @@ export function AskCard({
             variant="outline"
             onClick={() => onAnswer({ kind: "allow", always: true })}
           >
-            Always allow
+            {t("chat.ask.alwaysAllow")}
           </Button>
         )}
         <Button
@@ -89,7 +91,7 @@ export function AskCard({
           variant="outline"
           onClick={() => onAnswer({ kind: "deny" })}
         >
-          Deny
+          {t("chat.ask.deny")}
         </Button>
       </div>
     </div>
@@ -121,6 +123,7 @@ function Questions({
   ask: Extract<ChatAsk, { kind: "questions" }>
   onAnswer: (answer: ChatAnswer) => void
 }) {
+  const t = useT()
   const [picked, setPicked] = useState<Record<string, string[]>>({})
   const [custom, setCustom] = useState<Record<string, string>>({})
   const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({})
@@ -199,7 +202,7 @@ function Questions({
           </p>
           {question.multiSelect && (
             <p className="pl-5 text-[0.65rem] text-muted-foreground">
-              Pick as many as apply
+              {t("chat.ask.pickMany")}
             </p>
           )}
 
@@ -264,7 +267,7 @@ function Questions({
                 )}
               />
               <span className="min-w-0 text-xs font-medium">
-                Type your own answer
+                {t("chat.ask.typeOwn")}
               </span>
             </button>
             {customOpen[question.question] && (
@@ -284,7 +287,7 @@ function Questions({
                   // reply is usually the last thing filled in.
                   if (event.key === "Enter") submit()
                 }}
-                placeholder="Type an answer…"
+                placeholder={t("chat.ask.typePlaceholder")}
                 className="h-7 text-xs"
               />
             )}
@@ -294,7 +297,7 @@ function Questions({
 
       <div className="pl-5">
         <Button size="sm" disabled={!answered} onClick={submit}>
-          Answer
+          {t("chat.ask.answer")}
         </Button>
       </div>
     </div>

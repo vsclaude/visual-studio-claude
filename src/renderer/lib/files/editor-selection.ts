@@ -8,6 +8,7 @@ import {
 import { create } from "zustand"
 
 import { useComposerBus } from "@/lib/chat/composer-bus"
+import { t } from "@/lib/i18n"
 
 import { lineCount, selectedLines, type LineRun } from "./selected-lines"
 
@@ -80,7 +81,7 @@ function pillDom(path: string, run: LineRun): HTMLElement {
   const button = document.createElement("button")
   button.type = "button"
   const count = lineCount(run)
-  button.textContent = `Ask about ${count} ${count === 1 ? "line" : "lines"}`
+  button.textContent = t("files.diff.askAboutLines", { count })
   // `mousedown`, default prevented, like the conflict buttons: a click lets the
   // editor take the press first and collapse the selection being asked about.
   button.addEventListener("mousedown", (event) => {

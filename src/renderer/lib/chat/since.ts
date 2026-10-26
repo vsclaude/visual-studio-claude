@@ -17,6 +17,8 @@
  * screen would otherwise draw a zero, which reads as missing data.
  */
 
+import { t, type MessageKey } from "../i18n"
+
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
@@ -34,12 +36,13 @@ export function since(iso: string, now: number = Date.now()): string {
   // a negative count.
   const ms = Math.max(0, now - at)
 
-  if (ms < MINUTE) return "now"
-  if (ms < HOUR) return `${Math.floor(ms / MINUTE)}m`
-  if (ms < DAY) return `${Math.floor(ms / HOUR)}h`
-  if (ms < WEEK) return `${Math.floor(ms / DAY)}d`
-  if (ms < YEAR) return `${Math.floor(ms / WEEK)}w`
-  return "1y+"
+  if (ms < MINUTE) return t("transcript.time.now")
+  if (ms < HOUR)
+    return t("transcript.time.minutes", { n: Math.floor(ms / MINUTE) })
+  if (ms < DAY) return t("transcript.time.hours", { n: Math.floor(ms / HOUR) })
+  if (ms < WEEK) return t("transcript.time.days", { n: Math.floor(ms / DAY) })
+  if (ms < YEAR) return t("transcript.time.weeks", { n: Math.floor(ms / WEEK) })
+  return t("transcript.time.overYear")
 }
 
 const SECOND = 1000
@@ -120,20 +123,24 @@ export function dateTimeOf(iso: string): string {
  * on 24-hour spans: a line at 23:50 and one at 00:10 are ten minutes apart and
  * on different days, and the divider is about the day.
  *
- * English names rather than the locale's, for the reason `since` is not
- * `Intl.RelativeTimeFormat`: the label is three short tokens in a thin rule,
- * and a locale's long form does not fit the rule.
+ * The dictionary's short names rather than `Intl`'s, for the reason `since` is
+ * not `Intl.RelativeTimeFormat`: the label is three short tokens in a thin
+ * rule, and a locale's long form does not fit the rule.
  */
 export function dayLabel(iso: string, now: number = Date.now()): string {
   const at = new Date(iso)
   if (Number.isNaN(at.getTime())) return ""
   const today = new Date(now)
-  if (sameDay(at, today)) return "Today"
-  if (sameDay(at, new Date(now - DAY))) return "Yesterday"
-  const label = `${WEEKDAYS[at.getDay()]} ${at.getDate()} ${MONTHS[at.getMonth()]}`
+  if (sameDay(at, today)) return t("transcript.time.today")
+  if (sameDay(at, new Date(now - DAY))) return t("transcript.time.yesterday")
+  const parts = {
+    weekday: t(WEEKDAYS[at.getDay()]!),
+    day: at.getDate(),
+    month: t(MONTHS[at.getMonth()]!),
+  }
   return at.getFullYear() === today.getFullYear()
-    ? label
-    : `${label} ${at.getFullYear()}`
+    ? t("transcript.time.date", parts)
+    : t("transcript.time.dateYear", { ...parts, year: at.getFullYear() })
 }
 
 /**
@@ -165,18 +172,26 @@ function pad(part: number): string {
   return part.toString().padStart(2, "0")
 }
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+const WEEKDAYS: MessageKey[] = [
+  "transcript.time.weekdays.sun",
+  "transcript.time.weekdays.mon",
+  "transcript.time.weekdays.tue",
+  "transcript.time.weekdays.wed",
+  "transcript.time.weekdays.thu",
+  "transcript.time.weekdays.fri",
+  "transcript.time.weekdays.sat",
+]
+const MONTHS: MessageKey[] = [
+  "transcript.time.months.jan",
+  "transcript.time.months.feb",
+  "transcript.time.months.mar",
+  "transcript.time.months.apr",
+  "transcript.time.months.may",
+  "transcript.time.months.jun",
+  "transcript.time.months.jul",
+  "transcript.time.months.aug",
+  "transcript.time.months.sep",
+  "transcript.time.months.oct",
+  "transcript.time.months.nov",
+  "transcript.time.months.dec",
 ]

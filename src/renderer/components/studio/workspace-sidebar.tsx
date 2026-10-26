@@ -3,6 +3,7 @@ import {
   useProjects,
   type SidebarSection,
 } from "@/lib/projects"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { PanelHeader, type Fold } from "./panel-header"
 import { ProjectsSection } from "./project/projects-section"
 import { SearchSection } from "./search-section"
@@ -37,6 +38,7 @@ export function WorkspaceSidebar({
 }) {
   const shut = useProjects((state) => state.shutSections)
   const view = useProjects((state) => state.view)
+  const t = useT()
   /** Whether there is anything to fold *against* — see `Section`. */
   const alone = SIDEBAR_SECTIONS.length === 1
 
@@ -45,7 +47,7 @@ export function WorkspaceSidebar({
   if (view === "search") {
     return (
       <nav
-        aria-label="Search"
+        aria-label={t("common.search")}
         className="flex h-full min-h-0 flex-col overflow-hidden"
       >
         <SearchSection />
@@ -55,7 +57,7 @@ export function WorkspaceSidebar({
 
   return (
     <nav
-      aria-label="Workspace"
+      aria-label={t("nav.sidebar.workspace")}
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
       {/* Search was the first row here, and Settings a footer under the list.
@@ -93,8 +95,8 @@ export function WorkspaceSidebar({
 }
 
 /** What each section is called, in the column and in its own header. */
-const TITLES: Record<SidebarSection, string> = {
-  projects: "Projects",
+const TITLES: Record<SidebarSection, MessageKey> = {
+  projects: "nav.sidebar.projects",
 }
 
 /**
@@ -124,11 +126,12 @@ function Section({
   onAddFolder: () => void
 }) {
   const toggleSection = useProjects((state) => state.toggleSection)
+  const t = useT()
   const fold: Fold | undefined = folds
     ? { open, onToggle: () => toggleSection(id) }
     : undefined
 
-  if (!open) return <PanelHeader title={TITLES[id]} {...fold} />
+  if (!open) return <PanelHeader title={t(TITLES[id])} {...fold} />
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

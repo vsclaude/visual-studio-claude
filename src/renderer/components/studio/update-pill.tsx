@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { installLabel, pendingUpdate, useUpdates } from "@/lib/updates"
+import { useT } from "@/lib/i18n"
 import { UpdateProgressBar } from "./update-progress"
 
 /**
@@ -38,6 +39,7 @@ export function UpdatePill() {
   const install = useUpdates((state) => state.install)
   const dismiss = useUpdates((state) => state.dismiss)
   const [open, setOpen] = useState(false)
+  const t = useT()
 
   if (!update) return null
 
@@ -46,7 +48,10 @@ export function UpdatePill() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title={`Vey Studio ${update.version} is available. You are on ${update.current}.`}
+        title={t("nav.update.pillTitle", {
+          version: update.version,
+          current: update.current,
+        })}
         className="flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[0.6875rem] font-medium text-primary outline-none hover:bg-primary/20 focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <ArrowUpCircle className="size-3 shrink-0" />
@@ -55,35 +60,27 @@ export function UpdatePill() {
             thing on screen saying it still is. */}
         {installing
           ? installLabel(installing, progress)
-          : `Update to ${update.version}`}
+          : t("nav.update.pill", { version: update.version })}
       </button>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Update to Vey Studio {update.version}?
+              {t("nav.update.confirmTitle", { version: update.version })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {!update.installable ? (
-                <>
-                  Installing from inside the app is macOS and Windows only. The
-                  release page has the build for this machine.
-                </>
+                t("nav.update.notInstallable")
               ) : window.desktop.platform === "win32" ? (
-                <>
-                  Vey Studio will quit, run the {update.version} installer and
-                  reopen. Every running copy of the app is closed first, so the
-                  old version cannot stay behind. Terminal sessions and anything
-                  running in the dock end with it.
-                </>
+                t("nav.update.windows", { version: update.version })
               ) : (
                 <>
-                  Vey Studio will quit, install {update.version} into{" "}
-                  <code className="font-mono">/Applications</code> and reopen —
-                  the same <code className="font-mono">install.sh</code> the
-                  README hands you, run from inside the app. Terminal sessions
-                  and anything running in the dock end with it.
+                  {t("nav.update.macBefore", { version: update.version })}{" "}
+                  <code className="font-mono">/Applications</code>{" "}
+                  {t("nav.update.macMiddle")}{" "}
+                  <code className="font-mono">install.sh</code>{" "}
+                  {t("nav.update.macAfter")}
                 </>
               )}
             </AlertDialogDescription>
@@ -92,14 +89,14 @@ export function UpdatePill() {
           {/* An anchor, not an IPC call: main's window-open handler is what
               hands an http(s) link to the browser. */}
           <p className="text-xs text-muted-foreground">
-            You are on {update.current}.{" "}
+            {t("nav.update.youAreOn", { current: update.current })}{" "}
             <a
               href={update.url}
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-2 hover:text-foreground"
             >
-              What&rsquo;s new in {update.version}
+              {t("nav.update.whatsNewIn", { version: update.version })}
             </a>
           </p>
 
@@ -108,8 +105,8 @@ export function UpdatePill() {
               <UpdateProgressBar progress={progress} />
               <p className="text-xs text-muted-foreground">
                 {progress?.stage === "installing"
-                  ? "Vey Studio is quitting to replace itself, and reopens when it is done."
-                  : `Downloading Vey Studio ${update.version}. Nothing has been replaced yet.`}
+                  ? t("nav.update.quitting")
+                  : t("nav.update.downloading", { version: update.version })}
               </p>
             </div>
           )}
@@ -122,7 +119,7 @@ export function UpdatePill() {
             {/* Dismissing is per version, and says so — the pill comes back
                 for the next release rather than never again. */}
             <AlertDialogCancel onClick={() => dismiss()}>
-              Skip {update.version}
+              {t("nav.update.skip", { version: update.version })}
             </AlertDialogCancel>
             {update.installable ? (
               <AlertDialogAction
@@ -143,7 +140,7 @@ export function UpdatePill() {
                   <a href={update.url} target="_blank" rel="noreferrer" />
                 }
               >
-                Open the release
+                {t("nav.update.openRelease")}
               </AlertDialogAction>
             )}
           </AlertDialogFooter>

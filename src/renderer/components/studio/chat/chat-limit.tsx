@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Google } from "@/components/ui/svgs/google"
 import { useAccount } from "@/lib/account"
 import { limitWayOut, type LimitWayOut } from "@/lib/chat/column"
-import { resetLabel } from "@/lib/chat/plan-usage"
+import { isResetDue } from "@/lib/chat/plan-usage"
 import { useChats } from "@/lib/chat/store"
 import { useCreditsDialog } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { chatOptions, type Chat } from "@shared/api"
 import {
@@ -39,6 +40,7 @@ export function useLimitWayOut(
   busy: boolean
   run: () => void
 } | null {
+  const t = useT()
   const accounts = useColumnAccounts()
   const available = useFreeAi((state) => state.available)
   const ready = useFreeAi((state) => state.ready)
@@ -47,7 +49,7 @@ export function useLimitWayOut(
   const [moving, setMoving] = useState(false)
 
   const current = chatOptions(chat.options).profileId ?? null
-  const over = resetLabel(chat.limit?.resetsAt ?? null, now) === "resets now"
+  const over = isResetDue(chat.limit?.resetsAt ?? null, now)
   const way = limitWayOut(current, accounts, {
     over,
     credits: ready ? "ready" : available ? "signedOut" : "none",
@@ -58,7 +60,7 @@ export function useLimitWayOut(
   if (way.kind === "buy") {
     return {
       way,
-      label: "Buy credits to keep going",
+      label: t("chat.limit.buyToKeepGoing"),
       busy: false,
       run: () => useCreditsDialog.getState().show(),
     }
@@ -66,14 +68,18 @@ export function useLimitWayOut(
   if (way.kind === "signIn") {
     return {
       way,
-      label: signingIn ? "Signing in…" : "Sign in to use credits",
+      label: signingIn
+        ? t("chat.credits.signingIn")
+        : t("chat.limit.signInToUse"),
       busy: signingIn,
       run: () => void signIn(),
     }
   }
   return {
     way,
-    label: over ? "Continue" : `Continue with ${name}`,
+    label: over
+      ? t("chat.limit.continue")
+      : t("chat.limit.continueWith", { name }),
     busy: moving,
     run: () => {
       setMoving(true)
@@ -103,6 +109,7 @@ export function useLimitWayOut(
  * says they do not have to.
  */
 export function LimitWayOutCard({ chat, now }: { chat: Chat; now: Date }) {
+  const t = useT()
   const action = useLimitWayOut(chat, now)
   if (!action) return null
 
@@ -131,11 +138,9 @@ export function LimitWayOutCard({ chat, now }: { chat: Chat; now: Date }) {
     >
       <CreditsBadge size="sm" />
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-sm font-medium">No need to wait for the reset</p>
+        <p className="text-sm font-medium">{t("chat.limit.noWait")}</p>
         <p className="text-xs text-muted-foreground">
-          {buying
-            ? "Keep going on credits — every model, paid as you go, and they never expire. This chat carries on where it stopped."
-            : "Sign in to Vey Studio to keep going on credits — every model, paid as you go, never a monthly fee."}
+          {buying ? t("chat.limit.buyBody") : t("chat.limit.signInBody")}
         </p>
       </div>
       {buying ? (
@@ -148,7 +153,7 @@ export function LimitWayOutCard({ chat, now }: { chat: Chat; now: Date }) {
           )}
         >
           <Coins data-icon="inline-start" />
-          Buy credits
+          {t("chat.credits.buy")}
         </Button>
       ) : (
         <Button
@@ -158,7 +163,9 @@ export function LimitWayOutCard({ chat, now }: { chat: Chat; now: Date }) {
           onClick={action.run}
         >
           {!action.busy && <Google data-icon="inline-start" />}
-          {action.busy ? "Signing in…" : "Sign in with Google"}
+          {action.busy
+            ? t("chat.credits.signingIn")
+            : t("chat.credits.signInWithGoogle")}
         </Button>
       )}
     </div>

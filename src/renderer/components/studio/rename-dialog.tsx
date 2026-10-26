@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
 
 /**
  * Renames something that has a name and a call behind it, from wherever the
@@ -37,8 +38,8 @@ export function RenameDialog({
   description,
   label,
   currentName,
-  submitLabel = "Rename",
-  pendingLabel = "Renaming…",
+  submitLabel,
+  pendingLabel,
   onRename,
   onClose,
 }: {
@@ -58,6 +59,7 @@ export function RenameDialog({
   onRename: (name: string) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState(currentName)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -110,10 +112,12 @@ export function RenameDialog({
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={busy || !name.trim()}>
-              {busy ? pendingLabel : submitLabel}
+              {busy
+                ? (pendingLabel ?? t("nav.rename.renaming"))
+                : (submitLabel ?? t("common.rename"))}
             </Button>
           </DialogFooter>
         </form>

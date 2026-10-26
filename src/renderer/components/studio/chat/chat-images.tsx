@@ -5,6 +5,7 @@ import { noteFileUrl } from "@shared/note-files"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { imageTag } from "@/lib/chat/images"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /**
@@ -26,6 +27,7 @@ export function ImageThumb({
    * takes the picture out of the message — see `attachedIn`. */
   onRemove?: () => void
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const label = imageTag(n)
 
@@ -34,7 +36,7 @@ export function ImageThumb({
       <button
         type="button"
         title={label}
-        aria-label={`Open ${label}`}
+        aria-label={t("chat.images.open", { label })}
         onClick={() => setOpen(true)}
         className={cn(
           "size-12 overflow-hidden rounded-md border bg-muted/50",
@@ -52,8 +54,8 @@ export function ImageThumb({
       {onRemove && (
         <button
           type="button"
-          aria-label={`Take ${label} out`}
-          title={`Take ${label} out`}
+          aria-label={t("chat.images.takeOut", { label })}
+          title={t("chat.images.takeOut", { label })}
           onClick={onRemove}
           className={cn(
             "absolute -top-1.5 -right-1.5 inline-flex size-4 items-center justify-center rounded-full border bg-background text-muted-foreground",

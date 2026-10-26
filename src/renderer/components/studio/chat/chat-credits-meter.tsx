@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react"
 import { creditsLeft, formatCredits } from "@shared/credits"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { CreditsBar } from "../credits-badge"
 
@@ -29,6 +30,7 @@ const SETTLE_MS = 2_000
 const POLL_MS = 2_000
 
 export function CreditsMeter({ sending }: { sending: boolean }) {
+  const t = useT()
   const ready = useFreeAi((state) => state.ready)
   const account = useStudioAccount((state) => state.account)
   const refresh = useStudioAccount((state) => state.refresh)
@@ -63,10 +65,12 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
       onClick={show}
       title={
         broke
-          ? "No credits left — buy more to keep going"
-          : `${formatCredits(account.credits)} in credits left — buy more`
+          ? t("chat.creditsMeter.noneTitle")
+          : t("chat.creditsMeter.leftTitle", {
+              credits: formatCredits(account.credits),
+            })
       }
-      aria-label="Credits"
+      aria-label={t("chat.creditsMeter.label")}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] tabular-nums",
         "transition-colors hover:bg-accent",
@@ -78,7 +82,11 @@ export function CreditsMeter({ sending }: { sending: boolean }) {
       )}
     >
       <CreditsBar account={account} className="h-1 w-6" />
-      {broke ? "No credits" : `${formatCredits(account.credits)} left`}
+      {broke
+        ? t("chat.creditsMeter.none")
+        : t("chat.creditsMeter.left", {
+            credits: formatCredits(account.credits),
+          })}
     </button>
   )
 }

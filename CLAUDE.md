@@ -654,6 +654,11 @@ through `lib/chat/composer-bus.ts`:
 a delivery addressed to a chat, which the pane drawing that chat types in.
 Code blocks in a reply are coloured by `lib/markdown/highlight.ts`, the editor's
 grammar walked once into `.tok-*` spans rather than a CodeMirror per fence.
+**UI text goes through `lib/i18n`** — `useT()` in a component, plain `t()`
+elsewhere, keys in `lib/i18n/en/<area>.ts` with the Vietnamese beside them in
+`vi/` (typed against English, so a missing key fails `typecheck`;
+`test/i18n.ts` checks placeholders). Nothing sent to `claude` is translated
+(`docs/design.md` § Language).
 `⌘⇧[` / `⌘⇧]` and `⌘1`–`⌘9` walk the strip (`tabStepOf`, `tabNumberOf` in
 `lib/shortcuts.ts`). The first launch shows `onboarding-tour.tsx` once
 (`onboarded` in settings); Settings › Appearance replays it.

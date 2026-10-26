@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 import { useDock, DOCK_STRIP_HEIGHT } from "@/lib/dock"
 import { shellLabels, useScopedShells, useShells } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
@@ -69,10 +70,12 @@ export function Dock() {
   const loadInstalled = useShells((state) => state.loadInstalled)
 
   const folders = useStudio((state) => state.folders)
+  const t = useT()
   const labels = shellLabels(
     shells,
     (folderId) =>
-      folders.find((folder) => folder.id === folderId)?.name ?? "project"
+      folders.find((folder) => folder.id === folderId)?.name ??
+      t("nav.dock.project")
   )
   const active = shells.find((shell) => shell.id === activeId)
   const shellName = (shellId: string | null) =>
@@ -84,7 +87,7 @@ export function Dock() {
     <div className="flex h-full min-h-0 flex-col">
       <div
         role="tablist"
-        aria-label="Terminals"
+        aria-label={t("nav.dock.terminals")}
         style={{ height: DOCK_STRIP_HEIGHT }}
         // The top border belongs to *this row* rather than to the wrapper, and
         // that is the whole of it: a border on the wrapper is 1px the row does
@@ -94,7 +97,7 @@ export function Dock() {
         className="flex shrink-0 items-center gap-0.5 border-t border-b px-1.5"
       >
         <IconButton
-          label="Hide the panel"
+          label={t("nav.dock.hide")}
           onClick={hide}
           className="size-6 shrink-0"
         >
@@ -107,7 +110,7 @@ export function Dock() {
             // since opening the dock is what starts the first shell — and with
             // the dock already open, opening one is what the click can mean.
             <TabFace
-              label="Terminal"
+              label={t("nav.rail.terminal")}
               selected={false}
               onSelect={() => (open ? add() : show())}
             />
@@ -115,7 +118,7 @@ export function Dock() {
           {shells.map((shell) => (
             <TabFace
               key={shell.id}
-              label={labels.get(shell.id) ?? "project"}
+              label={labels.get(shell.id) ?? t("nav.dock.project")}
               // Named only when picked from the menu: a tab on the default
               // shell is every tab there was before there was a menu.
               kind={shellName(shell.shellId)}
@@ -131,7 +134,7 @@ export function Dock() {
         </div>
 
         <IconButton
-          label="New terminal"
+          label={t("nav.dock.newTerminal")}
           onClick={() => add()}
           className="size-6 shrink-0"
         >
@@ -148,7 +151,7 @@ export function Dock() {
           <DropdownMenuTrigger
             render={
               <IconButton
-                label="New terminal with…"
+                label={t("nav.dock.newTerminalWith")}
                 className="-ml-0.5 h-6 w-4 shrink-0"
               >
                 <ChevronDown className="size-3" />
@@ -158,13 +161,15 @@ export function Dock() {
           <DropdownMenuContent align="start" className="w-48">
             {/* A label outside a group throws in Base UI. */}
             <DropdownMenuGroup>
-              <DropdownMenuLabel>New terminal</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("nav.dock.newTerminal")}</DropdownMenuLabel>
               {installed === null ? (
                 <DropdownMenuItem disabled>
-                  Looking for shells…
+                  {t("nav.dock.lookingForShells")}
                 </DropdownMenuItem>
               ) : installed.length === 0 ? (
-                <DropdownMenuItem disabled>No shells found</DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  {t("nav.dock.noShells")}
+                </DropdownMenuItem>
               ) : (
                 installed.map((profile, index) => (
                   <DropdownMenuItem
@@ -175,7 +180,7 @@ export function Dock() {
                     {profile.name}
                     {index === 0 && (
                       <span className="ml-auto text-[0.65rem] text-muted-foreground">
-                        default
+                        {t("nav.dock.default")}
                       </span>
                     )}
                   </DropdownMenuItem>
@@ -187,7 +192,7 @@ export function Dock() {
 
         {open && active && (
           <IconButton
-            label="Restart shell"
+            label={t("nav.dock.restartShell")}
             onClick={() => restart(active.id)}
             className="ml-auto size-6 shrink-0"
           >
@@ -232,6 +237,7 @@ function TabFace({
   onRestart?: () => void
   onRename?: (name: string) => void
 }) {
+  const t = useT()
   const [renaming, setRenaming] = useState(false)
   const menuFocus = useMenuFocusHandoff()
 
@@ -285,8 +291,8 @@ function TabFace({
       {onClose && (
         <button
           type="button"
-          aria-label={`Close ${label}`}
-          title="Close terminal"
+          aria-label={t("nav.tabs.closeTab", { label })}
+          title={t("nav.dock.closeTerminal")}
           onClick={onClose}
           className={cn(
             "mr-1 grid size-4 shrink-0 place-items-center rounded-sm hover:bg-foreground/10",
@@ -312,12 +318,12 @@ function TabFace({
           }}
         >
           <Pencil />
-          Rename
+          {t("common.rename")}
         </ContextMenuItem>
         {onRestart && (
           <ContextMenuItem onClick={onRestart}>
             <RotateCw />
-            Restart
+            {t("nav.dock.restart")}
           </ContextMenuItem>
         )}
         {onClose && (
@@ -325,7 +331,7 @@ function TabFace({
             <ContextMenuSeparator />
             <ContextMenuItem onClick={onClose}>
               <X />
-              Close
+              {t("common.close")}
             </ContextMenuItem>
           </>
         )}
@@ -346,6 +352,7 @@ function TabNameField({
   name: string
   onDone: (name: string | null) => void
 }) {
+  const t = useT()
   // The blur that follows Enter or Escape must not decide a second time.
   const settled = useRef(false)
   const finish = (next: string | null) => {
@@ -359,7 +366,7 @@ function TabNameField({
       autoFocus
       defaultValue={name}
       spellCheck={false}
-      aria-label="Terminal name"
+      aria-label={t("nav.dock.terminalName")}
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={(event) => {
         if (event.key === "Enter") {

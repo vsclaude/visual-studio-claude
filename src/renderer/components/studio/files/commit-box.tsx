@@ -7,6 +7,7 @@ import { Claude } from "@/components/ui/svgs/claude"
 import { Textarea } from "@/components/ui/textarea"
 import { useCommitBox, useCommitBoxes } from "@/lib/files/commit-box"
 import type { FileRoot } from "@/lib/files/roots"
+import { useT } from "@/lib/i18n"
 import { isStudioShortcut } from "@/lib/shortcuts"
 
 /**
@@ -32,6 +33,7 @@ import { isStudioShortcut } from "@/lib/shortcuts"
  * would be a second meaning for `Staged` two rows below it.
  */
 export function CommitBox({ root }: { root: FileRoot }) {
+  const t = useT()
   // In a store rather than `useState`: this box is unmounted by switching the
   // `Git` tab to `Commits`, and a draft or a typed message has to survive that.
   const { message, committing, drafting, error, done } = useCommitBox(root.id)
@@ -60,7 +62,7 @@ export function CommitBox({ root }: { root: FileRoot }) {
             event.preventDefault()
             void commit()
           }}
-          placeholder="Message (⌘⏎ to commit)"
+          placeholder={t("files.commitBox.placeholder")}
           // Two lines to start with, which is a subject and the blank line under
           // it — the shape of the message this is for. It grows as one is typed.
           rows={2}
@@ -77,8 +79,8 @@ export function CommitBox({ root }: { root: FileRoot }) {
           className="h-6 gap-1.5 px-2 text-[0.6875rem]"
           title={
             drafting
-              ? "Stop drafting"
-              : "Have Claude write a message from the staged diff"
+              ? t("files.commitBox.stopDrafting")
+              : t("files.commitBox.draftTitle")
           }
         >
           {drafting ? (
@@ -86,7 +88,7 @@ export function CommitBox({ root }: { root: FileRoot }) {
           ) : (
             <Claude className="size-3" />
           )}
-          {drafting ? "Stop" : "Draft"}
+          {drafting ? t("files.commitBox.stop") : t("files.commitBox.draft")}
         </Button>
 
         <div className="min-w-0 flex-1 truncate text-[0.6875rem] text-muted-foreground">
@@ -112,7 +114,7 @@ export function CommitBox({ root }: { root: FileRoot }) {
           className="h-6 px-2 text-[0.6875rem]"
         >
           {committing ? <Spinner className="size-3" /> : null}
-          Commit
+          {t("files.commitBox.commit")}
         </Button>
       </div>
     </div>

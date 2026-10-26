@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
+import { useT } from "@/lib/i18n"
 import { TerminalView, type TerminalHandle } from "./terminal-view"
 
 /**
@@ -45,6 +46,7 @@ export function ClaudeLoginDialog({
   onClose: () => void
 }) {
   const check = useClaudeProfiles((state) => state.check)
+  const t = useT()
   /** Non-null once the pty has ended: what the CLI exited with. */
   const [exitCode, setExitCode] = useState<number | null>(null)
 
@@ -148,7 +150,7 @@ export function ClaudeLoginDialog({
       <DialogContent className="flex h-[30rem] max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         {/* `pr-12` clears the close button the dialog draws in the corner. */}
         <header className="shrink-0 border-b px-5 py-4 pr-12">
-          <DialogTitle>Sign in — {name}</DialogTitle>
+          <DialogTitle>{t("projects.login.title", { name })}</DialogTitle>
           <DialogDescription className="mt-1 font-mono text-xs">
             {configDir || "~/.claude"}
           </DialogDescription>
@@ -162,10 +164,10 @@ export function ClaudeLoginDialog({
 
         <footer className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
           {exitCode === null
-            ? "Follow the prompts — `claude` opens a browser to finish the login."
+            ? t("projects.login.follow")
             : exitCode === 0
-              ? "Done. The account beside this profile has been re-checked."
-              : `The login ended with ${exitCode}. Close this and try again, or read what it said above.`}
+              ? t("projects.login.done")
+              : t("projects.login.failed", { code: exitCode })}
         </footer>
       </DialogContent>
     </Dialog>

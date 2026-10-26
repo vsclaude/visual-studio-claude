@@ -47,6 +47,7 @@ import {
 } from "@/lib/files/git-blame"
 import { GIT_TONES } from "@/lib/files/git-status"
 import { rootOf } from "@/lib/files/roots"
+import { useT, type Translate } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /**
@@ -103,6 +104,7 @@ function Card({
   close,
   remeasure,
 }: BlameCard) {
+  const t = useT()
   const [history, setHistory] = useState<GitLineCommit[] | null>(
     source ? null : []
   )
@@ -177,7 +179,7 @@ function Card({
           {entries.length > 1 && (
             <div className="-mt-0.5 -mr-1 flex shrink-0 items-center rounded-md border border-border">
               <ActionButton
-                label="Newer change"
+                label={t("files.blame.newer")}
                 disabled={index === 0}
                 onClick={() => step(index - 1)}
               >
@@ -187,7 +189,7 @@ function Card({
                 {index + 1}/{entries.length}
               </span>
               <ActionButton
-                label="Older change — blame before this commit"
+                label={t("files.blame.older")}
                 disabled={index === entries.length - 1}
                 onClick={() => step(index + 1)}
               >
@@ -211,7 +213,7 @@ function Card({
                 className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[0.65rem]"
               >
                 <span className="shrink-0 text-muted-foreground">
-                  {trailerLabel(trailer.key)}
+                  {trailerLabel(trailer.key, t)}
                 </span>
                 <span className="truncate">{trailer.name}</span>
               </span>
@@ -291,7 +293,7 @@ function Card({
       {source && history !== null && entries.length === 1 && (
         <div className="flex items-center gap-1.5 border-t border-border px-3.5 py-2 text-[0.7rem] text-muted-foreground">
           <Sparkle className="size-3" />
-          The line has not changed since this commit.
+          {t("files.blame.unchangedSince")}
         </div>
       )}
     </div>
@@ -299,11 +301,11 @@ function Card({
 }
 
 /** `Co-Authored-By` as a chip's caption. */
-function trailerLabel(key: string): string {
+function trailerLabel(key: string, t: Translate): string {
   const lower = key.toLowerCase()
-  if (lower === "co-authored-by") return "Co-author"
-  if (lower === "signed-off-by") return "Signed off"
-  if (lower === "reviewed-by") return "Reviewed"
+  if (lower === "co-authored-by") return t("files.blame.coAuthor")
+  if (lower === "signed-off-by") return t("files.blame.signedOff")
+  if (lower === "reviewed-by") return t("files.blame.reviewed")
   return key
 }
 
@@ -339,6 +341,7 @@ function LineChange({
   before: string[]
   after: string[]
 }) {
+  const t = useT()
   if (before.length === 0 && after.length === 0) return null
   const rows = [
     ...before.map((text) => ({ sign: "−", text, tone: "deleted" as const })),
@@ -347,7 +350,7 @@ function LineChange({
   return (
     <div className="overflow-hidden rounded-md border border-border bg-background/60">
       <div className="flex items-center justify-between border-b border-border px-2.5 py-1 text-[0.65rem] text-muted-foreground">
-        <span>This line, in this commit</span>
+        <span>{t("files.blame.thisLine")}</span>
         {line > 0 && <span className="tabular-nums">L{line}</span>}
       </div>
       <div className="py-1 font-mono text-[0.7rem] leading-relaxed">
@@ -383,12 +386,13 @@ function History({
   index: number
   onPick: (index: number) => void
 }) {
+  const t = useT()
   if (entries !== null && entries.length <= 1) return null
   return (
     <div className="border-t border-border py-2">
       <div className="flex items-center gap-1.5 px-3.5 pb-1 text-[0.65rem] font-medium text-muted-foreground">
         <HistoryIcon className="size-3" />
-        Line history
+        {t("files.blame.lineHistory")}
         {entries === null ? (
           <Spinner className="size-3" />
         ) : (
@@ -447,7 +451,7 @@ function History({
       )}
       {entries !== null && entries.length >= HISTORY_LIMIT && (
         <div className="px-3.5 pt-1 text-[0.65rem] text-muted-foreground">
-          The last {HISTORY_LIMIT} changes.
+          {t("files.blame.lastChanges", { count: HISTORY_LIMIT })}
         </div>
       )}
     </div>
@@ -522,6 +526,7 @@ function Actions({
   onOpenDiff: (() => void) | null
   onAsk: () => void
 }) {
+  const t = useT()
   const [copied, setCopied] = useState<"hash" | "message" | null>(null)
 
   function copy(what: "hash" | "message", text: string) {
@@ -540,7 +545,9 @@ function Actions({
   return (
     <>
       <ActionButton
-        label={copied === "hash" ? "Copied" : "Copy commit SHA"}
+        label={
+          copied === "hash" ? t("common.copied") : t("files.commit.copySha")
+        }
         onClick={() => copy("hash", commit.hash)}
         className="w-auto gap-1 rounded-full bg-warning/10 px-2 font-mono text-[0.65rem] text-warning hover:bg-warning/20"
       >
@@ -553,7 +560,7 @@ function Actions({
           title={statText(commit.stat)}
         >
           <span>
-            {commit.stat.files} {commit.stat.files === 1 ? "file" : "files"}
+            {t("files.blame.fileCount", { count: commit.stat.files })}
           </span>
           <span className={GIT_TONES.added}>+{commit.stat.added}</span>
           <span className={GIT_TONES.deleted}>−{commit.stat.removed}</span>
@@ -561,17 +568,21 @@ function Actions({
       )}
       <span className="flex-1" />
       <ActionButton
-        label={copied === "message" ? "Copied" : "Copy message"}
+        label={
+          copied === "message"
+            ? t("common.copied")
+            : t("files.commit.copyMessage")
+        }
         onClick={() => copy("message", message)}
       >
         {copied === "message" ? <Check /> : <Copy />}
       </ActionButton>
       {onOpenDiff && (
-        <ActionButton label="Open this commit's diff" onClick={onOpenDiff}>
+        <ActionButton label={t("files.blame.openDiff")} onClick={onOpenDiff}>
           <FileDiff />
         </ActionButton>
       )}
-      <ActionButton label="Ask in chat" onClick={onAsk}>
+      <ActionButton label={t("files.commit.askInChat")} onClick={onAsk}>
         <MessageSquarePlus />
       </ActionButton>
 
@@ -580,7 +591,7 @@ function Actions({
           <span aria-hidden className="mx-1 h-4 w-px bg-border" />
           {commitHref && (
             <ActionButton
-              label={`Open commit on ${forge}`}
+              label={t("files.blame.openCommitOn", { forge })}
               onClick={() => open(commitHref)}
             >
               <GitCommitHorizontal />
@@ -588,7 +599,7 @@ function Actions({
           )}
           {fileHref && (
             <ActionButton
-              label="Open file at this commit"
+              label={t("files.blame.openFileAt")}
               onClick={() => open(fileHref)}
             >
               <FileCode />
@@ -597,7 +608,7 @@ function Actions({
           {issues.map(({ number, href }) => (
             <ActionButton
               key={number}
-              label={`Open #${number} on ${forge}`}
+              label={t("files.blame.openIssueOn", { number, forge })}
               onClick={() => open(href)}
             >
               <GitPullRequest />

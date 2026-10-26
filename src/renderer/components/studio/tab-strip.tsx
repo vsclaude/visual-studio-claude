@@ -7,6 +7,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 import { Copy, X } from "lucide-react"
 
 /** The insertion marker shown while a tab is being dragged — the boundary
@@ -63,7 +64,7 @@ export function TabStrip({
   label,
   items,
   activeId,
-  copyLabel = "Copy name",
+  copyLabel,
   trailing,
   onSelect,
   onKeep,
@@ -91,6 +92,7 @@ export function TabStrip({
   /** Hands back every id in its new order. Omit to pin the strip's order. */
   onReorder?: (ids: string[]) => void
 }) {
+  const t = useT()
   const [menuTarget, setMenuTarget] = useState<TabStripItem | null>(null)
   /** The tab being dragged, or null. Also the guard that keeps a file dragged
    * in from the desktop from being treated as a reorder. */
@@ -341,7 +343,7 @@ export function TabStrip({
 
                   {item.dirty && (
                     <span
-                      aria-label="Unsaved"
+                      aria-label={t("nav.tabs.unsaved")}
                       className="-mr-1 inline-flex size-4 shrink-0 items-center justify-center group-hover:hidden"
                     >
                       <span className="size-1.5 rounded-full bg-current" />
@@ -349,7 +351,7 @@ export function TabStrip({
                   )}
                   <button
                     type="button"
-                    aria-label={`Close ${item.label}`}
+                    aria-label={t("nav.tabs.closeTab", { label: item.label })}
                     onClick={(event) => {
                       event.stopPropagation()
                       onClose(item.id)
@@ -391,15 +393,17 @@ export function TabStrip({
         <ContextMenuContent className="w-44">
           <ContextMenuItem onClick={() => onClose(menuTarget.id)}>
             <X />
-            Close
+            {t("common.close")}
           </ContextMenuItem>
           <ContextMenuItem
             disabled={items.length < 2}
             onClick={() => onCloseOthers(menuTarget.id)}
           >
-            Close others
+            {t("nav.tabs.closeOthers")}
           </ContextMenuItem>
-          <ContextMenuItem onClick={onCloseAll}>Close all</ContextMenuItem>
+          <ContextMenuItem onClick={onCloseAll}>
+            {t("nav.tabs.closeAll")}
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
             onClick={() =>
@@ -409,7 +413,7 @@ export function TabStrip({
             }
           >
             <Copy />
-            {menuTarget.copyLabel ?? copyLabel}
+            {menuTarget.copyLabel ?? copyLabel ?? t("nav.tabs.copyName")}
           </ContextMenuItem>
         </ContextMenuContent>
       )}

@@ -12,6 +12,7 @@ import {
 } from "@/lib/panels"
 import { isStudioShortcut, tabNumberOf, tabStepOf } from "@/lib/shortcuts"
 import { useStudio, type Pane } from "@/lib/store"
+import { useT } from "@/lib/i18n"
 import { useTabItems } from "./tab-items"
 import { TabStrip } from "./tab-strip"
 
@@ -50,6 +51,7 @@ export function WorkspaceTabs({ pane }: { pane: Pane }) {
   })
 
   const activeId = useActiveTabId(pane)
+  const t = useT()
 
   /*
    * ⌘W closes the tab the pane is showing, the way an editor's does.
@@ -126,7 +128,7 @@ export function WorkspaceTabs({ pane }: { pane: Pane }) {
 
   return (
     <TabStrip
-      label="Open tabs"
+      label={t("nav.tabs.openTabs")}
       items={items}
       activeId={activeId}
       onSelect={selectTab}

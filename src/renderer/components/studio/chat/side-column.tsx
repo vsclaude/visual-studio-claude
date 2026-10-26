@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react"
 
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const DEFAULT_WIDTH = 240
@@ -36,6 +37,7 @@ export function SideColumn({
   label: string
   children: ReactNode
 }) {
+  const t = useT()
   const [width, setWidth] = useState(remembered)
   const [dragging, setDragging] = useState(false)
   const column = useRef<HTMLElement>(null)
@@ -56,11 +58,11 @@ export function SideColumn({
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label={`Resize ${label.toLowerCase()}`}
+        aria-label={t("transcript.side.resize", { label: label.toLowerCase() })}
         aria-valuenow={width}
         aria-valuemin={MIN_WIDTH}
         aria-valuemax={MAX_WIDTH}
-        title="Drag to resize, double-click to reset"
+        title={t("transcript.side.resizeHint")}
         onPointerDown={(event) => {
           if (event.button !== 0) return
           event.preventDefault()

@@ -1,3 +1,4 @@
+import type { MessageKey } from "../i18n"
 import { nameOf } from "./paths"
 
 /**
@@ -121,11 +122,11 @@ export function defaultViewer(filePath: string): Viewer {
 }
 
 /** What a viewer is called, in the "Open with" menu. */
-export const VIEWER_LABELS: Record<Viewer, string> = {
-  image: "Image preview",
-  text: "Text editor",
-  markdown: "Markdown preview",
-  html: "HTML preview",
-  blocks: "Markdown editor",
-  diff: "Diff",
+export const VIEWER_LABELS: Record<Viewer, MessageKey> = {
+  image: "files.viewers.image",
+  text: "files.viewers.text",
+  markdown: "files.viewers.markdown",
+  html: "files.viewers.html",
+  blocks: "files.viewers.blocks",
+  diff: "files.viewers.diff",
 }

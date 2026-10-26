@@ -3,6 +3,7 @@ import { Pin, PinOff } from "lucide-react"
 
 import { watchAccount } from "@/lib/account"
 import { applyAppearance } from "@/lib/appearance"
+import { applyLanguage, useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { useProjects } from "@/lib/projects"
 import { useSettings } from "@/lib/settings"
@@ -31,6 +32,7 @@ import { CreditsDialog } from "./credits-dialog"
  * is to keep it over whatever editor they are working in.
  */
 export function ChatWindow({ chatId }: { chatId: string }) {
+  const t = useT()
   const loaded = useStudio((state) => state.loaded)
   const chat = useChats((state) =>
     state.chats.find((entry) => entry.id === chatId)
@@ -67,6 +69,11 @@ export function ChatWindow({ chatId }: { chatId: string }) {
     return useSettings.subscribe(applyAppearance)
   }, [])
 
+  useEffect(() => {
+    applyLanguage(useSettings.getState().language)
+    return useSettings.subscribe((state) => applyLanguage(state.language))
+  }, [])
+
   // `busy` is sent on a change only, and this window may open mid-turn.
   useEffect(() => {
     const stop = useChats.getState().listen()
@@ -96,10 +103,12 @@ export function ChatWindow({ chatId }: { chatId: string }) {
         )}
       >
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-          {chat?.title ?? "Chat"}
+          {chat?.title ?? t("transcript.window.chat")}
         </span>
         <IconButton
-          label={pinned ? "Unpin from the top" : "Keep over other windows"}
+          label={
+            pinned ? t("transcript.window.unpin") : t("transcript.window.pin")
+          }
           side="bottom"
           pressed={pinned}
           onClick={togglePin}
@@ -123,8 +132,8 @@ export function ChatWindow({ chatId }: { chatId: string }) {
           <div className="grid h-full place-items-center p-6">
             <p className="max-w-xs text-center text-xs text-muted-foreground">
               {loaded
-                ? "That chat is not in the workspace any more."
-                : "Opening…"}
+                ? t("transcript.window.gone")
+                : t("transcript.window.opening")}
             </p>
           </div>
         )}

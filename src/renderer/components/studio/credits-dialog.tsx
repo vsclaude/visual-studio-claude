@@ -26,16 +26,17 @@ import {
 } from "@/components/ui/spinner"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { CreditsBadge } from "./credits-badge"
 
-const METHODS: { id: PaymentMethod; label: string; icon: LucideIcon }[] = [
-  { id: "bank", label: "Vietnamese bank · VietQR", icon: Landmark },
+const METHODS: { id: PaymentMethod; label: MessageKey; icon: LucideIcon }[] = [
+  { id: "bank", label: "projects.credits.bank", icon: Landmark },
   ...(CARD_OFFERED
     ? [
         {
           id: "card" as const,
-          label: "Card · international",
+          label: "projects.credits.card" as const,
           icon: CreditCard,
         },
       ]
@@ -73,6 +74,7 @@ function BuyDialog() {
   const error = useStudioAccount((state) => state.error)
   const buy = useStudioAccount((state) => state.buy)
   const packs = packsFor(method)
+  const t = useT()
 
   return (
     <Dialog
@@ -85,10 +87,10 @@ function BuyDialog() {
         <DialogHeader className="items-center text-center">
           <CreditsBadge size="md" />
           <DialogTitle className="text-xl font-semibold">
-            Buy credits
+            {t("projects.credits.title")}
           </DialogTitle>
           <DialogDescription className="max-w-lg">
-            Credits pay for every model as you use it — never a monthly fee.
+            {t("projects.credits.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -104,7 +106,7 @@ function BuyDialog() {
                 label: (
                   <>
                     <Icon className="size-3.5" />
-                    {label}
+                    {t(label)}
                   </>
                 ),
               }))}
@@ -133,7 +135,7 @@ function BuyDialog() {
               {pack.popular && (
                 <span className="absolute -top-2.5 inline-flex items-center gap-1 rounded-full bg-linear-to-r from-violet-500 to-amber-400 px-2.5 py-0.5 text-[0.625rem] font-semibold text-white shadow-sm">
                   <Sparkle className="size-2.5 fill-current" />
-                  Most popular
+                  {t("projects.credits.mostPopular")}
                 </span>
               )}
               <Coin size={pack.popular ? 34 : 28} struck />
@@ -141,16 +143,18 @@ function BuyDialog() {
                 {formatPrice(pack.price)}
               </span>
               <span className="text-xs text-muted-foreground">
-                {formatCredits(pack.credits)} in credits
+                {t("projects.credits.inCredits", {
+                  amount: formatCredits(pack.credits),
+                })}
               </span>
               {pack.bonus && (
                 <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400">
-                  +{pack.bonus}% bonus
+                  {t("projects.credits.bonus", { bonus: pack.bonus })}
                 </span>
               )}
               {pack.bankOnly && (
                 <span className="text-[0.625rem] text-muted-foreground">
-                  Bank transfer only
+                  {t("projects.credits.bankOnly")}
                 </span>
               )}
               <Button
@@ -164,10 +168,10 @@ function BuyDialog() {
                 onClick={() => void buy(pack.id, method)}
               >
                 {pending === pack.id
-                  ? "Opening…"
+                  ? t("projects.credits.opening")
                   : ready
-                    ? "Buy credits"
-                    : "Sign in to buy"}
+                    ? t("projects.credits.buy")
+                    : t("projects.credits.signInToBuy")}
               </Button>
             </div>
           ))}
@@ -176,8 +180,7 @@ function BuyDialog() {
         {awaiting && !error && (
           <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Spinner className="size-3.5" />
-            Waiting for your payment — this window will tell you the moment it
-            lands.
+            {t("projects.credits.waiting")}
           </p>
         )}
         {error && (
@@ -185,10 +188,9 @@ function BuyDialog() {
         )}
         <p className="text-center text-[0.6875rem] text-muted-foreground">
           {method === "bank"
-            ? "A page with the VietQR opens in your browser — scan it in your banking app."
-            : "Checkout opens in your browser and is handled by Paddle."}{" "}
-          Credits never expire, and show up here a moment after the payment
-          arrives.
+            ? t("projects.credits.bankNote")
+            : t("projects.credits.cardNote")}{" "}
+          {t("projects.credits.neverExpire")}
         </p>
       </DialogContent>
     </Dialog>
@@ -231,17 +233,22 @@ function Segmented<T extends string>({
  */
 function AccountStrip() {
   const account = useStudioAccount((state) => state.account)
+  const t = useT()
   if (!account) return null
 
   const total = account.creditsUsed + account.credits
   return (
     <div className="rounded-xl border bg-muted/40 px-4 py-3">
       <Meter
-        title="Credits"
+        title={t("projects.credits.meterTitle")}
         fraction={total > 0 ? account.creditsUsed / total : 0}
         bar="from-amber-500 to-amber-400"
-        used={`${formatCredits(account.creditsUsed)} used`}
-        aside={`${formatCredits(account.credits)} left`}
+        used={t("projects.credits.used", {
+          amount: formatCredits(account.creditsUsed),
+        })}
+        aside={t("projects.credits.left", {
+          amount: formatCredits(account.credits),
+        })}
         strong
       />
     </div>
@@ -294,6 +301,7 @@ function CreditsArrived() {
   const arrived = useStudioAccount((state) => state.arrived)
   const dismiss = useStudioAccount((state) => state.dismissArrival)
   const counted = useCountUp(arrived?.added ?? 0)
+  const t = useT()
 
   // The packs have done their job; the celebration replaces them rather than
   // stacking a second dialog over the first.
@@ -313,30 +321,32 @@ function CreditsArrived() {
         <div className="flex flex-col items-center gap-1.5 px-6 pt-2 pb-6 text-center">
           <DialogHeader className="items-center gap-1 text-center">
             <DialogTitle className="text-lg font-semibold">
-              Credits added
+              {t("projects.credits.added")}
             </DialogTitle>
             <DialogDescription>
-              Your payment arrived — thank you.
+              {t("projects.credits.arrived")}
             </DialogDescription>
           </DialogHeader>
           <span className="mt-3 bg-linear-to-r from-violet-500 to-amber-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent tabular-nums">
             +{formatCredits(counted)}
           </span>
-          <span className="text-xs text-muted-foreground">in credits</span>
+          <span className="text-xs text-muted-foreground">
+            {t("projects.credits.inCreditsShort")}
+          </span>
           {arrived && (
             <p className="mt-4 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              Your balance is now{" "}
+              {t("projects.credits.balanceBefore")}{" "}
               <b className="font-semibold text-foreground tabular-nums">
                 {formatCredits(arrived.balance)}
               </b>
-              . It never expires.
+              {t("projects.credits.balanceAfter")}
             </p>
           )}
           <Button
             className="mt-5 w-full bg-linear-to-r from-violet-500 to-amber-400 text-white hover:opacity-90"
             onClick={dismiss}
           >
-            Back to work
+            {t("projects.credits.backToWork")}
           </Button>
         </div>
       </DialogContent>

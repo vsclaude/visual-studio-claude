@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 
 import type { AssistantMessage, Chat, ChatTodo } from "@shared/api"
+import { useT } from "@/lib/i18n"
 import { iconFor } from "@/lib/files/icons"
 import { nameOf } from "@/lib/files/paths"
 import { cn } from "@/lib/utils"
@@ -148,6 +149,7 @@ function UserMessage({
   edit?: MessageEdit
   found: boolean
 }) {
+  const t = useT()
   const [editing, setEditing] = useState(false)
   const [open, setOpen] = useState(false)
   const [long, setLong] = useState(false)
@@ -218,14 +220,20 @@ function UserMessage({
             ) : (
               <ChevronDown aria-hidden className="size-3" />
             )}
-            {open ? "Show less" : "Show more"}
+            {open
+              ? t("transcript.message.showLess")
+              : t("transcript.message.showMore")}
           </button>
         )}
       </div>
       <MessageActions
         text={of.text}
         onEdit={edit && !edit.disabled ? () => setEditing(true) : undefined}
-        editLabel={edit?.disabled ? "Stop the turn to edit" : "Edit message"}
+        editLabel={
+          edit?.disabled
+            ? t("transcript.message.stopToEdit")
+            : t("transcript.message.edit")
+        }
         canEdit={edit !== undefined}
       >
         {/* Beside the copy button and only on hover: a stamp on every bubble
@@ -255,7 +263,7 @@ function UserMessage({
       {queued && (
         <p className="flex items-center justify-end gap-1 pt-0.5 pr-1 text-[0.65rem] text-muted-foreground">
           <Hourglass aria-hidden className="size-2.5 shrink-0" />
-          Queued for the next step
+          {t("transcript.message.queued")}
         </p>
       )}
     </div>
@@ -272,6 +280,7 @@ function OtherMessage({
   reply: string | null
   stopped?: Chat
 }) {
+  const t = useT()
   if (of.role === "ask") {
     // A row like a tool call rather than a bubble, and for the same reason: it
     // is a note about the turn rather than either side speaking. A refusal is
@@ -311,7 +320,9 @@ function OtherMessage({
       >
         <Coins className="size-3 shrink-0" />
         <span className="truncate">{usageLine(of.usage)}</span>
-        {reply && <CopyButton text={reply} label="Copy reply" />}
+        {reply && (
+          <CopyButton text={reply} label={t("transcript.message.copyReply")} />
+        )}
       </div>
     )
   }
@@ -413,6 +424,7 @@ function AccountMove({
 }: {
   line: Extract<AssistantMessage, { role: "account" }>
 }) {
+  const t = useT()
   const email = useAccountEmail(line.profileId)
 
   return (
@@ -422,8 +434,8 @@ function AccountMove({
     >
       <ArrowLeftRight className="size-3.5 shrink-0" />
       <span className="truncate">
-        You moved this chat to {email ?? line.name}
-        {line.resumed && " · picking up where it stopped"}
+        {t("transcript.message.movedTo", { account: email ?? line.name })}
+        {line.resumed && ` · ${t("transcript.message.resumed")}`}
       </span>
     </div>
   )
@@ -484,6 +496,7 @@ function ThinkingRow({
 }: {
   of: Extract<AssistantMessage, { role: "thinking" }>
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
 
   return (
@@ -500,7 +513,9 @@ function ThinkingRow({
       >
         <Chevron open={open} />
         <Brain className="size-3 shrink-0 translate-y-0.5" />
-        <span className="shrink-0 font-medium">Thinking</span>
+        <span className="shrink-0 font-medium">
+          {t("transcript.message.thinking")}
+        </span>
         {!open && (
           <span className="min-w-0 truncate rounded bg-muted/60 px-1.5 py-0.5 opacity-80">
             {of.text}
@@ -550,6 +565,7 @@ function MessageActions({
   canEdit: boolean
   children?: ReactNode
 }) {
+  const t = useT()
   return (
     <div className="flex h-5 items-center justify-end gap-0.5 pt-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
       <span className="mr-1">{children}</span>
@@ -563,7 +579,7 @@ function MessageActions({
           <PenLine />
         </IconButton>
       )}
-      <CopyButton text={text} label="Copy message" />
+      <CopyButton text={text} label={t("transcript.message.copyMessage")} />
     </div>
   )
 }
@@ -586,6 +602,7 @@ function EditMessage({
   onCancel: () => void
   onSave: (text: string) => void
 }) {
+  const t = useT()
   const [draft, setDraft] = useState(text)
   const ready = draft.trim() !== "" && draft.trim() !== text.trim()
   const save = () => onSave(draft)
@@ -616,10 +633,10 @@ function EditMessage({
       />
       <div className="flex justify-end gap-1">
         <Button size="xs" variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button size="xs" disabled={!ready} onClick={save}>
-          Send
+          {t("transcript.message.send")}
         </Button>
       </div>
     </div>
@@ -632,11 +649,12 @@ function EditMessage({
  * Hover-only, like the Edit beside it — see `MessageActions`.
  */
 function CopyButton({ text, label }: { text: string; label: string }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
 
   return (
     <IconButton
-      label={copied ? "Copied" : label}
+      label={copied ? t("common.copied") : label}
       onClick={() => {
         void navigator.clipboard.writeText(text)
         setCopied(true)
@@ -693,6 +711,7 @@ function ToolRow({
   of: Extract<AssistantMessage, { role: "tool" }>
   live: boolean
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const agent = isAgentTool(of.name)
   const words = rowOf(of)
@@ -719,7 +738,7 @@ function ToolRow({
   const mark =
     live && isPending(of) ? (
       <Spinner
-        aria-label="Running"
+        aria-label={t("transcript.message.running")}
         className="size-3 shrink-0 translate-y-0.5 text-foreground/70"
       />
     ) : (
@@ -996,6 +1015,7 @@ function ToolDetail({
 }: {
   of: Extract<AssistantMessage, { role: "tool" }>
 }) {
+  const t = useT()
   /* Whole where main kept it, and the row's own where it did not — except for a
      call showing a change or a todo list, whose argument is what the block below
      is already drawing in full. */
@@ -1027,7 +1047,7 @@ function ToolDetail({
             somebody read it as the file's would be worse than no block.
           */}
           <p className="px-2 py-1 text-[0.65rem] opacity-60">
-            What this call changed. The file&apos;s own diff is in Changes.
+            {t("transcript.message.callChange")}
           </p>
         </div>
       )}

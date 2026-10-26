@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Maximize2, Minimize2 } from "lucide-react"
 
+import { useT } from "@/lib/i18n"
 import { IconButton } from "../icon-button"
 
 /**
@@ -25,6 +26,7 @@ export function FileHtml({ text, dir }: { text: string; dir: string }) {
   const [page, setPage] = useState<string | null>(null)
   const frame = useRef<HTMLDivElement>(null)
   const [full, setFull] = useState(false)
+  const t = useT()
 
   // Read off the document rather than set by the button: `Esc` leaves
   // fullscreen without passing through anything of ours.
@@ -60,7 +62,7 @@ export function FileHtml({ text, dir }: { text: string; dir: string }) {
     // goes with it.
     <div ref={frame} className="group relative size-full">
       <iframe
-        title="HTML preview"
+        title={t("files.viewers.html")}
         srcDoc={page}
         sandbox="allow-scripts allow-forms allow-modals allow-popups"
         // White whatever the theme: a page with no background of its own is
@@ -69,7 +71,9 @@ export function FileHtml({ text, dir }: { text: string; dir: string }) {
         className="size-full border-0 bg-white"
       />
       <IconButton
-        label={full ? "Exit full screen" : "Full screen"}
+        label={
+          full ? t("files.image.exitFullScreen") : t("files.image.fullScreen")
+        }
         variant="outline"
         onClick={toggle}
         className="absolute top-2 right-2 bg-background/90 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"

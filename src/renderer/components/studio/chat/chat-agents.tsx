@@ -1,6 +1,7 @@
 import { Bot } from "lucide-react"
 
 import type { ChatAgent } from "@shared/api"
+import { useT } from "@/lib/i18n"
 import {
   Popover,
   PopoverContent,
@@ -15,16 +16,17 @@ import {
  * something is working; who is working is here, one click away.
  */
 export function ChatAgents({ agents }: { agents: ChatAgent[] }) {
+  const t = useT()
   if (agents.length === 0) return null
 
   return (
     <Popover>
       <PopoverTrigger
         className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] text-muted-foreground hover:bg-muted hover:text-foreground"
-        title="Subagents running in this chat"
+        title={t("transcript.agents.title")}
       >
         <Bot className="size-3 text-primary" />
-        {agents.length} {agents.length === 1 ? "agent" : "agents"} running
+        {t("transcript.agents.running", { count: agents.length })}
       </PopoverTrigger>
       <PopoverContent
         side="top"

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/context-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
+import { t as translate, useT, type Translate } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
 import { useShells } from "@/lib/shell/store"
 import { useChats } from "@/lib/chat/store"
@@ -48,12 +49,13 @@ async function runChatMenuItem(
     await item.run(chatId)
   } catch (error) {
     console.error(`[plugin ${item.pluginId}]`, error)
-    usePlugins
-      .getState()
-      .notify(
-        item.pluginId,
-        `${item.name} failed: ${error instanceof Error ? error.message : String(error)}`
-      )
+    usePlugins.getState().notify(
+      item.pluginId,
+      translate("projects.chatList.pluginFailed", {
+        name: item.name,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    )
   }
 }
 
@@ -86,6 +88,7 @@ export function ChatList({ chats }: { chats: Chat[] }) {
   const rename = useChats((state) => state.rename)
   const chatMenuItems = usePlugins((state) => state.chatMenuItems)
   const now = useMinuteClock()
+  const t = useT()
 
   /** Which chat's name is a field right now. In place, the way every other
    * sidebar in the studio renames — see `RenameRow`. */
@@ -104,7 +107,7 @@ export function ChatList({ chats }: { chats: Chat[] }) {
               key={chat.id}
               name={chat.title}
               indent={0}
-              label="Chat name"
+              label={t("projects.chatList.chatName")}
               onRename={async (name) => {
                 rename(chat.id, name)
                 setRenamingId(null)
@@ -142,7 +145,7 @@ export function ChatList({ chats }: { chats: Chat[] }) {
                 }}
               >
                 <Pencil />
-                Rename
+                {t("common.rename")}
               </ContextMenuItem>
               <ContextMenuSeparator />
               {/* What plugins add — the transcript as a document is the
@@ -171,7 +174,7 @@ export function ChatList({ chats }: { chats: Chat[] }) {
                 onClick={() => setDeleting(chat)}
               >
                 <Trash2 />
-                Delete chat…
+                {t("projects.chatList.deleteChat")}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -185,21 +188,24 @@ export function ChatList({ chats }: { chats: Chat[] }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("projects.chatList.deleteTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              &ldquo;{deleting?.title}&rdquo; and everything said in it are
-              deleted from Vey Studio, and there is no undo.
+              {t("projects.chatList.deleteDescription", {
+                title: deleting?.title ?? "",
+              })}
               {/* Said only when it is true: main kills a turn still running
                   in a chat it deletes, and that is the one part of this that
                   reaches past the transcript. */}
               {deleting && sending.includes(deleting.id)
-                ? " It is still working, and the running turn is stopped."
+                ? ` ${t("projects.chatList.deleteStillWorking")}`
                 : ""}{" "}
-              Files it changed in the project stay as they are.
+              {t("projects.chatList.deleteFilesStay")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -207,7 +213,7 @@ export function ChatList({ chats }: { chats: Chat[] }) {
                 setDeleting(null)
               }}
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -250,12 +256,13 @@ function ChatRow({
   state: ChatState
   active: boolean
 }) {
+  const t = useT()
   return (
     <SideRow
       {...rest}
       active={active}
       onClick={() => openChat(chat)}
-      title={`${chat.title}${titleSuffix(state)}`}
+      title={rowTitle(t, chat.title, state)}
       className={cn("rounded-md text-foreground", active && "shadow-none")}
     >
       <span
@@ -287,16 +294,16 @@ function ChatRow({
   )
 }
 
-function titleSuffix(state: ChatState): string {
+function rowTitle(t: Translate, title: string, state: ChatState): string {
   switch (state) {
     case "waiting":
-      return " — waiting for your answer"
+      return t("projects.chatList.waiting", { title })
     case "working":
-      return " — working"
+      return t("projects.chatList.working", { title })
     case "unread":
-      return " — answered since you last looked"
+      return t("projects.chatList.unread", { title })
     default:
-      return ""
+      return title
   }
 }
 
@@ -324,7 +331,14 @@ function LimitedRow({
 }) {
   const limit = chat.limit!
   const reset = resetLabel(limit.resetsAt, now)
-  const over = reset === "resets now"
+  // Off the clock rather than off `resetLabel`'s words, which are translated.
+  const over =
+    limit.resetsAt !== null &&
+    new Date(limit.resetsAt).getTime() - now.getTime() <= 0
+  const t = useT()
+  const windowName = limit.window
+    ? windowLabel(limit.window)
+    : t("projects.chatList.plan")
   const action = useLimitWayOut(chat, now, () => openChat(chat))
 
   return (
@@ -339,7 +353,7 @@ function LimitedRow({
       <button
         type="button"
         onClick={() => openChat(chat)}
-        title={`${chat.title} — stopped on a plan limit`}
+        title={t("projects.chatList.limited", { title: chat.title })}
         className="flex w-full items-center gap-1.5 rounded px-1.5 text-left text-xs text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
@@ -351,8 +365,13 @@ function LimitedRow({
         <Clock className="size-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">
           {over
-            ? "Limit has reset"
-            : `${limit.window ? windowLabel(limit.window) : "Plan"} limit${reset ? ` · ${reset}` : ""}`}
+            ? t("projects.chatList.limitReset")
+            : reset
+              ? t("projects.chatList.limitWithReset", {
+                  window: windowName,
+                  reset,
+                })
+              : t("projects.chatList.limit", { window: windowName })}
         </span>
       </div>
       {/* On a line of its own: the column is narrow, and beside the reason it

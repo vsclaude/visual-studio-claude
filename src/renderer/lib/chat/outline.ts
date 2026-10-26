@@ -1,4 +1,5 @@
 import type { AssistantMessage } from "@shared/api"
+import { t } from "../i18n"
 
 /**
  * A chat's table of contents: one entry per thing the user asked.
@@ -45,7 +46,10 @@ export function labelOf(text: string): string {
       .map((row) => row.replace(/\s+/g, " ").trim())
       .find((row) => row.length > 0) ?? ""
   // A message that was only pictures still needs a row somebody can click.
-  if (!first) return text.includes("[Image #") ? "Image" : "(empty message)"
+  if (!first)
+    return text.includes("[Image #")
+      ? t("transcript.outline.image")
+      : t("transcript.outline.emptyMessage")
   return first.length > LABEL_MAX
     ? `${first.slice(0, LABEL_MAX - 1).trimEnd()}…`
     : first

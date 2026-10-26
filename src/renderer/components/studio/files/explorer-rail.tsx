@@ -1,5 +1,6 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
 
+import { useT } from "@/lib/i18n"
 import { RAIL_WIDTH, useStudio } from "@/lib/store"
 import { IconButton } from "../icon-button"
 
@@ -31,6 +32,7 @@ import { IconButton } from "../icon-button"
 export function ExplorerRail() {
   const sidebar = useStudio((state) => state.sidebar)
   const toggleSidebar = useStudio((state) => state.toggleSidebar)
+  const t = useT()
 
   return (
     <div
@@ -41,7 +43,7 @@ export function ExplorerRail() {
       className="absolute top-0 right-0 flex h-9 items-center justify-center"
     >
       <IconButton
-        label={sidebar ? "Hide Explorer" : "Show Explorer"}
+        label={sidebar ? t("files.rail.hide") : t("files.rail.show")}
         // Into the window rather than above: this is the last 36px before the
         // window's edge, and the default puts the tooltip over the title bar.
         side="left"

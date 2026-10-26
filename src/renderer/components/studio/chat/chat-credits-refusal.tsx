@@ -7,6 +7,7 @@ import { useAccount } from "@/lib/account"
 import type { CreditsRefusal } from "@/lib/chat/credits-refusal"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   CREDITS_GRADIENT,
@@ -28,6 +29,7 @@ import {
  * again instead of selling a pack somebody already bought.
  */
 export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
+  const t = useT()
   const ready = useFreeAi((state) => state.ready)
   const credits = useStudioAccount((state) => state.account?.credits)
   const show = useCreditsDialog((state) => state.show)
@@ -39,18 +41,19 @@ export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
 
   const [title, body] = signedOut
     ? [
-        "Sign in to pay with credits",
-        "This chat runs on credits — every model, paid as you go, never a monthly fee. Sign in and send your message again.",
+        t("chat.creditsRefusal.signInTitle"),
+        t("chat.creditsRefusal.signInBody"),
       ]
     : topped
       ? [
-          reason === "signed-out" ? "You're signed in" : "Credits are back",
-          `You have ${formatCredits(credits)} in credits now. Send your message again to pick up where you left off.`,
+          reason === "signed-out"
+            ? t("chat.creditsRefusal.signedInTitle")
+            : t("chat.creditsRefusal.backTitle"),
+          t("chat.creditsRefusal.backBody", {
+            credits: formatCredits(credits),
+          }),
         ]
-      : [
-          "You're out of credits",
-          "Nothing was charged for this message. Top up to keep going — credits work on every model and never expire.",
-        ]
+      : [t("chat.creditsRefusal.outTitle"), t("chat.creditsRefusal.outBody")]
 
   return (
     <div
@@ -72,7 +75,9 @@ export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
           onClick={() => void signIn()}
         >
           {!busy && <Google data-icon="inline-start" />}
-          {busy ? "Signing in…" : "Sign in with Google"}
+          {busy
+            ? t("chat.credits.signingIn")
+            : t("chat.credits.signInWithGoogle")}
         </Button>
       ) : (
         !topped && (
@@ -85,7 +90,7 @@ export function CreditsRefusalCard({ reason }: { reason: CreditsRefusal }) {
             )}
           >
             <Coins data-icon="inline-start" />
-            Buy credits
+            {t("chat.credits.buy")}
           </Button>
         )
       )}

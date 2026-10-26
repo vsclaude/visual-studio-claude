@@ -1,4 +1,5 @@
 import type { AssistantMessage, TurnUsage } from "@shared/api"
+import { t } from "../i18n"
 import { dayBreak, dayLabel } from "./since"
 
 /**
@@ -425,16 +426,21 @@ export function countsOf(lines: AssistantMessage[]): ActivityCounts {
  * cut off. */
 export function summaryOf(counts: ActivityCounts, live = false): string {
   const parts: string[] = []
-  if (counts.tools > 0) parts.push(plural(counts.tools, "tool call"))
-  if (counts.messages > 0) parts.push(plural(counts.messages, "message"))
-  if (counts.subagents > 0) parts.push(plural(counts.subagents, "subagent"))
+  if (counts.tools > 0)
+    parts.push(t("transcript.activity.toolCalls", { count: counts.tools }))
+  if (counts.messages > 0)
+    parts.push(t("transcript.activity.messages", { count: counts.messages }))
+  if (counts.subagents > 0)
+    parts.push(t("transcript.activity.subagents", { count: counts.subagents }))
   // Nothing but the lines that are never folded can produce this, and a run of
   // those is never made — so it is a fallback rather than a case.
-  let line = parts.join(", ") || "working"
+  let line = parts.join(", ") || t("transcript.activity.working")
   // Before the todo: what went wrong and what is moving now are about the
   // calls the counts just named, and the todo is about the turn.
-  if (counts.failed) line += ` · ${counts.failed} failed`
-  if (live && counts.pending) line += ` · running ${counts.pending}`
+  if (counts.failed)
+    line += ` · ${t("transcript.activity.failed", { count: counts.failed })}`
+  if (live && counts.pending)
+    line += ` · ${t("transcript.activity.running", { name: counts.pending })}`
   if (!counts.todo) return line
 
   /* After the counts rather than instead of them, and separated the way a tool
@@ -445,11 +451,7 @@ export function summaryOf(counts: ActivityCounts, live = false): string {
   const { done, total, running } = counts.todo
   return running
     ? `${line} · ${running} (${done}/${total})`
-    : `${line} · ${done}/${total} done`
-}
-
-function plural(count: number, what: string): string {
-  return `${count} ${what}${count === 1 ? "" : "s"}`
+    : `${line} · ${t("transcript.activity.todoDone", { done, total })}`
 }
 
 /** The conversation split at the user's lines: a prompt and what followed it. */

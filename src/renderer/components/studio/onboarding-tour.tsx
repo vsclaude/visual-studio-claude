@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { IS_MAC } from "./title-bar"
 
@@ -22,6 +23,7 @@ import { IS_MAC } from "./title-bar"
  * reads as "about this app" rather than as a card pointing at nothing.
  */
 export function OnboardingTour({ onDone }: { onDone: () => void }) {
+  const t = useT()
   const [index, setIndex] = useState(0)
   // `index` only ever moves between 0 and the last step, so the lookup
   // cannot miss; the assertion is for `noUncheckedIndexedAccess`.
@@ -142,13 +144,16 @@ export function OnboardingTour({ onDone }: { onDone: () => void }) {
         }
       >
         <p className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-          {index + 1} of {STEPS.length}
+          {t("onboarding.tour.progress", {
+            index: index + 1,
+            total: STEPS.length,
+          })}
         </p>
         <h2 id="tour-title" className="mt-1 text-sm font-medium">
-          {step.title}
+          {t(step.title)}
         </h2>
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          {step.body}
+          {t(step.body, { shortcut: IS_MAC ? "⌘P" : "Ctrl+P" })}
         </p>
 
         <div className="mt-4 flex items-center gap-1">
@@ -165,16 +170,16 @@ export function OnboardingTour({ onDone }: { onDone: () => void }) {
           <div className="flex-1" />
           {!last && (
             <Button size="xs" variant="ghost" onClick={onDone}>
-              Skip tour
+              {t("onboarding.tour.skip")}
             </Button>
           )}
           {index > 0 && (
             <Button size="xs" variant="outline" onClick={back}>
-              Back
+              {t("common.back")}
             </Button>
           )}
           <Button size="xs" onClick={next}>
-            {last ? "Done" : "Next"}
+            {last ? t("common.done") : t("common.next")}
           </Button>
         </div>
       </div>
@@ -185,25 +190,25 @@ export function OnboardingTour({ onDone }: { onDone: () => void }) {
 type Step = {
   /** The `data-tour` value of the element the card points at. */
   target: string
-  title: string
-  body: string
+  title: MessageKey
+  body: MessageKey
 }
 
 const STEPS: Step[] = [
   {
     target: "projects",
-    title: "Your projects",
-    body: "One icon per folder this workspace points at. Pick one and the column beside it lists its chats; pick it again to hide the column. A number on an icon is chats waiting on you, a spinner is one working.",
+    title: "onboarding.tour.projectsTitle",
+    body: "onboarding.tour.projectsBody",
   },
   {
     target: "palette",
-    title: "Run a command",
-    body: `${IS_MAC ? "⌘P" : "Ctrl+P"} opens the palette: go to a file or a chat by name, or run anything the studio can do.`,
+    title: "onboarding.tour.paletteTitle",
+    body: "onboarding.tour.paletteBody",
   },
   {
     target: "composer",
-    title: "Chats, side by side",
-    body: "Each chat is a claude conversation in one project's directory. Several can run at once, and the row in the column says which are answering and which are waiting on you.",
+    title: "onboarding.tour.composerTitle",
+    body: "onboarding.tour.composerBody",
   },
   // The accounts before the shell: they are what the app is for, and the cap
   // of five meant one of the panels had to give up its card. The dock is the
@@ -211,13 +216,13 @@ const STEPS: Step[] = [
   // button for it.
   {
     target: "accounts",
-    title: "Your accounts",
-    body: "Every Claude account you sign in to, with how much of its five-hour window is used. + adds another. A chat stopped by its limit offers to continue on one with room, or on credits.",
+    title: "onboarding.tour.accountsTitle",
+    body: "onboarding.tour.accountsBody",
   },
   {
     target: "explorer",
-    title: "The Explorer",
-    body: "Every file in the checkout, and under Git, what has changed since the last commit and the commits before it.",
+    title: "onboarding.tour.explorerTitle",
+    body: "onboarding.tour.explorerBody",
   },
 ]
 

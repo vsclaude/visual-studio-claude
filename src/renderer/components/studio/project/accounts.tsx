@@ -50,6 +50,7 @@ import {
 import { useChats } from "@/lib/chat/store"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
+import { useT } from "@/lib/i18n"
 import { useSettings } from "@/lib/settings"
 import { ClaudeLoginDialog } from "../claude-login-dialog"
 import {
@@ -76,6 +77,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   const usage = usePlanUsage((state) => state.byProfile)
   const freeReady = useFreeAi((state) => state.ready)
   const credits = useStudioAccount((state) => state.account?.credits)
+  const t = useT()
 
   // An account nobody has checked is `usable`: not knowing is not the same as
   // signed out, and a turn sent to one that is says so itself.
@@ -87,7 +89,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   const list: ColumnAccount[] = [
     {
       profileId: null,
-      name: "This account",
+      name: t("projects.accounts.thisAccount"),
       utilization: fiveHour(usage[""]),
       usable: signedIn(""),
     },
@@ -101,7 +103,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   if (freeReady) {
     list.push({
       profileId: FREE_PROFILE_ID,
-      name: "Credits",
+      name: t("projects.accounts.credits"),
       utilization: null,
       usable: credits === undefined || credits > 0,
     })
@@ -121,10 +123,12 @@ function fiveHour(usage: PlanUsage | undefined): number | null {
 /** What the column calls an account — the picker's own names. */
 export function useAccountName(profileId: string | null): string {
   const profiles = useClaudeProfiles((state) => state.profiles)
-  if (profileId === null) return "This account"
-  if (profileId === FREE_PROFILE_ID) return "Credits"
+  const t = useT()
+  if (profileId === null) return t("projects.accounts.thisAccount")
+  if (profileId === FREE_PROFILE_ID) return t("projects.accounts.credits")
   return (
-    profiles.find((profile) => profile.id === profileId)?.name ?? "This account"
+    profiles.find((profile) => profile.id === profileId)?.name ??
+    t("projects.accounts.thisAccount")
   )
 }
 
@@ -205,6 +209,7 @@ export function AccountsFooter() {
   const remove = useClaudeProfiles((state) => state.remove)
   const freeReady = useFreeAi((state) => state.ready)
   const busy = useChats((state) => state.sending.length)
+  const t = useT()
 
   const [renaming, setRenaming] = useState<string | null>(null)
   const [removing, setRemoving] = useState<ClaudeProfile | null>(null)
@@ -294,8 +299,8 @@ export function AccountsFooter() {
         <div
           role="separator"
           aria-orientation="horizontal"
-          aria-label="Resize accounts"
-          title="Drag to resize, double-click to reset"
+          aria-label={t("projects.accounts.resize")}
+          title={t("projects.accounts.resizeHint")}
           onPointerDown={startResize}
           onPointerMove={moveResize}
           onPointerUp={endResize}
@@ -329,9 +334,13 @@ export function AccountsFooter() {
               !collapsed && "rotate-90"
             )}
           />
-          Accounts
+          {t("projects.accounts.heading")}
         </button>
-        <IconButton label="Add account" className="size-6" onClick={add}>
+        <IconButton
+          label={t("projects.accounts.add")}
+          className="size-6"
+          onClick={add}
+        >
           <Plus />
         </IconButton>
       </div>
@@ -404,14 +413,17 @@ export function AccountsFooter() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {removing?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("projects.accounts.removeTitle", {
+                name: removing?.name ?? "",
+              })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Chats that ran on it run on This account from their next message.
-              Its login directory is left on disk.
+              {t("projects.accounts.removeDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -419,7 +431,7 @@ export function AccountsFooter() {
                 setRemoving(null)
               }}
             >
-              Remove
+              {t("common.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -527,6 +539,7 @@ function PlanRow({
   const load = usePlanUsage((state) => state.load)
   const [open, setOpen] = useState(false)
   const menuFocus = useMenuFocusHandoff()
+  const t = useT()
 
   // A profile whose directory main has not named yet has nothing to check
   // or sign in — the empty key is the *default* login's.
@@ -573,7 +586,7 @@ function PlanRow({
                 !settingUp &&
                 (checking ? (
                   <span className="shrink-0 text-[0.6875rem] leading-4 text-muted-foreground">
-                    Checking…
+                    {t("common.checking")}
                   </span>
                 ) : (
                   windows.length > 0 && (
@@ -598,7 +611,9 @@ function PlanRow({
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={settingUp} onClick={onLogin}>
                 <KeyRound />
-                {signedIn ? "Sign in as another account…" : "Sign in…"}
+                {signedIn
+                  ? t("projects.accounts.signInAsAnother")
+                  : t("projects.accounts.signInMenu")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={settingUp || checking}
@@ -608,7 +623,7 @@ function PlanRow({
                 }}
               >
                 <RefreshCw />
-                Check again
+                {t("projects.accounts.checkAgain")}
               </DropdownMenuItem>
               {onRemove && (
                 <>
@@ -620,11 +635,11 @@ function PlanRow({
                     }}
                   >
                     <Pencil />
-                    Rename
+                    {t("common.rename")}
                   </DropdownMenuItem>
                   <DropdownMenuItem variant="destructive" onClick={onRemove}>
                     <Trash2 />
-                    Remove…
+                    {t("projects.accounts.remove")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -633,7 +648,7 @@ function PlanRow({
         )}
         {settingUp ? (
           <span className="shrink-0 pr-1 text-[0.6875rem] text-muted-foreground">
-            Setting up…
+            {t("projects.accounts.settingUp")}
           </span>
         ) : (
           !account.usable &&
@@ -642,10 +657,10 @@ function PlanRow({
               size="xs"
               variant="ghost"
               className="shrink-0 text-destructive hover:text-destructive"
-              title="Not signed in"
+              title={t("projects.accounts.notSignedIn")}
               onClick={onLogin}
             >
-              Sign in
+              {t("projects.accounts.signIn")}
             </Button>
           )
         )}
@@ -677,9 +692,18 @@ function meterLabel(id: string): string {
 function Meter({ window, now }: { window: PlanWindow; now: Date }) {
   const tone = usageTone(window.utilization)
   const reset = resetLabel(window.resetsAt, now)
+  const t = useT()
+  const vars = {
+    window: windowLabel(window.id),
+    percent: percent(window.utilization),
+  }
   return (
     <span
-      title={`${windowLabel(window.id)} limit: ${percent(window.utilization)} used${reset ? ` · ${reset}` : ""}`}
+      title={
+        reset
+          ? t("projects.accounts.meterWithReset", { ...vars, reset })
+          : t("projects.accounts.meter", vars)
+      }
       className="flex h-4 items-center gap-1.5 text-[0.625rem] tabular-nums"
     >
       <span
@@ -728,6 +752,7 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
   const busy = useAccount((state) => state.busy)
   const start = useAccount((state) => state.signIn)
   const account = useStudioAccount((state) => state.account)
+  const t = useT()
 
   const card = cn(
     "mt-1.5 flex w-full shrink-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs",
@@ -739,9 +764,11 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
       <div className={card}>
         <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">Credits</p>
+          <p className="truncate font-medium">
+            {t("projects.accounts.credits")}
+          </p>
           <p className="truncate text-[0.6875rem] text-muted-foreground">
-            Every model, pay as you go
+            {t("projects.accounts.creditsPitch")}
           </p>
         </div>
         <Button
@@ -750,11 +777,13 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
             "shrink-0 border-0 text-white shadow-sm shadow-violet-500/25 hover:opacity-90",
             CREDITS_GRADIENT
           )}
-          title="Every model, paid as you go — never a monthly fee"
+          title={t("projects.accounts.creditsPitchLong")}
           disabled={busy}
           onClick={() => void start()}
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy
+            ? t("projects.accounts.signingIn")
+            : t("projects.accounts.signIn")}
         </Button>
       </div>
     )
@@ -764,7 +793,7 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
   return (
     <button
       type="button"
-      title="Buy credits"
+      title={t("projects.accounts.buyCredits")}
       onClick={showCredits}
       className={cn(
         card,
@@ -774,7 +803,9 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
       <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-baseline gap-2">
-          <span className="min-w-0 flex-1 truncate font-medium">Credits</span>
+          <span className="min-w-0 flex-1 truncate font-medium">
+            {t("projects.accounts.credits")}
+          </span>
           {account && (
             <span
               className={cn(
@@ -782,7 +813,9 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
                 broke ? "text-destructive" : "text-muted-foreground"
               )}
             >
-              {formatCredits(account.credits)} left
+              {t("projects.accounts.creditsLeft", {
+                amount: formatCredits(account.credits),
+              })}
             </span>
           )}
         </div>
@@ -803,6 +836,7 @@ function InlineName({
 }) {
   const [value, setValue] = useState(name)
   const settled = useRef(false)
+  const t = useT()
   const finish = (next: string | null) => {
     if (settled.current) return
     settled.current = true
@@ -812,7 +846,7 @@ function InlineName({
   return (
     <input
       autoFocus
-      aria-label="Account name"
+      aria-label={t("projects.accounts.accountName")}
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onFocus={(event) => event.target.select()}

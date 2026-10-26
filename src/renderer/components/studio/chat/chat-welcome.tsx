@@ -1,6 +1,8 @@
 import { FolderGit2, GitBranch, TriangleAlert } from "lucide-react"
 
 import type { ChatPlace } from "@shared/api"
+import { useT } from "@/lib/i18n"
+import { withParts } from "@/lib/i18n/parts"
 import { useStudio } from "@/lib/store"
 
 /**
@@ -18,6 +20,7 @@ import { useStudio } from "@/lib/store"
  * gone, so the only honest line left is this one.
  */
 export function ChatWelcome({ place }: { place: ChatPlace | null }) {
+  const t = useT()
   const folders = useStudio((state) => state.folders)
 
   // Between the project leaving the workspace and its chats closing. The chat
@@ -31,23 +34,31 @@ export function ChatWelcome({ place }: { place: ChatPlace | null }) {
   return (
     <div className="animate-settle space-y-3">
       <div className="rounded-lg bg-muted px-4 py-3 text-sm">
-        You are in <span className="font-medium">{folder.name}</span> itself —
-        the working tree you have checked out
+        {withParts(t("transcript.welcome.youAreIn"), {
+          name: <span className="font-medium">{folder.name}</span>,
+        })}
       </div>
 
       <dl className="space-y-2 text-xs text-muted-foreground">
         {/* First, because it is the one fact that changes how the next
             sentence should be phrased: there is no branch to throw away. */}
         <Line Icon={TriangleAlert}>
-          Edits here change the files you are working in. Use{" "}
-          <span className="font-medium">Plan</span> or{" "}
-          <span className="font-medium">Ask</span> in the toolbar below if you
-          would rather be asked first.
+          {withParts(t("transcript.welcome.editsHere"), {
+            // The toolbar's own words, so the sentence names what is on it.
+            plan: (
+              <span className="font-medium">
+                {t("chat.permission.plan.short")}
+              </span>
+            ),
+            ask: (
+              <span className="font-medium">
+                {t("chat.permission.ask.short")}
+              </span>
+            ),
+          })}
         </Line>
 
-        <Line Icon={GitBranch}>
-          Turns run on whatever branch this project has checked out
-        </Line>
+        <Line Icon={GitBranch}>{t("transcript.welcome.branch")}</Line>
 
         {/* The path last and in full: it is the least interesting thing here
             until the moment somebody needs to reach it from a terminal. */}

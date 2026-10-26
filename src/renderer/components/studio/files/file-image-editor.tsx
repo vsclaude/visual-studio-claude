@@ -36,6 +36,7 @@ import {
   type Rect,
   type Size,
 } from "@/lib/files/image-edit"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { encodableTypeOf } from "@shared/image-files"
 import { IconButton } from "../icon-button"
@@ -74,6 +75,7 @@ export function FileImageEditor({
   src: string
   onClose: () => void
 }) {
+  const t = useT()
   const [history, setHistory] = useState<{
     stack: HTMLCanvasElement[]
     at: number
@@ -105,7 +107,7 @@ export function FileImageEditor({
       setHistory({ stack: [canvas], at: 0 })
       setSaved(canvas)
     }
-    image.onerror = () => live && setFailure("Could not decode this image.")
+    image.onerror = () => live && setFailure(t("files.image.couldNotDecode"))
     image.src = src
     return () => {
       live = false
@@ -161,8 +163,7 @@ export function FileImageEditor({
   }, [current, path, saving])
 
   function close() {
-    if (dirty && !window.confirm("Discard the unsaved changes to this image?"))
-      return
+    if (dirty && !window.confirm(t("files.image.discardConfirm"))) return
     onClose()
   }
 
@@ -276,24 +277,28 @@ export function FileImageEditor({
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b px-2">
         <ToolButton
-          label="Crop"
+          label={t("files.image.crop")}
           on={tool === "crop"}
           onClick={() => pick("crop")}
         >
           <Crop />
         </ToolButton>
-        <ToolButton label="Pen" on={tool === "pen"} onClick={() => pick("pen")}>
+        <ToolButton
+          label={t("files.image.pen")}
+          on={tool === "pen"}
+          onClick={() => pick("pen")}
+        >
           <Pencil />
         </ToolButton>
         <ToolButton
-          label="Rectangle"
+          label={t("files.image.rectangle")}
           on={tool === "rect"}
           onClick={() => pick("rect")}
         >
           <Square />
         </ToolButton>
         <ToolButton
-          label="Arrow"
+          label={t("files.image.arrow")}
           on={tool === "arrow"}
           onClick={() => pick("arrow")}
         >
@@ -303,28 +308,28 @@ export function FileImageEditor({
         <Divider />
 
         <IconButton
-          label="Rotate left"
+          label={t("files.image.rotateLeft")}
           disabled={!current}
           onClick={() => current && push(turned(current, -1))}
         >
           <RotateCcw />
         </IconButton>
         <IconButton
-          label="Rotate right"
+          label={t("files.image.rotateRight")}
           disabled={!current}
           onClick={() => current && push(turned(current, 1))}
         >
           <RotateCw />
         </IconButton>
         <IconButton
-          label="Flip horizontally"
+          label={t("files.image.flipHorizontally")}
           disabled={!current}
           onClick={() => current && push(flipped(current, "x"))}
         >
           <FlipHorizontal2 />
         </IconButton>
         <IconButton
-          label="Flip vertically"
+          label={t("files.image.flipVertically")}
           disabled={!current}
           onClick={() => current && push(flipped(current, "y"))}
         >
@@ -342,7 +347,7 @@ export function FileImageEditor({
             <Divider />
             <input
               type="color"
-              aria-label="Colour"
+              aria-label={t("files.image.colour")}
               value={color}
               onChange={(event) => setColor(event.target.value)}
               className="size-5 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
@@ -372,31 +377,35 @@ export function FileImageEditor({
               disabled={!canCrop}
               onClick={applyCrop}
             >
-              <Check /> Apply crop
+              <Check /> {t("files.image.applyCrop")}
             </Button>
           </>
         )}
 
         <span className="flex-1" />
 
-        <IconButton label="Undo" disabled={history.at <= 0} onClick={undo}>
+        <IconButton
+          label={t("files.image.undo")}
+          disabled={history.at <= 0}
+          onClick={undo}
+        >
           <Undo2 />
         </IconButton>
         <IconButton
-          label="Redo"
+          label={t("files.image.redo")}
           disabled={history.at >= history.stack.length - 1}
           onClick={redo}
         >
           <Redo2 />
         </IconButton>
         <IconButton
-          label="Save image"
+          label={t("files.image.save")}
           disabled={!dirty || saving}
           onClick={() => void save()}
         >
           <Save />
         </IconButton>
-        <IconButton label="Close editor" onClick={close}>
+        <IconButton label={t("files.image.closeEditor")} onClick={close}>
           <X />
         </IconButton>
       </div>
@@ -405,7 +414,7 @@ export function FileImageEditor({
         <div className="flex shrink-0 items-start gap-1 border-b bg-destructive/10 px-3 py-1.5 font-mono text-xs text-destructive">
           <p className="min-w-0 flex-1">{failure}</p>
           <IconButton
-            label="Dismiss"
+            label={t("files.dismiss")}
             onClick={() => setFailure(null)}
             className="size-5 shrink-0"
           >
@@ -438,10 +447,13 @@ export function FileImageEditor({
       {current && (
         <p className="shrink-0 border-t px-3 py-1.5 text-center font-mono text-[0.65rem] text-muted-foreground">
           {cropRect && canCrop
-            ? `${cropRect.width} × ${cropRect.height} of `
+            ? t("files.image.cropOf", {
+                width: cropRect.width,
+                height: cropRect.height,
+              })
             : ""}
           {current.width} × {current.height}
-          {dirty && " · Unsaved"}
+          {dirty && ` · ${t("files.workspace.unsaved")}`}
         </p>
       )}
     </div>
@@ -487,6 +499,7 @@ function ResizeButton({
   const [open, setOpen] = useState(false)
   const [next, setNext] = useState(size)
   const [locked, setLocked] = useState(true)
+  const t = useT()
 
   function change(side: "width" | "height", value: number) {
     if (!Number.isFinite(value)) return
@@ -509,7 +522,7 @@ function ResizeButton({
     >
       <PopoverTrigger
         render={
-          <IconButton label="Resize">
+          <IconButton label={t("files.image.resize")}>
             <Scaling />
           </IconButton>
         }
@@ -527,7 +540,7 @@ function ResizeButton({
           <div className="flex items-center gap-2">
             <Input
               type="number"
-              aria-label="Width"
+              aria-label={t("files.image.width")}
               min={1}
               value={next.width}
               onChange={(event) => change("width", event.target.valueAsNumber)}
@@ -536,7 +549,7 @@ function ResizeButton({
             <span className="text-xs text-muted-foreground">×</span>
             <Input
               type="number"
-              aria-label="Height"
+              aria-label={t("files.image.height")}
               min={1}
               value={next.height}
               onChange={(event) => change("height", event.target.valueAsNumber)}
@@ -549,10 +562,10 @@ function ResizeButton({
               checked={locked}
               onChange={(event) => setLocked(event.target.checked)}
             />
-            Keep aspect ratio
+            {t("files.image.keepRatio")}
           </label>
           <Button size="sm" type="submit" disabled={!valid}>
-            Resize
+            {t("files.image.resize")}
           </Button>
         </form>
       </PopoverContent>

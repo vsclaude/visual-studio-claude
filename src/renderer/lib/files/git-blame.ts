@@ -1,4 +1,5 @@
 import type { GitBlame, GitBlameCommit, GitLineCommit } from "@shared/api"
+import { currentLocale, t, type Locale } from "../i18n"
 
 /**
  * The words the editor's blame annotation and its hover are drawn from — the
@@ -26,7 +27,16 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60_000],
 ]
 
-const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
+const formats = new Map<Locale, Intl.RelativeTimeFormat>()
+function relative(): Intl.RelativeTimeFormat {
+  const locale = currentLocale()
+  let format = formats.get(locale)
+  if (!format) {
+    format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })
+    formats.set(locale, format)
+  }
+  return format
+}
 
 /**
  * `2 months ago` — the long form, unlike the sidebar's `since`: the annotation
@@ -37,9 +47,9 @@ export function ago(iso: string, now: number = Date.now()): string {
   if (Number.isNaN(at)) return ""
   const ms = Math.max(0, now - at)
   for (const [unit, size] of UNITS) {
-    if (ms >= size) return relative.format(-Math.floor(ms / size), unit)
+    if (ms >= size) return relative().format(-Math.floor(ms / size), unit)
   }
-  return "just now"
+  return t("files.blame.justNow")
 }
 
 /** What sits at the end of the caret's line: `Ada, 2 months ago • fix: …`. */
@@ -47,7 +57,7 @@ export function annotationOf(
   commit: GitBlameCommit | null,
   now: number = Date.now()
 ): string {
-  if (!commit) return "You • Not committed yet"
+  if (!commit) return t("files.blame.notCommitted")
   return `${commit.author}, ${ago(commit.date, now)} • ${commit.summary}`
 }
 
@@ -126,8 +136,11 @@ export function askAboutCommit(
 /** The size of a whole commit under its message: `3 files changed · +12 −4`. */
 export function statText(stat: GitLineCommit["stat"]): string {
   if (!stat) return ""
-  const files = `${stat.files} ${stat.files === 1 ? "file" : "files"} changed`
-  return `${files} · +${stat.added} −${stat.removed}`
+  return t("files.blame.stat", {
+    count: stat.files,
+    added: stat.added,
+    removed: stat.removed,
+  })
 }
 
 /**

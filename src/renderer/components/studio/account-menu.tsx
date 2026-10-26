@@ -16,6 +16,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useAccount, watchAccount } from "@/lib/account"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 import { CreditsBadge, CreditsBar } from "./credits-badge"
 import { IconButton } from "./icon-button"
 
@@ -36,10 +37,13 @@ export function AccountMenu() {
   const signOut = useAccount((state) => state.signOut)
   const showCredits = useCreditsDialog((state) => state.show)
   const studio = useStudioAccount((state) => state.account)
+  const t = useT()
 
   useEffect(watchAccount, [])
 
-  const name = account ? (account.name ?? account.email ?? "Signed in") : null
+  const name = account
+    ? (account.name ?? account.email ?? t("nav.account.signedIn"))
+    : null
   // Until the stored session has been read, the empty silhouette would say "signed out"
   // about somebody who is about to be signed in. A sign-in waiting on the
   // browser spins too, since the avatar is all there is to look at meanwhile.
@@ -55,8 +59,9 @@ export function AccountMenu() {
           <IconButton
             label={
               !ready
-                ? "Checking your sign-in…"
-                : (name ?? (busy ? "Signing in…" : "Sign in with Google"))
+                ? t("nav.account.checking")
+                : (name ??
+                  t(busy ? "nav.account.signingIn" : "nav.account.signIn"))
             }
             side="right"
             className="relative size-8"
@@ -113,7 +118,9 @@ export function AccountMenu() {
                 <CreditsBadge size="sm" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="text-menu font-medium">Buy credits</span>
+                    <span className="text-menu font-medium">
+                      {t("nav.account.buyCredits")}
+                    </span>
                     {studio && (
                       <span
                         className={cn(
@@ -123,7 +130,9 @@ export function AccountMenu() {
                             : "text-muted-foreground"
                         )}
                       >
-                        {formatCredits(studio.credits)} left
+                        {t("nav.account.creditsLeft", {
+                          credits: formatCredits(studio.credits),
+                        })}
                       </span>
                     )}
                   </span>
@@ -131,7 +140,7 @@ export function AccountMenu() {
                     <CreditsBar account={studio} className="h-1" />
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      Every model, never a monthly fee
+                      {t("nav.account.creditsPitch")}
                     </span>
                   )}
                 </span>
@@ -139,23 +148,23 @@ export function AccountMenu() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={busy} onClick={() => void signOut()}>
-                Sign out
+                {t("nav.account.signOut")}
               </DropdownMenuItem>
             </>
           ) : busy ? (
             <>
               <DropdownMenuLabel>
-                Finish signing in in your browser…
+                {t("nav.account.finishInBrowser")}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => void cancelSignIn()}>
-                Cancel
+                {t("common.cancel")}
               </DropdownMenuItem>
             </>
           ) : (
             <DropdownMenuItem disabled={!ready} onClick={() => void signIn()}>
               <Google />
-              Sign in with Google
+              {t("nav.account.signIn")}
             </DropdownMenuItem>
           )}
 

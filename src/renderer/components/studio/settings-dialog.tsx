@@ -46,6 +46,13 @@ import { useAppBackground } from "@/lib/app-background"
 import type { ClaudeVersions } from "@shared/api"
 import { isOn, usePlugins, type PluginStatus } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
+import {
+  isLanguageChoice,
+  LOCALE_NAMES,
+  LOCALES,
+  useT,
+  type MessageKey,
+} from "@/lib/i18n"
 import { installLabel, pendingUpdate, useUpdates } from "@/lib/updates"
 import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
 import { useAgentModels } from "@/lib/chat/models"
@@ -80,6 +87,7 @@ import { ModelMenu, ProfileMenu } from "./chat/chat-composer"
  * survives a relaunch the way the strip's arrangement does.
  */
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const [section, setSection] = useState<SectionId>("appearance")
 
   const current = SECTIONS.find((candidate) => candidate.id === section)!
@@ -93,11 +101,11 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     >
       <DialogContent className="grid h-[34rem] max-h-[85vh] w-full grid-cols-[12rem_1fr] gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <nav
-          aria-label="Settings sections"
+          aria-label={t("settings.sectionsLabel")}
           className="flex min-h-0 flex-col gap-0.5 overflow-y-auto border-r bg-muted/30 p-2"
         >
           <p className="px-2 pt-1 pb-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-            Options
+            {t("settings.options")}
           </p>
           {SECTIONS.map(({ id, label, icon: Icon }) => (
             <button
@@ -116,7 +124,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               )}
             >
               <Icon className="size-4 shrink-0" />
-              <span className="truncate">{label}</span>
+              <span className="truncate">{t(label)}</span>
             </button>
           ))}
         </nav>
@@ -125,9 +133,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           {/* `pr-12` clears the close button, which the dialog draws in the
               corner over whatever is there. */}
           <header className="shrink-0 border-b px-5 py-4 pr-12">
-            <DialogTitle>{current.label}</DialogTitle>
+            <DialogTitle>{t(current.label)}</DialogTitle>
             <DialogDescription className="mt-1 text-xs">
-              {current.blurb}
+              {t(current.blurb)}
             </DialogDescription>
           </header>
 
@@ -157,38 +165,38 @@ type SectionId = "appearance" | "tabs" | "chats" | "plugins" | "updates"
  * section is one entry rather than three edits. */
 const SECTIONS: {
   id: SectionId
-  label: string
-  blurb: string
+  label: MessageKey
+  blurb: MessageKey
   icon: LucideIcon
 }[] = [
   {
     id: "appearance",
-    label: "Appearance",
-    blurb: "How the studio looks.",
+    label: "settings.sections.appearance",
+    blurb: "settings.sections.appearanceBlurb",
     icon: Palette,
   },
   {
     id: "tabs",
-    label: "Tabs & editor",
-    blurb: "The tab strip and the editor.",
+    label: "settings.sections.tabs",
+    blurb: "settings.sections.tabsBlurb",
     icon: Columns2,
   },
   {
     id: "chats",
-    label: "Chats",
-    blurb: "Notifications, and the model commit drafts run on.",
+    label: "settings.sections.chats",
+    blurb: "settings.sections.chatsBlurb",
     icon: Bell,
   },
   {
     id: "plugins",
-    label: "Plugins",
-    blurb: "Code of your own, run in the studio.",
+    label: "settings.sections.plugins",
+    blurb: "settings.sections.pluginsBlurb",
     icon: Puzzle,
   },
   {
     id: "updates",
-    label: "Updates",
-    blurb: "Version and updates.",
+    label: "settings.sections.updates",
+    blurb: "settings.sections.updatesBlurb",
     icon: ArrowUpCircle,
   },
 ]
@@ -203,7 +211,10 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
   // `theme` is the choice, `resolvedTheme` what it came out as — the choice is
   // what a settings row is asking about, so `system` stays visible as `system`
   // rather than as whichever of the two it happens to be right now.
+  const t = useT()
   const { theme, setTheme } = useTheme()
+  const language = useSettings((state) => state.language)
+  const setLanguage = useSettings((state) => state.setLanguage)
   const palette = useSettings((state) => state.palette)
   const setPalette = useSettings((state) => state.setPalette)
   const fontSans = useSettings((state) => state.fontSans)
@@ -223,20 +234,47 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
   return (
     <div className="space-y-4">
       <Card>
-        <Row title="Theme" description="Follow the system, or pick one.">
+        <Row
+          title={t("settings.appearance.language")}
+          description={t("settings.appearance.languageDescription")}
+        >
+          <Segmented
+            value={language}
+            options={[
+              {
+                value: "system",
+                label: t("settings.appearance.languageSystem"),
+              },
+              ...LOCALES.map((locale) => ({
+                value: locale,
+                label: LOCALE_NAMES[locale],
+              })),
+            ]}
+            onPick={(value) => {
+              if (isLanguageChoice(value)) setLanguage(value)
+            }}
+          />
+        </Row>
+        <Row
+          title={t("settings.appearance.theme")}
+          description={t("settings.appearance.themeDescription")}
+        >
           <Segmented
             value={theme ?? "system"}
             options={[
-              { value: "system", label: "System" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              {
+                value: "system",
+                label: t("settings.appearance.themeSystem"),
+              },
+              { value: "light", label: t("settings.appearance.themeLight") },
+              { value: "dark", label: t("settings.appearance.themeDark") },
             ]}
             onPick={setTheme}
           />
         </Row>
         <Row
-          title="Accent"
-          description="Buttons, selections and the active row."
+          title={t("settings.appearance.accent")}
+          description={t("settings.appearance.accentDescription")}
         >
           <div role="radiogroup" className="flex items-center gap-1.5">
             {ACCENT_PALETTES.map((candidate) => (
@@ -269,7 +307,10 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
       </Card>
 
       <Card>
-        <Row title="Font" description="The interface font.">
+        <Row
+          title={t("settings.appearance.font")}
+          description={t("settings.appearance.fontDescription")}
+        >
           <FontPicker
             value={fontSans}
             labels={SANS_FONT_LABELS}
@@ -279,8 +320,8 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
           />
         </Row>
         <Row
-          title="Monospace font"
-          description="Editors, diffs and the terminal."
+          title={t("settings.appearance.monoFont")}
+          description={t("settings.appearance.monoFontDescription")}
         >
           <FontPicker
             value={fontMono}
@@ -290,13 +331,19 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
             }}
           />
         </Row>
-        <Row title="Font size" description="Scales the whole window.">
+        <Row
+          title={t("settings.appearance.fontSize")}
+          description={t("settings.appearance.fontSizeDescription")}
+        >
           <Segmented
             value={fontSize}
             options={[
-              { value: "small", label: "Small" },
-              { value: "default", label: "Default" },
-              { value: "large", label: "Large" },
+              { value: "small", label: t("settings.appearance.sizeSmall") },
+              {
+                value: "default",
+                label: t("settings.appearance.sizeDefault"),
+              },
+              { value: "large", label: t("settings.appearance.sizeLarge") },
             ]}
             onPick={(value) => {
               if (isFontSize(value)) setFontSize(value)
@@ -304,15 +351,24 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
           />
         </Row>
         <Row
-          title="Density"
-          description="Spacing of sidebar rows and chat turns."
+          title={t("settings.appearance.density")}
+          description={t("settings.appearance.densityDescription")}
         >
           <Segmented
             value={density}
             options={[
-              { value: "compact", label: "Compact" },
-              { value: "comfortable", label: "Comfortable" },
-              { value: "spacious", label: "Spacious" },
+              {
+                value: "compact",
+                label: t("settings.appearance.densityCompact"),
+              },
+              {
+                value: "comfortable",
+                label: t("settings.appearance.densityComfortable"),
+              },
+              {
+                value: "spacious",
+                label: t("settings.appearance.densitySpacious"),
+              },
             ]}
             onPick={(value) => {
               if (isDensity(value)) setDensity(value)
@@ -323,12 +379,12 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
 
       <Card>
         <Row
-          title="Background"
+          title={t("settings.appearance.background")}
           description={
             backgroundError ? (
               <span className="text-destructive">{backgroundError}</span>
             ) : (
-              "A picture behind the studio, seen in the gaps between panels and through them."
+              t("settings.appearance.backgroundDescription")
             )
           }
         >
@@ -339,7 +395,7 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
                 size="sm"
                 onClick={() => void clearBackground()}
               >
-                Remove
+                {t("common.remove")}
               </Button>
             )}
             <Button
@@ -352,14 +408,19 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
                 )
               }}
             >
-              {backgroundImage ? "Change picture…" : "Choose picture…"}
+              {backgroundImage
+                ? t("settings.appearance.changePicture")
+                : t("settings.appearance.choosePicture")}
             </Button>
           </div>
         </Row>
       </Card>
 
       <Card>
-        <Row title="Tour" description="The first-launch walkthrough.">
+        <Row
+          title={t("settings.appearance.tour")}
+          description={t("settings.appearance.tourDescription")}
+        >
           <Button
             variant="outline"
             size="sm"
@@ -371,7 +432,7 @@ function AppearanceSection({ onReplayTour }: { onReplayTour: () => void }) {
               onReplayTour()
             }}
           >
-            Replay the tour
+            {t("settings.appearance.replayTour")}
           </Button>
         </Row>
       </Card>
@@ -431,18 +492,19 @@ function TabsSection() {
   const setAllProjectTabs = useSettings((state) => state.setAllProjectTabs)
   const gitBlame = useSettings((state) => state.gitBlame)
   const setGitBlame = useSettings((state) => state.setGitBlame)
+  const t = useT()
 
   return (
     <Card>
       <Row
-        title="Show tabs from every project"
-        description="Off: only the project you are working in."
+        title={t("settings.tabs.allProjectTabs")}
+        description={t("settings.tabs.allProjectTabsDescription")}
       >
         <Switch checked={allProjectTabs} onCheckedChange={setAllProjectTabs} />
       </Row>
       <Row
-        title="Show who last changed the line"
-        description="Git blame after the current line, like GitLens."
+        title={t("settings.tabs.gitBlame")}
+        description={t("settings.tabs.gitBlameDescription")}
       >
         <Switch checked={gitBlame} onCheckedChange={setGitBlame} />
       </Row>
@@ -465,6 +527,7 @@ function TabsSection() {
 function ChatsSection() {
   const on = useSettings((state) => state.chatNotifications)
   const setOn = useSettings((state) => state.setChatNotifications)
+  const t = useT()
 
   const profiles = useClaudeProfiles((state) => state.profiles)
   const models = useAgentModels()
@@ -484,8 +547,8 @@ function ChatsSection() {
         from.
       */}
       <Row
-        title="Notify me when a chat finishes"
-        description="When a chat finishes, fails or asks something, while the window is in the background."
+        title={t("settings.chats.notify")}
+        description={t("settings.chats.notifyDescription")}
       >
         <Switch checked={on} onCheckedChange={setOn} />
       </Row>
@@ -495,8 +558,8 @@ function ChatsSection() {
           sits in front of. See `main/one-turn-agent.ts`; the `review*` field
           names are what is already on disk. */}
       <Row
-        title="Commit message drafts"
-        description="Model and account the Git tab's Draft button runs on."
+        title={t("settings.chats.commitDrafts")}
+        description={t("settings.chats.commitDraftsDescription")}
       >
         <div className="flex items-center gap-1.5">
           <ModelMenu
@@ -548,6 +611,7 @@ function PluginsSection() {
   const reload = usePlugins((state) => state.reload)
   const install = usePlugins((state) => state.install)
   const remove = usePlugins((state) => state.remove)
+  const t = useT()
   /** What the last install said: which plugin, or why not. */
   const [outcome, setOutcome] = useState<{
     text: string
@@ -566,8 +630,8 @@ function PluginsSection() {
       if (installed) {
         setOutcome({
           text: installed.replaced
-            ? `Updated ${installed.name}.`
-            : `Installed ${installed.name}. Switch it on to run it.`,
+            ? t("settings.plugins.updated", { name: installed.name })
+            : t("settings.plugins.installed", { name: installed.name }),
           failed: false,
         })
       }
@@ -581,9 +645,7 @@ function PluginsSection() {
   return (
     <div className="space-y-4">
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed">
-        A plugin runs inside the studio with the same access the studio has —
-        your files, your terminals, your chats. Built-in plugins come with the
-        app; switch on others only if you wrote or trust them.
+        {t("settings.plugins.warning")}
       </p>
 
       {SHOW_PLUGIN_INSTALL && (
@@ -596,7 +658,7 @@ function PluginsSection() {
               onClick={() => void installFrom("folder")}
             >
               <FolderOpen className="size-3.5" />
-              Install from folder…
+              {t("settings.plugins.installFolder")}
             </Button>
             <Button
               size="sm"
@@ -605,7 +667,7 @@ function PluginsSection() {
               onClick={() => void installFrom("zip")}
             >
               <FileArchive className="size-3.5" />
-              Install from .zip…
+              {t("settings.plugins.installZip")}
             </Button>
           </div>
           {/* `polite` so a screen reader hears how the install went, which is
@@ -617,8 +679,7 @@ function PluginsSection() {
               outcome?.failed ? "text-destructive" : "text-muted-foreground"
             )}
           >
-            {outcome?.text ??
-              "A plugin is a folder with a manifest.json and a main.js. Installing the same id again updates it."}
+            {outcome?.text ?? t("settings.plugins.installHint")}
           </p>
         </div>
       )}
@@ -651,7 +712,7 @@ function PluginsSection() {
                 <div className="flex items-center gap-1">
                   {on && (
                     <IconButton
-                      label="Reload"
+                      label={t("common.reload")}
                       onClick={() => void reload(plugin.id)}
                     >
                       <RefreshCw className="size-3.5" />
@@ -661,7 +722,7 @@ function PluginsSection() {
                       part of the app, and the next update would bring it back. */}
                   {!plugin.bundled && (
                     <IconButton
-                      label="Remove"
+                      label={t("common.remove")}
                       className="hover:text-destructive"
                       onClick={() =>
                         void remove(plugin.id).catch((error: unknown) =>
@@ -729,6 +790,7 @@ function UpdatesSection() {
   // Dismissal is the pill's business, not this page's.
   const update = useUpdates((state) => pendingUpdate(state, false))
   const [versions, setVersions] = useState<ClaudeVersions | null>(null)
+  const t = useT()
 
   const askVersions = () =>
     void window.desktop.claudeVersions().then(setVersions)
@@ -739,13 +801,16 @@ function UpdatesSection() {
   return (
     <Card>
       <Row
-        title="Version"
+        title={t("settings.updates.version")}
         description={
           !check
-            ? "Checking…"
-            : check.status === "current"
-              ? `Vey Studio ${check.current} — the latest release.`
-              : `Vey Studio ${check.current}.`
+            ? t("common.checking")
+            : t(
+                check.status === "current"
+                  ? "settings.updates.latest"
+                  : "settings.updates.current",
+                { version: check.current }
+              )
         }
       >
         <Button
@@ -758,16 +823,16 @@ function UpdatesSection() {
           }}
         >
           <RefreshCw className={cn("size-3.5", checking && "animate-spin")} />
-          Check now
+          {t("settings.updates.checkNow")}
         </Button>
       </Row>
 
       <Row
-        title="Claude Code"
+        title={t("settings.updates.claudeCode")}
         description={
           !versions
-            ? "Checking…"
-            : `CLI ${versions.cli ?? "not found"} · Agent SDK ${versions.sdk}${
+            ? t("common.checking")
+            : `CLI ${versions.cli ?? t("settings.updates.cliNotFound")} · Agent SDK ${versions.sdk}${
                 versions.error ? ` — ${versions.error}` : ""
               }`
         }
@@ -775,7 +840,7 @@ function UpdatesSection() {
 
       {update ? (
         <Row
-          title={`Vey Studio ${update.version} is available`}
+          title={t("settings.updates.available", { version: update.version })}
           description={
             installing ? (
               // The bar takes the description's place rather than sitting under
@@ -785,9 +850,9 @@ function UpdatesSection() {
                 <UpdateProgressBar progress={progress} />
               </span>
             ) : update.installable ? (
-              "Restarts the app; terminal sessions end."
+              t("settings.updates.restartNote")
             ) : (
-              "In-app install is macOS and Windows only."
+              t("settings.updates.notInstallable")
             )
           }
         >
@@ -798,7 +863,7 @@ function UpdatesSection() {
               rel="noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              What&rsquo;s new
+              {t("settings.updates.whatsNew")}
               <ExternalLink className="size-3" />
             </a>
             {update.installable && (
@@ -817,14 +882,17 @@ function UpdatesSection() {
           // Said out loud rather than left as silence: "no update" and "could
           // not ask" look identical otherwise, and only one of them means the
           // version on screen is worth trusting.
-          <Row title="Could not check" description={check.error}>
+          <Row
+            title={t("settings.updates.couldNotCheck")}
+            description={check.error}
+          >
             <a
               href="https://github.com/veystudioapp/vey-studio-releases/releases"
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              Releases
+              {t("settings.updates.releases")}
               <ExternalLink className="size-3" />
             </a>
           </Row>
@@ -833,7 +901,7 @@ function UpdatesSection() {
 
       {error && (
         <p className="px-4 pb-3 text-xs leading-relaxed text-destructive">
-          {error} The installer&rsquo;s own output is in{" "}
+          {error} {t("settings.updates.installerLog")}{" "}
           <code className="font-mono">~/.veystudio/update.log</code>.
         </p>
       )}

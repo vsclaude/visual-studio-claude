@@ -17,6 +17,7 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view"
+import { t } from "../i18n"
 
 import {
   DIFF_REVEAL_STEP,
@@ -411,10 +412,10 @@ function unfoldControl(dir: RevealDir): HTMLElement {
   control.setAttribute("role", "button")
   control.title =
     dir === "fromAbove"
-      ? `Show ${DIFF_REVEAL_STEP} more unchanged lines below the change above`
+      ? t("files.diff.showMoreBelow", { count: DIFF_REVEAL_STEP })
       : dir === "fromBelow"
-        ? `Show ${DIFF_REVEAL_STEP} more unchanged lines above the change below`
-        : "Show all unchanged lines"
+        ? t("files.diff.showMoreAbove", { count: DIFF_REVEAL_STEP })
+        : t("files.diff.showAll")
   control.append(arrowIcon(dir))
   return control
 }

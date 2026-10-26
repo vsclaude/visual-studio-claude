@@ -16,6 +16,7 @@ import { Spinner } from "@/components/ui/spinner"
 import * as repo from "@/lib/workspace"
 import { useStudio } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 
 /** The directory's own name, as a starting point for the folder's name. */
 function basename(target: string): string {
@@ -60,6 +61,7 @@ function draggedKind(transfer: DataTransfer): "folder" | "file" {
  */
 export function AddFolderDialog({ onClose }: { onClose: () => void }) {
   const addFolder = useStudio((state) => state.addFolder)
+  const t = useT()
 
   const nameId = useId()
   const pathId = useId()
@@ -120,9 +122,9 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
             <FolderPlus className="size-5" />
           </span>
           <div className="min-w-0 space-y-0.5">
-            <DialogTitle>Add a folder</DialogTitle>
+            <DialogTitle>{t("nav.addFolder.title")}</DialogTitle>
             <DialogDescription>
-              Work on a folder where it already is. Nothing is copied.
+              {t("nav.addFolder.description")}
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -153,7 +155,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
               // otherwise be drawn as the folder chosen and only fail on Add.
               const entry = event.dataTransfer.items[0]?.webkitGetAsEntry()
               if (entry && !entry.isDirectory) {
-                setError("Only folders can be added.")
+                setError(t("nav.addFolder.onlyFoldersError"))
                 return
               }
               const file = event.dataTransfer.files[0]
@@ -187,7 +189,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
                   </span>
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground transition-colors group-hover:text-foreground">
-                  Change
+                  {t("nav.addFolder.change")}
                 </span>
               </>
             ) : (
@@ -213,15 +215,15 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
                   )}
                 >
                   {dragging === "folder"
-                    ? "Drop to add it"
+                    ? t("nav.addFolder.dropToAdd")
                     : dragging === "file"
-                      ? "Only folders can be added"
-                      : "Choose a folder"}
+                      ? t("nav.addFolder.onlyFolders")
+                      : t("nav.addFolder.choose")}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {dragging === "file"
-                    ? "Drag the folder that holds it instead"
-                    : "or drag one here from Finder"}
+                    ? t("nav.addFolder.dragParent")
+                    : t("nav.addFolder.orDrag")}
                 </span>
               </span>
             )}
@@ -233,7 +235,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
                 htmlFor={pathId}
                 className="text-xs font-medium text-muted-foreground"
               >
-                Path
+                {t("nav.addFolder.path")}
               </Label>
               <Input
                 id={pathId}
@@ -253,7 +255,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
                 htmlFor={nameId}
                 className="text-xs font-medium text-muted-foreground"
               >
-                Name
+                {t("nav.addFolder.name")}
               </Label>
               <Input
                 id={nameId}
@@ -274,15 +276,15 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
 
           <DialogFooter className="items-center sm:justify-between">
             <p className="text-[0.7rem] text-muted-foreground">
-              Removing it later leaves its files untouched.
+              {t("nav.addFolder.removeNote")}
             </p>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={!path || adding}>
                 {adding && <Spinner />}
-                Add folder
+                {t("nav.addFolder.add")}
               </Button>
             </div>
           </DialogFooter>

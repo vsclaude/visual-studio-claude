@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import type { ImageDoc } from "@/lib/files/store"
+import { useT } from "@/lib/i18n"
 import { FileImage } from "./file-image"
 
 /**
@@ -24,6 +25,7 @@ export function FileImageDiff({
   image: ImageDoc
   revision: unknown
 }) {
+  const t = useT()
   const [head, setHead] = useState<ImageDoc | "absent">({ kind: "loading" })
 
   useEffect(() => {
@@ -54,14 +56,14 @@ export function FileImageDiff({
     <div className="grid h-full min-h-0 grid-cols-2 divide-x">
       <Side label="HEAD">
         {head === "absent" ? (
-          <Missing text="Not in HEAD — this picture is new." />
+          <Missing text={t("files.image.newInWorkingTree")} />
         ) : (
           <FileImage image={head} alt={`${path} at HEAD`} />
         )}
       </Side>
-      <Side label="Working tree">
+      <Side label={t("files.image.workingTree")}>
         {deleted && head.kind !== "loading" ? (
-          <Missing text="Deleted." />
+          <Missing text={t("files.image.deleted")} />
         ) : (
           <FileImage image={image} alt={path} />
         )}

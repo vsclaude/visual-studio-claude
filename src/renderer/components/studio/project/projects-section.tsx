@@ -189,7 +189,15 @@ function ProjectHeader({
         title={`New chat in ${folder.name}`}
       >
         <Plus className="text-primary" />
-        Chat
+        {/* Segoe UI's tall ascent sets its capitals ~1px below the line box's
+            middle, so on Windows the word sat lower than the centred `+`. */}
+        <span
+          className={
+            window.desktop.platform === "win32" ? "-translate-y-px" : undefined
+          }
+        >
+          Chat
+        </span>
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger

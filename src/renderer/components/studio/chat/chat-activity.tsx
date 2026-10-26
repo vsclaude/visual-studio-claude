@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react"
 import { CircleAlert } from "lucide-react"
 
 import { Spinner } from "@/components/ui/spinner"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   dayDividerBetween,
@@ -127,6 +128,7 @@ function ToolGroup({
   lines: ToolLine[]
   live: boolean
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const running = live && lines.some(isPending)
 
@@ -141,7 +143,7 @@ function ToolGroup({
         <Chevron open={open} />
         {running ? (
           <Spinner
-            aria-label="Running"
+            aria-label={t("transcript.message.running")}
             className="size-3 shrink-0 translate-y-0.5 text-foreground/70"
           />
         ) : (

@@ -74,6 +74,7 @@ import { useGitStatus } from "@/lib/files/git-status"
 import { iconFor } from "@/lib/files/icons"
 import { useFiles } from "@/lib/files/store"
 import { useSettings } from "@/lib/settings"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { formatCredits } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
@@ -271,7 +272,7 @@ export function ChatComposer({
   sending,
   onSend,
   onStop,
-  placeholder = "Ask about this checkout…",
+  placeholder,
   options = DEFAULT_CHAT_OPTIONS,
   onOptions,
   attachRoot,
@@ -354,6 +355,7 @@ export function ChatComposer({
    */
   onLeave?: (text: string, images: ChatImage[]) => void
 }) {
+  const t = useT()
   const [draft, setDraft] = useState(initialDraft)
   /**
    * Every picture added to this draft, in the order it was added — `[Image #n]`
@@ -821,8 +823,8 @@ export function ChatComposer({
         <div
           role="separator"
           aria-orientation="horizontal"
-          aria-label="Resize the composer"
-          title="Drag to resize, double-click to reset"
+          aria-label={t("chat.composer.resize")}
+          title={t("chat.composer.resizeHint")}
           onPointerDown={onResizeStart}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeEnd}
@@ -862,8 +864,8 @@ export function ChatComposer({
               </span>
               <button
                 type="button"
-                aria-label="Leave the selection out"
-                title="Leave the selection out"
+                aria-label={t("chat.composer.leaveSelectionOut")}
+                title={t("chat.composer.leaveSelectionOut")}
                 onClick={() => useEditorSelection.getState().clear()}
                 className="inline-flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-accent hover:text-foreground"
               >
@@ -930,7 +932,7 @@ export function ChatComposer({
             onPaste={onPaste}
             rows={3}
             spellCheck={false}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("chat.composer.placeholder")}
             style={
               height === null
                 ? undefined
@@ -1020,7 +1022,7 @@ export function ChatComposer({
                 render={
                   <button
                     type="button"
-                    aria-label="Add to this message"
+                    aria-label={t("chat.composer.addToMessage")}
                     className={cn(
                       "inline-flex size-6 items-center justify-center rounded-md text-muted-foreground",
                       "transition-colors hover:bg-accent hover:text-foreground",
@@ -1034,7 +1036,7 @@ export function ChatComposer({
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuItem onClick={() => void attach()}>
                   <Paperclip />
-                  Attach file
+                  {t("chat.composer.attachFile")}
                   <span className="ml-auto text-[0.65rem] text-muted-foreground">
                     ⌘U
                   </span>
@@ -1042,14 +1044,14 @@ export function ChatComposer({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={startMention}>
                   <AtSign />
-                  Mention a file…
+                  {t("chat.composer.mentionFile")}
                   <span className="ml-auto text-[0.65rem] text-muted-foreground">
                     @
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={startCommand}>
                   <Slash />
-                  Run a command…
+                  {t("chat.composer.runCommand")}
                   <span className="ml-auto text-[0.65rem] text-muted-foreground">
                     /
                   </span>
@@ -1059,7 +1061,7 @@ export function ChatComposer({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setMcpOpen(true)}>
                       <Plug />
-                      MCP servers…
+                      {t("chat.composer.mcpServers")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -1078,12 +1080,18 @@ export function ChatComposer({
               screen.
             */}
             {sending && (
-              <IconButton label="Stop" variant="outline" onClick={onStop}>
+              <IconButton
+                label={t("chat.composer.stop")}
+                variant="outline"
+                onClick={onStop}
+              >
                 <Square />
               </IconButton>
             )}
             <IconButton
-              label={sending ? "Send next" : "Send"}
+              label={
+                sending ? t("chat.composer.sendNext") : t("chat.composer.send")
+              }
               variant="outline"
               disabled={!draft.trim()}
               onClick={submit}
@@ -1178,6 +1186,7 @@ export function ModelMenu({
   effort: ChatEffort | null
   onPick: (model: string | null, effort: ChatEffort | null) => void
 }) {
+  const t = useT()
   const rows = orderedModels(models)
   const chosen = rows.find((entry) => entry.value === model)
   /* What the CLI's `default` row actually is. Read once for the menu rather
@@ -1194,12 +1203,12 @@ export function ModelMenu({
 
   const buttonLabel =
     model === null
-      ? "Inherit"
+      ? t("chat.model.inherit")
       : chosen
         ? effort && chatEfforts(models, model).includes(effort)
-          ? `${nameOf(chosen)} · ${EFFORT_LABELS[effort]}`
+          ? `${nameOf(chosen)} · ${t(EFFORT_LABELS[effort])}`
           : nameOf(chosen)
-        : (model ?? "Model")
+        : (model ?? t("chat.model.model"))
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -1216,7 +1225,7 @@ export function ModelMenu({
             // `--model` this CLI no longer lists, and the honest answer is what
             // the record says rather than the name of some other model.
             label={buttonLabel}
-            title="Which model answers and how much thinking it gets"
+            title={t("chat.model.title")}
             on={model !== null}
           />
         }
@@ -1268,13 +1277,13 @@ export function ModelMenu({
                     )}
                     {entry.isNew && (
                       <span className="rounded border border-muted-foreground/40 px-1 py-[0.5px] text-[0.5625rem] leading-tight font-semibold tracking-tight text-muted-foreground uppercase">
-                        NEW
+                        {t("chat.model.new")}
                       </span>
                     )}
                   </div>
                   {isSelected && effort && (
                     <span className="text-[0.6875rem] font-normal text-muted-foreground/80">
-                      {EFFORT_LABELS[effort]}
+                      {t(EFFORT_LABELS[effort])}
                     </span>
                   )}
                   {entry.isFavorite && (!isSelected || !effort) && (
@@ -1296,7 +1305,7 @@ export function ModelMenu({
                     >
                       <span className="flex items-center gap-1.5">
                         <EffortIcon effort={level} />
-                        {EFFORT_LABELS[level]}
+                        {t(EFFORT_LABELS[level])}
                       </span>
                       {isSelected && effort === level && (
                         <CheckIcon className="size-3.5 text-foreground" />
@@ -1332,7 +1341,7 @@ export function ModelMenu({
                 )}
                 {entry.isNew && (
                   <span className="rounded border border-muted-foreground/40 px-1 py-[0.5px] text-[0.5625rem] leading-tight font-semibold tracking-tight text-muted-foreground uppercase">
-                    NEW
+                    {t("chat.model.new")}
                   </span>
                 )}
               </div>
@@ -1353,9 +1362,11 @@ export function ModelMenu({
             )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-xs font-normal">Inherit</span>
+            <span className="truncate text-xs font-normal">
+              {t("chat.model.inherit")}
+            </span>
             <span className="truncate text-[0.625rem] text-muted-foreground">
-              Whatever your own `claude` is set to
+              {t("chat.model.inheritDetail")}
             </span>
           </div>
         </DropdownMenuItem>
@@ -1366,12 +1377,12 @@ export function ModelMenu({
 
 /** The levels as a row says them — the CLI's own words, capitalised, since
  * `xhigh` is a flag value and not something to put in front of somebody. */
-const EFFORT_LABELS: Record<ChatEffort, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  xhigh: "Very high",
-  max: "Max",
+const EFFORT_LABELS: Record<ChatEffort, MessageKey> = {
+  low: "chat.effort.low",
+  medium: "chat.effort.medium",
+  high: "chat.effort.high",
+  xhigh: "chat.effort.xhigh",
+  max: "chat.effort.max",
 }
 
 function EffortIcon({ effort }: { effort: ChatEffort | null }) {
@@ -1401,6 +1412,7 @@ function PermissionMenu({
   permission: ChatPermission
   onPick: (permission: ChatPermission) => void
 }) {
+  const t = useT()
   const chosen = PERMISSION_MARKS[permission] ?? PERMISSION_MARKS.edits
 
   return (
@@ -1409,8 +1421,8 @@ function PermissionMenu({
         render={
           <ToolbarButton
             icon={<chosen.icon />}
-            label={chosen.short}
-            title={chosen.detail}
+            label={t(chosen.short)}
+            title={t(chosen.detail)}
             on={permission !== "edits"}
             // The one mode that is worth spotting from across the pane: a chat
             // left on it approves whatever the next turn reaches for.
@@ -1429,12 +1441,12 @@ function PermissionMenu({
             >
               <mark.icon />
               <span className="flex min-w-0 flex-col">
-                {mark.label}
+                {t(mark.label)}
                 {/* The second line is the whole point of the menu being wider
                     than the others: "read only" and "full access" are the two
                     somebody has to be sure about before picking. */}
                 <span className="text-[0.7rem] text-muted-foreground">
-                  {mark.detail}
+                  {t(mark.detail)}
                 </span>
               </span>
               {permission === entry && <Check />}
@@ -1474,6 +1486,7 @@ export function ProfileMenu({
   profileId: string | null
   onPick: (profileId: string | null) => void
 }) {
+  const t = useT()
   const chosen = profiles.find((profile) => profile.id === profileId)
   const accounts = useClaudeProfiles((state) => state.accounts)
   const checking = useClaudeProfiles((state) => state.checking)
@@ -1510,8 +1523,12 @@ export function ProfileMenu({
                 <UserRound />
               )
             }
-            label={free ? "Credits" : (chosen?.name ?? "Account")}
-            title="Which CLAUDE_CONFIG_DIR this chat's turns run under"
+            label={
+              free
+                ? t("chat.profile.credits")
+                : (chosen?.name ?? t("chat.profile.account"))
+            }
+            title={t("chat.profile.title")}
             on={profileId !== null}
           />
         }
@@ -1519,17 +1536,17 @@ export function ProfileMenu({
       <DropdownMenuContent align="start" className="w-72 p-1.5">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2 pt-1 pb-1.5 text-[0.625rem] font-medium tracking-wider text-muted-foreground uppercase">
-            Account for this chat
+            {t("chat.profile.heading")}
           </DropdownMenuLabel>
           <PickerRow
             onSelect={() => onPick(null)}
             tile={<PickerTile icon={UserRound} />}
-            title="This account"
+            title={t("chat.profile.thisAccount")}
             detail={
               <AccountLine
                 account={accounts[""]}
                 busy={checking.includes("")}
-                fallback="Whichever your own `claude` is already signed into"
+                fallback={t("chat.profile.thisAccountFallback")}
               />
             }
             selected={profileId === null}
@@ -1540,16 +1557,18 @@ export function ProfileMenu({
             <PickerRow
               onSelect={() => onPick(FREE_PROFILE_ID)}
               tile={<CreditsBadge size="sm" />}
-              title="Pay with credits"
+              title={t("chat.profile.payWithCredits")}
               detail={
                 <span className={stuck ? "text-destructive" : undefined}>
                   {!freeReady
-                    ? "Signed out"
+                    ? t("chat.profile.signedOut")
                     : broke
-                      ? "No credits left · top up to keep going"
+                      ? t("chat.profile.noCreditsLeft")
                       : credits !== undefined
-                        ? `Every model · ${formatCredits(credits)} left`
-                        : "Every model, paid with credits"}
+                        ? t("chat.profile.creditsLeft", {
+                            credits: formatCredits(credits),
+                          })
+                        : t("chat.profile.everyModel")}
                 </span>
               }
               selected={free}
@@ -1564,8 +1583,8 @@ export function ProfileMenu({
                   className="bg-amber-500/15 text-amber-500"
                 />
               }
-              title="Buy credits"
-              detail="Pay as you go · no monthly fee"
+              title={t("chat.credits.buy")}
+              detail={t("chat.profile.buyDetail")}
               trailing={
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               }
@@ -1591,7 +1610,7 @@ export function ProfileMenu({
                     busy={checking.includes(profile.configDir.trim())}
                   />
                 ) : (
-                  "No directory set"
+                  t("chat.profile.noDirectory")
                 )
               }
               selected={profileId === profile.id}
@@ -1684,6 +1703,7 @@ function AccountLine({
    * sentence of its own worth keeping. */
   fallback?: string
 }) {
+  const t = useT()
   const { text, tone } = accountLine(account)
 
   return (
@@ -1693,7 +1713,11 @@ function AccountLine({
         tone === "bad" && !busy ? "text-destructive" : "text-muted-foreground"
       )}
     >
-      {busy && !account ? "Checking…" : !account && fallback ? fallback : text}
+      {busy && !account
+        ? t("common.checking")
+        : !account && fallback
+          ? fallback
+          : text}
     </span>
   )
 }
@@ -1704,41 +1728,41 @@ function AccountLine({
 const PERMISSION_MARKS: Record<
   ChatPermission,
   {
-    label: string
+    label: MessageKey
     /** The toolbar has room for one word. */
-    short: string
-    detail: string
+    short: MessageKey
+    detail: MessageKey
     icon: typeof Map
   }
 > = {
   plan: {
-    label: "Plan",
-    short: "Plan",
-    detail: "Reads, and answers with a plan. Changes nothing.",
+    label: "chat.permission.plan.label",
+    short: "chat.permission.plan.short",
+    detail: "chat.permission.plan.detail",
     icon: Map,
   },
   read: {
-    label: "Read only",
-    short: "Read",
-    detail: "Reads and answers. No edits, no shell.",
+    label: "chat.permission.read.label",
+    short: "chat.permission.read.short",
+    detail: "chat.permission.read.detail",
     icon: Eye,
   },
   ask: {
-    label: "Ask",
-    short: "Ask",
-    detail: "Asks exactly what the claude CLI would, under your own settings.",
+    label: "chat.permission.ask.label",
+    short: "chat.permission.ask.short",
+    detail: "chat.permission.ask.detail",
     icon: MessageCircleQuestion,
   },
   edits: {
-    label: "Edits",
-    short: "Edits",
-    detail: "Edits files and runs commands in this checkout.",
+    label: "chat.permission.edits.label",
+    short: "chat.permission.edits.short",
+    detail: "chat.permission.edits.detail",
     icon: PencilLine,
   },
   full: {
-    label: "Full access",
-    short: "Full",
-    detail: "Nothing is asked, including tools this app has not listed.",
+    label: "chat.permission.full.label",
+    short: "chat.permission.full.short",
+    detail: "chat.permission.full.detail",
     icon: ShieldOff,
   },
 }
@@ -1832,6 +1856,7 @@ function Marks({
  * terminal theme's, so `WINDOW_TONES` maps them here.
  */
 function WindowMeter({ of }: { of: ChatWindow }) {
+  const t = useT()
   const band = bandOf(of)
   const slices = windowSlices(of)
   const hint = windowHint(of)
@@ -1845,7 +1870,9 @@ function WindowMeter({ of }: { of: ChatWindow }) {
             // The detail on the title as well as in the menu: the meter is a
             // glance, and hovering should answer the question without a click.
             title={hint ? `${windowDetail(of)}\n${hint}` : windowDetail(of)}
-            aria-label={`Context window: ${windowLabel(of)} before auto-compacting`}
+            aria-label={t("chat.composer.contextWindow", {
+              label: windowLabel(of),
+            })}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem]",
               "transition-colors hover:bg-accent data-[popup-open]:bg-accent",
@@ -1905,7 +1932,7 @@ function WindowMeter({ of }: { of: ChatWindow }) {
         ))}
         {slices.length === 0 && (
           <div className="px-2 py-1 text-[0.7rem] text-muted-foreground">
-            No breakdown was reported.
+            {t("chat.composer.noBreakdown")}
           </div>
         )}
         {hint && (
@@ -1951,6 +1978,7 @@ function CommandMenu({
   onSelect: (command: AgentCommand) => void
   onHover: (index: number) => void
 }) {
+  const t = useT()
   const list = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
@@ -2010,7 +2038,7 @@ function CommandMenu({
                     command.name
                   ) && (
                     <span className="ml-auto shrink-0 text-[0.625rem] text-muted-foreground/70">
-                      this app
+                      {t("chat.composer.thisApp")}
                     </span>
                   )}
                 </span>
@@ -2028,8 +2056,8 @@ function CommandMenu({
       {items.length === 0 && (
         <li className="px-2 py-1.5 text-[0.7rem] text-muted-foreground">
           {loading
-            ? "Asking claude what it can run…"
-            : (error ?? "No command matches that.")}
+            ? t("chat.composer.askingCommands")
+            : (error ?? t("chat.composer.noCommand"))}
         </li>
       )}
     </ul>

@@ -702,6 +702,35 @@ in `globals.css`) so it shows through the card's edges as well; the cards'
 contents keep their own opaque surfaces so text stays readable. Capped at the
 image-preview ceiling, 20 MB. Not drawn in the popped-out chat window.
 
+### Language
+
+**Language** (Appearance) is `System`, English or Tiếng Việt, kept as
+`language` in `workbench.settings`; `System` reads `navigator.language`, which
+in Electron is the OS's. `lib/i18n` is written here rather than taken from
+i18next: what the UI needs is a key looked up and a `{name}` filled in, and
+Vietnamese has no plural forms, so English's one rule — a `_one` sibling read
+when `count` is 1 — is the whole plural engine. The dictionaries are a file per
+area of the window (`lib/i18n/en/<area>.ts`), English being the shape every
+other one is typed against, so a missing key fails `typecheck`;
+`test/i18n.ts` catches the one thing the types cannot, a placeholder renamed on
+one side.
+
+The **first launch** offers it too, as a pill in the corner of the setup screen
+from its first page (`LanguagePicker` in `claude-setup.tsx`): somebody who
+cannot read the screen has to be able to change it before reading anything on
+it, and Settings is behind the whole of the setup and the tour. It lights the
+locale in use, so a `System` that came out Vietnamese shows Vietnamese; a pick
+there is written down as that locale.
+
+The language is the **UI's**, not the conversation's. Nothing sent to `claude`
+is translated — the system prompt, a mode's sentence at the head of a message,
+`Continue.` — because those are instructions to the model, identical on every
+turn for the cache's sake (§ The chat is hosted, not tailed), and the model
+answers in whatever language it is written to. Git's own verbs (commit, push,
+stage) stay English inside Vietnamese sentences, the way Vietnamese developers
+say them. Not every surface is translated yet; an untranslated string is simply
+English.
+
 ### The free AI
 
 Anybody signed in to the studio (Google, through the server) can chat on

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from "react"
 import { ChevronDown, ChevronUp, X } from "lucide-react"
 
+import { useT } from "@/lib/i18n"
 import { IconButton } from "../icon-button"
 
 /**
@@ -50,6 +51,7 @@ export function ChatFind({
   onStep: (by: number) => void
   onClose: () => void
 }) {
+  const t = useT()
   const field = useRef<HTMLInputElement>(null)
 
   // Focused on the press rather than with `autoFocus`, which fires only on the
@@ -88,8 +90,8 @@ export function ChatFind({
         value={query}
         onChange={(event) => onQuery(event.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Find in this chat"
-        aria-label="Find in this chat"
+        placeholder={t("transcript.find.placeholder")}
+        aria-label={t("transcript.find.placeholder")}
         spellCheck={false}
         className="h-6 w-44 bg-transparent text-xs outline-none placeholder:text-muted-foreground/70"
       />
@@ -99,11 +101,15 @@ export function ChatFind({
           that has not been filled in — and nothing at all before anything is
           typed, since there is no question to answer yet. */}
       <span className="w-20 shrink-0 text-right text-[0.7rem] text-muted-foreground tabular-nums">
-        {total > 0 ? `${at + 1} of ${total}` : query ? "No results" : ""}
+        {total > 0
+          ? t("transcript.find.count", { at: at + 1, total })
+          : query
+            ? t("transcript.find.none")
+            : ""}
       </span>
 
       <IconButton
-        label="Previous match"
+        label={t("transcript.find.previous")}
         side="bottom"
         disabled={total === 0}
         onClick={() => onStep(-1)}
@@ -111,14 +117,14 @@ export function ChatFind({
         <ChevronUp />
       </IconButton>
       <IconButton
-        label="Next match"
+        label={t("transcript.find.next")}
         side="bottom"
         disabled={total === 0}
         onClick={() => onStep(1)}
       >
         <ChevronDown />
       </IconButton>
-      <IconButton label="Close" side="bottom" onClick={onClose}>
+      <IconButton label={t("common.close")} side="bottom" onClick={onClose}>
         <X />
       </IconButton>
     </div>

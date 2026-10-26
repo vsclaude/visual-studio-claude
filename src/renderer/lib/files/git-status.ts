@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import type { GitFileState, GitStatusEntry } from "@shared/api"
+import type { MessageKey } from "../i18n"
 import { useStudio } from "../store"
 import { isInside } from "./paths"
 import { fileRoots, rootOf, type FileRoot } from "./roots"
@@ -75,13 +76,13 @@ export const GIT_LETTERS: Record<GitFileState, string | null> = {
 
 /** What the row's hover line says after the path, so the colours are readable
  * by somebody who has not learnt them — and by somebody who cannot see them. */
-export const GIT_LABELS: Record<GitFileState, string> = {
-  untracked: "new",
-  added: "new",
-  modified: "modified",
-  deleted: "deleted",
-  conflicted: "conflicted",
-  ignored: "ignored",
+export const GIT_LABELS: Record<GitFileState, MessageKey> = {
+  untracked: "files.gitState.new",
+  added: "files.gitState.new",
+  modified: "files.gitState.modified",
+  deleted: "files.gitState.deleted",
+  conflicted: "files.gitState.conflicted",
+  ignored: "files.gitState.ignored",
 }
 
 /**

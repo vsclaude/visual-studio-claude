@@ -29,6 +29,7 @@ import { GIT_LABELS, GIT_LETTERS, GIT_TONES } from "@/lib/files/git-status"
 import { nameOf } from "@/lib/files/paths"
 import type { FileRoot } from "@/lib/files/roots"
 import { useFiles } from "@/lib/files/store"
+import { useT } from "@/lib/i18n"
 import { useStudio } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { FileIcon } from "../file-icon"
@@ -82,6 +83,7 @@ import { CommitBox } from "./commit-box"
  * reached by keyboard has.
  */
 export function ChangesList({ root }: { root: FileRoot }) {
+  const t = useT()
   const changes = useChanges((state) => state.byRoot[root.id])
   const loading = useChanges((state) => state.loading.includes(root.id))
 
@@ -111,11 +113,11 @@ export function ChangesList({ root }: { root: FileRoot }) {
   if (changes === undefined) {
     // Only before the first answer. A re-read behind a list already on screen
     // says nothing — the rows are still true until they are replaced.
-    return loading ? <Note>Reading…</Note> : null
+    return loading ? <Note>{t("files.reading")}</Note> : null
   }
 
   if (changes.length === 0) {
-    return <Note>Nothing has changed in this checkout.</Note>
+    return <Note>{t("files.changes.nothingChanged")}</Note>
   }
 
   const { staged, unstaged } = splitChanges(changes)
@@ -179,7 +181,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
         {staged.length > 0 && (
           <>
             <Heading
-              label="Staged"
+              label={t("files.changes.staged")}
               count={staged.length}
               open={open.staged}
               onToggle={() =>
@@ -187,7 +189,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
               }
             >
               <RowAction
-                label={"Unstage everything"}
+                label={t("files.changes.unstageEverything")}
                 onClick={() => {
                   void useChanges.getState().unstage(
                     root,
@@ -205,7 +207,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
         {unstaged.length > 0 && (
           <>
             <Heading
-              label="Changes"
+              label={t("files.changes.changes")}
               count={unstaged.length}
               open={open.unstaged}
               onToggle={() =>
@@ -213,13 +215,13 @@ export function ChangesList({ root }: { root: FileRoot }) {
               }
             >
               <RowAction
-                label={"Discard every change in this checkout"}
+                label={t("files.changes.discardEverything")}
                 onClick={() => setDiscarding("all")}
               >
                 <Undo2 />
               </RowAction>
               <RowAction
-                label={"Stage everything"}
+                label={t("files.changes.stageEverything")}
                 onClick={() => {
                   void useChanges.getState().stage(
                     root,
@@ -245,7 +247,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
                 }}
               >
                 <Minus />
-                Unstage
+                {t("files.changes.unstage")}
               </ContextMenuItem>
             ) : (
               <ContextMenuItem
@@ -254,7 +256,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
                 }}
               >
                 <Plus />
-                Stage
+                {t("files.changes.stage")}
               </ContextMenuItem>
             )}
             <ContextMenuItem
@@ -262,7 +264,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
               onClick={() => setDiscarding(target)}
             >
               <Undo2 />
-              Discard changes…
+              {t("files.changes.discardChanges")}
             </ContextMenuItem>
             {/* A directory row has no path to copy: the folders in this tree
                 exist because a file's path passed through them, and this
@@ -276,7 +278,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
                   }
                 >
                   <Copy />
-                  Copy path
+                  {t("files.copyPath")}
                 </ContextMenuItem>
               </>
             )}
@@ -297,7 +299,7 @@ export function ChangesList({ root }: { root: FileRoot }) {
           }}
         >
           <Plus />
-          Stage all
+          {t("files.changes.stageAll")}
         </ContextMenuItem>
         <ContextMenuItem
           disabled={staged.length === 0}
@@ -309,14 +311,14 @@ export function ChangesList({ root }: { root: FileRoot }) {
           }}
         >
           <Minus />
-          Unstage all
+          {t("files.changes.unstageAll")}
         </ContextMenuItem>
         <ContextMenuItem
           variant="destructive"
           onClick={() => setDiscarding("all")}
         >
           <Undo2 />
-          Discard all changes…
+          {t("files.changes.discardAllChanges")}
         </ContextMenuItem>
       </ContextMenuContent>
 
@@ -449,6 +451,7 @@ function DirRow({
   onMenu: (target: RowTarget) => void
   onDiscard: (target: RowTarget) => void
 }) {
+  const t = useT()
   const under = changesUnder(node)
   const target: RowTarget = {
     label: node.label,
@@ -461,7 +464,10 @@ function DirRow({
     <div className="group/row relative">
       <SideRow
         indent={indent}
-        title={`${node.label} — ${under.length} changed ${under.length === 1 ? "file" : "files"}`}
+        title={t("files.changes.dirTitle", {
+          label: node.label,
+          count: under.length,
+        })}
         onContextMenu={() => onMenu(target)}
         onClick={onToggle}
       >
@@ -505,6 +511,7 @@ function DiscardDialog({
   count: number
   onClose: () => void
 }) {
+  const t = useT()
   const row = target === "all" ? null : target
   const all = target === "all"
   // A folder row, which is the one case that discards many paths at once.
@@ -521,21 +528,24 @@ function DiscardDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>
             {all
-              ? `Discard every change in ${root.label}?`
+              ? t("files.changes.discardAllTitle", { name: root.label })
               : one
-                ? `Discard changes to “${row?.label}”?`
-                : `Discard ${row?.paths.length} changes in “${row?.label}”?`}
+                ? t("files.changes.discardOneTitle", { name: row?.label ?? "" })
+                : t("files.changes.discardManyTitle", {
+                    count: row?.paths.length ?? 0,
+                    name: row?.label ?? "",
+                  })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {all
-              ? `All ${count} changed ${count === 1 ? "file" : "files"} go back to the last commit. Files that were never committed are moved to the trash. Nothing staged is kept.`
+              ? t("files.changes.discardAllDescription", { count })
               : one
-                ? "The file goes back to the last commit — the staged copy and the edits on disk both. A file that was never committed is moved to the trash instead, since there is nothing to go back to."
-                : "Every changed file in this folder goes back to the last commit — the staged copies and the edits on disk both. Files that were never committed are moved to the trash instead, since there is nothing to go back to."}
+                ? t("files.changes.discardOneDescription")
+                : t("files.changes.discardManyDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             onClick={() => {
@@ -545,7 +555,7 @@ function DiscardDialog({
               onClose()
             }}
           >
-            Discard
+            {t("files.changes.discard")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -572,6 +582,7 @@ function ChangeRow({
   const active = useChanges(
     (state) => state.selectedPath[root.id] === change.path
   )
+  const t = useT()
 
   const target: RowTarget = {
     label: nameOf(change.path),
@@ -587,8 +598,16 @@ function ChangeRow({
         indent={indent}
         title={
           change.directory
-            ? `${change.path}/ — a ${GIT_LABELS[change.state]} folder, everything in it. Opens in All files.`
-            : `${change.path} — ${GIT_LABELS[change.state]}${change.staged ? ", staged" : ""}`
+            ? t("files.changes.folderRowTitle", {
+                path: change.path,
+                state: t(GIT_LABELS[change.state]),
+              })
+            : t(
+                change.staged
+                  ? "files.changes.fileRowTitleStaged"
+                  : "files.changes.fileRowTitle",
+                { path: change.path, state: t(GIT_LABELS[change.state]) }
+              )
         }
         onContextMenu={() => onMenu(target)}
         onClick={() => {
@@ -726,7 +745,10 @@ function RowActions({
   root: FileRoot
   onDiscard: (target: RowTarget) => void
 }) {
-  const what = target.path ? target.label : `everything in ${target.label}`
+  const t = useT()
+  const what = target.path
+    ? target.label
+    : t("files.changes.everythingIn", { name: target.label })
 
   return (
     <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100 group-hover/row:pointer-events-auto group-hover/row:opacity-100">
@@ -736,7 +758,7 @@ function RowActions({
           the dialog rather than acting, which is the other half of that. */}
       {!target.staged && (
         <RowAction
-          label={`Discard changes to ${what}`}
+          label={t("files.changes.discardChangesTo", { what })}
           onClick={() => onDiscard(target)}
         >
           <Undo2 />
@@ -744,7 +766,7 @@ function RowActions({
       )}
       {target.staged ? (
         <RowAction
-          label={`Unstage ${what}`}
+          label={t("files.changes.unstageWhat", { what })}
           onClick={() => {
             void useChanges.getState().unstage(root, target.paths)
           }}
@@ -753,7 +775,7 @@ function RowActions({
         </RowAction>
       ) : (
         <RowAction
-          label={`Stage ${what}`}
+          label={t("files.changes.stageWhat", { what })}
           onClick={() => {
             void useChanges.getState().stage(root, target.paths)
           }}

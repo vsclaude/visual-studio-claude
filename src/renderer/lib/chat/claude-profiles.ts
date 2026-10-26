@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import type { ClaudeAccount, ClaudeProfile } from "@shared/api"
+import { t } from "@/lib/i18n"
 
 /**
  * The workspace's `CLAUDE_CONFIG_DIR` profiles — see `ClaudeProfile`.
@@ -179,15 +180,15 @@ export function accountLabel(account: ClaudeAccount | undefined): {
 } {
   switch (account?.state) {
     case "signedIn":
-      return { label: "Signed in", tone: "good" }
+      return { label: t("projects.profiles.signedIn"), tone: "good" }
     case "signedOut":
-      return { label: "Not signed in", tone: "bad" }
+      return { label: t("projects.profiles.notSignedIn"), tone: "bad" }
     case "missing":
-      return { label: "No such directory", tone: "bad" }
+      return { label: t("projects.profiles.missing"), tone: "bad" }
     case "error":
-      return { label: "Could not check", tone: "bad" }
+      return { label: t("projects.profiles.couldNotCheck"), tone: "bad" }
     default:
-      return { label: "Not checked", tone: "off" }
+      return { label: t("projects.profiles.notChecked"), tone: "off" }
   }
 }
 
@@ -223,7 +224,10 @@ export function accountLine(account: ClaudeAccount | undefined): {
 } {
   if (account?.state === "signedIn") {
     return {
-      text: account.email ?? account.organization ?? "Signed in",
+      text:
+        account.email ??
+        account.organization ??
+        t("projects.profiles.signedIn"),
       tone: "good",
     }
   }
@@ -233,5 +237,7 @@ export function accountLine(account: ClaudeAccount | undefined): {
 
 /** A new profile's name, the same way `nextEnvironmentName` picks one. */
 export function nextProfileName(count: number): string {
-  return count === 0 ? "Profile" : `Profile ${count + 1}`
+  return count === 0
+    ? t("projects.profiles.first")
+    : t("projects.profiles.numbered", { number: count + 1 })
 }

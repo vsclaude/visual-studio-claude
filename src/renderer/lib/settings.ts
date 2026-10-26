@@ -10,6 +10,7 @@ import {
   isSansFont,
   type Appearance,
 } from "./appearance"
+import { isLanguageChoice, type LanguageChoice } from "./i18n"
 import { recall, remember } from "./tab-memory"
 import { getSetting, setSetting } from "./workspace"
 
@@ -87,6 +88,12 @@ type Stored = {
   accountsHeight: number | null
   /** The Accounts foot folded down to its heading. */
   accountsCollapsed: boolean
+  /**
+   * The language the UI is drawn in — `lib/i18n`. `system` by default, so a
+   * machine set to Vietnamese opens in Vietnamese without anybody finding the
+   * row first.
+   */
+  language: LanguageChoice
 } & Appearance
 
 function isStored(value: unknown): value is Stored {
@@ -135,7 +142,8 @@ function isStored(value: unknown): value is Stored {
       record.accountsHeight === null ||
       typeof record.accountsHeight === "number") &&
     (record.accountsCollapsed === undefined ||
-      typeof record.accountsCollapsed === "boolean")
+      typeof record.accountsCollapsed === "boolean") &&
+    (record.language === undefined || isLanguageChoice(record.language))
   )
 }
 
@@ -177,6 +185,9 @@ type SettingsState = Stored & {
   setAccountsHeight: (height: number | null) => void
   setAccountsCollapsed: (collapsed: boolean) => void
   setAllProjectTabs: (on: boolean) => void
+  /** Applied to the UI by `applyLanguage` through a subscription, the way
+   * the appearance is. */
+  setLanguage: (language: LanguageChoice) => void
   /** Reads the stored preferences. Called once, at launch. */
   restore: () => Promise<void>
 }
@@ -220,6 +231,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       composerHeight,
       accountsHeight,
       accountsCollapsed,
+      language,
     } = get()
     remember(SETTINGS_KEY, {
       diffSideBySide,
@@ -239,6 +251,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       composerHeight,
       accountsHeight,
       accountsCollapsed,
+      language,
     })
   }
 
@@ -261,6 +274,7 @@ export const useSettings = create<SettingsState>((set, get) => {
     composerHeight: null,
     accountsHeight: null,
     accountsCollapsed: false,
+    language: "system",
     chatNotifications: true,
     loaded: false,
 
@@ -349,6 +363,11 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setAccountsCollapsed(accountsCollapsed) {
       set({ accountsCollapsed })
+      save()
+    },
+
+    setLanguage(language) {
+      set({ language })
       save()
     },
 

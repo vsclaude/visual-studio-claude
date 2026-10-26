@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/context-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
+import { useT, type Translate } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
 import { useProjectIcon } from "@/lib/project-icon"
 import { checkoutsOf, projectOf, projectsIn } from "@/lib/project-checkouts"
@@ -54,6 +55,7 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
   const sending = useChats((state) => state.sending)
   const asks = useChats((state) => state.asks)
   const unread = useChats((state) => state.unread)
+  const t = useT()
 
   const showing = sidebar && view === "projects"
   // The same fallback the column makes for an id that names nothing. Lit by
@@ -176,7 +178,7 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
         />
       )}
       <IconButton
-        label="Add project"
+        label={t("projects.rail.addProject")}
         side="right"
         onClick={onAddFolder}
         className="size-8 shrink-0 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-solid"
@@ -218,13 +220,14 @@ function ProjectIcon({
   drag: SlotDrag
 }) {
   const picture = useProjectIcon(folder.id)
+  const t = useT()
 
   return (
     <ContextMenu>
       <ContextMenuTrigger
         render={
           <RailSlot
-            label={`${folder.name}${badgeTitle(badge)}`}
+            label={badgeTitle(t, folder.name, badge)}
             active={active}
             badge={badge}
             onClick={onClick}
@@ -277,9 +280,10 @@ function UngroupedIcon({
   const asks = useChats((state) => state.asks)
   const unread = useChats((state) => state.unread)
   const badge = railBadgeOf(chats, sending, asks, unread)
+  const t = useT()
   return (
     <RailSlot
-      label={`Ungrouped — ${chats.length} chat${chats.length === 1 ? "" : "s"} with no project`}
+      label={t("projects.rail.ungrouped", { count: chats.length })}
       active={active}
       badge={badge}
       onClick={onClick}
@@ -401,14 +405,15 @@ function Badge({ badge }: { badge: RailBadge }) {
 }
 
 /** The badge said out loud, after the project's name in the tooltip. */
-function badgeTitle(badge: RailBadge): string {
-  if (!badge) return ""
+function badgeTitle(t: Translate, name: string, badge: RailBadge): string {
+  if (!badge) return name
+  const vars = { name, count: badge.count }
   switch (badge.kind) {
     case "needs":
-      return ` — ${badge.count} need${badge.count === 1 ? "s" : ""} you`
+      return t("projects.rail.needs", vars)
     case "working":
-      return ` — ${badge.count} running`
+      return t("projects.rail.running", vars)
     case "unread":
-      return ` — ${badge.count} answered`
+      return t("projects.rail.answered", vars)
   }
 }

@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   headlineWindow,
@@ -42,6 +43,7 @@ export function PlanUsageMeter({
   profileId: string | null
   sending: boolean
 }) {
+  const t = useT()
   const key = profileId ?? ""
   const usage = usePlanUsage((state) => state.byProfile[key])
   const loading = usePlanUsage((state) => state.loading.includes(key))
@@ -64,6 +66,7 @@ export function PlanUsageMeter({
   const headline = headlineWindow(usage.windows)
   const tone = headline ? usageTone(headline.utilization) : "ok"
   const now = new Date()
+  const headlineReset = headline ? resetLabel(headline.resetsAt, now) : null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -73,14 +76,19 @@ export function PlanUsageMeter({
             type="button"
             title={
               headline
-                ? `${windowLabel(headline.id)} limit: ${percent(headline.utilization)} used${
-                    resetLabel(headline.resetsAt, now)
-                      ? `, ${resetLabel(headline.resetsAt, now)}`
-                      : ""
-                  }`
-                : "Plan usage"
+                ? headlineReset
+                  ? t("chat.planUsage.meterTitleReset", {
+                      window: windowLabel(headline.id),
+                      percent: percent(headline.utilization),
+                      reset: headlineReset,
+                    })
+                  : t("chat.planUsage.meterTitle", {
+                      window: windowLabel(headline.id),
+                      percent: percent(headline.utilization),
+                    })
+                : t("chat.planUsage.title")
             }
-            aria-label="Plan usage"
+            aria-label={t("chat.planUsage.title")}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] tabular-nums",
               "transition-colors hover:bg-accent data-[popup-open]:bg-accent",
@@ -95,7 +103,7 @@ export function PlanUsageMeter({
                 {percent(headline.utilization)}
               </>
             ) : (
-              "Usage"
+              t("chat.planUsage.usage")
             )}
           </button>
         }
@@ -103,7 +111,7 @@ export function PlanUsageMeter({
       <PopoverContent align="start" className="w-64 gap-0 p-0">
         <div className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-3">
           <p className="flex-1 text-xs font-medium">
-            Plan usage
+            {t("chat.planUsage.title")}
             {planName(usage.subscription) && (
               <span className="ml-1.5 font-normal text-muted-foreground">
                 {planName(usage.subscription)}
@@ -111,7 +119,7 @@ export function PlanUsageMeter({
             )}
           </p>
           <IconButton
-            label="Refresh"
+            label={t("common.refresh")}
             side="bottom"
             disabled={loading}
             onClick={() => void load(profileId, true)}
@@ -125,7 +133,7 @@ export function PlanUsageMeter({
           <p className="p-3 text-xs text-destructive">{usage.error}</p>
         ) : usage.windows.length === 0 ? (
           <p className="p-3 text-xs text-muted-foreground">
-            Claude reported no usage windows for this plan.
+            {t("chat.planUsage.noWindows")}
           </p>
         ) : (
           <div className="space-y-2.5 p-3">

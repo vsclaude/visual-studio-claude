@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { X } from "lucide-react"
 
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import type { OutlineEntry } from "@/lib/chat/outline"
 import { IconButton } from "../icon-button"
@@ -29,6 +30,7 @@ export function ChatOutline({
   onPick: (id: string) => void
   onClose: () => void
 }) {
+  const t = useT()
   const list = useRef<HTMLOListElement>(null)
 
   // The marked row kept in view as the transcript scrolls under it: a long
@@ -41,16 +43,16 @@ export function ChatOutline({
   }, [current])
 
   return (
-    <SideColumn label="Table of contents">
+    <SideColumn label={t("transcript.outline.label")}>
       <div className="flex h-8 shrink-0 items-center gap-1 pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate text-[0.7rem] font-medium text-muted-foreground">
-          Contents
+          {t("transcript.outline.title")}
           <span className="ml-1.5 tabular-nums opacity-70">
             {entries.length}
           </span>
         </span>
         <IconButton
-          label="Close contents"
+          label={t("transcript.outline.close")}
           side="bottom"
           onClick={onClose}
           className="shrink-0"
@@ -61,7 +63,7 @@ export function ChatOutline({
 
       {entries.length === 0 ? (
         <p className="px-3 py-2 text-[0.7rem] text-muted-foreground">
-          Nothing asked yet.
+          {t("transcript.outline.empty")}
         </p>
       ) : (
         <ol ref={list} className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">

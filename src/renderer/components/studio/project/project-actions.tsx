@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useT } from "@/lib/i18n"
 import { chooseProjectIcon, resetProjectIcon } from "@/lib/project-icon"
 import { isCheckout, projectsIn } from "@/lib/project-checkouts"
 import { useProjects } from "@/lib/projects"
@@ -91,6 +92,7 @@ export function ProjectMenuItems({
   Separator: ComponentType
 }) {
   const dialogs = useProjectDialogs.getState()
+  const t = useT()
   // Read when the menu opens rather than subscribed to: a menu is up for one
   // decision, and the list does not move under it.
   const all = useStudio.getState().folders
@@ -113,7 +115,7 @@ export function ProjectMenuItems({
         onClick={() => void useChats.getState().create({ folderId: folder.id })}
       >
         <MessageSquare className="text-muted-foreground" />
-        New chat here
+        {t("projects.actions.newChatHere")}
       </Item>
       <Item
         onClick={() => {
@@ -125,41 +127,41 @@ export function ProjectMenuItems({
         }}
       >
         <SquareTerminal className="text-muted-foreground" />
-        New terminal here
+        {t("projects.actions.newTerminalHere")}
       </Item>
       <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
         <GitBranchPlus className="text-muted-foreground" />
-        New worktree…
+        {t("projects.actions.newWorktree")}
       </Item>
       {!checkout && (
         <>
           <Item onClick={() => dialogs.set({ renaming: folder })}>
             <Pencil className="text-muted-foreground" />
-            Rename…
+            {t("projects.actions.rename")}
           </Item>
           <Separator />
           {/* The rail's drag, for somebody not holding a mouse. */}
           <Item disabled={index <= 0} onClick={() => move(index - 1)}>
             <ArrowUp className="text-muted-foreground" />
-            Move up
+            {t("projects.actions.moveUp")}
           </Item>
           <Item
             disabled={index === -1 || index >= folders.length - 1}
             onClick={() => move(index + 1)}
           >
             <ArrowDown className="text-muted-foreground" />
-            Move down
+            {t("projects.actions.moveDown")}
           </Item>
         </>
       )}
       <Separator />
       <Item onClick={() => void navigator.clipboard.writeText(folder.path)}>
         <ClipboardCopy className="text-muted-foreground" />
-        Copy path
+        {t("projects.actions.copyPath")}
       </Item>
       <Item onClick={() => void window.desktop.revealPath(folder.path)}>
         <ExternalLink className="text-muted-foreground" />
-        Reveal in file manager
+        {t("projects.actions.reveal")}
       </Item>
       <Separator />
       {checkout ? (
@@ -168,7 +170,7 @@ export function ProjectMenuItems({
           onClick={() => dialogs.set({ removingWorktree: folder })}
         >
           <Trash2 />
-          Remove worktree…
+          {t("projects.actions.removeWorktree")}
         </Item>
       ) : (
         <>
@@ -181,11 +183,11 @@ export function ProjectMenuItems({
             }}
           >
             <ImageIcon className="text-muted-foreground" />
-            Change icon…
+            {t("projects.actions.changeIcon")}
           </Item>
           <Item onClick={() => void resetProjectIcon(folder.id)}>
             <ImageOff className="text-muted-foreground" />
-            Reset icon
+            {t("projects.actions.resetIcon")}
           </Item>
           <Separator />
           <Item
@@ -193,7 +195,7 @@ export function ProjectMenuItems({
             onClick={() => dialogs.set({ removing: folder })}
           >
             <Trash2 />
-            Remove project
+            {t("projects.actions.removeProject")}
           </Item>
         </>
       )}
@@ -206,6 +208,7 @@ export function ProjectMenuItems({
 export function ProjectDialogs() {
   const { removing, renaming, worktreeOf, removingWorktree, set } =
     useProjectDialogs()
+  const t = useT()
 
   return (
     <>
@@ -217,16 +220,18 @@ export function ProjectDialogs() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this project?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("projects.actions.removeProjectTitle")}
+            </AlertDialogTitle>
             {/* The same sentence Explorer's own dialog says: this is the same
                 call, and a second wording would leave somebody comparing the
                 two to work out whether their repository is at stake. */}
             <AlertDialogDescription>
-              The folder stays on disk.
+              {t("projects.actions.folderStays")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -235,7 +240,7 @@ export function ProjectDialogs() {
                 set({ removing: null })
               }}
             >
-              Remove
+              {t("common.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -250,19 +255,19 @@ export function ProjectDialogs() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remove the worktree “{removingWorktree?.name}”?
+              {t("projects.actions.removeWorktreeTitle", {
+                name: removingWorktree?.name ?? "",
+              })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              The checkout is deleted with any changes in it that are not
-              committed. The branch and its commits stay, and its chats are kept
-              under Ungrouped. Its terminals are closed first.
+              {t("projects.actions.removeWorktreeDescription")}
             </AlertDialogDescription>
             <p className="max-w-full font-mono text-xs break-all text-muted-foreground">
               {removingWorktree?.path}
             </p>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -298,7 +303,7 @@ export function ProjectDialogs() {
                   )
               }}
             >
-              Remove worktree
+              {t("projects.actions.removeWorktreeConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -306,8 +311,8 @@ export function ProjectDialogs() {
 
       {renaming && (
         <RenameDialog
-          title="Rename project"
-          label="Project name"
+          title={t("projects.actions.renameProject")}
+          label={t("projects.actions.projectName")}
           currentName={renaming.name}
           onRename={async (name) => {
             try {
@@ -316,7 +321,7 @@ export function ProjectDialogs() {
             } catch (error) {
               return error instanceof Error
                 ? error.message
-                : "Could not rename that project."
+                : t("projects.actions.renameFailed")
             }
           }}
           onClose={() => set({ renaming: null })}
@@ -338,12 +343,13 @@ export function ProjectDialogs() {
 export function ProjectFailure() {
   const failure = useProjectDialogs((state) => state.failure)
   const set = useProjectDialogs((state) => state.set)
+  const t = useT()
   if (!failure) return null
   return (
     <div className="flex shrink-0 items-start gap-1 border-t bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
       <p className="min-w-0 flex-1">{failure}</p>
       <IconButton
-        label="Dismiss"
+        label={t("projects.actions.dismiss")}
         onClick={() => set({ failure: null })}
         className="size-5 shrink-0"
       >

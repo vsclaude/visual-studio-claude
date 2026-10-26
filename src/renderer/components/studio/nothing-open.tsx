@@ -21,6 +21,7 @@ import { useShells } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
 import { useWorkspaceSearch } from "@/lib/workspace-search"
 import { useChats } from "@/lib/chat/store"
+import { useT } from "@/lib/i18n"
 
 /**
  * The pane with nothing in it: one notice for the whole workbench rather than
@@ -41,6 +42,7 @@ export function NothingOpen() {
     folders.find((folder) => folder.id === activeFolderId) ??
     folders[0]
   const mod = IS_MAC ? "⌘" : "Ctrl+"
+  const t = useT()
 
   return (
     <div className="flex size-full items-center justify-center p-6">
@@ -52,7 +54,7 @@ export function NothingOpen() {
           <div className="flex items-center gap-1">
             <Action
               icon={<MessageSquarePlus />}
-              label="New chat"
+              label={t("nav.nothingOpen.newChat")}
               onClick={() => {
                 // Into that project first, the way its own row's click moves
                 // the tree and the shell: the tab is in the strip only while
@@ -73,7 +75,7 @@ export function NothingOpen() {
             >
               <SelectTrigger
                 size="sm"
-                aria-label="Project"
+                aria-label={t("nav.nothingOpen.project")}
                 className="h-7 max-w-40 min-w-0 border-0 bg-transparent text-xs text-muted-foreground shadow-none hover:text-foreground dark:bg-transparent"
               >
                 <SelectValue />
@@ -94,13 +96,13 @@ export function NothingOpen() {
         )}
         <Action
           icon={<Search />}
-          label="Go to file or chat"
+          label={t("nav.nothingOpen.goTo")}
           keys={`${mod}P`}
           onClick={() => usePalette.getState().setOpen(true)}
         />
         <Action
           icon={<TextSearch />}
-          label="Find in files"
+          label={t("nav.nothingOpen.findInFiles")}
           keys={IS_MAC ? "⇧⌘F" : "Ctrl+Shift+F"}
           onClick={() => {
             useProjects.getState().showView("search")
@@ -109,7 +111,7 @@ export function NothingOpen() {
         />
         <Action
           icon={<SquareTerminal />}
-          label="Terminal"
+          label={t("nav.rail.terminal")}
           keys={IS_MAC ? "⌃`" : "Ctrl+`"}
           onClick={() => useDock.getState().toggle()}
         />

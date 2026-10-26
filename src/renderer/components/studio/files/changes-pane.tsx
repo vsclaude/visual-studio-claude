@@ -11,6 +11,7 @@ import {
 import { useChanges } from "@/lib/files/changes"
 import { fileRootsOf } from "@/lib/files/roots"
 import { isImage } from "@/lib/files/viewers"
+import { useT } from "@/lib/i18n"
 import { useFiles } from "@/lib/files/store"
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
@@ -40,6 +41,7 @@ import { FilePane } from "./file-workspace"
  * what keeps reviewing from spawning tabs.
  */
 export function ChangesPane() {
+  const t = useT()
   const openIds = useChanges((state) => state.openIds)
   const selectedId = useChanges((state) => state.selectedId)
   const rootId = selectedId && openIds.includes(selectedId) ? selectedId : null
@@ -111,8 +113,8 @@ export function ChangesPane() {
   if (!root) {
     return (
       <Notice
-        title="That project has gone"
-        detail="The project this tab was opened for is no longer in the workspace. Close the tab, or pick a file under Changes in the Explorer."
+        title={t("files.changesPane.goneTitle")}
+        detail={t("files.changesPane.goneDetail")}
       />
     )
   }
@@ -132,11 +134,11 @@ export function ChangesPane() {
     />
   ) : (
     <Notice
-      title="Nothing selected"
+      title={t("files.changesPane.nothingSelected")}
       detail={
         count
-          ? "Pick a file under Changes in the Explorer to read what changed in it."
-          : "Nothing has changed in this checkout."
+          ? t("files.changesPane.pickFile")
+          : t("files.changes.nothingChanged")
       }
     />
   )

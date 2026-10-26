@@ -22,6 +22,7 @@ import {
   type ChatPlace,
   type ChatOptions,
 } from "@shared/api"
+import { useT, type Translate } from "@/lib/i18n"
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -87,6 +88,7 @@ export function ChatPane({
   const selectedId = useChats((state) => state.selectedId)
   const openIds = useChats((state) => state.openIds)
 
+  const t = useT()
   const shown = chatId
     ? chats.find((chat) => chat.id === chatId)
     : selectedId && openIds.includes(selectedId)
@@ -100,8 +102,7 @@ export function ChatPane({
     return (
       <div className="grid h-full place-items-center p-6">
         <p className="max-w-xs text-center text-xs text-muted-foreground">
-          That chat has been deleted. Pick another from the strip, or start one
-          from its project.
+          {t("transcript.pane.deleted")}
         </p>
       </div>
     )
@@ -153,12 +154,16 @@ export function ChatPane({
  * placeholder saying otherwise is the composer being wrong about the one thing
  * that decides how carefully somebody phrases the next sentence.
  */
-const placeholderFor = (permission: ChatPermission, where: string): string =>
+const placeholderFor = (
+  t: Translate,
+  permission: ChatPermission,
+  where: string
+): string =>
   permission === "plan"
-    ? `Ask for a plan for ${where}…`
+    ? t("transcript.pane.placeholderPlan", { where })
     : permission === "read"
-      ? `Ask about ${where}…`
-      : `Ask to make changes in ${where}…`
+      ? t("transcript.pane.placeholderRead", { where })
+      : t("transcript.pane.placeholderEdit", { where })
 
 /**
  * Where each chat was left reading, by chat id.
@@ -242,6 +247,7 @@ function Conversation({
   /** Drawn inside a chat's own window rather than the studio's pane. */
   popped?: boolean
 }) {
+  const t = useT()
   const messages = useChats((state) => state.messages[chatId])
   const reading = useChats((state) => state.reading.includes(chatId))
   const sending = useChats((state) => state.sending.includes(chatId))
@@ -825,7 +831,7 @@ function Conversation({
       {dropping && (
         <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-lg border-2 border-dashed border-ring bg-background/70">
           <p className="text-xs text-muted-foreground">
-            Drop to add it to your message
+            {t("transcript.pane.drop")}
           </p>
         </div>
       )}
@@ -841,7 +847,11 @@ function Conversation({
           {title}
         </h2>
         <IconButton
-          label={outlineOpen ? "Hide contents" : "Show contents"}
+          label={
+            outlineOpen
+              ? t("transcript.pane.hideContents")
+              : t("transcript.pane.showContents")
+          }
           side="bottom"
           onClick={toggleOutline}
           className={cn("size-6", outlineOpen && "bg-accent")}
@@ -849,7 +859,11 @@ function Conversation({
           <ListTree className="size-3.5" />
         </IconButton>
         <IconButton
-          label={side === "media" ? "Hide media" : "Show media"}
+          label={
+            side === "media"
+              ? t("transcript.pane.hideMedia")
+              : t("transcript.pane.showMedia")
+          }
           side="bottom"
           onClick={() => toggleSide("media")}
           className={cn("size-6", side === "media" && "bg-accent")}
@@ -857,7 +871,7 @@ function Conversation({
           <Images className="size-3.5" />
         </IconButton>
         <IconButton
-          label="Find in chat"
+          label={t("transcript.pane.find")}
           side="bottom"
           onClick={openFind}
           className="size-6"
@@ -869,7 +883,7 @@ function Conversation({
             window, which has no studio to pop out of. */}
         {!popped && !unsaved && (
           <IconButton
-            label="Open in its own window"
+            label={t("transcript.pane.popOut")}
             side="bottom"
             onClick={() => void window.desktop.openChatWindow(chatId)}
             className="size-6"
@@ -1055,7 +1069,7 @@ function Conversation({
                 {compacting && (
                   <div className="flex items-center gap-2 px-1 text-[0.7rem] text-muted-foreground">
                     <Archive className="size-3 shrink-0 animate-pulse" />
-                    <span>Compacting the conversation…</span>
+                    <span>{t("transcript.pane.compacting")}</span>
                     <Elapsed startedAt={compacting} />
                   </div>
                 )}
@@ -1066,7 +1080,9 @@ function Conversation({
                   <div className="flex items-center gap-2 px-1 text-[0.7rem] text-destructive">
                     <Archive className="size-3 shrink-0" />
                     <span className="truncate">
-                      Could not compact: {compactError}
+                      {t("transcript.pane.compactFailed", {
+                        error: compactError,
+                      })}
                     </span>
                   </div>
                 )}
@@ -1090,7 +1106,7 @@ function Conversation({
               from there on. */}
           {away && !empty && !reading && (
             <IconButton
-              label="Scroll to bottom"
+              label={t("transcript.pane.toBottom")}
               variant="outline"
               onClick={toBottom}
               className="absolute bottom-3 left-1/2 z-10 size-8 -translate-x-1/2 animate-pop rounded-full bg-background shadow-md"
@@ -1155,13 +1171,17 @@ function Conversation({
             onStop={() => stop(chatId)}
             placeholder={
               ask
-                ? "Answer above to carry on…"
+                ? t("transcript.pane.placeholderAsk")
                 : sending
                   ? // Said rather than left to be discovered: the field is live
                     // while a turn runs, and somebody who last used this app a
                     // version ago has every reason to think it is not.
-                    "Type ahead — this goes when the turn ends…"
-                  : placeholderFor(options.permission, "this project")
+                    t("transcript.pane.placeholderQueued")
+                  : placeholderFor(
+                      t,
+                      options.permission,
+                      t("transcript.pane.thisProject")
+                    )
             }
             options={options}
             onOptions={(next) => setOptions(chatId, next)}

@@ -24,6 +24,7 @@ import { parentOf, relativeTo } from "@/lib/files/paths"
 import { fileRootsOf, rootOfPath } from "@/lib/files/roots"
 import { isDirty, useFiles, viewOf, type FileDoc } from "@/lib/files/store"
 import { viewersFor, type Viewer } from "@/lib/files/viewers"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { useSettings } from "@/lib/settings"
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
@@ -50,6 +51,7 @@ import { FileBlocks } from "./file-blocks"
 export function FileWorkspace() {
   const openIds = useFiles((state) => state.openIds)
   const selectedId = useFiles((state) => state.selectedId)
+  const t = useT()
 
   /*
    * Whether this panel is the one on screen at all.
@@ -122,9 +124,9 @@ export function FileWorkspace() {
             <EmptyMedia variant="icon" style={{ color: SECTION_ACCENT.files }}>
               <FolderTree />
             </EmptyMedia>
-            <EmptyTitle>No file open</EmptyTitle>
+            <EmptyTitle>{t("files.workspace.noFileOpen")}</EmptyTitle>
             <EmptyDescription>
-              Pick one from the tree on the left.
+              {t("files.workspace.pickFromTree")}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -161,6 +163,7 @@ export function FilePane({
   visible: boolean
   preferred?: Viewer
 }) {
+  const t = useT()
   const doc = useFiles((state) => state.docs[path])
   const image = useFiles((state) => state.images[path])
   const viewer = useFiles((state) => viewOf(state, path, preferred))
@@ -262,7 +265,7 @@ export function FilePane({
 
         {dirty && (
           <span className="shrink-0 text-[0.65rem] text-muted-foreground">
-            Unsaved
+            {t("files.workspace.unsaved")}
           </span>
         )}
 
@@ -291,7 +294,7 @@ export function FilePane({
           image?.kind === "image" &&
           encodableTypeOf(path) && (
             <IconButton
-              label="Edit image"
+              label={t("files.workspace.editImage")}
               onClick={() => setEditing(image.src)}
               className="shrink-0"
             >
@@ -305,7 +308,7 @@ export function FilePane({
             view — a control that moves between viewers is one the eye has to
             find again. */}
         <IconButton
-          label="Save"
+          label={t("common.save")}
           disabled={!dirty}
           onClick={commit}
           className="shrink-0"
@@ -313,14 +316,14 @@ export function FilePane({
           <Save />
         </IconButton>
         <IconButton
-          label="Copy path"
+          label={t("files.copyPath")}
           onClick={() => void navigator.clipboard.writeText(path)}
           className="shrink-0"
         >
           <Copy />
         </IconButton>
         <IconButton
-          label="Reveal in file manager"
+          label={t("files.reveal")}
           onClick={() => void window.desktop.revealPath(path)}
           className="shrink-0"
         >
@@ -332,7 +335,7 @@ export function FilePane({
         <div className="flex shrink-0 items-start gap-1 border-b bg-destructive/10 px-3 py-1.5 font-mono text-xs text-destructive">
           <p className="min-w-0 flex-1">{failure}</p>
           <IconButton
-            label="Dismiss"
+            label={t("files.dismiss")}
             onClick={() => setFailure(null)}
             className="size-5 shrink-0"
           >
@@ -411,6 +414,7 @@ function Body({
    * a diff too — two versions of a megabyte of one line is not a thing to
    * render — and `error` is not, for the reason the comment further down gives.
    */
+  const t = useT()
   const readable =
     doc === undefined ||
     doc.kind === "loading" ||
@@ -449,14 +453,14 @@ function Body({
   }
 
   if (doc === undefined || doc.kind === "loading") {
-    return <Notice title="Reading…" />
+    return <Notice title={t("files.reading")} />
   }
 
   if (doc.kind === "binary") {
     return (
       <Notice
-        title="Not a text file"
-        detail="There is nothing here an editor could show without corrupting it on the way back out. Reveal it to open it in whatever does read this format."
+        title={t("files.workspace.notText")}
+        detail={t("files.workspace.notTextDetail")}
       />
     )
   }
@@ -464,8 +468,10 @@ function Body({
   if (doc.kind === "too-large") {
     return (
       <Notice
-        title="Too large to open"
-        detail={`${(doc.size / (1024 * 1024)).toFixed(1)} MB. Files this size are the ones that hang an editor rather than the ones somebody reads, so the studio leaves them on disk.`}
+        title={t("files.workspace.tooLarge")}
+        detail={t("files.workspace.tooLargeDetail", {
+          size: (doc.size / (1024 * 1024)).toFixed(1),
+        })}
       />
     )
   }
@@ -486,7 +492,9 @@ function Body({
    * arrive at by typing.
    */
   if (doc.kind === "error") {
-    return <Notice title="Could not open this file" detail={doc.message} />
+    return (
+      <Notice title={t("files.workspace.couldNotOpen")} detail={doc.message} />
+    )
   }
 
   if (viewer === "markdown") return <FileMarkdown text={doc.text} path={path} />
@@ -545,6 +553,7 @@ function ViewerSwitch({
   viewer: Viewer
   changed: boolean
 }) {
+  const t = useT()
   if (
     viewer !== "diff" &&
     viewer !== "text" &&
@@ -556,12 +565,14 @@ function ViewerSwitch({
   const offered = viewersFor(path)
   // At most one of the two is offered for a file, and either is its `Preview`.
   const preview = offered.find((v) => v === "html" || v === "markdown")
-  const choices: [Viewer, string][] = [
-    ...(preview ? [[preview, "Preview"] as [Viewer, string]] : []),
-    ...(offered.includes("diff") && (viewer === "diff" || changed)
-      ? [["diff", "Diff"] as [Viewer, string]]
+  const choices: [Viewer, MessageKey][] = [
+    ...(preview
+      ? [[preview, "files.workspace.preview"] as [Viewer, MessageKey]]
       : []),
-    ["text", "Edit"],
+    ...(offered.includes("diff") && (viewer === "diff" || changed)
+      ? [["diff", "files.workspace.diff"] as [Viewer, MessageKey]]
+      : []),
+    ["text", "files.workspace.edit"],
   ]
   // `Edit` alone is a control with nothing to switch to.
   if (choices.length < 2) return null
@@ -571,7 +582,7 @@ function ViewerSwitch({
       {choices.map(([choice, label]) => (
         <SwitchButton
           key={choice}
-          label={label}
+          label={t(label)}
           on={viewer === choice}
           onClick={() => void useFiles.getState().setView(path, choice)}
         />
@@ -624,12 +635,13 @@ export function DiffControls() {
   const setSideBySide = useSettings((state) => state.setDiffSideBySide)
   const whitespace = useSettings((state) => state.diffWhitespace)
   const setWhitespace = useSettings((state) => state.setDiffWhitespace)
+  const t = useT()
 
   return (
     <div className="flex shrink-0 items-center gap-1">
       <div className="flex items-center rounded-md border p-0.5">
         <IconButton
-          label="Inline"
+          label={t("files.workspace.inline")}
           pressed={!sideBySide}
           className={cn("size-5", !sideBySide && ON)}
           onClick={() => setSideBySide(false)}
@@ -637,7 +649,7 @@ export function DiffControls() {
           <Rows3 />
         </IconButton>
         <IconButton
-          label="Side by side"
+          label={t("files.workspace.sideBySide")}
           pressed={sideBySide}
           className={cn("size-5", sideBySide && ON)}
           onClick={() => setSideBySide(true)}
@@ -647,7 +659,7 @@ export function DiffControls() {
       </div>
 
       <IconButton
-        label="Show whitespace"
+        label={t("files.workspace.showWhitespace")}
         pressed={whitespace}
         className={cn("shrink-0", whitespace && ON)}
         onClick={() => setWhitespace(!whitespace)}

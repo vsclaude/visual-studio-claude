@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { create } from "zustand"
 
 import type { UpdateCheck, UpdateProgress } from "@shared/api"
+import { t } from "./i18n"
 import { recall, remember } from "./tab-memory"
 
 /**
@@ -154,10 +155,12 @@ export function installLabel(
   installing: boolean,
   progress: UpdateProgress | null
 ): string {
-  if (!installing) return "Update and reopen"
-  if (progress?.stage === "installing") return "Installing…"
+  if (!installing) return t("nav.update.install")
+  if (progress?.stage === "installing") return t("nav.update.installing")
   const percent = downloadPercent(progress)
-  return percent === null ? "Downloading…" : `Downloading ${percent}%`
+  return percent === null
+    ? t("nav.update.downloadingIndeterminate")
+    : t("nav.update.downloadingPercent", { percent })
 }
 
 /**

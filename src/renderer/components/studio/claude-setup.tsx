@@ -8,6 +8,7 @@ import {
   Download,
   Gauge,
   KeyRound,
+  Languages,
   Users,
   type LucideIcon,
 } from "lucide-react"
@@ -24,6 +25,15 @@ import {
   setupStep,
   type SetupStep,
 } from "@/lib/chat/claude-setup"
+import {
+  LOCALE_NAMES,
+  LOCALES,
+  useLocale,
+  useT,
+  type MessageKey,
+} from "@/lib/i18n"
+import { withParts } from "@/lib/i18n/parts"
+import { useSettings } from "@/lib/settings"
 import { ClaudeLoginDialog } from "./claude-login-dialog"
 import { StudioMark } from "./splash"
 import { Wordmark } from "./wordmark"
@@ -116,6 +126,7 @@ export function ClaudeSetup({
   /** Finished or skipped — either way the screen goes, for this run. */
   onDone: () => void
 }) {
+  const t = useT()
   const [signingIn, setSigningIn] = useState(false)
   const account = useClaudeProfiles((state) => state.accounts[""])
   const pages: Page[] = firstRun
@@ -158,6 +169,11 @@ export function ClaudeSetup({
         aria-hidden
         className="pointer-events-none absolute -bottom-56 left-1/2 size-[28rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
       />
+
+      {/* On the first launch only, and from the first page: somebody who
+          cannot read the screen has to be able to change it before reading
+          anything on it. A returning user has Settings › Appearance. */}
+      {firstRun && <LanguagePicker />}
 
       <div className="relative flex w-[32rem] max-w-[calc(100vw-3rem)] flex-col items-center">
         <div className="flex animate-rise items-center gap-2.5">
@@ -205,16 +221,14 @@ export function ClaudeSetup({
             {page === "welcome" && <WelcomeHero />}
             {page === "install" &&
               (versions === undefined ? (
-                <Checking label="Looking for Claude Code…" />
+                <Checking label={t("onboarding.lookingForClaude")} />
               ) : installed ? (
                 <Done
-                  title="Claude Code is installed"
-                  detail={
-                    <>
-                      <code>claude</code> {versions.cli} — every chat here runs
-                      on it, in the project&rsquo;s own folder.
-                    </>
-                  }
+                  title={t("onboarding.setup.installedTitle")}
+                  detail={withParts(t("onboarding.setup.installedDetail"), {
+                    claude: <code>claude</code>,
+                    version: versions.cli,
+                  })}
                 />
               ) : (
                 <InstallStep versions={versions} />
@@ -222,14 +236,14 @@ export function ClaudeSetup({
             {page === "signIn" &&
               (signedIn ? (
                 <Done
-                  title="You are signed in"
+                  title={t("onboarding.setup.signedInTitle")}
                   detail={
                     accountCaption(account) ||
-                    "Chats run under one of your Claude profiles."
+                    t("onboarding.setup.signedInDetail")
                   }
                 />
               ) : step === "checking" ? (
-                <Checking label="Checking your sign-in…" />
+                <Checking label={t("onboarding.setup.checkingSignIn")} />
               ) : (
                 <SignInStep versions={versions} />
               ))}
@@ -244,7 +258,7 @@ export function ClaudeSetup({
               <>
                 <RecheckButton checking={checking} onClick={onRecheck} />
                 <Button size="sm" onClick={() => setSigningIn(true)}>
-                  Sign in
+                  {t("onboarding.setup.signIn")}
                   <ArrowRight />
                 </Button>
               </>
@@ -253,13 +267,13 @@ export function ClaudeSetup({
               (page === "signIn" && signedIn)) &&
               firstRun && (
                 <Button size="sm" onClick={next}>
-                  Next
+                  {t("common.next")}
                   <ArrowRight />
                 </Button>
               )}
             {page === "welcome" && (
               <Button size="sm" onClick={onDone}>
-                Get started
+                {t("onboarding.setup.getStarted")}
                 <ArrowRight />
               </Button>
             )}
@@ -273,8 +287,8 @@ export function ClaudeSetup({
             className="mt-5 animate-fade text-xs text-muted-foreground/70 underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
             {page === "install"
-              ? "Already installed? Continue without checking"
-              : "Continue without signing in"}
+              ? t("onboarding.setup.skipInstall")
+              : t("onboarding.setup.skipSignIn")}
           </button>
         )}
       </div>
@@ -292,13 +306,56 @@ export function ClaudeSetup({
   )
 }
 
-const PAGE_LABEL: Record<Page, string> = {
-  install: "Install",
-  signIn: "Sign in",
-  welcome: "Welcome",
+const PAGE_LABEL: Record<Page, MessageKey> = {
+  install: "onboarding.setup.pageInstall",
+  signIn: "onboarding.setup.pageSignIn",
+  welcome: "onboarding.setup.pageWelcome",
+}
+
+/**
+ * The language, as the screen's first control. Shows the locale actually in
+ * use, so on a "system" choice the machine's language is the one lit; picking
+ * one writes it down as a choice of its own.
+ */
+function LanguagePicker() {
+  const t = useT()
+  const locale = useLocale()
+  const setLanguage = useSettings((state) => state.setLanguage)
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t("onboarding.language")}
+      className="absolute top-4 right-4 flex animate-fade items-center gap-1 rounded-full border bg-popover/80 p-0.5 pl-2.5 text-xs shadow-sm backdrop-blur"
+    >
+      <Languages
+        aria-hidden
+        className="mr-0.5 size-3.5 text-muted-foreground"
+      />
+      {LOCALES.map((candidate) => (
+        <button
+          key={candidate}
+          type="button"
+          role="radio"
+          aria-checked={candidate === locale}
+          onClick={() => {
+            setLanguage(candidate)
+          }}
+          className={cn(
+            "rounded-full px-2.5 py-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            candidate === locale
+              ? "bg-primary font-medium text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {LOCALE_NAMES[candidate]}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 function Stepper({ pages, page }: { pages: Page[]; page: Page }) {
+  const t = useT()
   const current = pages.indexOf(page)
   return (
     <ol className="mt-8 flex animate-rise items-center gap-3 text-xs">
@@ -332,7 +389,7 @@ function Stepper({ pages, page }: { pages: Page[]; page: Page }) {
                   active ? "text-foreground" : "text-muted-foreground"
                 )}
               >
-                {PAGE_LABEL[each]}
+                {t(PAGE_LABEL[each])}
               </span>
             </span>
           </li>
@@ -351,6 +408,7 @@ function RecheckButton({
   onClick: () => void
   primary?: boolean
 }) {
+  const t = useT()
   return (
     <Button
       size="sm"
@@ -359,7 +417,7 @@ function RecheckButton({
       onClick={onClick}
     >
       {checking && <Spinner />}
-      Check again
+      {t("onboarding.setup.checkAgain")}
     </Button>
   )
 }
@@ -475,6 +533,7 @@ function Chip({
  * with the chips saying what it is for — several accounts, and the five-hour
  * window the Accounts foot measures for each. */
 function WelcomeHero() {
+  const t = useT()
   return (
     <div
       aria-hidden
@@ -484,7 +543,8 @@ function WelcomeHero() {
         <StudioMark />
       </div>
       <Chip className="top-0 -left-2">
-        <Users />3 accounts
+        <Users />
+        {t("onboarding.setup.accountsChip")}
       </Chip>
       <Chip className="-right-2 bottom-1 [animation-delay:-2.5s]">
         <Gauge />
@@ -495,6 +555,7 @@ function WelcomeHero() {
 }
 
 function InstallStep({ versions }: { versions: ClaudeVersions | undefined }) {
+  const t = useT()
   const platform = window.desktop.platform
   return (
     <>
@@ -502,25 +563,26 @@ function InstallStep({ versions }: { versions: ClaudeVersions | undefined }) {
         id="claude-setup-title"
         className="text-center font-heading text-xl font-medium tracking-tight"
       >
-        Install Claude Code
+        {t("onboarding.setup.installTitle")}
       </h2>
       <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
-        Chats run on the Claude Code CLI, which this machine does not have yet.
-        Run this in {installShell(platform)}, then press Check again.
+        {t("onboarding.setup.installBody", { shell: installShell(platform) })}
       </p>
       <CommandLine command={installCommand(platform)} />
       <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
-        Installed elsewhere? Set <code>CLAUDE_BIN</code> to its path and
-        restart. More options in the{" "}
-        <a
-          href={SETUP_DOCS}
-          target="_blank"
-          rel="noreferrer"
-          className="text-foreground/80 underline underline-offset-2 hover:text-foreground"
-        >
-          setup guide
-        </a>
-        .
+        {withParts(t("onboarding.setup.installElsewhere"), {
+          env: <code>CLAUDE_BIN</code>,
+          guide: (
+            <a
+              href={SETUP_DOCS}
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground/80 underline underline-offset-2 hover:text-foreground"
+            >
+              {t("onboarding.setup.setupGuide")}
+            </a>
+          ),
+        })}
       </p>
       {/* "Could not find" is the paragraph above said again; only a `claude`
           that was found and then failed has something to add. */}
@@ -534,23 +596,27 @@ function InstallStep({ versions }: { versions: ClaudeVersions | undefined }) {
 }
 
 function SignInStep({ versions }: { versions: ClaudeVersions | undefined }) {
+  const t = useT()
   return (
     <>
       <h2
         id="claude-setup-title"
         className="text-center font-heading text-xl font-medium tracking-tight"
       >
-        Sign in to Claude
+        {t("onboarding.setup.signInTitle")}
       </h2>
       <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
-        <code>claude</code>
-        {versions?.cli ? ` ${versions.cli}` : ""} is installed. Sign in once,
-        with a Claude subscription or a Console account, and every chat runs as
-        that account.
+        {withParts(t("onboarding.setup.signInBody"), {
+          claude: (
+            <>
+              <code>claude</code>
+              {versions?.cli ? ` ${versions.cli}` : ""}
+            </>
+          ),
+        })}
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        More accounts can be added later under Accounts, at the foot of the
-        chats column.
+        {t("onboarding.setup.signInMore")}
       </p>
     </>
   )
@@ -565,38 +631,40 @@ function SignInStep({ versions }: { versions: ClaudeVersions | undefined }) {
  * (`limitWayOut`), not a switch made for them, and credits are offered only
  * by a build with a credits server, hence "can".
  */
-const WELCOME_POINTS = [
+const WELCOME_POINTS: {
+  icon: LucideIcon
+  title: MessageKey
+  detail: MessageKey
+}[] = [
   {
     icon: Users,
-    title: "All your Claude accounts",
-    detail:
-      "Sign in to as many as you have, each with its five-hour window in view.",
+    title: "onboarding.setup.accountsTitle",
+    detail: "onboarding.setup.accountsDetail",
   },
   {
     icon: ArrowLeftRight,
-    title: "Switch without starting over",
-    detail:
-      "A chat that hits its limit continues on another account, conversation and all.",
+    title: "onboarding.setup.switchTitle",
+    detail: "onboarding.setup.switchDetail",
   },
   {
     icon: Coins,
-    title: "Keep going past the limit",
-    detail:
-      "With every plan used up, a chat can run on credits instead of waiting hours.",
+    title: "onboarding.setup.creditsTitle",
+    detail: "onboarding.setup.creditsDetail",
   },
 ]
 
 function WelcomeStep() {
+  const t = useT()
   return (
     <>
       <h2
         id="claude-setup-title"
         className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-center font-heading text-2xl font-medium tracking-tight text-transparent"
       >
-        Welcome to Vey Studio
+        {t("onboarding.setup.welcomeTitle")}
       </h2>
       <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
-        You are all set. A short tour of the window comes next.
+        {t("onboarding.setup.welcomeBody")}
       </p>
       <ul className="mx-auto mt-6 flex max-w-sm flex-col gap-4">
         {WELCOME_POINTS.map(({ icon: Icon, title, detail }, index) => (
@@ -609,9 +677,9 @@ function WelcomeStep() {
               <Icon className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-medium">{title}</p>
+              <p className="text-sm font-medium">{t(title)}</p>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                {detail}
+                {t(detail)}
               </p>
             </div>
           </li>
@@ -623,6 +691,7 @@ function WelcomeStep() {
 
 /** The install line as a terminal would show it, prompt and all. */
 function CommandLine({ command }: { command: string }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -653,14 +722,14 @@ function CommandLine({ command }: { command: string }) {
           size="xs"
           variant="ghost"
           className="shrink-0"
-          aria-label="Copy the command"
+          aria-label={t("onboarding.setup.copyCommand")}
           onClick={() => {
             void navigator.clipboard.writeText(command)
             setCopied(true)
           }}
         >
           {copied ? <Check /> : <Copy />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("common.copied") : t("common.copy")}
         </Button>
       </div>
     </div>

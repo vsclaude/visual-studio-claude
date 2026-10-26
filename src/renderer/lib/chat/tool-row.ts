@@ -1,4 +1,5 @@
 import type { AssistantMessage } from "@shared/api"
+import { t, type MessageKey } from "../i18n"
 import { isAgentTool } from "./activity"
 
 /**
@@ -53,22 +54,23 @@ export type ToolRowWords = {
 }
 
 /** A verb and whether rows of it merge, by tool name. A tool not listed
- * reads under its own name and never merges. */
-const VERBS: Record<string, { verb: string; group?: string }> = {
-  Read: { verb: "Read", group: "Read" },
-  NotebookRead: { verb: "Read", group: "Read" },
-  Edit: { verb: "Edit", group: "Edit" },
-  MultiEdit: { verb: "Edit", group: "Edit" },
-  NotebookEdit: { verb: "Edit", group: "Edit" },
-  Write: { verb: "Write", group: "Write" },
-  Bash: { verb: "Ran" },
-  BashOutput: { verb: "Read output" },
-  Glob: { verb: "Searched", group: "Searched" },
-  Grep: { verb: "Searched", group: "Searched" },
-  WebSearch: { verb: "Searched web" },
-  WebFetch: { verb: "Fetched" },
-  TodoWrite: { verb: "Todo" },
-  Skill: { verb: "Skill" },
+ * reads under its own name and never merges. The verb is a key, read in the
+ * language of the moment; `group` is compared, so it stays a fixed word. */
+const VERBS: Record<string, { verb: MessageKey; group?: string }> = {
+  Read: { verb: "transcript.tools.read", group: "Read" },
+  NotebookRead: { verb: "transcript.tools.read", group: "Read" },
+  Edit: { verb: "transcript.tools.edit", group: "Edit" },
+  MultiEdit: { verb: "transcript.tools.edit", group: "Edit" },
+  NotebookEdit: { verb: "transcript.tools.edit", group: "Edit" },
+  Write: { verb: "transcript.tools.write", group: "Write" },
+  Bash: { verb: "transcript.tools.ran" },
+  BashOutput: { verb: "transcript.tools.readOutput" },
+  Glob: { verb: "transcript.tools.searched", group: "Searched" },
+  Grep: { verb: "transcript.tools.searched", group: "Searched" },
+  WebSearch: { verb: "transcript.tools.searchedWeb" },
+  WebFetch: { verb: "transcript.tools.fetched" },
+  TodoWrite: { verb: "transcript.tools.todo" },
+  Skill: { verb: "transcript.tools.skill" },
 }
 
 export function rowOf(line: ToolLine): ToolRowWords {
@@ -82,7 +84,7 @@ export function rowOf(line: ToolLine): ToolRowWords {
     // the object here, not a parameter of it.
     const brief = [line.summary, line.title].filter(Boolean).join(" · ")
     return {
-      verb: "Agent",
+      verb: t("transcript.tools.agent"),
       group: null,
       object: brief ? { kind: "text", text: brief } : null,
       outcome,
@@ -90,7 +92,7 @@ export function rowOf(line: ToolLine): ToolRowWords {
   }
 
   const known = VERBS[line.name]
-  const verb = known?.verb ?? toolLabel(line.name)
+  const verb = known ? t(known.verb) : toolLabel(line.name)
   const group = known?.group ?? null
   const caption = line.title
 
@@ -229,7 +231,9 @@ export function groupOutcome(lines: ToolLine[]): string {
   // of change, and `5 files` over a row showing one chip was a count of
   // something the row was not showing.
   const n = files ? distinctFiles(lines).length : lines.length
-  const count = files ? `${n} ${n === 1 ? "file" : "files"}` : `${n} calls`
+  const count = files
+    ? t("transcript.tools.files", { count: n })
+    : t("transcript.tools.calls", { count: n })
   const stats = lines.map((line) => (line.failed ? null : statOf(line.stat)))
   if (stats.some((stat) => stat === null)) return count
   const added = stats.reduce((sum, stat) => sum + stat!.added, 0)

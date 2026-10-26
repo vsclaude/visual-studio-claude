@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Reply } from "lucide-react"
 
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /**
@@ -43,6 +44,7 @@ export function ReplyToSelection({
   const [at, setAt] = useState<{ x: number; y: number; text: string } | null>(
     null
   )
+  const t = useT()
   const dragging = useRef(false)
 
   useEffect(() => {
@@ -131,7 +133,7 @@ export function ReplyToSelection({
       )}
     >
       <Reply className="size-3" />
-      Reply
+      {t("transcript.reply.button")}
     </button>
   )
 }

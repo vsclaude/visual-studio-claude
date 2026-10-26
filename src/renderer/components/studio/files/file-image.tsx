@@ -9,6 +9,7 @@ import {
 import { ImageOff } from "lucide-react"
 
 import type { ImageDoc } from "@/lib/files/store"
+import { useT } from "@/lib/i18n"
 import { SECTION_ACCENT } from "../section-marks"
 
 /**
@@ -24,6 +25,7 @@ import { SECTION_ACCENT } from "../section-marks"
  * white one look identical.
  */
 export function FileImage({ image, alt }: { image: ImageDoc; alt: string }) {
+  const t = useT()
   /** Natural dimensions, once the browser has decoded it — the one fact about
    * a picture worth a line of chrome, and not known until it loads. */
   const [size, setSize] = useState<{ width: number; height: number } | null>(
@@ -31,11 +33,13 @@ export function FileImage({ image, alt }: { image: ImageDoc; alt: string }) {
   )
 
   if (image.kind === "loading") {
-    return <Notice title="Reading…" />
+    return <Notice title={t("files.reading")} />
   }
 
   if (image.kind === "error") {
-    return <Notice title="Could not open this image" detail={image.message} />
+    return (
+      <Notice title={t("files.image.couldNotOpen")} detail={image.message} />
+    )
   }
 
   return (

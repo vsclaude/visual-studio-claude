@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Search, Settings, SquareTerminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { t as translate, useT } from "@/lib/i18n"
 import { useDock } from "@/lib/dock"
 import { useProjects } from "@/lib/projects"
 import { useWorkspaceSearch } from "@/lib/workspace-search"
@@ -43,10 +44,11 @@ export function NavRail({
   const dockOpen = useDock((state) => state.open)
   const pluginButtons = usePlugins((state) => state.railButtons)
   const toggleDock = useDock((state) => state.toggle)
+  const t = useT()
 
   return (
     <nav
-      aria-label="Window"
+      aria-label={t("nav.rail.window")}
       className="studio-surface flex w-12 shrink-0 flex-col items-center gap-1 rounded-xl bg-background py-2 outline -outline-offset-1 outline-border"
     >
       <ProjectRail onAddFolder={onAddFolder} />
@@ -55,7 +57,7 @@ export function NavRail({
       {/* The workspace's `Find in files`, in the left column — `⌘P` (the title
           bar's field) is still the way to go to a file or a chat by name. */}
       <RailButton
-        label={searching ? "Hide search" : "Search files and chats"}
+        label={t(searching ? "nav.rail.hideSearch" : "nav.rail.search")}
         pressed={searching}
         onClick={() => {
           toggleView("search")
@@ -83,14 +85,14 @@ export function NavRail({
         )
       })}
       <RailButton
-        label="Terminal"
+        label={t("nav.rail.terminal")}
         pressed={dockOpen}
         onClick={toggleDock}
         tour="terminal"
       >
         <SquareTerminal />
       </RailButton>
-      <RailButton label="Settings" onClick={onOpenSettings}>
+      <RailButton label={t("common.settings")} onClick={onOpenSettings}>
         <Settings />
       </RailButton>
       {/* Last, so it is the corner of the window whatever the rail holds above
@@ -107,12 +109,13 @@ async function runRailButton(button: PluginRailButton): Promise<void> {
     await button.run()
   } catch (error) {
     console.error(`[plugin ${button.pluginId}]`, error)
-    usePlugins
-      .getState()
-      .notify(
-        button.pluginId,
-        `${button.label} failed: ${error instanceof Error ? error.message : String(error)}`
-      )
+    usePlugins.getState().notify(
+      button.pluginId,
+      translate("nav.rail.pluginFailed", {
+        label: button.label,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    )
   }
 }
 

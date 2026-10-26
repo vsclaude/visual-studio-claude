@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react"
 import type { TurnUsage } from "@shared/api"
 
 import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "@/components/ui/spinner"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { elapsed } from "@/lib/chat/since"
 import { usageDetail, usageLine } from "@/lib/chat/usage"
@@ -28,6 +29,7 @@ export function ChatSkeleton({
   /** The running turn's spend so far — see `live` in the chat store. */
   live?: TurnUsage
 }) {
+  const t = useT()
   return (
     <div
       className={cn(
@@ -36,7 +38,9 @@ export function ChatSkeleton({
       )}
     >
       <WorkingMark />
-      <span className="text-shimmer shrink-0">Working…</span>
+      <span className="text-shimmer shrink-0">
+        {t("transcript.skeleton.working")}
+      </span>
       {startedAt !== undefined && <Elapsed startedAt={startedAt} />}
       {/* The model and the tokens while they are still moving, in the turn
           line's own words, so the row under the answer reads as this one
@@ -66,11 +70,12 @@ const LOADER_H = "h-5"
  * popped out into one window would otherwise share whichever came first.
  */
 function WorkingMark() {
+  const t = useT()
   const ink = `vs-trace-${useId().replace(/:/g, "")}`
   return (
     <div
       role="status"
-      aria-label="Working"
+      aria-label={t("transcript.skeleton.workingLabel")}
       className={cn(LOADER_H, "flex shrink-0 items-center px-0.5")}
     >
       <svg viewBox={VS_VIEWBOX} fill="none" aria-hidden className="vs-trace">

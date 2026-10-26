@@ -3,6 +3,7 @@ import { Copy } from "lucide-react"
 
 import type { GitCommitFileDiff } from "@shared/api"
 import type { CommitFileTarget } from "@/lib/files/changes"
+import { useT } from "@/lib/i18n"
 import { useSettings } from "@/lib/settings"
 import { IconButton } from "../icon-button"
 import { DiffControls } from "./file-workspace"
@@ -30,6 +31,7 @@ export function CommitDiff({
   folderId: string
   target: CommitFileTarget
 }) {
+  const t = useT()
   const [read, setRead] = useState<{
     key: string
     target: CommitFileTarget
@@ -77,12 +79,14 @@ export function CommitDiff({
           </span>
           <span className="shrink-0">{name}</span>
           <span className="min-w-0 truncate text-muted-foreground">
-            {shown.from ? `from ${shown.from}` : directory}
+            {shown.from
+              ? t("files.commitDiff.from", { path: shown.from })
+              : directory}
           </span>
         </span>
         <DiffControls />
         <IconButton
-          label="Copy path"
+          label={t("files.copyPath")}
           className="shrink-0"
           onClick={() => void navigator.clipboard.writeText(shown.path)}
         >
@@ -92,9 +96,9 @@ export function CommitDiff({
 
       <div className="min-h-0 flex-1">
         {read === null ? null : read.diff.binary ? (
-          <Note>A binary file, or one too large to draw.</Note>
+          <Note>{t("files.commitDiff.binary")}</Note>
         ) : read.diff.before === null && read.diff.after === null ? (
-          <Note>Nothing to show for this file in that commit.</Note>
+          <Note>{t("files.commitDiff.nothing")}</Note>
         ) : (
           <Suspense fallback={<div className="h-full w-full" />}>
             <CodeMirrorFileDiff

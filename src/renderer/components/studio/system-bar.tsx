@@ -22,6 +22,7 @@ import { useStudio } from "@/lib/store"
 import { useSystemUsage } from "@/lib/system/usage"
 import { cn } from "@/lib/utils"
 import { useUpdateWatch } from "@/lib/updates"
+import { useT, type Translate } from "@/lib/i18n"
 import { VsGlyph } from "./credits-badge"
 import { UpdatePill } from "./update-pill"
 
@@ -49,6 +50,7 @@ export function SystemBar() {
   // draws nothing until there is something to install, so it cannot be the
   // thing that keeps the check running.
   useUpdateWatch()
+  const t = useT()
 
   return (
     // No edge or fill of its own: it sits on the canvas under the cards, which
@@ -71,11 +73,11 @@ export function SystemBar() {
           // dialog's violet: it is the one thing on this side that is asking
           // to be clicked, and in plain muted text it read as another reading.
           className={cn(ACTION, "group font-medium text-foreground/80")}
-          title="Report a bug, request a feature or suggest an improvement"
+          title={t("nav.systemBar.feedbackTitle")}
           onClick={() => useFeedbackDialog.getState().show()}
         >
           <MessageSquareHeart className="size-3 shrink-0 text-violet-500 transition-transform group-hover:scale-110" />
-          Feedback
+          {t("nav.systemBar.feedback")}
         </button>
         {usage && <Divider />}
         <span className="flex items-center pr-1">
@@ -112,9 +114,10 @@ function Divider() {
  * same thresholds as `Meter`, so amber means one thing wherever it is seen.
  */
 function MachineUsage({ usage }: { usage: SystemUsage }) {
+  const t = useT()
   return (
     <>
-      <span className={ITEM} title={cpuTitle(usage)}>
+      <span className={ITEM} title={cpuTitle(t, usage)}>
         <Cpu className="size-3 shrink-0" />
         {/* A fixed width, so the row does not shift as 9% becomes 10%. */}
         <span className={cn("w-7", tone(usage.cpuPercent))}>
@@ -122,12 +125,14 @@ function MachineUsage({ usage }: { usage: SystemUsage }) {
         </span>
       </span>
 
-      <span className={cn(ITEM, "shrink")} title={memoryTitle(usage)}>
+      <span className={cn(ITEM, "shrink")} title={memoryTitle(t, usage)}>
         <MemoryStick className="size-3 shrink-0" />
         {/* The free figure, not the used one: "how much is left" is the
             question a glance at the bottom of the window is asking. */}
         <span className={cn("truncate", tone(memoryUsedPercent(usage)))}>
-          {bytes(usage.memoryAvailable)} free
+          {t("nav.systemBar.memoryFree", {
+            size: bytes(usage.memoryAvailable),
+          })}
         </span>
       </span>
 
@@ -135,7 +140,7 @@ function MachineUsage({ usage }: { usage: SystemUsage }) {
           two meters show, measured on the same scale, and the divider is
           what keeps "this app" from reading as a third resource. */}
       <Divider />
-      <span className={ITEM} title={appTitle(usage)}>
+      <span className={ITEM} title={appTitle(t, usage)}>
         <VsGlyph className="h-2.5 w-auto shrink-0" />
         <span className="sr-only">Vey Studio</span>
         <span>{formatPercent(usage.appCpuPercent)}</span>
@@ -162,6 +167,7 @@ function GitLabel() {
   const folders = useStudio((state) => state.folders)
   const branches = useStudio((state) => state.branches)
   const activeFolderId = useProjects((state) => state.activeFolderId)
+  const t = useT()
 
   const shown = shownRootOf(folders, activeFolderId)
   const rootId = shown?.id ?? null
@@ -211,7 +217,7 @@ function GitLabel() {
     <button
       type="button"
       className={cn(ACTION, "shrink")}
-      title={gitTitle(branch, shown.path, upstream, changed)}
+      title={gitTitle(t, branch, shown.path, upstream, changed)}
       onClick={openChanges}
     >
       <GitBranch className="size-3 shrink-0" />
@@ -233,6 +239,7 @@ function GitLabel() {
 }
 
 function gitTitle(
+  t: Translate,
   branch: string,
   path: string,
   upstream: GitUpstream | null,
@@ -241,15 +248,19 @@ function gitTitle(
   const lines = [branch, path, ""]
   if (upstream?.name) {
     lines.push(
-      `${upstream.aheadCount} to push, ${upstream.behind} to pull — ${upstream.name}`
+      t("nav.systemBar.gitUpstream", {
+        ahead: upstream.aheadCount,
+        behind: upstream.behind,
+        name: upstream.name,
+      })
     )
   } else if (upstream) {
-    lines.push(`No upstream — ${upstream.aheadCount} commits not pushed`)
+    lines.push(t("nav.systemBar.gitNoUpstream", { count: upstream.aheadCount }))
   }
   lines.push(
-    changed === 1 ? "1 file changed" : `${changed} files changed`,
+    t("nav.systemBar.filesChanged", { count: changed }),
     "",
-    "Click to open Changes."
+    t("nav.systemBar.openChanges")
   )
   return lines.join("\n")
 }
@@ -273,6 +284,7 @@ function ChatsLabel() {
   const asks = useChats((state) => state.asks)
   const unread = useChats((state) => state.unread)
   const selectedId = useChats((state) => state.selectedId)
+  const t = useT()
 
   const { working, waiting } = activityOf(chats, sending, asks)
   const unseen = unreadIn(chats, unread)
@@ -293,11 +305,11 @@ function ChatsLabel() {
   }
 
   const title = [
-    waiting > 0 && `${waiting} waiting on a question`,
-    unseen > 0 && `${unseen} answered, unread`,
-    working > 0 && `${working} working`,
+    waiting > 0 && t("nav.systemBar.chatsWaiting", { count: waiting }),
+    unseen > 0 && t("nav.systemBar.chatsUnread", { count: unseen }),
+    working > 0 && t("nav.systemBar.chatsWorking", { count: working }),
     "",
-    "Click to go to the next one.",
+    t("nav.systemBar.chatsNext"),
   ]
     .filter((line) => line !== false)
     .join("\n")
@@ -343,41 +355,45 @@ function memoryUsedPercent(usage: SystemUsage): number {
   return Math.max(0, Math.min(100, (used / usage.memoryTotal) * 100))
 }
 
-function cpuTitle(usage: SystemUsage): string {
+function cpuTitle(t: Translate, usage: SystemUsage): string {
   return [
-    `CPU ${Math.round(usage.cpuPercent)}% in use, ${Math.round(100 - usage.cpuPercent)}% idle`,
-    `Across all ${usage.cores} cores, averaged over the last couple of seconds.`,
+    t("nav.systemBar.cpuUse", {
+      used: Math.round(usage.cpuPercent),
+      idle: Math.round(100 - usage.cpuPercent),
+    }),
+    t("nav.systemBar.cpuCores", { count: usage.cores }),
   ].join("\n")
 }
 
-function memoryTitle(usage: SystemUsage): string {
+function memoryTitle(t: Translate, usage: SystemUsage): string {
   const used = usage.memoryTotal - usage.memoryAvailable
   return [
-    `Memory ${bytes(used)} in use of ${bytes(usage.memoryTotal)}`,
-    `${bytes(usage.memoryAvailable)} available.`,
+    t("nav.systemBar.memoryUse", {
+      used: bytes(used),
+      total: bytes(usage.memoryTotal),
+    }),
+    t("nav.systemBar.memoryAvailable", { size: bytes(usage.memoryAvailable) }),
     "",
     // Worth saying, because it is why this figure is kinder than the one a
     // naive "free memory" reading would give — and than the one macOS itself
     // shows under "Memory Used".
-    "Available counts cached memory the system would reclaim on demand,",
-    "not only pages that are wholly free.",
+    t("nav.systemBar.memoryNote"),
   ].join("\n")
 }
 
-function appTitle(usage: SystemUsage): string {
+function appTitle(t: Translate, usage: SystemUsage): string {
   return [
-    `Vey Studio across ${usage.appProcesses} ${
-      usage.appProcesses === 1 ? "process" : "processes"
-    }`,
-    `CPU ${formatPercent(usage.appCpuPercent)} of the machine — ${formatPercent(
-      usage.appCoreCpuPercent
-    )} of one core, which is the figure Activity Monitor shows.`,
-    `Memory ${bytes(usage.appMemory)} resident.`,
+    t("nav.systemBar.appProcesses", { count: usage.appProcesses }),
+    t("nav.systemBar.appCpu", {
+      machine: formatPercent(usage.appCpuPercent),
+      core: formatPercent(usage.appCoreCpuPercent),
+    }),
+    t("nav.systemBar.appMemory", { size: bytes(usage.appMemory) }),
     "",
     // The distinction that stops this reading as a bug: an agent chewing
     // through a turn is the user's own `claude`, and it costs what it costs
     // whether it was started from here or from a terminal.
-    "Terminal panel sessions are separate processes and are not counted here.",
+    t("nav.systemBar.appNote"),
   ].join("\n")
 }
 

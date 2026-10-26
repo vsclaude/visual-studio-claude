@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings"
 import { useStudio } from "@/lib/store"
 import { PREFIX } from "@/lib/tabs"
 import { useChats } from "@/lib/chat/store"
+import { useT } from "@/lib/i18n"
 import { FileIcon } from "./file-icon"
 import type { TabStripItem } from "./tab-strip"
 
@@ -48,6 +49,7 @@ export function useTabItems(): Map<string, TabStripItem> {
 
   const workspaceFolders = useStudio((state) => state.folders)
   const allProjectTabs = useSettings((state) => state.allProjectTabs)
+  const t = useT()
 
   const items = new Map<string, TabStripItem>()
   const add = (item: TabStripItem) => items.set(item.id, item)
@@ -68,7 +70,7 @@ export function useTabItems(): Map<string, TabStripItem> {
       label: nameOf(filePath),
       title: filePath,
       copyText: filePath,
-      copyLabel: "Copy path",
+      copyLabel: t("nav.tabs.copyPath"),
       // The same icon the tree draws, so a tab and the row it came from are
       // recognisably the same file.
       icon: <FileIcon filePath={filePath} className="size-3" />,
@@ -82,7 +84,7 @@ export function useTabItems(): Map<string, TabStripItem> {
       // `deleted` wins whatever git last said, because it is the state that
       // makes the tab the only thing left of the file.
       tone: deleted ? GIT_TONES.deleted : git ? GIT_TONES[git] : undefined,
-      note: deleted ? "deleted" : undefined,
+      note: deleted ? t("nav.tabs.deleted") : undefined,
     })
   }
 
@@ -106,12 +108,15 @@ export function useTabItems(): Map<string, TabStripItem> {
       id: PREFIX.changes + rootId,
       // Unless the strip holds every project's tabs, where *here* is no longer
       // said by the strip and four tabs reading `Changes` are four guesses.
-      label: allProjectTabs && folder ? `Changes · ${folder}` : "Changes",
+      label:
+        allProjectTabs && folder
+          ? t("nav.tabs.changesIn", { folder })
+          : t("nav.tabs.changes"),
       icon: <GitCompare className="size-3 shrink-0" />,
       // Nothing until the first read, and nothing for a clean project: a badge
       // reading zero is a thing to notice saying there is nothing to notice.
       note: count ? String(count) : undefined,
-      title: folder ?? "Changes",
+      title: folder ?? t("nav.tabs.changes"),
     })
   }
 
@@ -165,9 +170,9 @@ export function useTabItems(): Map<string, TabStripItem> {
         <MessageSquare className="size-3 shrink-0" />
       ),
       title: waiting
-        ? `${title} — waiting for your answer`
+        ? t("nav.tabs.chatWaiting", { title })
         : unread
-          ? `${title} — answered since you last looked`
+          ? t("nav.tabs.chatUnread", { title })
           : title,
     })
   }

@@ -21,6 +21,7 @@ import {
 } from "@/lib/shortcuts"
 import { useShells } from "@/lib/shell/store"
 import { applyAppearance } from "@/lib/appearance"
+import { applyLanguage, useT } from "@/lib/i18n"
 import { backgroundStyle, useAppBackground } from "@/lib/app-background"
 import { usePlugins } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
@@ -139,6 +140,12 @@ export function Studio() {
     return useSettings.subscribe(applyAppearance)
   }, [])
 
+  useEffect(() => {
+    applyLanguage(useSettings.getState().language)
+    return useSettings.subscribe((state) => applyLanguage(state.language))
+  }, [])
+  const t = useT()
+
   /** The first-launch tour: once the launch screen has gone and the settings
    * have said whether it has been seen. Read here rather than in `Workbench`
    * because `launch` is this component's. */
@@ -238,7 +245,7 @@ export function Studio() {
       {launch !== "done" && (
         <Splash
           closing={launch === "closing"}
-          status={loaded ? "Looking for Claude Code…" : undefined}
+          status={loaded ? t("onboarding.lookingForClaude") : undefined}
         />
       )}
       {touring && <OnboardingTour onDone={() => setOnboarded(true)} />}

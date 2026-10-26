@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import type { PlanUsage, PlanWindow } from "@shared/api"
+import { t, type MessageKey } from "@/lib/i18n"
 
 /**
  * The composer's plan-usage meter: how much of the claude.ai plan's five-hour
@@ -12,20 +13,21 @@ import type { PlanUsage, PlanWindow } from "@shared/api"
 /** A window's name as a person says it. A key this build has never heard of
  * is drawn as the CLI wrote it, underscores opened up, rather than not at all. */
 export function windowLabel(id: string): string {
-  const known: Record<string, string> = {
-    five_hour: "5-hour",
-    seven_day: "7-day",
-    seven_day_opus: "7-day Opus",
-    seven_day_sonnet: "7-day Sonnet",
-    seven_day_oauth_apps: "7-day apps",
+  const known: Record<string, MessageKey> = {
+    five_hour: "chat.planUsage.window.fiveHour",
+    seven_day: "chat.planUsage.window.sevenDay",
+    seven_day_opus: "chat.planUsage.window.sevenDayOpus",
+    seven_day_sonnet: "chat.planUsage.window.sevenDaySonnet",
+    seven_day_oauth_apps: "chat.planUsage.window.sevenDayApps",
   }
-  return known[id] ?? id.replace(/_/g, " ")
+  const key = known[id]
+  return key ? t(key) : id.replace(/_/g, " ")
 }
 
 /** The short form on the toolbar button — `5h`, `7d`, or the long label. */
 export function windowShort(id: string): string {
-  if (id === "five_hour") return "5h"
-  if (id === "seven_day") return "7d"
+  if (id === "five_hour") return t("chat.planUsage.short.fiveHour")
+  if (id === "seven_day") return t("chat.planUsage.short.sevenDay")
   return windowLabel(id)
 }
 
@@ -64,20 +66,30 @@ export function resetLabel(resetsAt: string | null, now: Date): string | null {
   const at = new Date(resetsAt)
   const ms = at.getTime() - now.getTime()
   if (Number.isNaN(ms)) return null
-  if (ms <= 0) return "resets now"
+  if (ms <= 0) return t("chat.planUsage.resetsNow")
   const minutes = Math.ceil(ms / 60_000)
-  if (minutes < 60) return `resets in ${minutes}m`
+  if (minutes < 60) return t("chat.planUsage.resetsInMinutes", { minutes })
   const hours = Math.floor(minutes / 60)
   if (hours < 24) {
     const rest = minutes % 60
-    return rest === 0 ? `resets in ${hours}h` : `resets in ${hours}h ${rest}m`
+    return rest === 0
+      ? t("chat.planUsage.resetsInHours", { hours })
+      : t("chat.planUsage.resetsInHoursMinutes", { hours, minutes: rest })
   }
   const day = at.toLocaleDateString(undefined, { weekday: "short" })
   const time = at.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
   })
-  return `resets ${day} ${time}`
+  return t("chat.planUsage.resetsAt", { day, time })
+}
+
+/** Whether a window's reset is already behind `now` — asked of the time rather
+ * than of `resetLabel`'s words, which are in whatever language is showing. */
+export function isResetDue(resetsAt: string | null, now: Date): boolean {
+  if (!resetsAt) return false
+  const ms = new Date(resetsAt).getTime() - now.getTime()
+  return !Number.isNaN(ms) && ms <= 0
 }
 
 /**
@@ -93,12 +105,12 @@ export function limitSentence(
   now: Date
 ): string {
   const what = limit.window
-    ? `${who} reached its ${windowLabel(limit.window)} limit`
+    ? t("chat.planUsage.reached", { who, window: windowLabel(limit.window) })
     : `${who}: ${limit.text}`
   const reset = limit.resetsAt ? resetLabel(limit.resetsAt, now) : null
-  return reset && reset !== "resets now"
-    ? `Stopped. ${what} · ${reset}`
-    : `Stopped. ${what}`
+  return reset && !isResetDue(limit.resetsAt, now)
+    ? t("chat.planUsage.stoppedReset", { what, reset })
+    : t("chat.planUsage.stopped", { what })
 }
 
 /** A plan's name, capitalised — `max` → `Max`. */

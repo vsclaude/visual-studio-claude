@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useT } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
 import { useShells } from "@/lib/shell/store"
 import { useStudio } from "@/lib/store"
@@ -71,6 +72,7 @@ export function NewWorktreeDialog({
   })
   const [reloading, setReloading] = useState(false)
   const field = useRef<HTMLInputElement>(null)
+  const t = useT()
 
   useEffect(() => {
     let current = true
@@ -94,8 +96,14 @@ export function NewWorktreeDialog({
   }
 
   const baseGroups: BranchGroup[] = [
-    { label: "Local", items: known.local.map((value) => ({ value })) },
-    { label: "Remote", items: known.remote.map((value) => ({ value })) },
+    {
+      label: t("projects.worktree.local"),
+      items: known.local.map((value) => ({ value })),
+    },
+    {
+      label: t("projects.worktree.remote"),
+      items: known.remote.map((value) => ({ value })),
+    },
   ].filter((group) => group.items.length > 0)
   const name = branch.trim()
   const existing = known.local.includes(name)
@@ -137,14 +145,16 @@ export function NewWorktreeDialog({
     >
       <DialogContent initialFocus={field}>
         <DialogHeader>
-          <DialogTitle>New worktree</DialogTitle>
+          <DialogTitle>{t("projects.worktree.title")}</DialogTitle>
           <DialogDescription>
-            A second checkout of “{folder.name}”, inside the project.
+            {t("projects.worktree.description", { name: folder.name })}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="worktree-branch">Branch</Label>
+            <Label htmlFor="worktree-branch">
+              {t("projects.worktree.branch")}
+            </Label>
             <Input
               id="worktree-branch"
               ref={field}
@@ -158,21 +168,23 @@ export function NewWorktreeDialog({
             />
             <p className="text-xs text-muted-foreground">
               {existing
-                ? `“${name}” already exists — it is checked out as it is.`
-                : "A new branch, cut from the one below."}
+                ? t("projects.worktree.exists", { name })
+                : t("projects.worktree.newBranch")}
             </p>
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="worktree-base">Based on</Label>
+              <Label htmlFor="worktree-base">
+                {t("projects.worktree.basedOn")}
+              </Label>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-xs"
                 onClick={reload}
                 disabled={busy || reloading}
-                aria-label="Reload branches"
-                title="Reload branches"
+                aria-label={t("projects.worktree.reloadBranches")}
+                title={t("projects.worktree.reloadBranches")}
               >
                 <RefreshCw className={reloading ? "animate-spin" : undefined} />
               </Button>
@@ -186,8 +198,11 @@ export function NewWorktreeDialog({
               disabled={busy || existing}
             />
             <p className="text-xs text-muted-foreground">
-              Empty is what is checked out now
-              {branchNow ? ` (${branchNow})` : ""}.
+              {branchNow
+                ? t("projects.worktree.emptyIsCurrentBranch", {
+                    branch: branchNow,
+                  })
+                : t("projects.worktree.emptyIsCurrent")}
             </p>
           </div>
           {error && (
@@ -202,10 +217,12 @@ export function NewWorktreeDialog({
               onClick={onClose}
               disabled={busy}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={busy || !name}>
-              {busy ? "Creating…" : "Create worktree"}
+              {busy
+                ? t("projects.worktree.creating")
+                : t("projects.worktree.create")}
             </Button>
           </DialogFooter>
         </form>
@@ -235,13 +252,20 @@ function BranchCombobox({
   disabled: boolean
 }) {
   const [query, setQuery] = useState(value?.value ?? "")
+  const t = useT()
   const typed = query.trim()
   const exact = groups.some((group) =>
     group.items.some((item) => item.value === typed)
   )
   const items: BranchGroup[] =
     typed && !exact
-      ? [...groups, { label: "Other", items: [{ value: typed, typed: true }] }]
+      ? [
+          ...groups,
+          {
+            label: t("projects.worktree.other"),
+            items: [{ value: typed, typed: true }],
+          },
+        ]
       : groups
 
   return (
@@ -268,7 +292,7 @@ function BranchCombobox({
         className="w-full font-mono"
       />
       <ComboboxContent>
-        <ComboboxEmpty>No branches.</ComboboxEmpty>
+        <ComboboxEmpty>{t("projects.worktree.noBranches")}</ComboboxEmpty>
         <ComboboxList>
           {(group: BranchGroup) => (
             <ComboboxGroup key={group.label} items={group.items}>
@@ -282,7 +306,9 @@ function BranchCombobox({
                   >
                     {item.typed && <Plus className="text-muted-foreground" />}
                     <span className="min-w-0 flex-1 truncate">
-                      {item.typed ? `Use “${item.value}”` : item.value}
+                      {item.typed
+                        ? t("projects.worktree.use", { value: item.value })
+                        : item.value}
                     </span>
                   </ComboboxItem>
                 )}

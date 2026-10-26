@@ -61,6 +61,7 @@ import { useProjects } from "@/lib/projects"
 import { useStudio } from "@/lib/store"
 import { useWorkspaceSearch, type SearchKind } from "@/lib/workspace-search"
 import { useChats } from "@/lib/chat/store"
+import { useT, type MessageKey, type Translate } from "@/lib/i18n"
 import { FileIcon } from "./file-icon"
 import { IconButton } from "./icon-button"
 import { PanelHeader } from "./panel-header"
@@ -133,6 +134,7 @@ export function SearchSection() {
   } = useWorkspaceSearch.getState()
   const folders = useStudio((state) => state.folders)
   const activeFolderId = useProjects((state) => state.activeFolderId)
+  const t = useT()
 
   const field = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLDivElement>(null)
@@ -328,10 +330,10 @@ export function SearchSection() {
   const replaceable = replaceOpen && fileMatches > 0 && !replacing
   const filtered = scope.include.trim() !== "" || scope.exclude.trim() !== ""
   const narrowing = [
-    scope.kinds === "chats" && "chats only",
-    scope.kinds === "files" && "files only",
-    scope.thisProject && "this project",
-    filtered && "file globs",
+    scope.kinds === "chats" && t("nav.search.narrowChatsOnly"),
+    scope.kinds === "files" && t("nav.search.narrowFilesOnly"),
+    scope.thisProject && t("nav.search.narrowThisProject"),
+    filtered && t("nav.search.narrowGlobs"),
   ].filter((part): part is string => Boolean(part))
 
   // `toggleAll` opens everything once every group is shut, so the button says
@@ -363,12 +365,16 @@ export function SearchSection() {
 
   return (
     <div className="flex h-full min-h-0 flex-col" onKeyDown={onSectionKey}>
-      <PanelHeader title="Search">
-        <IconButton label="Search again" onClick={run} disabled={!query}>
+      <PanelHeader title={t("common.search")}>
+        <IconButton
+          label={t("nav.search.searchAgain")}
+          onClick={run}
+          disabled={!query}
+        >
           <RotateCw />
         </IconButton>
         <IconButton
-          label={allShut ? "Expand all" : "Collapse all"}
+          label={t(allShut ? "nav.search.expandAll" : "nav.search.collapseAll")}
           onClick={toggleAll}
           disabled={!result || (fileMatches === 0 && chatMatches === 0)}
         >
@@ -381,7 +387,9 @@ export function SearchSection() {
           {/* The disclosure for Replace, the search field's height and level
               with it: stretched down the pair, it read as a bar. */}
           <IconButton
-            label={replaceOpen ? "Hide replace" : "Replace"}
+            label={t(
+              replaceOpen ? "nav.search.hideReplace" : "nav.search.replace"
+            )}
             onClick={toggleReplace}
             aria-expanded={replaceOpen}
             className="size-7 shrink-0 [&_svg]:size-3.5"
@@ -416,14 +424,14 @@ export function SearchSection() {
                     list.current?.focus()
                   }
                 }}
-                placeholder="Search files and chats"
+                placeholder={t("nav.search.placeholder")}
                 spellCheck={false}
                 className="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
               />
               {/* Kept mounted while empty, disabled, so the toggles beside it
                   do not jump left as the first letter is typed. */}
               <IconButton
-                label="Clear search (Esc)"
+                label={t("nav.search.clear")}
                 onClick={() => setQuery("")}
                 disabled={!query}
                 className="size-6 [&_svg]:size-3"
@@ -432,7 +440,7 @@ export function SearchSection() {
               </IconButton>
               <Toggle
                 option="matchCase"
-                label="Match case (⌥⌘C)"
+                label={t("nav.search.matchCase")}
                 options={options}
                 onToggle={toggleOption}
               >
@@ -440,7 +448,7 @@ export function SearchSection() {
               </Toggle>
               <Toggle
                 option="wholeWord"
-                label="Match whole word (⌥⌘W)"
+                label={t("nav.search.wholeWord")}
                 options={options}
                 onToggle={toggleOption}
               >
@@ -448,7 +456,7 @@ export function SearchSection() {
               </Toggle>
               <Toggle
                 option="regex"
-                label="Use regular expression (⌥⌘R)"
+                label={t("nav.search.regex")}
                 options={options}
                 onToggle={toggleOption}
               >
@@ -475,13 +483,15 @@ export function SearchSection() {
                     }
                   }}
                   placeholder={
-                    options.regex ? "Replace — $1, $<name>, $&" : "Replace"
+                    options.regex
+                      ? t("nav.search.replaceRegexPlaceholder")
+                      : t("nav.search.replace")
                   }
                   spellCheck={false}
                   className="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
                 />
                 <IconButton
-                  label="Replace all in files (⌘↵)"
+                  label={t("nav.search.replaceAllInFiles")}
                   onClick={() => setConfirming(true)}
                   disabled={!replaceable}
                   className="size-6 [&_svg]:size-3.5"
@@ -502,8 +512,12 @@ export function SearchSection() {
           <IconButton
             label={
               scope.thisProject
-                ? `Only ${nameOfFolder(activeFolderId) ?? "this project"}`
-                : "Search only this project"
+                ? t("nav.search.onlyProject", {
+                    name:
+                      nameOfFolder(activeFolderId) ??
+                      t("nav.search.narrowThisProject"),
+                  })
+                : t("nav.search.onlyThisProject")
             }
             pressed={scope.thisProject}
             onClick={() => setScope({ thisProject: !scope.thisProject })}
@@ -515,9 +529,9 @@ export function SearchSection() {
             <FolderDot />
           </IconButton>
           <IconButton
-            label={
-              filtersOpen ? "Hide file filters" : "Files to include/exclude"
-            }
+            label={t(
+              filtersOpen ? "nav.search.hideFilters" : "nav.search.showFilters"
+            )}
             pressed={filtersOpen || filtered}
             onClick={toggleFilters}
             className={cn(
@@ -532,16 +546,16 @@ export function SearchSection() {
         {filtersOpen && (
           <div className="space-y-1">
             <GlobField
-              label="files to include"
+              label={t("nav.search.include")}
               value={scope.include}
-              placeholder="e.g. src/**, *.ts"
+              placeholder={t("nav.search.includePlaceholder")}
               disabled={scope.kinds === "chats"}
               onChange={(include) => setScope({ include })}
             />
             <GlobField
-              label="files to exclude"
+              label={t("nav.search.exclude")}
               value={scope.exclude}
-              placeholder="e.g. **/*.test.ts, dist"
+              placeholder={t("nav.search.excludePlaceholder")}
               disabled={scope.kinds === "chats"}
               onChange={(exclude) => setScope({ exclude })}
             />
@@ -554,19 +568,20 @@ export function SearchSection() {
           ) : notice ? (
             <span className="text-foreground">{notice}</span>
           ) : replacing ? (
-            "Replacing…"
+            t("nav.search.replacing")
           ) : !query ? null : searching && !result ? (
-            "Searching…"
+            t("nav.search.searching")
           ) : result ? (
             <>
               {summary(
+                t,
                 fileMatches,
                 result.files.length,
                 chatMatches,
                 result.chats.length
               )}
-              {result.truncated && " — stopped at the limit, narrow the search"}
-              {searching && " · searching…"}
+              {result.truncated && t("nav.search.truncated")}
+              {searching && t("nav.search.stillSearching")}
             </>
           ) : null}
         </p>
@@ -576,7 +591,7 @@ export function SearchSection() {
         ref={list}
         tabIndex={rows.length > 0 ? 0 : -1}
         role="tree"
-        aria-label="Search results"
+        aria-label={t("nav.search.results")}
         aria-activedescendant={at >= 0 ? rowId(rows[at]!.key) : undefined}
         onKeyDown={onListKey}
         onFocus={() => {
@@ -603,7 +618,7 @@ export function SearchSection() {
             <Kind
               id={head.key}
               current={head.key === cursor}
-              label={head.label}
+              label={t(KIND_LABELS[head.kind])}
               count={head.count}
               open={head.open}
               onToggle={() => openRow(head)}
@@ -674,14 +689,14 @@ export function SearchSection() {
           result.chats.length === 0 && (
             <div className="space-y-1 px-3 py-2 text-xs text-muted-foreground">
               <p>
-                No results for{" "}
+                {t("nav.search.noResultsFor")}{" "}
                 <span className="text-foreground">“{query}”</span>
               </p>
               {/* A filter that is on narrows the answer without saying so, so
                   the empty answer is the place to say it. */}
               {narrowing.length > 0 && (
                 <p className="text-[0.7rem]">
-                  Narrowed by {narrowing.join(", ")}
+                  {t("nav.search.narrowedBy", { list: narrowing.join(", ") })}
                 </p>
               )}
             </div>
@@ -692,28 +707,34 @@ export function SearchSection() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Replace {plural(fileMatches, "occurrence")} in{" "}
-              {plural(result?.files.length ?? 0, "file")}?
+              {t("nav.search.confirmTitle", {
+                occurrences: t("nav.search.occurrences", {
+                  count: fileMatches,
+                }),
+                files: t("nav.search.fileCount", {
+                  count: result?.files.length ?? 0,
+                }),
+              })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Every match of{" "}
-              <code className="font-mono text-foreground">{query}</code> becomes{" "}
+              {t("nav.search.confirmEvery")}{" "}
+              <code className="font-mono text-foreground">{query}</code>{" "}
+              {t("nav.search.confirmBecomes")}{" "}
               <code className="font-mono text-foreground">
-                {replacement || "nothing"}
+                {replacement || t("nav.search.confirmNothing")}
               </code>
-              , written to disk at once. A file with unsaved edits is skipped,
-              and the chats are left as they were said.
+              {t("nav.search.confirmRest")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setConfirming(false)
                 void replace()
               }}
             >
-              Replace all
+              {t("nav.search.replaceAll")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -727,7 +748,6 @@ type Row =
       type: "kind"
       key: string
       kind: SearchKind
-      label: string
       count: number
       open: boolean
     }
@@ -790,7 +810,6 @@ function rowsOf(
       type: "kind",
       key: "kind:chats",
       kind: "chats",
-      label: "Chats",
       count: count(result.chats),
       open,
     })
@@ -837,7 +856,6 @@ function rowsOf(
       type: "kind",
       key: "kind:files",
       kind: "files",
-      label: "Files",
       count: count(result.files),
       open,
     })
@@ -909,10 +927,13 @@ const OPTION_KEYS: Record<string, keyof SearchOptions> = {
 const rowId = (key: string) =>
   `search-row-${key.replace(/[^\w-]/g, (char) => `_${char.charCodeAt(0)}`)}`
 
-const plural = (count: number, word: string) =>
-  `${count} ${word}${count === 1 ? "" : "s"}`
+const KIND_LABELS: Record<SearchKind, MessageKey> = {
+  chats: "nav.search.chats",
+  files: "nav.search.files",
+}
 
 function summary(
+  t: Translate,
   fileMatches: number,
   files: number,
   chatMatches: number,
@@ -920,10 +941,20 @@ function summary(
 ): string {
   const parts: string[] = []
   if (chats > 0)
-    parts.push(`${plural(chatMatches, "result")} in ${plural(chats, "chat")}`)
+    parts.push(
+      t("nav.search.resultsIn", {
+        results: t("nav.search.resultCount", { count: chatMatches }),
+        where: t("nav.search.chatCount", { count: chats }),
+      })
+    )
   if (files > 0)
-    parts.push(`${plural(fileMatches, "result")} in ${plural(files, "file")}`)
-  return parts.join(", ") || "No results"
+    parts.push(
+      t("nav.search.resultsIn", {
+        results: t("nav.search.resultCount", { count: fileMatches }),
+        where: t("nav.search.fileCount", { count: files }),
+      })
+    )
+  return parts.join(", ") || t("nav.search.noResults")
 }
 
 function Toggle({
@@ -955,10 +986,10 @@ function Toggle({
   )
 }
 
-const KINDS: { value: SearchKinds; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "chats", label: "Chats" },
-  { value: "files", label: "Files" },
+const KINDS: { value: SearchKinds; label: MessageKey }[] = [
+  { value: "all", label: "nav.search.all" },
+  { value: "chats", label: "nav.search.chats" },
+  { value: "files", label: "nav.search.files" },
 ]
 
 /** Which half is searched. A segmented control rather than two toggles, since
@@ -970,6 +1001,7 @@ function KindSwitch({
   value: SearchKinds
   onChange: (kinds: SearchKinds) => void
 }) {
+  const t = useT()
   return (
     <div role="radiogroup" className="flex h-6 rounded-md border p-0.5">
       {KINDS.map((kind) => (
@@ -984,7 +1016,7 @@ function KindSwitch({
             value === kind.value && "bg-accent text-accent-foreground"
           )}
         >
-          {kind.label}
+          {t(kind.label)}
         </button>
       ))}
     </div>
@@ -1107,6 +1139,7 @@ function Group({
   /** The right-click menu's items — `GroupMenu`. */
   menu: ReactNode
 }) {
+  const t = useT()
   const row = (
     // A row rather than one button, so the actions beside the count are
     // buttons of their own and not ones nested in another.
@@ -1152,7 +1185,7 @@ function Group({
       <span className="invisible absolute top-1/2 right-1 flex -translate-y-1/2 items-center group-hover/row:visible">
         {onReplace && (
           <IconButton
-            label="Replace in this file"
+            label={t("nav.search.replaceInFile")}
             tabIndex={-1}
             onClick={onReplace}
             className="size-5 [&_svg]:size-3.5"
@@ -1161,7 +1194,7 @@ function Group({
           </IconButton>
         )}
         <IconButton
-          label="Dismiss (⌫)"
+          label={t("nav.search.dismissKey")}
           tabIndex={-1}
           onClick={onDismiss}
           className="size-5 [&_svg]:size-3.5"
@@ -1193,6 +1226,7 @@ function GroupMenu({
   onOpen: () => void
   onDismiss: () => void
 }) {
+  const t = useT()
   const copy = (text: string) => void navigator.clipboard.writeText(text)
   const path = group.path
 
@@ -1200,40 +1234,40 @@ function GroupMenu({
     <>
       <ContextMenuItem onClick={onOpen}>
         {path ? <FileText /> : <MessageSquare />}
-        {path ? "Open file" : "Open chat"}
+        {t(path ? "nav.search.openFile" : "nav.search.openChat")}
       </ContextMenuItem>
       <ContextMenuSeparator />
       {path ? (
         <>
           <ContextMenuItem onClick={() => copy(path)}>
             <Link />
-            Copy path
+            {t("nav.tabs.copyPath")}
           </ContextMenuItem>
           {group.relative && (
             <ContextMenuItem onClick={() => copy(group.relative!)}>
               <Link2 />
-              Copy relative path
+              {t("nav.search.copyRelativePath")}
             </ContextMenuItem>
           )}
           <ContextMenuItem onClick={() => revealInExplorer(path)}>
             <FolderTree />
-            Reveal in Explorer
+            {t("nav.search.revealInExplorer")}
           </ContextMenuItem>
           <ContextMenuItem onClick={() => void window.desktop.revealPath(path)}>
             <ExternalLink />
-            Reveal in file manager
+            {t("nav.search.revealInFileManager")}
           </ContextMenuItem>
         </>
       ) : (
         <ContextMenuItem onClick={() => copy(group.name)}>
           <Copy />
-          Copy title
+          {t("nav.search.copyTitle")}
         </ContextMenuItem>
       )}
       <ContextMenuSeparator />
       <ContextMenuItem onClick={onDismiss}>
         <X />
-        Dismiss
+        {t("nav.search.dismiss")}
       </ContextMenuItem>
     </>
   )
@@ -1270,6 +1304,7 @@ function Line({
   role?: "user" | "assistant"
   onClick: () => void
 }) {
+  const t = useT()
   const match = preview.text.slice(preview.from, preview.to)
   return (
     <button
@@ -1299,7 +1334,7 @@ function Line({
               : "bg-muted text-muted-foreground"
           )}
         >
-          {role === "user" ? "You" : "Claude"}
+          {role === "user" ? t("nav.search.you") : "Claude"}
         </span>
       )}
       <span className="min-w-0 truncate font-mono text-[0.7rem] whitespace-pre">
@@ -1340,26 +1375,27 @@ function SearchStart({
   onForget: (query: string) => void
   onClear: () => void
 }) {
-  const hints: [string, string][] = [
-    ["↑ ↓", "Walk the results"],
-    ["Enter", "Open the match"],
-    ["F4 / ⇧F4", "Next / previous match"],
-    ["⌫", "Dismiss a file or chat"],
-    ["⌥⌘C W R", "Case, word, regex"],
-    ["Esc", "Back to the field, then clear it"],
+  const t = useT()
+  const hints: [string, MessageKey][] = [
+    ["↑ ↓", "nav.search.hintWalk"],
+    ["Enter", "nav.search.hintOpen"],
+    ["F4 / ⇧F4", "nav.search.hintNext"],
+    ["⌫", "nav.search.hintDismiss"],
+    ["⌥⌘C W R", "nav.search.hintOptions"],
+    ["Esc", "nav.search.hintEscape"],
   ]
   return (
     <div className="space-y-3 py-1">
       {recent.length > 0 && (
         <section>
           <div className="flex h-6 items-center gap-1 px-2 pt-1 text-[0.65rem] font-medium tracking-wider text-muted-foreground uppercase">
-            <span className="flex-1 pl-1">Recent</span>
+            <span className="flex-1 pl-1">{t("nav.search.recent")}</span>
             <button
               type="button"
               onClick={onClear}
               className="rounded-sm px-1 tracking-normal normal-case transition-colors hover:text-foreground"
             >
-              Clear
+              {t("nav.search.clearRecent")}
             </button>
           </div>
           <ul>
@@ -1380,7 +1416,7 @@ function SearchStart({
                   </span>
                 </button>
                 <IconButton
-                  label="Remove from recent"
+                  label={t("nav.search.removeRecent")}
                   onClick={() => onForget(entry)}
                   className="invisible absolute top-1/2 right-1 size-5 -translate-y-1/2 group-hover/recent:visible [&_svg]:size-3"
                 >
@@ -1398,7 +1434,7 @@ function SearchStart({
             <dt className="font-mono text-[0.7rem] whitespace-nowrap text-foreground">
               {keys}
             </dt>
-            <dd className="text-muted-foreground">{what}</dd>
+            <dd className="text-muted-foreground">{t(what)}</dd>
           </div>
         ))}
       </dl>

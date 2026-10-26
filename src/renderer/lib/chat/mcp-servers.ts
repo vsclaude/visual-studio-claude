@@ -1,4 +1,5 @@
 import type { McpServerInfo, McpServerState, McpToolInfo } from "@shared/api"
+import { t } from "@/lib/i18n"
 
 /**
  * The composer's MCP dialog (`chat-mcp.tsx`), minus the drawing.
@@ -208,17 +209,17 @@ export function stateLabel(state: McpServerState): {
 } {
   switch (state) {
     case "connected":
-      return { label: "Connected", tone: "good" }
+      return { label: t("chat.mcp.state.connected"), tone: "good" }
     case "failed":
-      return { label: "Failed", tone: "bad" }
+      return { label: t("chat.mcp.state.failed"), tone: "bad" }
     case "needs-auth":
-      return { label: "Needs sign-in", tone: "bad" }
+      return { label: t("chat.mcp.state.needsAuth"), tone: "bad" }
     case "pending":
-      return { label: "Connecting", tone: "waiting" }
+      return { label: t("chat.mcp.state.pending"), tone: "waiting" }
     case "disabled":
-      return { label: "Disabled", tone: "off" }
+      return { label: t("chat.mcp.state.disabled"), tone: "off" }
     default:
-      return { label: "Unknown", tone: "off" }
+      return { label: t("chat.mcp.state.unknown"), tone: "off" }
   }
 }
 

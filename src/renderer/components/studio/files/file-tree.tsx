@@ -77,6 +77,7 @@ import {
   viewersFor,
   type Viewer,
 } from "@/lib/files/viewers"
+import { useT } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
 import { shownRootOf } from "@/lib/files/roots"
 import { isInside, parentOf, relativeTo } from "@/lib/files/paths"
@@ -155,6 +156,7 @@ function failureOf(error: unknown, fallback: string): string {
  * the result of.
  */
 export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
+  const t = useT()
   const folders = useStudio((state) => state.folders)
   const renameFolder = useStudio((state) => state.renameFolder)
   const removeFolder = useStudio((state) => state.removeFolder)
@@ -255,7 +257,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
       .getState()
       .copyIn(dir, sources)
       .catch((error: unknown) => {
-        setDropError(failureOf(error, "Could not copy that in."))
+        setDropError(failureOf(error, t("files.tree.couldNotCopyIn")))
       })
   }
 
@@ -268,7 +270,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
       .getState()
       .moveInto(copied.path, dir)
       .catch((error: unknown) => {
-        setDropError(failureOf(error, "Could not move that."))
+        setDropError(failureOf(error, t("files.tree.couldNotMove")))
       })
   }
 
@@ -279,7 +281,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
       .getState()
       .copyIn(dir, [source])
       .catch((error: unknown) => {
-        setDropError(failureOf(error, "Could not copy that in."))
+        setDropError(failureOf(error, t("files.tree.couldNotCopyIn")))
       })
   }
 
@@ -307,14 +309,14 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             <ExplorerTabButton
               active={tab === "files"}
               onClick={() => setTab("files")}
-              label="All files"
+              label={t("files.tree.allFiles")}
             />
             {/* The count rides on `Git` too, so `Git 12` is true before it is
                 clicked — and on whichever view is showing inside it. */}
             <ExplorerTabButton
               active={tab === "git"}
               onClick={() => setTab("git")}
-              label="Git"
+              label={t("files.tree.git")}
               count={changed}
             />
           </div>
@@ -333,7 +335,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 itself, and the filesystems `fs.watch` is quiet on are why it
                 exists at all. */}
             <IconButton
-              label="Refresh"
+              label={t("common.refresh")}
               disabled={folders.length === 0}
               // Both halves of what a row shows: what is on disk, and what git
               // says about it. One button, since "this is out of date" is one
@@ -366,13 +368,13 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
               <ExplorerTabButton
                 active={gitView === "changes"}
                 onClick={() => setGitView("changes")}
-                label="Changes"
+                label={t("files.tree.changes")}
                 count={changed}
               />
               <ExplorerTabButton
                 active={gitView === "commits"}
                 onClick={() => setGitView("commits")}
-                label="Commits"
+                label={t("files.tree.commits")}
               />
             </div>
             <div className="min-h-0 flex-1 overflow-auto pb-3">
@@ -448,10 +450,10 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                     <Empty className="border-0 py-8">
                       <EmptyHeader>
                         <EmptyTitle className="text-sm">
-                          No folders yet
+                          {t("files.tree.noFolders")}
                         </EmptyTitle>
                         <EmptyDescription>
-                          Point the workspace at a directory on this machine.
+                          {t("files.tree.noFoldersDescription")}
                         </EmptyDescription>
                       </EmptyHeader>
                       <EmptyContent>
@@ -461,7 +463,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                           onClick={onAddFolder}
                         >
                           <FolderPlus />
-                          Add folder…
+                          {t("files.tree.addFolder")}
                         </Button>
                       </EmptyContent>
                     </Empty>
@@ -474,22 +476,28 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
 
         {renamingFolder && (
           <RenameDialog
-            title="Rename folder"
-            description={
-              <>
-                Only what the studio calls it. The directory —{" "}
-                <code className="font-mono">{renamingFolder.path}</code> — keeps
-                its own name.
-              </>
-            }
-            label="Folder name"
+            title={t("files.tree.renameFolder")}
+            description={(() => {
+              // Split around the placeholder so the path can be set as code.
+              const [before, after] = t(
+                "files.tree.renameFolderDescription"
+              ).split("{path}")
+              return (
+                <>
+                  {before}
+                  <code className="font-mono">{renamingFolder.path}</code>
+                  {after}
+                </>
+              )
+            })()}
+            label={t("files.tree.folderName")}
             currentName={renamingFolder.name}
             onRename={async (name) => {
               try {
                 await renameFolder(renamingFolder.id, name)
                 return null
               } catch (error) {
-                return failureOf(error, "Could not rename that folder.")
+                return failureOf(error, t("files.tree.couldNotRenameFolder"))
               }
             }}
             onClose={() => setRenamingFolder(null)}
@@ -528,7 +536,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
           <ContextMenuContent className="w-52">
             <ContextMenuItem onClick={onAddFolder}>
               <FolderPlus />
-              Add folder…
+              {t("files.tree.addFolder")}
             </ContextMenuItem>
           </ContextMenuContent>
         ))}
@@ -548,7 +556,9 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
               <>
                 <ContextMenuGroup>
                   {/* Base UI throws for a label outside the group it names. */}
-                  <ContextMenuLabel>Open with</ContextMenuLabel>
+                  <ContextMenuLabel>
+                    {t("files.tree.openWith")}
+                  </ContextMenuLabel>
                   <OpenWith path={menuTarget.entry.path} />
                 </ContextMenuGroup>
                 <ContextMenuSeparator />
@@ -563,7 +573,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 }}
               >
                 <FilePlus />
-                New file
+                {t("files.tree.newFile")}
               </ContextMenuItem>
               <ContextMenuItem
                 onClick={() => {
@@ -574,7 +584,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 }}
               >
                 <FolderPlus />
-                New folder
+                {t("files.tree.newFolder")}
               </ContextMenuItem>
               {/* In the folder the tree is showing, so the shell's directory is
                   inside a root main already knows; `openAt` only ever gets a
@@ -588,13 +598,13 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                   }
                 >
                   <SquareTerminal />
-                  New terminal here
+                  {t("files.tree.newTerminalHere")}
                 </ContextMenuItem>
               )}
               {copied && (
                 <ContextMenuItem onClick={() => paste(menuTarget.entry.path)}>
                   <ClipboardPaste />
-                  Paste
+                  {t("files.tree.paste")}
                 </ContextMenuItem>
               )}
               <ContextMenuSeparator />
@@ -606,7 +616,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }
           >
             <Copy />
-            Copy
+            {t("common.copy")}
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() =>
@@ -614,13 +624,13 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }
           >
             <Scissors />
-            Cut
+            {t("files.tree.cut")}
           </ContextMenuItem>
           {others.length > 0 && (
             <ContextMenuSub>
               <ContextMenuSubTrigger>
                 <FolderInput />
-                Copy to
+                {t("files.tree.copyTo")}
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-52">
                 {others.map((other) => (
@@ -642,7 +652,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }
           >
             <Link />
-            Copy path
+            {t("files.copyPath")}
           </ContextMenuItem>
           {shown && (
             <ContextMenuItem
@@ -653,7 +663,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
               }
             >
               <Link2 />
-              Copy relative path
+              {t("files.tree.copyRelativePath")}
             </ContextMenuItem>
           )}
           <ContextMenuItem
@@ -662,7 +672,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }
           >
             <ExternalLink />
-            Reveal in file manager
+            {t("files.reveal")}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -672,14 +682,14 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }}
           >
             <Pencil />
-            Rename
+            {t("common.rename")}
           </ContextMenuItem>
           <ContextMenuItem
             variant="destructive"
             onClick={() => setTrashing(menuTarget.entry)}
           >
             <Trash2 />
-            Move to trash…
+            {t("files.tree.moveToTrashEllipsis")}
           </ContextMenuItem>
         </ContextMenuContent>
       )}
@@ -693,20 +703,20 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Move “{trashing?.name}” to the trash?
+              {t("files.tree.trashTitle", { name: trashing?.name ?? "" })}
             </AlertDialogTitle>
             {/* Says where it goes rather than "this cannot be undone", because
                 it can: the OS trash is the undo, which is the whole reason
                 this is not an `unlink`. */}
             <AlertDialogDescription>
               {trashing?.kind === "directory"
-                ? "The folder and everything in it goes to the system trash, and any tabs open on those files close."
-                : "It goes to the system trash, and its tab closes."}{" "}
-              You can put it back from there.
+                ? t("files.tree.trashFolderDescription")
+                : t("files.tree.trashFileDescription")}{" "}
+              {t("files.tree.trashPutBack")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -721,7 +731,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 setTrashing(null)
               }}
             >
-              Move to trash
+              {t("files.tree.moveToTrash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -735,11 +745,13 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Could not put that there</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("files.tree.dropErrorTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>{dropError}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.close")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -752,18 +764,20 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this folder?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("files.tree.removeFolderTitle")}
+            </AlertDialogTitle>
             {/*
               The folder is the user's own — a dialog that left that in doubt
               would be asking them to gamble a repository on it. No path: a long
               one has nowhere to break and widens the dialog past its card.
             */}
             <AlertDialogDescription>
-              The folder stays on disk.
+              {t("files.tree.removeFolderDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -771,7 +785,7 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 setRemovingFolder(null)
               }}
             >
-              Remove
+              {t("common.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -834,6 +848,7 @@ function ExplorerTabButton({
  */
 function OpenWith({ path }: { path: string }) {
   const current = useFiles((state) => viewOf(state, path))
+  const t = useT()
 
   return (
     <ContextMenuRadioGroup
@@ -849,7 +864,7 @@ function OpenWith({ path }: { path: string }) {
       {viewersFor(path).map((viewer) => (
         <ContextMenuRadioItem key={viewer} value={viewer}>
           <ViewerIcon viewer={viewer} />
-          {VIEWER_LABELS[viewer]}
+          {t(VIEWER_LABELS[viewer])}
         </ContextMenuRadioItem>
       ))}
     </ContextMenuRadioGroup>
@@ -915,26 +930,27 @@ function RootMenu({
   /** New file and New folder hand focus to the field they open. */
   finalFocus: () => boolean
 }) {
+  const t = useT()
   return (
     <ContextMenuContent className="w-52" finalFocus={finalFocus}>
       <ContextMenuItem onClick={() => onCreate("file")}>
         <FilePlus />
-        New file
+        {t("files.tree.newFile")}
       </ContextMenuItem>
       <ContextMenuItem onClick={() => onCreate("directory")}>
         <FolderPlus />
-        New folder
+        {t("files.tree.newFolder")}
       </ContextMenuItem>
       {onPaste && (
         <ContextMenuItem onClick={onPaste}>
           <ClipboardPaste />
-          Paste
+          {t("files.tree.paste")}
         </ContextMenuItem>
       )}
       <ContextMenuSeparator />
       <ContextMenuItem onClick={() => void useFiles.getState().read(path)}>
         <RotateCw />
-        Refresh
+        {t("common.refresh")}
       </ContextMenuItem>
       {/* Where the header button went. It is about the tree rather than about
           this project's files, but this menu is the one the tree has — and a
@@ -944,15 +960,15 @@ function RootMenu({
         onClick={() => useFiles.getState().collapseAll()}
       >
         <ChevronDown />
-        Collapse all
+        {t("files.tree.collapseAll")}
       </ContextMenuItem>
       <ContextMenuItem onClick={() => void navigator.clipboard.writeText(path)}>
         <Link />
-        Copy path
+        {t("files.copyPath")}
       </ContextMenuItem>
       <ContextMenuItem onClick={() => void window.desktop.revealPath(path)}>
         <ExternalLink />
-        Reveal in file manager
+        {t("files.reveal")}
       </ContextMenuItem>
       <ContextMenuSeparator />
       {/* The workspace's own action, at the end and under a rule: everything
@@ -960,16 +976,16 @@ function RootMenu({
           there are. */}
       <ContextMenuItem onClick={onAddFolder}>
         <FolderPlus />
-        Add folder…
+        {t("files.tree.addFolder")}
       </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem onClick={onRename}>
         <Pencil />
-        Rename…
+        {t("files.tree.renameEllipsis")}
       </ContextMenuItem>
       <ContextMenuItem variant="destructive" onClick={onRemove}>
         <Trash2 />
-        Remove {folder.name}…
+        {t("files.tree.removeNamed", { name: folder.name })}
       </ContextMenuItem>
     </ContextMenuContent>
   )
@@ -990,6 +1006,7 @@ function Directory({
   const creating = useFiles((state) =>
     state.creating?.dir === dir ? state.creating.kind : null
   )
+  const t = useT()
 
   if (error) {
     return (
@@ -1027,7 +1044,7 @@ function Directory({
         style={{ paddingLeft: `${depth * 0.75 + 0.75}rem` }}
         className="py-1 pr-2 text-xs text-muted-foreground/70"
       >
-        Reading…
+        {t("files.reading")}
       </p>
     )
   }
@@ -1062,12 +1079,13 @@ function CreateRow({
   kind: "file" | "directory"
   depth: number
 }) {
+  const t = useT()
   const directory = kind === "directory"
   return (
     <RenameRow
       name=""
       indent={depth}
-      label={directory ? "Folder name" : "File name"}
+      label={directory ? t("files.tree.folderName") : t("files.tree.fileName")}
       lead={
         directory ? (
           <>
@@ -1089,7 +1107,7 @@ function CreateRow({
           endCreate()
           return null
         } catch (error) {
-          return failureOf(error, "Could not create that.")
+          return failureOf(error, t("files.tree.couldNotCreate"))
         }
       }}
       onCancel={() => useFiles.getState().endCreate()}
@@ -1116,6 +1134,7 @@ function Row({
   // A string or null rather than the store's own record, so a row re-renders
   // when *its* file's state changes and not when any file's does.
   const git = useGitStatus((state) => gitStateOf(state, entry.path))
+  const t = useT()
 
   const directory = entry.kind === "directory"
   const dropDir = directory ? entry.path : parentOf(entry.path)
@@ -1177,7 +1196,9 @@ function Row({
           indent={depth}
           // A directory's dot is part of its name; a file's is its extension.
           selection={directory ? "all" : "stem"}
-          label={directory ? "Folder name" : "File name"}
+          label={
+            directory ? t("files.tree.folderName") : t("files.tree.fileName")
+          }
           lead={lead}
           onRename={async (name) => {
             try {
@@ -1185,7 +1206,7 @@ function Row({
               useFiles.getState().endRename()
               return null
             } catch (error) {
-              return failureOf(error, "Could not rename that.")
+              return failureOf(error, t("files.tree.couldNotRename"))
             }
           }}
           onCancel={() => useFiles.getState().endRename()}
@@ -1211,7 +1232,7 @@ function Row({
         // The state in words as well as in colour: the hover line is the only
         // thing that says what a green name means to somebody who has not
         // learnt the palette, or who cannot see it.
-        title={git ? `${entry.path} — ${GIT_LABELS[git]}` : entry.path}
+        title={git ? `${entry.path} — ${t(GIT_LABELS[git])}` : entry.path}
         // A single click on a file is a **look**: the tab it opens is the
         // preview one, in italics, and the next look takes its place rather
         // than adding a tab beside it. Reading through a repository was the
@@ -1254,7 +1275,7 @@ function Row({
           <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
             {dirty && (
               <span
-                aria-label="Unsaved changes"
+                aria-label={t("files.tree.unsavedChanges")}
                 className="size-1.5 rounded-full bg-foreground/60"
               />
             )}

@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
 import { byCheckout, checkoutsOf, projectOf } from "@/lib/project-checkouts"
 import { useShells } from "@/lib/shell/store"
@@ -70,6 +71,7 @@ export function ProjectsSection({ onAddFolder }: { onAddFolder: () => void }) {
   const showingUngrouped = useProjects((state) => state.ungrouped)
   const chats = useChats((state) => state.chats)
   const unsaved = useChats((state) => state.unsaved)
+  const t = useT()
 
   const listed = saved(chats, unsaved)
   const orphans = ungroupedChats(listed)
@@ -87,11 +89,11 @@ export function ProjectsSection({ onAddFolder }: { onAddFolder: () => void }) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          A project is a folder on this machine. Its chats run in it.
+          {t("projects.section.emptyHint")}
         </p>
         <Button size="sm" onClick={onAddFolder}>
           <Plus />
-          Add project
+          {t("projects.section.addProject")}
         </Button>
       </div>
     )
@@ -109,13 +111,13 @@ export function ProjectsSection({ onAddFolder }: { onAddFolder: () => void }) {
 
   return (
     <nav
-      aria-label="Chats"
+      aria-label={t("projects.section.chats")}
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
       {ungrouped ? (
         <Header
-          title="Ungrouped"
-          caption="Chats whose project has left the workspace"
+          title={t("projects.section.ungrouped")}
+          caption={t("projects.section.ungroupedCaption")}
         />
       ) : (
         <ProjectHeader
@@ -176,6 +178,7 @@ function ProjectHeader({
   folder: WorkspaceFolder
   branch: string | null
 }) {
+  const t = useT()
   return (
     <Header
       title={project.name}
@@ -186,15 +189,27 @@ function ProjectHeader({
         variant="outline"
         className="pl-1.5 text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground dark:hover:bg-primary/15"
         onClick={() => void useChats.getState().create({ folderId: folder.id })}
-        title={`New chat in ${folder.name}`}
+        title={t("projects.section.newChatIn", { name: folder.name })}
       >
         <Plus className="text-primary" />
-        Chat
+        {/* Segoe UI's tall ascent sets its capitals ~1px below the line box's
+            middle, so on Windows the word sat lower than the centred `+`. */}
+        <span
+          className={
+            window.desktop.platform === "win32" ? "-translate-y-px" : undefined
+          }
+        >
+          {t("projects.section.chat")}
+        </span>
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <IconButton label="Project" side="bottom" className="size-6">
+            <IconButton
+              label={t("projects.section.project")}
+              side="bottom"
+              className="size-6"
+            >
               <MoreHorizontal />
             </IconButton>
           }
@@ -236,6 +251,7 @@ function CheckoutHeading({
   const branch = useStudio((state) => state.branches[checkout.id] ?? null)
   const label = branch ?? checkout.name
   const Icon = main ? GitBranch : FolderGit2
+  const t = useT()
 
   return (
     <ContextMenu>
@@ -250,7 +266,10 @@ function CheckoutHeading({
             <button
               type="button"
               aria-expanded={open}
-              aria-label={open ? `Fold ${label}` : `Unfold ${label}`}
+              aria-label={t(
+                open ? "projects.section.fold" : "projects.section.unfold",
+                { name: label }
+              )}
               onClick={() => useProjects.getState().toggleCheckout(checkout.id)}
               className="flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-accent hover:text-foreground"
             >
@@ -281,7 +300,7 @@ function CheckoutHeading({
               )}
             </button>
             <IconButton
-              label={`New chat in ${label}`}
+              label={t("projects.section.newChatIn", { name: label })}
               side="bottom"
               onClick={() =>
                 void useChats.getState().create({ folderId: checkout.id })
@@ -340,11 +359,12 @@ function Sections({
   const unread = useChats((state) => state.unread)
   const selectedId = useChats((state) => state.selectedId)
   const shutCheckouts = useProjects((state) => state.shutCheckouts)
+  const t = useT()
 
   if (chats.length === 0 && !checkouts) {
     return (
       <p className="px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        No chats yet. Start one with the button above.
+        {t("projects.section.noChats")}
       </p>
     )
   }
@@ -360,17 +380,17 @@ function Sections({
   return (
     <>
       {needsYou.length > 0 && (
-        <Section label="Needs you" tone="primary">
+        <Section label={t("projects.section.needsYou")} tone="primary">
           <ChatList chats={needsYou} />
         </Section>
       )}
       {running.length > 0 && (
-        <Section label="Running">
+        <Section label={t("projects.section.running")}>
           <ChatList chats={running} />
         </Section>
       )}
       {checkouts ? (
-        <Section label={alone ? null : "Recent"}>
+        <Section label={alone ? null : t("projects.section.recent")}>
           {byCheckout(recent, checkouts).map((group, index) => {
             const open = !shutCheckouts.includes(group.folder.id)
             // Folded, the selected chat stays listed, as it does past
@@ -394,7 +414,7 @@ function Sections({
                   <RecentList chats={group.chats} />
                 ) : (
                   <p className="px-3 pb-1 pl-6 text-[0.6875rem] text-muted-foreground/70">
-                    No chats here yet.
+                    {t("projects.section.noChatsHere")}
                   </p>
                 )}
               </div>
@@ -403,7 +423,7 @@ function Sections({
         </Section>
       ) : (
         recent.length > 0 && (
-          <Section label={alone ? null : "Recent"}>
+          <Section label={alone ? null : t("projects.section.recent")}>
             <RecentList chats={recent} />
           </Section>
         )
@@ -416,6 +436,7 @@ function Sections({
 function RecentList({ chats }: { chats: Chat[] }) {
   const selectedId = useChats((state) => state.selectedId)
   const [showAll, setShowAll] = useState(false)
+  const t = useT()
 
   const hidden = chats.length - CHAT_LIMIT
   const shown = showAll || hidden <= 0 ? chats : chats.slice(0, CHAT_LIMIT)
@@ -434,7 +455,9 @@ function RecentList({ chats }: { chats: Chat[] }) {
           onClick={() => setShowAll((all) => !all)}
         >
           <span className="min-w-0 flex-1 truncate text-left">
-            {showAll ? "Show less" : `View all (${chats.length})`}
+            {showAll
+              ? t("projects.section.showLess")
+              : t("projects.section.viewAll", { count: chats.length })}
           </span>
         </SideRow>
       )}

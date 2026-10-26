@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { useSettings } from "@/lib/settings"
 import { whatsNewOf } from "@/lib/whats-new"
+import { useT } from "@/lib/i18n"
 import { MarkdownView } from "./markdown-view"
 
 /**
@@ -40,6 +41,7 @@ export function WhatsNewDialog({ ready }: { ready: boolean }) {
     releases: ReleaseNote[]
   } | null>(null)
   const [open, setOpen] = useState(false)
+  const t = useT()
 
   useEffect(() => {
     // Decided as soon as the settings are read rather than at `ready`: a first
@@ -92,12 +94,12 @@ export function WhatsNewDialog({ ready }: { ready: boolean }) {
           </span>
           <DialogHeader className="items-center gap-1 text-center">
             <DialogTitle className="text-lg font-semibold">
-              Vey Studio is now {shown.version}
+              {t("nav.whatsNew.title", { version: shown.version })}
             </DialogTitle>
             <DialogDescription>
-              {shown.releases.length === 1
-                ? "Here is what this update brought."
-                : `Here is what the last ${shown.releases.length} releases brought.`}
+              {t("nav.whatsNew.description", {
+                count: shown.releases.length,
+              })}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -129,11 +131,11 @@ export function WhatsNewDialog({ ready }: { ready: boolean }) {
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           >
-            Release page
+            {t("nav.whatsNew.releasePage")}
             <ArrowUpRight className="size-3" />
           </a>
           <Button size="sm" onClick={() => setOpen(false)}>
-            Got it
+            {t("nav.whatsNew.gotIt")}
           </Button>
         </DialogFooter>
       </DialogContent>

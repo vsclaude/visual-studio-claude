@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import {
   isRemovable,
@@ -94,6 +95,7 @@ export function McpDialog({
   disabled: string[]
   onPick: (disabled: string[]) => void
 }) {
+  const t = useT()
   const [listing, setListing] = useState<McpListing | null>(null)
   const [loading, setLoading] = useState(false)
   /**
@@ -175,15 +177,15 @@ export function McpDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="grid h-[36rem] max-h-[85vh] w-full grid-cols-[15rem_1fr] gap-0 overflow-hidden p-0 sm:max-w-3xl">
           <nav
-            aria-label="MCP servers"
+            aria-label={t("chat.mcp.servers")}
             className="flex min-h-0 flex-col border-r bg-muted/30"
           >
             <div className="flex shrink-0 items-center gap-2 px-2 pt-2 pb-1">
               <p className="flex-1 px-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-                Servers
+                {t("chat.mcp.serversHeading")}
               </p>
               <IconButton
-                label="Refresh"
+                label={t("common.refresh")}
                 side="bottom"
                 disabled={loading}
                 onClick={ask}
@@ -210,18 +212,16 @@ export function McpDialog({
 
           <div className="flex min-h-0 min-w-0 flex-col">
             {loading && !listing ? (
-              <Blank title="MCP servers">
-                Asking <code className="font-mono">claude</code> what it
-                has&hellip;
+              <Blank title={t("chat.mcp.servers")}>
+                {rich(t("chat.mcp.asking"))}
               </Blank>
             ) : listing?.error ? (
-              <Blank title="MCP servers" tone="bad">
+              <Blank title={t("chat.mcp.servers")} tone="bad">
                 {listing.error}
               </Blank>
             ) : !current ? (
-              <Blank title="No MCP servers here">
-                Add one with <code className="font-mono">claude mcp add</code>,
-                or connect one to your account on claude.ai, then Refresh.
+              <Blank title={t("chat.mcp.noneTitle")}>
+                {rich(t("chat.mcp.noneBody"))}
               </Blank>
             ) : (
               <ServerDetail
@@ -249,18 +249,16 @@ export function McpDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remove &ldquo;{pendingRemove?.name}&rdquo;?
+              {t("chat.mcp.removeTitle", { name: pendingRemove?.name ?? "" })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This runs <code className="font-mono">claude mcp remove</code>{" "}
-              against your own <code className="font-mono">claude</code>
-              {pendingRemove?.scope
-                ? ` ${pendingRemove.scope} configuration`
-                : " configuration"}
-              , so it goes from every chat here <em>and</em> from your terminal.
-              There is no undo — adding it back means{" "}
-              <code className="font-mono">claude mcp add</code>. To keep it
-              installed but out of this chat, use the switch instead.
+              {rich(
+                pendingRemove?.scope
+                  ? t("chat.mcp.removeBodyScoped", {
+                      scope: pendingRemove.scope,
+                    })
+                  : t("chat.mcp.removeBody")
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {removeError && (
@@ -269,7 +267,7 @@ export function McpDialog({
             </p>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={(event) => {
@@ -279,7 +277,7 @@ export function McpDialog({
                 if (pendingRemove) remove(pendingRemove)
               }}
             >
-              Remove
+              {t("common.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -302,12 +300,13 @@ export function McpChip({
   disabled: string[]
   onClick: () => void
 }) {
+  const t = useT()
   if (disabled.length === 0) return null
   return (
     <ToolbarButton
       icon={<Plug />}
-      label={`MCP · ${disabled.length} off`}
-      title="Some MCP tools are switched off in this chat"
+      label={t("chat.mcp.chip", { count: disabled.length })}
+      title={t("chat.mcp.chipTitle")}
       on
       onClick={onClick}
     />
@@ -358,6 +357,7 @@ function ServerItem({
   onChoose: () => void
   onPick: (disabled: string[]) => void
 }) {
+  const t = useT()
   const { tone } = stateLabel(server.state)
   const off = isServerOff(disabled, server.name)
   return (
@@ -394,7 +394,7 @@ function ServerItem({
       </button>
       <Switch
         checked={!off}
-        aria-label={`Allow ${server.name} in this chat`}
+        aria-label={t("chat.mcp.allow", { name: server.name })}
         onCheckedChange={(next) =>
           onPick(withServerOff(disabled, server.name, !next))
         }
@@ -420,6 +420,7 @@ function ServerDetail({
   onPick: (disabled: string[]) => void
   onRemove: () => void
 }) {
+  const t = useT()
   const [query, setQuery] = useState("")
   const { label, tone } = stateLabel(server.state)
   const caption = serverCaption(server)
@@ -452,8 +453,9 @@ function ServerDetail({
         <DialogDescription className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
           {caption && <span>{caption}</span>}
           <span>
-            {server.tools.length} {server.tools.length === 1 ? "tool" : "tools"}
-            {offTools > 0 && (off ? " · all off" : ` · ${offTools} off`)}
+            {t("chat.mcp.tools", { count: server.tools.length })}
+            {offTools > 0 &&
+              ` · ${off ? t("chat.mcp.allOff") : t("chat.mcp.someOff", { count: offTools })}`}
           </span>
           {/* What the server costs a turn when it is on — the number that
               decides whether its switch is worth flipping. A floor (see
@@ -461,10 +463,10 @@ function ServerDetail({
               off, since an off server costs nothing. */}
           {tokens > 0 && (
             <span
-              title="Estimated from tool names and descriptions at ~4 characters per token. Parameter schemas are not in the listing, so the real figure is higher."
+              title={t("chat.mcp.tokensTitle")}
               className={cn(off && "line-through opacity-60")}
             >
-              ≥ ~{compact(tokens)} tokens/turn
+              {t("chat.mcp.tokensPerTurn", { tokens: compact(tokens) })}
             </span>
           )}
         </DialogDescription>
@@ -493,23 +495,22 @@ function ServerDetail({
             href={auth.url}
             className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
           >
-            Authorize on claude.ai
+            {t("chat.mcp.authorize")}
             <ExternalLink className="size-3" />
           </a>
         )}
         {auth?.kind === "cli" && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Sign in with <code className="font-mono">/mcp</code> in a{" "}
-            <code className="font-mono">claude</code> session — the dock&rsquo;s
-            Terminal will do — then Refresh.
+            {rich(t("chat.mcp.signInCli"))}
           </p>
         )}
       </header>
 
       {server.tools.length === 0 ? (
         <p className="flex-1 p-5 text-xs text-muted-foreground">
-          This server offers no tools
-          {server.state === "connected" ? "." : " until it connects."}
+          {server.state === "connected"
+            ? t("chat.mcp.noTools")
+            : t("chat.mcp.noToolsYet")}
         </p>
       ) : (
         <>
@@ -519,8 +520,10 @@ function ServerDetail({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={`Filter ${server.tools.length} tools…`}
-                aria-label="Filter tools"
+                placeholder={t("chat.mcp.filterPlaceholder", {
+                  count: server.tools.length,
+                })}
+                aria-label={t("chat.mcp.filterLabel")}
                 className="h-7 pl-7 text-xs md:text-xs"
               />
             </div>
@@ -564,7 +567,7 @@ function ServerDetail({
                   <Switch
                     checked={!toolOff}
                     disabled={off}
-                    aria-label={`Allow ${tool.name} in this chat`}
+                    aria-label={t("chat.mcp.allow", { name: tool.name })}
                     onCheckedChange={(next) =>
                       onPick(
                         withToolOff(disabled, server.name, tool.name, !next)
@@ -577,7 +580,7 @@ function ServerDetail({
             })}
             {tools.length === 0 && (
               <li className="px-5 py-4 text-xs text-muted-foreground">
-                No tool matches &ldquo;{query.trim()}&rdquo;.
+                {t("chat.mcp.noMatch", { query: query.trim() })}
               </li>
             )}
           </ul>
@@ -593,17 +596,37 @@ function ServerDetail({
       {isRemovable(server) && (
         <footer className="flex shrink-0 items-center gap-3 border-t bg-muted/30 px-5 py-2.5">
           <p className="min-w-0 flex-1 text-[0.7rem] leading-relaxed text-muted-foreground">
-            In your <span className="font-medium">{server.scope}</span>{" "}
-            <code className="font-mono">claude</code> config. Removing it takes
-            it out of every chat and your terminal.
+            {rich(t("chat.mcp.configNote", { scope: server.scope ?? "" }))}
           </p>
           <Button variant="destructive" size="sm" onClick={onRemove}>
             <Trash2 />
-            Remove server
+            {t("chat.mcp.removeServer")}
           </Button>
         </footer>
       )}
     </>
+  )
+}
+
+/**
+ * A translated sentence with its commands still drawn as code: `` `x` `` is
+ * mono and `*x*` is weighted. Marks in the dictionary rather than JSX split
+ * around the words, because the word order around a command is the
+ * translation's to choose.
+ */
+function rich(text: string): ReactNode {
+  return text.split(/(`[^`]+`|\*[^*]+\*)/).map((part, index) =>
+    part.length > 1 && part.startsWith("`") && part.endsWith("`") ? (
+      <code key={index} className="font-mono">
+        {part.slice(1, -1)}
+      </code>
+    ) : part.length > 1 && part.startsWith("*") && part.endsWith("*") ? (
+      <span key={index} className="font-medium">
+        {part.slice(1, -1)}
+      </span>
+    ) : (
+      part
+    )
   )
 }
 

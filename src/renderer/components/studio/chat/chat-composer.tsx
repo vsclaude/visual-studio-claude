@@ -1183,6 +1183,10 @@ export function ModelMenu({
   /* What the CLI's `default` row actually is. Read once for the menu rather
    * than per row: it is one answer about one row, and the rest do not ask. */
   const alias = defaultModelAlias(models)
+  // The toolbar names the model that answers, not the row that asked for it:
+  // `Default (recommended) · Medium` says nothing about which model is behind it.
+  const nameOf = (entry: AgentModel) =>
+    entry.value === "default" && alias ? alias : entry.label
   // Held only so the digit shortcuts can close it: a click is Base UI's own
   // business, and a menu still open after the pick it was asked for reads as a
   // key that did nothing.
@@ -1193,8 +1197,8 @@ export function ModelMenu({
       ? "Inherit"
       : chosen
         ? effort && chatEfforts(models, model).includes(effort)
-          ? `${chosen.label} · ${EFFORT_LABELS[effort]}`
-          : chosen.label
+          ? `${nameOf(chosen)} · ${EFFORT_LABELS[effort]}`
+          : nameOf(chosen)
         : (model ?? "Model")
 
   return (

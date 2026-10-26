@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
   ArrowUpCircle,
+  AudioLines,
   Bell,
   Columns2,
   ExternalLink,
@@ -44,6 +46,12 @@ import {
 } from "@/lib/appearance"
 import { useAppBackground } from "@/lib/app-background"
 import type { ClaudeVersions } from "@shared/api"
+import {
+  MEDIA_PROVIDER_LABELS,
+  MEDIA_PROVIDERS,
+  type MediaKeyStatus,
+  type MediaProvider,
+} from "@shared/media"
 import { isOn, usePlugins, type PluginStatus } from "@/lib/plugins/store"
 import { useSettings } from "@/lib/settings"
 import { installLabel, pendingUpdate, useUpdates } from "@/lib/updates"
@@ -138,6 +146,8 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <TabsSection />
             ) : section === "chats" ? (
               <ChatsSection />
+            ) : section === "media" ? (
+              <MediaSection />
             ) : section === "plugins" ? (
               <PluginsSection />
             ) : (
@@ -150,7 +160,8 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-type SectionId = "appearance" | "tabs" | "chats" | "plugins" | "updates"
+type SectionId =
+  "appearance" | "tabs" | "chats" | "media" | "plugins" | "updates"
 
 /** The sections, in the order they are listed. Each one is a heading, a line
  * saying what it covers, and the rows below — kept together so adding a
@@ -178,6 +189,12 @@ const SECTIONS: {
     label: "Chats",
     blurb: "Notifications, and the model commit drafts run on.",
     icon: Bell,
+  },
+  {
+    id: "media",
+    label: "Media",
+    blurb: "Services a chat can generate audio with, on your own account.",
+    icon: AudioLines,
   },
   {
     id: "plugins",
@@ -519,6 +536,183 @@ function ChatsSection() {
         </div>
       </Row>
     </Card>
+  )
+}
+
+/**
+ * The media services' API keys — what lets a chat's `media` tools exist.
+ *
+ * A key is typed here once and never shown again: main seals it with the OS
+ * keychain and tells this side only whether one is set (`MediaKeyStatus`), so
+ * the row offers Replace and Remove rather than a field holding the secret.
+ * No store: nothing else in the renderer needs to know, and the dialog asks
+ * when it opens.
+ */
+function MediaSection() {
+  const [status, setStatus] = useState<MediaKeyStatus | null>(null)
+  const [failure, setFailure] = useState<string | null>(null)
+
+  useEffect(() => {
+    let live = true
+    void window.desktop
+      .mediaKeys()
+      .then((next) => {
+        if (live) setStatus(next)
+      })
+      .catch((error: unknown) => {
+        if (live) setFailure(messageOfError(error))
+      })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  const save = async (provider: MediaProvider, key: string | null) => {
+    setFailure(null)
+    try {
+      setStatus(await window.desktop.setMediaKey(provider, key))
+      return true
+    } catch (error) {
+      setFailure(messageOfError(error))
+      return false
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {status && !status.sealable && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed">
+          This machine has no keychain the studio can seal a key with, so none
+          can be saved — it would otherwise sit on disk in the clear.
+        </p>
+      )}
+
+      <Card>
+        {MEDIA_PROVIDERS.map((provider) => (
+          <MediaKeyRow
+            key={provider}
+            provider={provider}
+            saved={status?.keys[provider] ?? false}
+            disabled={!status?.sealable}
+            onSave={(key) => save(provider, key)}
+          />
+        ))}
+      </Card>
+
+      <p
+        aria-live="polite"
+        className={cn(
+          "text-xs leading-relaxed",
+          failure ? "text-destructive" : "text-muted-foreground"
+        )}
+      >
+        {failure ??
+          "With a key saved, a chat can generate audio when you ask it to, and writes the file into the project's media/ folder. Each one spends your credits with that service: Ask and Edits ask you first, Full access does not, and Plan and Read only never generate."}
+      </p>
+    </div>
+  )
+}
+
+const MEDIA_PROVIDER_ABOUT: Record<MediaProvider, string> = {
+  elevenlabs:
+    "Speech and sound effects. A key is under Developers › API keys on elevenlabs.io.",
+}
+
+function MediaKeyRow({
+  provider,
+  saved,
+  disabled,
+  onSave,
+}: {
+  provider: MediaProvider
+  saved: boolean
+  disabled: boolean
+  onSave: (key: string | null) => Promise<boolean>
+}) {
+  /** Typing a key — always, when none is saved; after Replace, when one is. */
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const submit = async (key: string | null) => {
+    setBusy(true)
+    const ok = await onSave(key)
+    setBusy(false)
+    if (ok) {
+      setDraft("")
+      setEditing(false)
+    }
+  }
+
+  return (
+    <Row
+      title={MEDIA_PROVIDER_LABELS[provider]}
+      description={MEDIA_PROVIDER_ABOUT[provider]}
+    >
+      {saved && !editing ? (
+        <div className="flex items-center gap-1.5">
+          <span className="mr-1 text-xs text-muted-foreground">Key saved</span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy || disabled}
+            onClick={() => setEditing(true)}
+          >
+            Replace
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            className="hover:text-destructive"
+            onClick={() => void submit(null)}
+          >
+            Remove
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="flex items-center gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (draft.trim()) void submit(draft)
+          }}
+        >
+          <Input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="API key"
+            aria-label={`${MEDIA_PROVIDER_LABELS[provider]} API key`}
+            value={draft}
+            disabled={busy || disabled}
+            onChange={(event) => setDraft(event.target.value)}
+            className="h-7 w-52 font-mono text-xs"
+          />
+          <Button
+            size="sm"
+            type="submit"
+            disabled={busy || disabled || !draft.trim()}
+          >
+            Save
+          </Button>
+          {editing && (
+            <Button
+              size="sm"
+              variant="ghost"
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setDraft("")
+                setEditing(false)
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </form>
+      )}
+    </Row>
   )
 }
 

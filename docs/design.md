@@ -35,6 +35,7 @@ absolute path.
     claude-profiles/<slug>/  one Claude profile's `CLAUDE_CONFIG_DIR`
     note-files/              pictures dropped into a document or a chat
     drawings/                one `<id>.excalidraw` per drawing
+    media-keys.json          media services' API keys, sealed by the keychain
 ```
 
 **There is no switching.** Somebody working on a frontend and the API behind it
@@ -1154,10 +1155,12 @@ event twice. An example of a user's plugin, in plain JavaScript, is
 
 ## MCP: what the user's own `claude` has
 
-**This app serves no MCP server and passes no MCP config.** A turn gets exactly
-the servers the CLI finds in that directory — `~/.claude.json`, `.mcp.json`,
-plugins, claude.ai connectors. The cost: `Plan` and `Read only` cannot refuse a
-server by name; an unlisted tool is still refused by `deciding`.
+**A turn gets the servers the CLI finds in that directory** — `~/.claude.json`,
+`.mcp.json`, plugins, claude.ai connectors — **plus one of this app's own,
+`media`, once a media service has a key** (§ Generating audio). Nothing else
+is configured, and no config is ever written to a command line. The cost:
+`Plan` and `Read only` cannot refuse a server by name; an unlisted tool is
+still refused by `deciding`.
 
 ### Per chat, in the composer
 
@@ -1181,6 +1184,66 @@ something is switched off, since that is a property of the next message.
 - **Remove** runs `claude mcp remove`, only where a scope allows it.
 - A **`needs-auth`** claude.ai connector links to its settings page; any other
   points at `/mcp` in a terminal.
+- **`media` is not in this listing**: the listing is asked of a `claude` that
+  is not a chat's session, and the server only exists inside one. Its tools
+  are off by removing the key in Settings › Media, for every chat at once.
+
+### Generating audio
+
+A chat can make speech and sound effects with **ElevenLabs**, on the user's own
+account and key, and write the file into the project. The ask is the user's —
+"make a voiceover of this paragraph" — and the call is the chat's, through
+three tools on an MCP server this app serves: `elevenlabs_voices` (free),
+`elevenlabs_speech`, `elevenlabs_sound_effect`. Video (Veo) is the next
+service; it is a job that is started and waited on rather than one response,
+which a single long tool call covers — measured below.
+
+**This reverses "this app serves no MCP server."** The three `yasuo-*` servers
+went for two reasons: they served panels that were themselves deleted, and
+their config went to the CLI on a command line any process on the machine can
+read. Neither holds here. The server is the SDK's `createSdkMcpServer`, **in
+the main process**: the CLI is told a name and a type, every call comes back
+over the control channel, and the key is read by the handler at the moment it
+is spent — it never reaches the CLI, the command line or the renderer. And it is
+not a panel's: generating is a thing a conversation does, asked for in words,
+in the one place this app already is.
+
+Measured against the user's own `claude` (2.1.309) before it was built: the
+server connects; the CLI's own servers (a local `playwright`, two claude.ai
+connectors) load beside it unchanged; a tool call held for 200 seconds returns
+whole; and the tools are deferred behind `ToolSearch` like any MCP server's, so
+they cost the prefix their names and not their schemas until used — hence the
+`searchHint` on each.
+
+- **Only with a key.** No key, no server: a tool the model can see is a tool it
+  will try. Which services have a key is in `signatureOf`, since a tool list is
+  fixed for a process; adding or removing one reaches an open chat on its next
+  message, as a new session. Replacing a key changes nothing there — it is read
+  per call.
+- **The modes treat it as any MCP tool.** Each call spends money with a third
+  party, so `Plan` and `Read only` refuse it, `Ask` and `Edits` put a card up
+  first (until somebody answers it with Always allow), and `Full access` runs
+  it. No special case was needed: that
+  is already what `PERMISSIONS` does with `mcp__*`.
+- **Keys are sealed** with Electron's `safeStorage` (the OS keychain) into
+  `workspace/media-keys.json`, owner-only. A machine with no keychain is
+  refused a key rather than given one in the clear, the call the deleted
+  Database panel's `encryption.ts` made for passwords. The renderer is told
+  whether a key is set and never what it is, so a plugin cannot lift it.
+- **Files go into the project**, `media/<words-of-the-prompt>-<stamp>.mp3`
+  unless the turn names a path, which is held inside the chat's directory the
+  way `insideAny` holds a `files:*` path. Never over an existing file — a
+  second take is `-2` — so asking again cannot quietly destroy the first.
+- **The Explorer plays them**: a `Player` viewer for audio and video, streamed
+  through `vsc-media://` with `Range` passed along so seeking works. The
+  scheme answers only for an audio or video extension inside the workspace's
+  folders — a player's way in, not a second `files:read`. It does not reload
+  on git status, which moves whenever any file does and would restart the
+  recording somebody is listening to.
+- **A failure is the tool's answer, not a throw.** ElevenLabs' own sentence —
+  no credits, an unknown voice, a field out of range — comes back with
+  `isError`, so the model can try another voice or stop and say the quota is
+  gone.
 
 ## Explorer
 

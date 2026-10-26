@@ -1,3 +1,5 @@
+import type { Sealer } from "./media/keys"
+
 /**
  * Everything `ipc.ts` needs from Electron itself — a native dialog, a window to
  * pin, a badge on the dock icon — and nothing that reads or writes the
@@ -68,6 +70,10 @@ export type Host = {
    * heard.
    */
   fetch: (url: string, init?: RequestInit) => Promise<Response>
+
+  /** Electron's `safeStorage` — the OS keychain's own key — for the media
+   * services' API keys. See `main/media/keys.ts`. */
+  sealer: Sealer
 
   /** The number on the app's own icon — the dock's red badge on macOS, the
    * launcher's count on Linux. Zero clears it. */

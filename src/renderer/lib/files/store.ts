@@ -430,6 +430,11 @@ export const useFiles = create<FilesState>((set, get) => {
    * re-read, and neither is a picture whose tab has been away and come back.
    */
   async function load(filePath: string, viewer: Viewer): Promise<void> {
+    // Nothing to read: the player streams the file itself, by URL, and
+    // reading a recording as text only to be told it is binary is megabytes
+    // across the bridge for nothing.
+    if (viewer === "media") return
+
     if (viewer === "image") {
       if (get().images[filePath] !== undefined) return
       setImage(filePath, { kind: "loading" })

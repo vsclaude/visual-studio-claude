@@ -33,6 +33,7 @@ import { FileDiff } from "./file-diff"
 import { FileEditor } from "./file-editor"
 import { encodableTypeOf } from "@shared/image-files"
 import { FileImage } from "./file-image"
+import { FileMedia } from "./file-media"
 import { FileImageEditor } from "./file-image-editor"
 import { FileImageDiff } from "./file-image-diff"
 import { FileHtml } from "./file-html"
@@ -359,6 +360,8 @@ export function FilePane({
           />
         ) : viewer === "image" ? (
           <FileImage image={image ?? { kind: "loading" }} alt={path} />
+        ) : viewer === "media" ? (
+          <FileMedia key={path} path={path} />
         ) : (
           <Body
             path={path}

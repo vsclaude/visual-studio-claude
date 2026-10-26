@@ -149,6 +149,9 @@ const api: DesktopApi = {
   planUsage: (profileId, fresh) =>
     ipcRenderer.invoke(IPC.planUsage, profileId, fresh),
   removeMcpServer: (input) => ipcRenderer.invoke(IPC.removeMcpServer, input),
+  mediaKeys: () => ipcRenderer.invoke(IPC.mediaKeys),
+  setMediaKey: (provider, key) =>
+    ipcRenderer.invoke(IPC.setMediaKey, provider, key),
   listClaudeProfiles: () => ipcRenderer.invoke(IPC.listClaudeProfiles),
   saveClaudeProfiles: (profiles) =>
     ipcRenderer.invoke(IPC.saveClaudeProfiles, profiles),

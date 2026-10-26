@@ -1,3 +1,5 @@
+import { mediaKindOf } from "@shared/media"
+
 import { nameOf } from "./paths"
 
 /**
@@ -21,7 +23,8 @@ import { nameOf } from "./paths"
  * a menu entry that appears and disappears with the working tree is one nobody
  * can learn. It is never the default: a diff is what somebody asks for.
  */
-export type Viewer = "image" | "text" | "markdown" | "html" | "blocks" | "diff"
+export type Viewer =
+  "image" | "media" | "text" | "markdown" | "html" | "blocks" | "diff"
 
 /**
  * What the studio will draw as a picture.
@@ -92,6 +95,10 @@ export function isHtml(filePath: string): boolean {
  * the thing already on screen is a menu that teaches nothing.
  */
 export function viewersFor(filePath: string): Viewer[] {
+  // A player and nothing else: a recording opened as text is the binary
+  // notice, and two takes of one as a diff is not a thing anybody reads.
+  if (mediaKindOf(filePath)) return ["media"]
+
   if (isImage(filePath)) {
     // An SVG is a picture first — that is what somebody double-clicking one
     // wants to see — and text when they say so, which is what earns it a diff
@@ -123,6 +130,7 @@ export function defaultViewer(filePath: string): Viewer {
 /** What a viewer is called, in the "Open with" menu. */
 export const VIEWER_LABELS: Record<Viewer, string> = {
   image: "Image preview",
+  media: "Player",
   text: "Text editor",
   markdown: "Markdown preview",
   html: "HTML preview",

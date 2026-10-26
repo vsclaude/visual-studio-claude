@@ -20,6 +20,7 @@ import {
   type ChatOptions,
 } from "../shared/api"
 import { FREE_PROFILE_ID } from "../shared/free-ai"
+import { isMediaProvider, mediaKindOf } from "../shared/media"
 import type { PluginFile, PluginSource } from "../shared/plugins"
 import { pathFilterOf } from "../shared/search"
 import { agentCommands } from "./agent-commands"
@@ -70,6 +71,8 @@ import {
 import { ChatNotices, noticeText, type ChatNotice } from "./notify"
 import { cancelSignInWithGoogle, signInWithGoogle } from "./google-sign-in"
 import { installedMcpServers, removeMcpServer } from "./mcp-servers"
+import { MEDIA_KEYS_FILE, MediaKeys } from "./media/keys"
+import { mediaServer } from "./media/server"
 import { planUsage } from "./plan-usage"
 import {
   installedPluginDir,
@@ -211,6 +214,7 @@ export function createIpc(host: Host): {
   watchers: { closeAll: () => void }
   noteFilePath: (fileName: string) => string
   pluginFilePath: (id: string, file: PluginFile) => string
+  mediaFilePath: (target: string) => Promise<string>
 } {
   // Before anything reads the tree: the store, the daemon's socket, the logs.
   migrateLegacyDataDir()
@@ -231,6 +235,13 @@ export function createIpc(host: Host): {
       ? [...stored, { id: FREE_PROFILE_ID, name: "Credits", configDir: dir }]
       : stored
   }
+
+  /** The media services' keys, sealed by the OS keychain — see
+   * `main/media/keys.ts`. */
+  const mediaKeys = new MediaKeys(
+    path.join(dataDir(), WORKSPACE_DIR, MEDIA_KEYS_FILE),
+    host.sealer
+  )
 
   const handlers = new Map<string, Handler>()
   const handle = (channel: string, handler: Handler): void => {
@@ -299,6 +310,17 @@ export function createIpc(host: Host): {
       deleteChat: (id) => store.deleteChat(id),
       writeImage: (fileName, bytes) => store.writeNoteFile(fileName, bytes),
       readImage: (fileName) => store.readNoteFile(fileName),
+      mediaProviders: () => mediaKeys.providers(),
+      // `host.fetch` for the reason it exists: the system proxy and the OS's
+      // certificates, which a company network's API calls need as much as a
+      // sign-in does.
+      mediaServer: (cwd, providers) =>
+        mediaServer({
+          cwd,
+          providers,
+          keyOf: (provider) => mediaKeys.keyOf(provider),
+          fetch: host.fetch,
+        }),
     },
     (event) => {
       send(IPC.chatEvent, event)
@@ -411,6 +433,18 @@ export function createIpc(host: Host): {
         cwd: await folderDirOf(input.folderId),
       })
   )
+
+  handle(IPC.mediaKeys, () => mediaKeys.status())
+
+  // The key is checked for a provider this build knows, and nothing else: what
+  // a key looks like is the service's business, and a wrong one is refused by
+  // the service on first use with a sentence the turn passes on.
+  handle(IPC.setMediaKey, (_event, provider: unknown, key: unknown) => {
+    if (!isMediaProvider(provider)) {
+      throw new Error(`Not a media service: ${String(provider)}`)
+    }
+    return mediaKeys.set(provider, typeof key === "string" ? key : null)
+  })
 
   /** A project's directory, or null for one that has left the workspace —
    * shared by the two MCP handlers above, which both run `claude` somewhere. */
@@ -1605,5 +1639,14 @@ export function createIpc(host: Host): {
     /** For the `vsc-plugin://` handler, the same way — see `servePlugins`. */
     pluginFilePath: (id: string, file: PluginFile) =>
       pluginFilePath(pluginRootOf(pluginRoots, id), id, file),
+    /** For the `vsc-media://` handler — see `serveMediaFiles`. The same gate
+     * as every `files:*` call, and narrower: a player's file and nothing else,
+     * so the scheme cannot be used to read a `.env` by URL. */
+    mediaFilePath: async (target: string): Promise<string> => {
+      if (!mediaKindOf(target)) {
+        throw new Error(`${path.basename(target)} is not audio or video.`)
+      }
+      return inWorkspace(target)
+    },
   }
 }

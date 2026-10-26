@@ -4,8 +4,14 @@ import { useData } from "vitepress"
 import { VPNavBarSearch } from "vitepress/theme"
 
 import { APP_MARK, WORDMARK } from "../../../server/utils/brand.ts"
-import { COPY, LANGS, docsStartOf, langOf, pathOf } from "./copy.ts"
-import { useDownload } from "./download.ts"
+import {
+  COPY,
+  LANGS,
+  docsStartOf,
+  installPathOf,
+  langOf,
+  pathOf,
+} from "./copy.ts"
 import { ICON, slugOf } from "./links.ts"
 
 /*
@@ -24,9 +30,6 @@ const t = computed(() => COPY[current.value].nav)
 const home = computed(() => pathOf(current.value))
 const at = computed(() => (props.onHome ? "" : home.value))
 const slug = computed(() => slugOf(page.value.relativePath))
-const { href: downloadHref, direct } = useDownload(
-  () => `${docsStartOf(current.value)}#install`
-)
 </script>
 
 <template>
@@ -53,9 +56,11 @@ const { href: downloadHref, direct } = useDownload(
           >{{ COPY[l].short }}</a
         >
       </div>
-      <a class="button ghost download" :href="downloadHref"
+      <!-- The install page rather than a file: on a Mac a browser's .dmg is
+           quarantined, and the page says how to open it anyway. -->
+      <a class="button ghost download" :href="installPathOf(current)"
         ><span>{{ t.download }}</span
-        ><i v-html="direct ? ICON.download : ICON.arrow"></i
+        ><i v-html="ICON.download"></i
       ></a>
     </div>
   </nav>

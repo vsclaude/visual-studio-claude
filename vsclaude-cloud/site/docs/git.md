@@ -27,7 +27,7 @@ Stage what you want, type a message in the box above the lists and press
 **Draft** has Claude write the message for you from the staged diff and your
 last ten commit subjects, in the same style. It only fills the box — nothing is
 committed until you press commit. The model and account it uses are set in
-**Settings › Claude › Helpers › Commit message drafts**.
+**Settings › Chats › Commit message drafts**.
 
 ## Commits
 

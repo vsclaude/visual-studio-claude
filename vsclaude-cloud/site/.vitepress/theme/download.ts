@@ -9,14 +9,27 @@ import { RELEASES_URL } from "./links.ts"
  * spelled out here; until that answers, or if it never does, a button is the
  * releases page it always was.
  *
- * The guide names its builds outright (`useBuild`); only the home page and
- * the bar guess one from the browser (`useDownload`).
+ * The guide and the install page name their builds outright (`useBuild`);
+ * only the home page's buttons guess one from the browser (`useDownload`).
  */
 
 const LATEST_API =
   "https://api.github.com/repos/veystudioapp/vey-studio-releases/releases/latest"
 
 export type Os = "macOS" | "Windows" | "Linux"
+
+export const OSES: Os[] = ["macOS", "Windows", "Linux"]
+
+/** An OS as the install page's address names its tab: `/install#windows`. */
+export function hashOf(os: Os): string {
+  return `#${os.toLowerCase()}`
+}
+
+/** The tab `location.hash` asks for, if it names one — in any case, since
+ * a link typed by hand may say `#macOS`. */
+export function osOfHash(hash: string): Os | null {
+  return OSES.find((os) => hashOf(os) === hash.toLowerCase()) ?? null
+}
 
 type Asset = { name: string; browser_download_url: string }
 
@@ -66,18 +79,40 @@ async function buildOf(os: Os): Promise<Build> {
   return (await macArch()) === "x64" ? "mac-x64" : "mac-arm64"
 }
 
+type Release = { tag_name?: string; assets?: Asset[] }
+
 // One request per page load however many buttons ask: the API allows an
 // address sixty an hour.
-let latest: Promise<Asset[]> | undefined
+let latest: Promise<Release> | undefined
 
-async function urlOf(build: Build): Promise<string | null> {
+function release(): Promise<Release> {
   latest ??= fetch(LATEST_API, {
     headers: { Accept: "application/vnd.github+json" },
   })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((release: { assets?: Asset[] } | null) => release?.assets ?? [])
-    .catch(() => [])
-  return find(build, await latest)?.browser_download_url ?? null
+    .then((r) => (r.ok ? r.json() : {}))
+    .catch(() => ({}))
+  return latest
+}
+
+async function urlOf(build: Build): Promise<string | null> {
+  const { assets = [] } = await release()
+  return find(build, assets)?.browser_download_url ?? null
+}
+
+/** The latest release's version, `1.0.17`, once GitHub has answered. */
+export function useVersion() {
+  const version = ref<string | null>(null)
+  onMounted(async () => {
+    version.value = (await release()).tag_name?.replace(/^v/, "") ?? null
+  })
+  return version
+}
+
+/** The OS this page is being read on, once it is mounted. */
+export function useOs() {
+  const os = ref<Os | null>(null)
+  onMounted(() => (os.value = osOf(navigator.userAgent)))
+  return os
 }
 
 /** Where one build's button goes: the file itself once the release answers. */

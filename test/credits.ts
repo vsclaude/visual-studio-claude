@@ -62,16 +62,21 @@ check("a dime drops the trailing zero", formatCredits(1_000_000) === "$0.10")
 check("nothing is $0.00", formatCredits(0) === "$0.00")
 check("and an overdraft is not negative", formatCredits(-50) === "$0.00")
 
-// One pack, 20.000 ₫ for $10.00, and a bank transfer's alone: Paddle's fixed
-// fee is most of it, and the server refuses a card checkout for it.
+// The 20.000 ₫ pack is a bank transfer's alone: Paddle's fixed fee is most of
+// it, and the server refuses a card checkout for it.
 section("packsFor")
 check(
-  "a transfer buys the one pack",
+  "a transfer buys all four",
   packsFor("bank")
     .map((pack) => `${pack.price}:${formatCredits(pack.credits)}`)
-    .join() === "20000:$10.00"
+    .join() === "20000:$10.00,50000:$25.00,100000:$55.00,200000:$120.00"
 )
-check("a card buys nothing", packsFor("card").length === 0)
+check(
+  "a card buys from 50.000 ₫ up",
+  packsFor("card")
+    .map((pack) => pack.price)
+    .join() === "50000,100000,200000"
+)
 
 section("stockOf")
 const stocked = (stock?: Record<string, number>): StudioAccount => ({

@@ -11,8 +11,8 @@ You do not need Claude Code at all to chat on [credits](/docs/credits).
 
 ## An account is not signed in
 
-Open **Settings › Claude**. **Check** asks the account again; **Log in** signs
-it in once more. Each account is its own Claude Code login, so signing out of
+Open the account's menu under **Accounts**, at the foot of the chats column.
+**Check again** asks the account again; **Sign in…** signs it in once more. Each account is its own Claude Code login, so signing out of
 one does not touch the others.
 
 ## A chat stopped at the limit

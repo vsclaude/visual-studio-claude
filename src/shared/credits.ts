@@ -42,7 +42,7 @@ function usd(dollars: number): number {
 }
 
 export type CreditPack = {
-  id: "vnd-20k"
+  id: "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
   /**
    * Sold by bank transfer alone, and not offered while the dialog is on card:
    * on 20.000 ₫ Paddle's fixed $0.50 is most of the price, and Paddle charges
@@ -53,21 +53,38 @@ export type CreditPack = {
   price: number
   /** What it adds, in the integer unit — `CREDITS_PER_USD` to the dollar. */
   credits: number
+  /** A bonus over the base rate, in percent — drawn as a badge. */
+  bonus?: number
+  /**
+   * The pack the dialog steers toward — raised, ringed and given the filled
+   * button. One at most: two highlights are no highlight.
+   */
+  popular?: boolean
 }
 
 /**
  * Credits, which every Studio AI request is paid for out of, on any model —
  * they do not expire.
  *
- * **One pack: 20.000 ₫ for $10.00, by bank transfer, in limited stock** —
- * how many are left is the server's (`StudioAccount.stock`). There were four,
- * up to 200.000 ₫ with a bonus on the bigger ones; the server keeps the other
- * three as `retired`, only to credit orders opened before they were
- * withdrawn. Why the rate is the server's `billing.ts`. An id is its price,
- * and is also the server's item name.
+ * $1.00 of usage per 2.000 ₫, plus the bonus the bigger packs are badged
+ * with: 100.000 ₫ is $50 and 10% more, 200.000 ₫ is $100 and 20% more, so
+ * the badge and the number say the same thing. Four amounts, the ones a
+ * Vietnamese transfer is made in; the 20.000 ₫ one is `bankOnly`. Each is in
+ * limited stock — how many are left is the server's (`StudioAccount.stock`).
+ * Why the rate is the server's `billing.ts`. An id is its price, and is also
+ * the server's item name.
  */
 export const CREDIT_PACKS: CreditPack[] = [
   { id: "vnd-20k", price: 20_000, credits: usd(10), bankOnly: true },
+  { id: "vnd-50k", price: 50_000, credits: usd(25) },
+  {
+    id: "vnd-100k",
+    price: 100_000,
+    credits: usd(55),
+    bonus: 10,
+    popular: true,
+  },
+  { id: "vnd-200k", price: 200_000, credits: usd(120), bonus: 20 },
 ]
 
 const VND = new Intl.NumberFormat("vi-VN", {

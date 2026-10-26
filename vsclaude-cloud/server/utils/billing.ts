@@ -37,11 +37,13 @@ function usd(dollars: number): number {
  * Anthropic's own API**, where $1.00 is about 26.000 ₫, and has to be
  * repriced before this server is pointed at `api.anthropic.com`.
  *
- * **One pack is sold: 20.000 ₫ for $10.00, in limited stock** — the gateway's
- * usage is bought in lots, so the server sells no more packs than it has
- * usage behind (`unsoldCredits`, `accounts.ts`). The other three are `retired`.
- * The packs were the four amounts a Vietnamese transfer is made in — 20.000,
- * 50.000, 100.000 and 200.000 ₫. The smallest is **`bankOnly`**: Paddle's
+ * **Four packs, in limited stock** — the gateway's usage is bought in lots,
+ * so the server sells no more of any pack than it has usage behind
+ * (`unsoldCredits`, `accounts.ts`). They are the four amounts a Vietnamese
+ * transfer is made in — 20.000, 50.000, 100.000 and 200.000 ₫ — with 10% and
+ * 20% more on the two biggest. For a while only the 20.000 ₫ one was sold and
+ * the rest were `retired`; the flag stays for the next pack withdrawn. The
+ * smallest is **`bankOnly`**: Paddle's
  * fixed $0.50 is about 13.000 ₫ of a 20.000 ₫ pack, and Paddle charges no
  * less than 20.276 ₫ in đồng anyway, so a card buys from 50.000 ₫ up. One
  * table otherwise for both ways of paying (`docs/design.md` § Credits). An
@@ -52,9 +54,9 @@ export const CREDIT_PACKS: Record<
   { price: number; credits: number; bankOnly?: true; retired?: true }
 > = {
   "vnd-20k": { price: 20_000, credits: usd(10), bankOnly: true },
-  "vnd-50k": { price: 50_000, credits: usd(25), retired: true },
-  "vnd-100k": { price: 100_000, credits: usd(55), retired: true },
-  "vnd-200k": { price: 200_000, credits: usd(120), retired: true },
+  "vnd-50k": { price: 50_000, credits: usd(25) },
+  "vnd-100k": { price: 100_000, credits: usd(55) },
+  "vnd-200k": { price: 200_000, credits: usd(120) },
 }
 
 /** Whether it is a pack at all — one still sold or one somebody may already
@@ -65,7 +67,7 @@ export function isCreditItem(value: unknown): value is CreditItem {
   return typeof value === "string" && value in CREDIT_PACKS
 }
 
-/** Whether a new purchase of it may be opened — 20.000 ₫ alone now, and
+/** Whether a new purchase of it may be opened — any pack not `retired`, and
  * only while the unsold pool covers it (`packsAffordable`). */
 export function isOnSale(value: unknown): value is CreditItem {
   return isCreditItem(value) && !CREDIT_PACKS[value].retired

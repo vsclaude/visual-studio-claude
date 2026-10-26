@@ -106,17 +106,15 @@ describe("items", () => {
     expect(isCreditItem("plus-3m")).toBe(false)
     expect(isCreditItem("pri_c60")).toBe(false)
   })
-  test("20.000 ₫ for $10.00 is the one pack on sale", () => {
-    expect(ON_SALE).toEqual(["vnd-20k"])
+  test("all four packs are on sale, cheapest first", () => {
+    expect(ON_SALE).toEqual(["vnd-20k", "vnd-50k", "vnd-100k", "vnd-200k"])
     expect(CREDIT_PACKS["vnd-20k"]).toMatchObject({
       price: 20_000,
       credits: 10 * CREDITS_PER_USD,
     })
-    expect(isOnSale("vnd-20k")).toBe(true)
-  })
-  test("a retired pack is still a pack, so old orders are credited", () => {
-    expect(isCreditItem("vnd-100k")).toBe(true)
-    expect(isOnSale("vnd-100k")).toBe(false)
+    expect(CREDIT_PACKS["vnd-100k"].credits).toBe(55 * CREDITS_PER_USD)
+    expect(CREDIT_PACKS["vnd-200k"].credits).toBe(120 * CREDITS_PER_USD)
+    expect(isOnSale("vnd-200k")).toBe(true)
     expect(isOnSale("plus")).toBe(false)
   })
   test("the pool is what the keys were bought with, less what was sold", () => {
@@ -131,27 +129,34 @@ describe("items", () => {
   })
   test("the pool sells only whole packs", () => {
     const pack = CREDIT_PACKS["vnd-20k"].credits
-    expect(packsAffordable(3 * pack, {}, ON_SALE)).toEqual({ "vnd-20k": 3 })
+    expect(packsAffordable(3 * pack, {}, ON_SALE)).toEqual({
+      "vnd-20k": 3,
+      "vnd-50k": 1,
+      "vnd-100k": 0,
+      "vnd-200k": 0,
+    })
     // $25 behind is two $10 packs, not three.
-    expect(packsAffordable(2.5 * pack, {}, ON_SALE)).toEqual({ "vnd-20k": 2 })
+    expect(packsAffordable(2.5 * pack, {}, ["vnd-20k"])).toEqual({
+      "vnd-20k": 2,
+    })
     // Short of one whole pack is out of credits.
-    expect(packsAffordable(pack - 1, {}, ON_SALE)).toEqual({ "vnd-20k": 0 })
-    expect(packsAffordable(0, {}, ON_SALE)).toEqual({ "vnd-20k": 0 })
+    expect(packsAffordable(pack - 1, {}, ["vnd-20k"])).toEqual({ "vnd-20k": 0 })
+    expect(packsAffordable(0, {}, ["vnd-20k"])).toEqual({ "vnd-20k": 0 })
   })
   test("unpaid orders hold their packs back", () => {
     const pack = CREDIT_PACKS["vnd-20k"].credits
-    expect(packsAffordable(3 * pack, { "vnd-20k": 2 }, ON_SALE)).toEqual({
+    expect(packsAffordable(3 * pack, { "vnd-20k": 2 }, ["vnd-20k"])).toEqual({
       "vnd-20k": 1,
     })
-    // An old order for a retired pack holds back what it would add.
+    // An order for another pack holds back what it would add.
     expect(
       packsAffordable(
         CREDIT_PACKS["vnd-50k"].credits + pack,
         { "vnd-50k": 1 },
-        ON_SALE
+        ["vnd-20k"]
       )
     ).toEqual({ "vnd-20k": 1 })
-    expect(packsAffordable(pack, { "vnd-20k": 5 }, ON_SALE)).toEqual({
+    expect(packsAffordable(pack, { "vnd-20k": 5 }, ["vnd-20k"])).toEqual({
       "vnd-20k": 0,
     })
   })

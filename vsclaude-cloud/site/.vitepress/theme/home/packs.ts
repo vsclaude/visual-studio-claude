@@ -54,6 +54,10 @@ export function coin(id: string, size: number): string {
 </svg>`
 }
 
+/** Whether the page sells by card at all — off, as the studio's own
+ * `CARD_OFFERED` is: every purchase is by bank transfer for now. */
+const CARD_OFFERED = false
+
 /** The packs as the page draws them, cheapest first — the size in dollars
  * (`$1.00`), as the studio writes it. */
 export function packsForSale(method: PaymentMethod = "bank"): {
@@ -63,6 +67,7 @@ export function packsForSale(method: PaymentMethod = "bank"): {
   bonus?: number
   popular: boolean
 }[] {
+  if (method === "card" && !CARD_OFFERED) return []
   return (Object.keys(CREDIT_PACKS) as CreditItem[])
     .filter((id) => !CREDIT_PACKS[id].retired)
     .filter((id) => method === "bank" || !CREDIT_PACKS[id].bankOnly)

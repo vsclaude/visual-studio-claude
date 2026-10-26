@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useData } from "vitepress"
 
 import { APP_MARK, WORDMARK } from "../../../../server/utils/brand.ts"
-import { COPY, LANGS, docsStartOf, langOf, pathOf } from "../copy.ts"
+import { COPY, LANGS, installPathOf, langOf, pathOf } from "../copy.ts"
 import InlineStyle from "../InlineStyle.ts"
-import { useDownload } from "../download.ts"
+import { hashOf, useDownload } from "../download.ts"
 import { ICON } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
 import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
@@ -34,9 +34,9 @@ const { lang } = useData()
 const t = computed(() => COPY[langOf(lang.value)])
 const home = computed(() => pathOf(langOf(lang.value)))
 // Every build, named — for a Mac the button guessed wrong for, or another OS.
-const downloads = computed(() => `${docsStartOf(langOf(lang.value))}#install`)
-// Only the ways of paying something is sold by — the one pack on sale is
-// `bankOnly`, so the card side would be an empty row of packs.
+const downloads = computed(() => installPathOf(langOf(lang.value)))
+// Only the ways of paying something is sold by — cards are off for now
+// (`CARD_OFFERED` in `packs.ts`), so the card side would be an empty row.
 const METHODS = (["bank", "card"] as PaymentMethod[]).filter(
   (m) => packsForSale(m).length > 0
 )
@@ -47,7 +47,22 @@ const style = css + "\n" + demoCss()
 const LOGO = APP_MARK + WORDMARK
 const STACK = "<span></span><span></span>" + APP_MARK
 
-const { os, href: downloadHref } = useDownload(downloads)
+// The install page open on this OS's tab, for when the button is not the
+// file: a Mac, or a release GitHub has not answered for.
+const installHref = computed(() =>
+  os.value ? downloads.value + hashOf(os.value) : downloads.value
+)
+const { os, href: fileHref } = useDownload(() => installHref.value)
+// Not the file on a Mac: a browser's .dmg is quarantined and Gatekeeper calls
+// the unsigned app "damaged", so the button goes to the install page, which
+// hands over the `.dmg` with the `xattr` line that opens it. Windows and Linux
+// open the file they are handed, so they are still handed it.
+const downloadHref = computed(() =>
+  os.value === "macOS" ? installHref.value : fileHref.value
+)
+const downloadIcon = computed(() =>
+  os.value === "macOS" ? ICON.arrow : ICON.download
+)
 const downloadLabel = computed(() =>
   os.value ? t.value.cta.downloadFor + os.value : t.value.cta.download
 )
@@ -102,7 +117,7 @@ onBeforeUnmount(() => seen?.disconnect())
         <div class="ctas enter" style="--d: 0.24s">
           <a class="button primary download" :href="downloadHref"
             ><span>{{ downloadLabel }}</span
-            ><i v-html="ICON.download"></i
+            ><i v-html="downloadIcon"></i
           ></a>
           <a class="button ghost" href="#credits"
             ><span>{{ t.cta.pricing }}</span
@@ -267,7 +282,7 @@ onBeforeUnmount(() => seen?.disconnect())
         <div class="ctas reveal">
           <a class="button primary download" :href="downloadHref"
             ><span>{{ downloadLabel }}</span
-            ><i v-html="ICON.download"></i
+            ><i v-html="downloadIcon"></i
           ></a>
         </div>
       </section>

@@ -1185,9 +1185,15 @@ export async function startAgentSession(
       void conversation.interrupt().catch(() => {})
     },
     setModel: (model) => {
-      void conversation.setModel(model ?? undefined).catch((error: unknown) => {
-        console.error("Could not change the model mid-session", error)
-      })
+      void conversation
+        .setModel(model ?? undefined)
+        // The window's size is the model's, so the meter is re-asked now:
+        // waiting for the next turn's end drew Haiku's 200k under an Opus 1M
+        // for as long as somebody took to type.
+        .then(askWindow)
+        .catch((error: unknown) => {
+          console.error("Could not change the model mid-session", error)
+        })
     },
     setEffort: (effort) => {
       void conversation

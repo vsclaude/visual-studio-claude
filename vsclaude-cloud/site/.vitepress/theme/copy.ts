@@ -56,6 +56,11 @@ export function docsStartOf(lang: Lang): string {
   return `${docsPathOf(lang)}getting-started`
 }
 
+/** Where a language's install page lives (`install.md`, `Install.vue`). */
+export function installPathOf(lang: Lang): string {
+  return `${pathOf(lang)}install`
+}
+
 type Section = {
   kicker: string
   title: string
@@ -85,9 +90,9 @@ export type Copy = {
   h1: [plain: string, accent: string]
   lede: string
   cta: { download: string; downloadFor: string; pricing: string }
-  /** Under the buttons: the platforms, linking to the guide's downloads —
-   * every build, for whoever the button's guess was wrong for — then the
-   * rest of the line. */
+  /** Under the buttons: the platforms, linking to the install page — every
+   * build, for whoever the button's guess was wrong for — then the rest of
+   * the line. */
   fine: [platforms: string, rest: string]
   /** The three problems — in the order of `PILLAR_ORDER` in `home/demo.ts`. */
   pillars: Section
@@ -118,6 +123,45 @@ export type Copy = {
   /** Under the picture of the app in the hero. */
   windowCaption: string
   footer: { download: string; product: string; tagline: string }
+  /** The install page (`install/Install.vue`). */
+  install: InstallCopy
+}
+
+type InstallCopy = {
+  title: string
+  description: string
+  eyebrow: string
+  h1: [plain: string, accent: string]
+  lede: string
+  /** The tabs' own label, for a screen reader. */
+  platform: string
+  /** "v1.0.17", once the latest release has answered. */
+  version: (v: string) => string
+  copy: string
+  copied: string
+  mac: {
+    app: string
+    appBody: string
+    /** Why the `xattr` line: the builds are unsigned. */
+    why: string
+    arm64: string
+    x64: string
+  }
+  windows: { app: string; appBody: string; button: string; smartScreen: string }
+  linux: { app: string; appBody: string; button: string; fuse: string }
+  after: {
+    kicker: string
+    title: string
+    /** `doc` is the guide's page the step is told in full on, `docs/<doc>`. */
+    items: { title: string; body: string; doc: string; more: string }[]
+  }
+  more: {
+    kicker: string
+    title: string
+    releases: { title: string; body: string }
+    update: { title: string; body: string }
+    trouble: { title: string; body: string }
+  }
 }
 
 const en: Copy = {
@@ -292,6 +336,80 @@ const en: Copy = {
     product: "Product",
     tagline: "The desktop studio for Claude Code.",
   },
+  install: {
+    title: "Install Vey Studio for macOS, Windows or Linux",
+    description:
+      "Download Vey Studio, the free desktop app for Claude Code, for macOS, Windows or Linux.",
+    eyebrow: "Free desktop app for Claude Code",
+    h1: ["Install", "Vey Studio."],
+    lede: "Download the app for your computer, then add your Claude accounts and start a chat.",
+    platform: "Platform",
+    version: (v) => `Latest: v${v}`,
+    copy: "Copy",
+    copied: "Copied",
+    mac: {
+      app: "Download the .dmg",
+      appBody:
+        "Open it and drag Vey Studio into Applications. Then run this once, or macOS will say the app is damaged:",
+      why: "Vey Studio isn't signed with an Apple certificate yet, so macOS quarantines a .dmg downloaded in a browser and then says the app is “damaged”. The command above lifts that quarantine.",
+      arm64: "Apple Silicon",
+      x64: "Intel",
+    },
+    windows: {
+      app: "Download the installer",
+      appBody: "x64. Run the .exe; it installs the app and opens it.",
+      button: "Download for Windows",
+      smartScreen:
+        "The installer isn't signed yet, so SmartScreen stops it the first time: click “More info”, then “Run anyway”.",
+    },
+    linux: {
+      app: "Download the AppImage",
+      appBody:
+        "x64. The AppImage is the whole app: make it executable and run it.",
+      button: "Download AppImage",
+      fuse: "It needs FUSE. On Debian and Ubuntu:",
+    },
+    after: {
+      kicker: "After installing",
+      title: "Your first chat in three steps",
+      items: [
+        {
+          title: "Open a project",
+          body: "Click + beside Projects and pick a folder already on your computer. Vey Studio works on it where it is.",
+          doc: "projects-and-files",
+          more: "Projects and files",
+        },
+        {
+          title: "Add your Claude accounts",
+          body: "Press + beside Accounts at the bottom of the chats column, once per account. No Claude plan? Sign in with Google and use credits.",
+          doc: "accounts",
+          more: "Claude accounts",
+        },
+        {
+          title: "Start a chat",
+          body: "Press + Chat and ask. When an account hits its limit, “Continue with …” carries the chat on.",
+          doc: "chats",
+          more: "Chats",
+        },
+      ],
+    },
+    more: {
+      kicker: "More",
+      title: "Everything else",
+      releases: {
+        title: "Every release",
+        body: "Older versions and every build, with their notes, on GitHub.",
+      },
+      update: {
+        title: "Updating",
+        body: "The app checks for new releases itself. When one is out, a button appears in the status bar: click it and it installs. On Linux it opens the release page instead.",
+      },
+      trouble: {
+        title: "Something not working?",
+        body: "claude can't be found, an account won't sign in, a chat seems stuck: the fixes are in the guide.",
+      },
+    },
+  },
 }
 
 const vi: Copy = {
@@ -465,6 +583,80 @@ const vi: Copy = {
     download: "Tải về",
     product: "Sản phẩm",
     tagline: "Studio desktop cho Claude Code.",
+  },
+  install: {
+    title: "Cài Vey Studio cho macOS, Windows hoặc Linux",
+    description:
+      "Tải Vey Studio, ứng dụng desktop miễn phí cho Claude Code, cho macOS, Windows hoặc Linux.",
+    eyebrow: "Ứng dụng desktop miễn phí cho Claude Code",
+    h1: ["Cài đặt", "Vey Studio."],
+    lede: "Tải ứng dụng cho máy của bạn, rồi thêm các tài khoản Claude và bắt đầu chat.",
+    platform: "Nền tảng",
+    version: (v) => `Mới nhất: v${v}`,
+    copy: "Chép",
+    copied: "Đã chép",
+    mac: {
+      app: "Tải file .dmg",
+      appBody:
+        "Mở file và kéo Vey Studio vào Applications. Sau đó chạy lệnh này một lần, nếu không macOS sẽ báo ứng dụng bị hỏng:",
+      why: "Vey Studio chưa được ký bằng chứng chỉ của Apple, nên macOS cách ly file .dmg tải bằng trình duyệt và báo ứng dụng “bị hỏng”. Lệnh trên gỡ việc cách ly đó.",
+      arm64: "Apple Silicon",
+      x64: "Intel",
+    },
+    windows: {
+      app: "Tải bộ cài",
+      appBody: "Bản x64. Chạy file .exe; nó cài ứng dụng rồi mở lên.",
+      button: "Tải cho Windows",
+      smartScreen:
+        "Bộ cài chưa được ký, nên lần đầu SmartScreen sẽ chặn: bấm “More info”, rồi “Run anyway”.",
+    },
+    linux: {
+      app: "Tải AppImage",
+      appBody:
+        "Bản x64. AppImage là toàn bộ ứng dụng: cấp quyền chạy rồi mở nó.",
+      button: "Tải AppImage",
+      fuse: "Cần có FUSE. Trên Debian và Ubuntu:",
+    },
+    after: {
+      kicker: "Sau khi cài",
+      title: "Cuộc chat đầu tiên trong ba bước",
+      items: [
+        {
+          title: "Mở một project",
+          body: "Bấm + cạnh Projects và chọn một thư mục đã có trên máy. Vey Studio làm việc ngay tại chỗ, không sao chép nó.",
+          doc: "projects-and-files",
+          more: "Project và file",
+        },
+        {
+          title: "Thêm các tài khoản Claude",
+          body: "Bấm + cạnh Accounts ở cuối cột chat, mỗi tài khoản một lần. Không có gói Claude? Đăng nhập bằng Google và dùng credit.",
+          doc: "accounts",
+          more: "Tài khoản Claude",
+        },
+        {
+          title: "Bắt đầu chat",
+          body: "Bấm + Chat và đặt câu hỏi. Khi một tài khoản chạm giới hạn, “Continue with …” giúp cuộc chat làm tiếp.",
+          doc: "chats",
+          more: "Chat",
+        },
+      ],
+    },
+    more: {
+      kicker: "Thêm",
+      title: "Những thứ khác",
+      releases: {
+        title: "Mọi phiên bản",
+        body: "Các phiên bản cũ và mọi bản build, kèm ghi chú, trên GitHub.",
+      },
+      update: {
+        title: "Cập nhật",
+        body: "Ứng dụng tự kiểm tra bản mới. Khi có, một nút hiện ở thanh trạng thái: bấm vào là nó tự cài. Trên Linux, nút này mở trang phát hành.",
+      },
+      trouble: {
+        title: "Gặp trục trặc?",
+        body: "Không tìm thấy claude, tài khoản không đăng nhập được, chat có vẻ bị treo: cách xử lý có trong hướng dẫn.",
+      },
+    },
   },
 }
 

@@ -7,16 +7,23 @@ và chuyển chat giữa chúng mà không mất gì.
 ## Thêm tài khoản
 
 1. Mở **Settings** (`⌘,`) › **Claude**.
-2. Bấm **Add account** và đặt tên: _Công việc_, _Cá nhân_, _Team_…
-3. Đăng nhập. Đây là màn hình login của chính Claude Code, nên mật khẩu của bạn
+1. Ở cuối cột chat, bên dưới các chat của project, tìm **Accounts** rồi bấm
+   **+** cạnh nó.
+1. Đặt tên cho tài khoản: _Công việc_, _Cá nhân_, _Team_…
+1. Đăng nhập. Đây là màn hình login của chính Claude Code, nên mật khẩu của bạn
    không bao giờ đi qua Vey Studio.
-
-![Settings › Claude: Pay with credits, các tài khoản và nút Add account](/screenshots/settings-claude.png)
 
 `claude` bạn đang dùng sẵn được liệt kê đầu tiên, tên là **This account**. Mỗi
 tài khoản bạn thêm nằm trong một thư mục riêng và giữ nguyên trạng thái đăng
-nhập. Mỗi hàng cho biết tài khoản đã đăng nhập chưa, và bằng email nào: **Check**
-kiểm tra lại, **Log in** đăng nhập lại tài khoản đó.
+nhập. Mỗi hàng cho biết tài khoản đã đăng nhập chưa, và bằng email nào. Mở menu
+của một hàng để **Check again**, hoặc **Sign in…** lại (hoặc **Sign in as
+another account…** với tài khoản đã đăng nhập).
+
+Mỗi hàng tài khoản cũng cho biết đã dùng bao nhiêu hạn mức 5 giờ và hằng tuần.
+Hàng **Credits** ở dưới cùng dành cho các chat dùng credit; bấm **Sign in** ở đó
+để đăng nhập Vey Studio.
+
+![Mục Accounts ở cuối cột chat: This account với thanh hạn mức 5 giờ và tuần, và Credits](/screenshots/accounts.png)
 
 ## Chọn tài khoản cho một chat
 

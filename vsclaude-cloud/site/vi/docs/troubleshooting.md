@@ -11,8 +11,8 @@ Bạn không cần Claude Code nếu chỉ chat bằng [credit](/vi/docs/credits
 
 ## Tài khoản chưa đăng nhập
 
-Mở **Settings › Claude**. **Check** kiểm tra lại tài khoản; **Log in** đăng nhập
-lại. Mỗi tài khoản là một lần đăng nhập Claude Code riêng, nên đăng xuất tài
+Mở menu của tài khoản trong mục **Accounts** ở cuối cột chat. **Check again**
+kiểm tra lại tài khoản; **Sign in…** đăng nhập lại. Mỗi tài khoản là một lần đăng nhập Claude Code riêng, nên đăng xuất tài
 khoản này không ảnh hưởng tài khoản khác.
 
 ## Chat dừng vì chạm giới hạn

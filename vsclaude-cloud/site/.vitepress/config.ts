@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { defineConfig, type HeadConfig } from "vitepress"
 
 import { APP_MARK_URL } from "../../server/utils/brand.ts"
-import { COPY, LANGS, pathOf, type Lang } from "./theme/copy.ts"
+import { COPY, installPathOf, LANGS, pathOf, type Lang } from "./theme/copy.ts"
 
 /*
  * The site — the home page and the user's guide — built into `public/`, which
@@ -114,6 +114,38 @@ function homeHead(lang: Lang): HeadConfig[] {
   ]
 }
 
+/** The install page's head: its canonical and its other language. */
+function installHead(lang: Lang): HeadConfig[] {
+  const t = COPY[lang].install
+  const url = absoluteOf(installPathOf(lang))
+  return [
+    ...(SITE_URL
+      ? [["link", { rel: "canonical", href: url }] as HeadConfig]
+      : []),
+    ["meta", { property: "og:title", content: t.title }],
+    ["meta", { property: "og:description", content: t.description }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:locale", content: OG_LOCALE[lang] }],
+    ...LANGS.map((l): HeadConfig => [
+      "link",
+      {
+        rel: "alternate",
+        hreflang: COPY[l].htmlLang,
+        href: absoluteOf(installPathOf(l)),
+      },
+    ]),
+  ]
+}
+
+/** Which language's install page a page is, if it is one. */
+function installOf(relativePath: string): Lang | null {
+  return (
+    LANGS.find(
+      (lang) => `${installPathOf(lang).slice(1)}.md` === relativePath
+    ) ?? null
+  )
+}
+
 /** Which language's home page a page is, if it is one. */
 function homeOf(relativePath: string): Lang | null {
   return (
@@ -164,6 +196,15 @@ export default defineConfig({
   // The home page's title, description and alternates are its copy's, so
   // they cannot drift from the words on it.
   transformPageData(pageData) {
+    const install = installOf(pageData.relativePath)
+    if (install) {
+      const t = COPY[install].install
+      pageData.title = t.title
+      pageData.description = t.description
+      pageData.titleTemplate = false
+      pageData.frontmatter.head = installHead(install)
+      return
+    }
     const lang = homeOf(pageData.relativePath)
     if (!lang) return
     const t = COPY[lang]

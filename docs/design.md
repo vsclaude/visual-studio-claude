@@ -892,11 +892,15 @@ sold. A buy button asks main (`buyCredits`), which asks the server for the page
 — `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
 shown is re-read when the window takes focus back from that tab.
 
-**One pack, sold out of a pool.** What is sold now is 20.000 ₫ for $10.00, by
-bank transfer, and no more of it than there is usage behind — the server buys
-its upstream usage in lots. The other three packs are `retired` in the server's
-`CREDIT_PACKS`: not sold, but still credited for an order opened before they
-were withdrawn. What is behind them is the server's `upstreams` table, one row
+**Four packs, sold out of a pool.** 20.000 ₫ for $10.00 (bank transfer
+only), 50.000 ₫ for $25, 100.000 ₫ for $55 and 200.000 ₫ for $120 — the 10%
+and 20% bonuses — each by bank transfer, and no more of any than there is
+usage behind: the server buys its upstream usage in lots. For a while only the
+20.000 ₫ pack was sold and the other three were `retired` in the server's
+`CREDIT_PACKS` (still credited for an order opened before, not sold); they are
+back, and the flag stays for the next pack withdrawn. The dialog is the grid
+of four again, each card saying `Sold out` on its own, since the pool can
+cover a $10 pack and not a $120 one. What is behind them is the server's `upstreams` table, one row
 per provider key, each carrying `credit_usd` — the usage that key was bought
 with. What can still be sold is their sum less every paid transaction's
 credits, so restocking is inserting the key that was just bought, one

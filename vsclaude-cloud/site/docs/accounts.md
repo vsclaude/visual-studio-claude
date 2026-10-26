@@ -6,17 +6,23 @@ have, and move a chat between them without losing it.
 
 ## Adding an account
 
-1. Open **Settings** (`⌘,`) › **Claude**.
-2. Click **Add account** and give it a name — _Work_, _Personal_, _Team_.
+1. At the foot of the chats column, under the project's chats, find
+   **Accounts** and click **+** beside it.
+2. Give the account a name — _Work_, _Personal_, _Team_.
 3. Sign in. It is Claude Code's own login, so your password never passes
    through Vey Studio.
 
-![Settings › Claude: Pay with credits, then your accounts and Add account](/screenshots/settings-claude.png)
-
 The `claude` you already use is listed first, as **This account**. Each account
 you add is kept in a directory of its own and stays signed in. Every row says
-whether it is signed in, and as whom — **Check** asks again, **Log in** signs
-that account in once more.
+whether it is signed in, and as whom. Open a row's menu to **Check again**, or
+to **Sign in…** again (or **Sign in as another account…** on one that is
+already signed in).
+
+Each account row also shows how much of its five-hour and weekly limit is
+used. The **Credits** row at the bottom is for chats on credits; **Sign in**
+there signs in to Vey Studio.
+
+![The Accounts section at the foot of the chats column: This account with its five-hour and weekly meters, and Credits](/screenshots/accounts.png)
 
 ## Choosing the account a chat runs on
 

@@ -25,7 +25,7 @@ Stage những gì bạn muốn, gõ message vào ô phía trên danh sách rồi
 **Draft** để Claude viết message giúp bạn dựa trên diff đã stage và mười tiêu đề
 commit gần nhất, theo cùng văn phong. Nó chỉ điền vào ô — không có gì được commit
 cho đến khi bạn tự bấm. Model và tài khoản nó dùng được chọn trong **Settings ›
-Claude › Helpers › Commit message drafts**.
+Chats › Commit message drafts**.
 
 ## Commits
 

@@ -52,12 +52,12 @@ Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/
 
    ![Hộp thoại Add a folder](/screenshots/add-project.png)
 
-2. **Thêm tài khoản Claude** trong **Settings › Claude › Add account**. Xem
+2. **Thêm tài khoản Claude** bằng nút **+** cạnh **Accounts** ở cuối cột chat. Xem
    [Tài khoản Claude](/vi/docs/accounts).
 3. **Bấm `+`** trên hàng của project để mở chat, rồi gõ tin nhắn. Xem
    [Chat](/vi/docs/chats) để biết mọi thứ khung soạn tin làm được.
 
-## Cập nhật
+## Cập nhật {#updating}
 
 Khi có bản mới, một nút sẽ hiện trên thanh trạng thái. Bấm vào, ứng dụng tự tải
 và cài bản cập nhật. Trên Linux, nút này mở trang release.

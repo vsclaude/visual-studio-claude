@@ -1,8 +1,36 @@
+import { existsSync, readFileSync } from "node:fs"
+import { extname, join, sep } from "node:path"
+
 import { defineConfig } from "nitro"
+
+/** Where `vitepress build site` writes the site (`outDir` in its config). */
+const SITE = join(import.meta.dirname, "public")
+
+/**
+ * The site's pages as Cloudflare serves them: `/install` is `install.html`.
+ * Workers' static assets do that themselves (`html_handling`), but the dev
+ * server's static handler serves a path only with an extension or as a
+ * directory's `index.html` — so every page but the two home pages was a 404
+ * on reload in `bun run dev`, though a click got there through VitePress's
+ * own router. Only an `.html` file already built is answered; anything else
+ * goes on to the routes.
+ */
+function cleanUrl(event: { req: Request; url: URL }): Response | undefined {
+  if (event.req.method !== "GET" && event.req.method !== "HEAD") return
+  const path = decodeURI(event.url.pathname)
+  if (path.endsWith("/") || extname(path)) return
+  const file = join(SITE, `${path}.html`)
+  if (!file.startsWith(SITE + sep) || !existsSync(file)) return
+  return new Response(readFileSync(file), {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  })
+}
 
 export default defineConfig({
   preset: "cloudflare_module",
   serverDir: "./server",
+
+  devHandlers: [{ route: "/**", middleware: true, handler: cleanUrl }],
 
   // Nitro's dev entry imports unstorage's `fs` driver for `server/assets`, and
   // that module calls `randomUUID()` at its top level — workerd refuses that

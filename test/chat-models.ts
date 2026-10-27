@@ -6,10 +6,12 @@ import {
 } from "../src/shared/api"
 import { readModel } from "../src/main/agent-models"
 import {
+  answeringName,
   defaultModelAlias,
   effortFor,
   mergeModels,
   orderedModels,
+  standIn,
 } from "../src/renderer/lib/chat/models"
 import { check, finish, section } from "./harness"
 
@@ -281,6 +283,82 @@ section("a record written before the picker named its levels")
     "and one that names a level keeps it",
     chatOptions({ model: "opus", effort: "high", permission: "edits" })
       .effort === "high"
+  )
+}
+
+section("answeringName: what a default chat says it is answering")
+{
+  const models = [
+    readModel(
+      row({
+        value: "default",
+        displayName: "Default (recommended)",
+        resolvedModel: "claude-haiku-5-5",
+      })
+    ),
+    readModel(
+      row({
+        value: "opus",
+        displayName: "Opus 5.5",
+        resolvedModel: "claude-opus-5-5",
+      })
+    ),
+  ]
+
+  check(
+    "a row carrying the answering id names it by that row",
+    answeringName(models, "claude-opus-5-5") === "Opus 5.5"
+  )
+
+  check(
+    "an id no row carries is read into a name rather than dropped",
+    answeringName(models, "claude-sonnet-4-6-20260101") === "Sonnet 4.6"
+  )
+
+  check(
+    "an id only the default row carries is read into a name, not the row's own",
+    answeringName(models, "claude-haiku-5-5") === "Haiku 5.5"
+  )
+
+  check(
+    "no answer yet names nothing",
+    answeringName(models, undefined) === null
+  )
+}
+
+section("standIn: another account's list, minus what its default is")
+{
+  const team = [
+    readModel(
+      row({
+        value: "default",
+        displayName: "Default (recommended)",
+        resolvedModel: "claude-haiku-5-5",
+      })
+    ),
+    readModel(
+      row({
+        value: "haiku",
+        displayName: "Haiku 5.5",
+        resolvedModel: "claude-haiku-5-5",
+      })
+    ),
+  ]
+  const shown = standIn(team)
+
+  check(
+    "the default row no longer names the other account's model",
+    defaultModelAlias(shown) === null
+  )
+
+  check(
+    "every other row is kept as it was",
+    shown.length === team.length && shown[1] === team[1]
+  )
+
+  check(
+    "the list it was made from is left alone",
+    defaultModelAlias(team) === "Haiku 5.5"
   )
 }
 

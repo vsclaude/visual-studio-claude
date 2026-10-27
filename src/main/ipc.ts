@@ -367,7 +367,11 @@ export function createIpc(host: Host): {
   // Asked of the user's own `claude` and held for the run — see
   // `agent-models.ts`. Not a handler that touches any of the managers above,
   // which is why it takes no argument and keeps no state here.
-  handle(IPC.agentModels, () => agentModels())
+  // The profile resolved here rather than a path trusted from the renderer —
+  // the same `configDirOf` the plan usage goes through.
+  handle(IPC.agentModels, async (_event, profileId: string | null) =>
+    agentModels(await configDirOf(profileId ?? null))
+  )
 
   /*
    * The slash commands that `claude` has, asked in a project's directory — see

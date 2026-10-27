@@ -7,6 +7,8 @@ import {
   type ChatEffort,
 } from "@shared/api"
 
+import { modelLabel } from "./usage"
+
 /**
  * The models the user's own `claude` offers, for the composer's toolbar.
  *
@@ -25,10 +27,12 @@ import {
  * aliases and not a guess at this machine's list; see `CHAT_MODEL_FALLBACK`.
  */
 
-/** Shared by every composer in the window: the promise, so two mounting at
- * once make one call, and the answer, so a later one makes none. */
-let asked: Promise<AgentModel[]> | null = null
-let held: AgentModel[] | null = null
+/** Shared by every composer in the window, by profile (`""` for none): the
+ * promise, so two mounting at once make one call, and the answer, so a later
+ * one makes none. Per profile because `default` resolves per account — see
+ * `main/agent-models.ts`. */
+const asked = new Map<string, Promise<AgentModel[]>>()
+const held = new Map<string, AgentModel[]>()
 
 /**
  * What the CLI answered, with the preset's own trimmings where a row matches.
@@ -63,31 +67,66 @@ export function mergeModels(
   })
 }
 
-export function useAgentModels(): AgentModel[] {
-  const [models, setModels] = useState<AgentModel[]>(
-    held ?? CHAT_MODEL_FALLBACK
-  )
+export function useAgentModels(profileId: string | null): AgentModel[] {
+  const key = profileId ?? ""
+  // Only to draw again once the answer is in `held`, which is what is read.
+  const [, answered] = useState(0)
 
   useEffect(() => {
-    if (held) return
+    if (held.has(key)) return
     let mounted = true
-    asked ??= window.desktop.agentModels()
-    void asked
+    let asking = asked.get(key)
+    if (!asking) {
+      asking = window.desktop.agentModels(profileId)
+      asked.set(key, asking)
+    }
+    void asking
       .then((answer) => {
-        const merged = mergeModels(CHAT_MODEL_FALLBACK, answer)
-        held = merged
-        if (mounted) setModels(merged)
+        held.set(key, mergeModels(CHAT_MODEL_FALLBACK, answer))
+        if (mounted) answered((count) => count + 1)
       })
       .catch((error: unknown) => {
-        asked = null
+        asked.delete(key)
         console.error("Could not read the model list", error)
       })
     return () => {
       mounted = false
     }
-  }, [])
+  }, [key, profileId])
 
-  return models
+  const other = held.values().next().value
+  if (held.has(key) || !other) return held.get(key) ?? CHAT_MODEL_FALLBACK
+  // Kept per list so a render returns the same array as the last: callers
+  // put this in effect dependencies.
+  let shown = standIns.get(other)
+  if (!shown) {
+    shown = standIn(other)
+    standIns.set(other, shown)
+  }
+  return shown
+}
+
+const standIns = new WeakMap<AgentModel[], AgentModel[]>()
+
+/**
+ * What a profile not asked about yet draws for the second its ask takes.
+ *
+ * Another account's list, with what its `default` resolves to taken off. The
+ * rows themselves can differ too — a Team login listed thirteen where a
+ * personal one listed five — but a row this account lacks is on screen for the
+ * second the ask takes, while a wrong default name is what the toolbar draws:
+ * left on, a switch from that Team login to the personal one drew `Haiku 5.5`
+ * over a chat about to answer on Opus. Off, the toolbar says
+ * `Default (recommended)` for that second, a missing name rather than a wrong
+ * one.
+ */
+export function standIn(other: AgentModel[]): AgentModel[] {
+  return other.map((entry) => {
+    if (entry.value !== "default") return entry
+    const unnamed = { ...entry }
+    delete unnamed.resolvedModel
+    return unnamed
+  })
 }
 
 /**
@@ -137,6 +176,26 @@ export function defaultModelAlias(models: AgentModel[]): string | null {
       entry.resolvedModel === fallback.resolvedModel
   )
   return named?.label ?? null
+}
+
+/**
+ * The name of the model a chat's CLI reports answering, for a `default` chat.
+ *
+ * The picker's row that carries the same wire id is the name the menu already
+ * uses for it. When no row does — a model the picker was not asked about, or a
+ * CLI old enough not to send `resolvedModel` — the id is read into a name the
+ * way the usage line reads it (`claude-opus-5-5` as `Opus 5.5`). Null when no
+ * answer has come yet, so the caller falls back to `defaultModelAlias`.
+ */
+export function answeringName(
+  models: AgentModel[],
+  answering: string | undefined
+): string | null {
+  if (!answering) return null
+  const row = models.find(
+    (entry) => entry.value !== "default" && entry.resolvedModel === answering
+  )
+  return row?.label ?? modelLabel(answering)
 }
 
 /**

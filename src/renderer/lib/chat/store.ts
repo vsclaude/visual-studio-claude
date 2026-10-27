@@ -139,6 +139,14 @@ type ChatState = {
    * while nothing is being written.
    */
   agents: Record<string, ChatAgent[]>
+  /**
+   * The model each live chat's CLI says is answering, as its id. What a
+   * `default` chat's toolbar names — the picker's own `default` row only knows
+   * what the account's default was when the app asked, which is not what a
+   * chat on another profile or project is running. Live and never written down,
+   * like `agents`: a chat read back off disk has none until its CLI answers.
+   */
+  answering: Record<string, string>
   /** The chats the CLI is compacting right now, and since when. Not a fraction —
    * compaction is one summarisation call, so there is no progress to report;
    * a clock is what the row can honestly add. */
@@ -371,6 +379,7 @@ export const useChats = create<ChatState>((set, get) => ({
   live: {},
   window: {},
   agents: {},
+  answering: {},
   compacting: {},
   compactError: {},
   asks: {},
@@ -681,6 +690,7 @@ export const useChats = create<ChatState>((set, get) => ({
       chats: forgetWindow(get().chats, id),
       // Same reason: the session that was running them is closed.
       agents: without(get().agents, id),
+      answering: without(get().answering, id),
       compacting: without(get().compacting, id),
       compactError: without(get().compactError, id),
     })
@@ -1061,6 +1071,11 @@ export const useChats = create<ChatState>((set, get) => ({
               ? { ...get().agents, [chatId]: event.agents }
               : without(get().agents, chatId),
         })
+        return
+      }
+
+      if (event.type === "model") {
+        set({ answering: { ...get().answering, [chatId]: event.model } })
         return
       }
 

@@ -78,13 +78,18 @@ import { useT, type MessageKey } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { formatCredits } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
-import { accountLine, useClaudeProfiles } from "@/lib/chat/claude-profiles"
+import {
+  accountLine,
+  defaultAccountName,
+  useClaudeProfiles,
+} from "@/lib/chat/claude-profiles"
 import { useFreeAi } from "@/lib/free-ai"
 import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import {
   defaultModelAlias,
   effortFor,
   orderedModels,
+  answeringName,
   useAgentModels,
 } from "@/lib/chat/models"
 import { useAgentCommands } from "@/lib/chat/commands"
@@ -278,6 +283,7 @@ export function ChatComposer({
   attachRoot,
   folderId = null,
   contextWindow,
+  answering,
   initialDraft = "",
   initialImages = NO_IMAGES,
   onLeave,
@@ -293,6 +299,8 @@ export function ChatComposer({
   placeholder?: string
   /** What the toolbar under the field is showing. */
   options?: ChatOptions
+  /** The model the chat's CLI reports answering, for a `default` chat's name. */
+  answering?: string
   /**
    * A whole new set of them, on every change.
    *
@@ -387,7 +395,7 @@ export function ChatComposer({
 
   // The user's own `claude`'s list, for the two pickers that need it — the
   // model's rows and, per model, which effort levels exist at all.
-  const models = useAgentModels()
+  const models = useAgentModels(options.profileId ?? null)
   // Loaded once at launch (`studio.tsx`); read here for the profile picker,
   // which is drawn only once there is a profile to choose — see `ProfileMenu`.
   const profiles = useClaudeProfiles((state) => state.profiles)
@@ -959,6 +967,7 @@ export function ChatComposer({
                 models={models}
                 model={options.model}
                 effort={options.effort}
+                answering={answering}
                 onPick={(model, effort) =>
                   onOptions({
                     ...options,
@@ -1179,11 +1188,14 @@ export function ModelMenu({
   models,
   model,
   effort,
+  answering,
   onPick,
 }: {
   models: AgentModel[]
   model: string | null
   effort: ChatEffort | null
+  /** The model the chat's CLI reports answering — see `answeringName`. */
+  answering?: string
   onPick: (model: string | null, effort: ChatEffort | null) => void
 }) {
   const t = useT()
@@ -1192,10 +1204,14 @@ export function ModelMenu({
   /* What the CLI's `default` row actually is. Read once for the menu rather
    * than per row: it is one answer about one row, and the rest do not ask. */
   const alias = defaultModelAlias(models)
+  /* What this chat's CLI says is answering, once it has said. The alias above is
+   * the account's default as the app asked for it, which is not what a chat on
+   * another profile or project runs — the toolbar names this one when it can. */
+  const answered = answeringName(models, answering)
   // The toolbar names the model that answers, not the row that asked for it:
   // `Default (recommended) · Medium` says nothing about which model is behind it.
   const nameOf = (entry: AgentModel) =>
-    entry.value === "default" && alias ? alias : entry.label
+    entry.value === "default" ? (answered ?? alias ?? entry.label) : entry.label
   // Held only so the digit shortcuts can close it: a click is Base UI's own
   // business, and a menu still open after the pick it was asked for reads as a
   // key that did nothing.
@@ -1492,6 +1508,9 @@ export function ProfileMenu({
   const checking = useClaudeProfiles((state) => state.checking)
   const checkUnknown = useClaudeProfiles((state) => state.checkUnknown)
   const defaultLabel = useSettings((state) => state.defaultAccountLabel)
+  // The Accounts foot's own name for it — the name given, else the address —
+  // so the toolbar says *which* login rather than a bare `Account`.
+  const defaultName = defaultAccountName(accounts[""], defaultLabel)
   const freeReady = useFreeAi((state) => state.ready)
   const free = profileId === FREE_PROFILE_ID
   const credits = useStudioAccount((state) => state.account?.credits)
@@ -1525,9 +1544,7 @@ export function ProfileMenu({
               )
             }
             label={
-              free
-                ? t("chat.profile.credits")
-                : (chosen?.name ?? t("chat.profile.account"))
+              free ? t("chat.profile.credits") : (chosen?.name ?? defaultName)
             }
             title={t("chat.profile.title")}
             on={profileId !== null}
@@ -1542,7 +1559,7 @@ export function ProfileMenu({
           <PickerRow
             onSelect={() => onPick(null)}
             tile={<PickerTile icon={UserRound} />}
-            title={defaultLabel ?? t("chat.profile.defaultAccount")}
+            title={defaultName}
             detail={
               <AccountLine
                 account={accounts[""]}

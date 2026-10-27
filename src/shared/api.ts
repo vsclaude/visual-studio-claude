@@ -946,6 +946,15 @@ export type AssistantEvent =
    * *now*. A chat read back off disk has none.
    */
   | { type: "agents"; agents: ChatAgent[] }
+  /**
+   * The model the CLI says is answering the chat, as an id (`claude-opus-5-5`).
+   *
+   * The one place a `default` chat's model is known: the CLI chooses it, from
+   * the account and the profile's config, and the picker's `default` row can
+   * only say what the default was when the app asked. A state, not an edge — a
+   * receiver keeps the last one. See `onModel` in `main/claude-agent.ts`.
+   */
+  | { type: "model"; model: string }
 
 /**
  * One subagent running under a turn.
@@ -2488,8 +2497,12 @@ export type DesktopApi = {
    * tokens, and main holds the answer for the run, so a renderer may call it as
    * often as a picker opens. Empty where the CLI could not be asked, which is
    * the picker's cue to draw `CHAT_MODEL_FALLBACK`.
+   *
+   * Per account: `profileId` is resolved to its `CLAUDE_CONFIG_DIR` in main,
+   * because what `default` resolves to is the account's — see
+   * `main/agent-models.ts`. Null is the user's own `claude` login.
    */
-  agentModels: () => Promise<AgentModel[]>
+  agentModels: (profileId: string | null) => Promise<AgentModel[]>
   /**
    * The slash commands that same `claude` has in a project's directory, for the
    * composer's `/` menu — what pressing `/` in the CLI lists.

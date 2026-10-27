@@ -1634,6 +1634,12 @@ export class Chats {
         onAgents: (agents) => {
           if (current()) this.emit({ chatId: id, type: "agents", agents })
         },
+        // Forwarded and not kept, like `agents`: the model answering is true of
+        // a live CLI. A chat read back off disk has none, and the composer falls
+        // back to what the account's default is.
+        onModel: (model) => {
+          if (current()) this.emit({ chatId: id, type: "model", model })
+        },
         onDequeued: () => {
           if (current()) this.emit({ chatId: id, type: "dequeued" })
         },

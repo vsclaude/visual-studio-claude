@@ -64,10 +64,8 @@ export const chat: Messages["chat"] = {
   },
   profile: {
     credits: "Credit",
-    account: "Tài khoản",
     title: "CLAUDE_CONFIG_DIR mà các lượt của chat này chạy theo",
     heading: "Tài khoản cho chat này",
-    defaultAccount: "Tài khoản mặc định",
     defaultAccountFallback: "Tài khoản mà `claude` của bạn đang đăng nhập",
     payWithCredits: "Trả bằng credit",
     signedOut: "Đã đăng xuất",

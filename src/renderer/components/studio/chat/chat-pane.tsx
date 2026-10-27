@@ -253,6 +253,7 @@ function Conversation({
   const sending = useChats((state) => state.sending.includes(chatId))
   const startedAt = useChats((state) => state.startedAt[chatId])
   const agents = useChats((state) => state.agents[chatId])
+  const answering = useChats((state) => state.answering[chatId])
   // When this chat came on screen — one `Conversation` per chat, so this is
   // when its transcript was drawn. A line stamped after it arrived while the
   // chat was up and rises; the history it opened with is drawn still.
@@ -1191,6 +1192,7 @@ function Conversation({
             // store's to say — see `agentCommands`.
             folderId={place?.folderId ?? null}
             contextWindow={contextWindow}
+            answering={answering}
           />
 
           {/* Under the composer rather than at the end of the transcript: the

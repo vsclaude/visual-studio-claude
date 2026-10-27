@@ -364,6 +364,17 @@ export type AgentHandlers = {
    */
   onAgents: (agents: ChatAgent[]) => void
   /**
+   * The model the CLI says is answering the main loop, sent when it changes.
+   *
+   * What a `default` chat is actually on: the CLI picks it, from the account,
+   * the profile's config and the project's settings, and none of that is
+   * visible to this app. `init` says it at the start and each main-loop reply
+   * says it after that, so a model switched under a running session shows up on
+   * the reply it changes. A subagent's replies are not the chat's model, so they
+   * are not read here.
+   */
+  onModel: (model: string) => void
+  /**
    * A message sent mid-turn has been taken into the conversation — the oldest
    * of them, since the CLI drains its queue in order.
    *
@@ -803,6 +814,13 @@ export async function startAgentSession(
    */
   const agents = new Map<string, ChatAgent>()
   const announceAgents = () => handlers.onAgents([...agents.values()])
+  /** The last model announced, so a reply on the same one is not sent again. */
+  let answeringModel: string | null = null
+  const announceModel = (model: string) => {
+    if (model === answeringModel) return
+    answeringModel = model
+    handlers.onModel(model)
+  }
   /** Everything running, dropped at once, when the chat is known to be quiet.
    * Silent if there was nothing, so a quiet turn does not push an empty list on
    * every result. */
@@ -1076,6 +1094,15 @@ export async function startAgentSession(
             context = at
             handlers.onContext(at)
           }
+        }
+
+        // Which model is answering, as the CLI reports it — the only place a
+        // `default` chat's model is known (see `onModel`).
+        if (message.type === "system" && message.subtype === "init") {
+          announceModel(message.model)
+        }
+        if (message.type === "assistant" && !message.parent_tool_use_id) {
+          announceModel(message.message.model)
         }
 
         // The spend so far, a subagent's included: the result line counts

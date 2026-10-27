@@ -181,7 +181,7 @@ function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
   const [effort, setEffort] = useState(saved.reviewEffort)
   const [profileId, setProfileId] = useState(saved.reviewProfileId)
   const profiles = useClaudeProfiles((state) => state.profiles)
-  const models = useAgentModels()
+  const models = useAgentModels(profileId)
   const freeReady = useFreeAi((state) => state.ready)
   const field = useRef<HTMLTextAreaElement>(null)
 
@@ -253,7 +253,9 @@ function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
             }}
             placeholder={t("files.commitBox.rulesPlaceholder")}
             spellCheck={false}
-            className="min-h-40 font-mono text-xs"
+            // `md:` too: the shadcn textarea's own `md:text-sm` is a different
+            // variant from `text-xs`, so it survives the merge and wins.
+            className="min-h-40 font-mono text-xs md:text-xs"
           />
         </div>
 

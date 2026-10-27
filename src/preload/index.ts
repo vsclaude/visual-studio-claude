@@ -143,7 +143,7 @@ const api: DesktopApi = {
   getSetting: (key) => ipcRenderer.invoke(IPC.getSetting, key),
   setSetting: (key, value) => ipcRenderer.invoke(IPC.setSetting, key, value),
 
-  agentModels: () => ipcRenderer.invoke(IPC.agentModels),
+  agentModels: (profileId) => ipcRenderer.invoke(IPC.agentModels, profileId),
   agentCommands: (folderId) => ipcRenderer.invoke(IPC.agentCommands, folderId),
   installedMcpServers: (folderId) =>
     ipcRenderer.invoke(IPC.installedMcpServers, folderId),

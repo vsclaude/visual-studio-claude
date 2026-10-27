@@ -63,10 +63,8 @@ export const chat = {
   },
   profile: {
     credits: "Credits",
-    account: "Account",
     title: "Which CLAUDE_CONFIG_DIR this chat's turns run under",
     heading: "Account for this chat",
-    defaultAccount: "Default account",
     defaultAccountFallback:
       "Whichever your own `claude` is already signed into",
     payWithCredits: "Pay with credits",

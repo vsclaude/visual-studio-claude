@@ -15,7 +15,7 @@ export const nav = {
     signIn: "Sign in with Google",
     buyCredits: "Buy credits",
     creditsLeft: "{credits} left",
-    creditsPitch: "Every model, never a monthly fee",
+    creditsPitch: "DeepSeek models, never a monthly fee",
     signOut: "Sign out",
     finishInBrowser: "Finish signing in in your browser…",
   },

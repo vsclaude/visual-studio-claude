@@ -223,26 +223,32 @@ describe("the prompt ceiling", () => {
 })
 
 describe("usage", () => {
-  test("weighted by price", () => {
+  test("weighted by price, a cache write as a miss", () => {
     expect(
-      weighted({
-        input_tokens: 100,
-        cache_creation_input_tokens: 100,
-        cache_read_input_tokens: 1000,
-        output_tokens: 10,
-      })
-    ).toBe(100 + 125 + 100 + 50)
+      weighted(
+        {
+          input_tokens: 100,
+          cache_creation_input_tokens: 100,
+          cache_read_input_tokens: 1000,
+          output_tokens: 10,
+        },
+        "deepseek-flash"
+      )
+    ).toBe(300 + 300 + 60 + 120)
   })
 
-  test("a prompt past 100K is charged fivefold, as Anthropic charges it", () => {
-    const usage = {
-      input_tokens: 10,
-      cache_creation_input_tokens: 0,
-      cache_read_input_tokens: 100_000,
-      output_tokens: 100,
-    }
-    expect(weighted(usage)).toBe((10 + 10_000 + 500) * 5)
-    expect(weighted({ ...usage, input_tokens: 0 })).toBe(10_000 + 500)
+  test("a fraction of a credit is a credit", () => {
+    expect(
+      weighted(
+        {
+          input_tokens: 0,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 1,
+          output_tokens: 0,
+        },
+        "deepseek-flash"
+      )
+    ).toBe(1)
   })
 
   test("a non-streamed answer's usage", () => {

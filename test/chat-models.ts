@@ -4,7 +4,7 @@ import {
   CHAT_MODEL_FALLBACK,
   DEFAULT_CHAT_EFFORT,
 } from "../src/shared/api"
-import { readModel } from "../src/main/agent-models"
+import { distinctModels, readModel } from "../src/main/agent-models"
 import {
   answeringName,
   defaultModelAlias,
@@ -359,6 +359,30 @@ section("standIn: another account's list, minus what its default is")
   check(
     "the list it was made from is left alone",
     defaultModelAlias(team) === "Haiku 5.5"
+  )
+}
+
+section("distinctModels: Studio AI's aliases over two DeepSeek models")
+{
+  // The rows the CLI answered under `freeAiEnv`, in its order — measured.
+  const answered = [
+    ["default", "deepseek-flash", "Default (recommended)"],
+    ["opus", "deepseek-v4-pro", "DeepSeek V4 Pro"],
+    ["fable", "deepseek-v4-pro", "DeepSeek V4 Pro"],
+    ["sonnet", "deepseek-flash", "DeepSeek Flash"],
+    ["haiku", "deepseek-flash", "DeepSeek Flash"],
+  ].map(([value, resolvedModel, displayName]) =>
+    readModel(row({ value, resolvedModel, displayName }))
+  )
+  const shown = distinctModels(answered)
+  check(
+    "one row per model, Default kept beside the row it resolves to",
+    shown.map((model) => model.value).join() === "default,opus,sonnet",
+    shown
+  )
+  check(
+    "and Default is still named by its model",
+    defaultModelAlias(shown) === "DeepSeek Flash"
   )
 }
 

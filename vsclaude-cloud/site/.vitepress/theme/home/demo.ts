@@ -77,9 +77,9 @@ const DEMO = {
 /**
  * The figures in the demo are worked, not made up, so a visitor who checks
  * them against the FAQ finds they agree: the second turn is ~20.5k cached and
- * ~0.9k fresh prompt with 0.9k out on Sonnet, which the server's `weighted`
- * charges at about 128k of the unit — $0.013 — and the balance beside the
- * composer is the popular $55 pack less that turn.
+ * ~0.9k fresh prompt with 0.9k out on DeepSeek Flash, which the server's
+ * `weighted` charges at about 14.7k of the unit — $0.001 — and the balance
+ * beside the composer is the popular $3.67 pack less that turn.
  *
  * The hero window plays the page's story on a loop, like a GIF: a turn on
  * the Work account, the 5-hour limit, a switch to Credits, and the next turn
@@ -197,7 +197,7 @@ export const WINDOW = `<div class="titlebar"><div class="palette">${UI.search}<s
           <div class="bubble beat" style="animation-name:bubble2">${DEMO.ask2}</div>
           <div class="tool beat" style="animation-name:edit2">${UI.right}Write<span>test/sepay.test.ts · +31</span></div>
           <div class="reply beat" style="animation-name:reply2">Added <code>test/sepay.test.ts</code>: the second delivery is ignored and the order is credited once. 6 passed.</div>
-          <div class="cost beat" style="animation-name:cost2">Sonnet 5.5 · Credits · 21.4k prompt, 96% cached · 0.9k out · 9s · $0.013 in credits</div>
+          <div class="cost beat" style="animation-name:cost2">DeepSeek Flash · Credits · 21.4k prompt, 96% cached · 0.9k out · 9s · $0.001 in credits</div>
         </div>
         <div class="composer">
           <p><span class="hint">Ask to make changes in this project…<span class="caret"></span></span><span class="typed" style="animation-name:typed1">${DEMO.ask1}</span><span class="typed" style="animation-name:typed2">${DEMO.ask2}</span></p>
@@ -207,7 +207,7 @@ export const WINDOW = `<div class="titlebar"><div class="palette">${UI.search}<s
             <span class="mcp">${UI.plug}MCP</span>
             <span class="stack-in">
               <span class="work" style="animation-name:work">${UI.user}Work<span class="meter full"><span></span>5h 100%</span></span>
-              <span class="credits" style="animation-name:oncredits">${APP_MARK}Credits<span class="meter"><span></span>$54.99 left</span></span>
+              <span class="credits" style="animation-name:oncredits">${APP_MARK}Credits<span class="meter"><span></span>$3.67 left</span></span>
             </span>
             <span class="end">${UI.plus}<b class="send">${UI.send}</b></span>
           </div>

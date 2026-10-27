@@ -844,7 +844,7 @@ English.
 ### The free AI
 
 Anybody signed in to the studio (Google, through the server) can chat on
-**Haiku, Sonnet or Opus through this app's own server**, paid for with
+**DeepSeek's Flash or V4 Pro through this app's own server**, paid for with
 credits and with no Claude account of their own — the way in for somebody who has not got one. It is a row of the composer's
 account menu, `Studio AI`, and **not a profile**: Settings has nothing to rename or
 delete, and it is offered exactly while somebody is signed in. A chat on it
@@ -866,10 +866,25 @@ no `.env` and is launched with none of the builder's variables, so
 
 **What the server is sent is an access token of its own**, as
 `Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against its own secret) and forwards to Anthropic with a key of its own, on
-whichever model the request names — so every request is this app's
-API spend, charged per uid to that user's credits by the server, and no user credential is ever
-forwarded.
+(against its own secret) and forwards to DeepSeek's Anthropic-compatible API
+(`https://api.deepseek.com/anthropic`, a row of its `upstreams` table) with a
+key of its own, on whichever model the request names — so every request is
+this app's API spend, charged per uid to that user's credits by the server,
+and no user credential is ever forwarded.
+
+**It runs on DeepSeek, not Anthropic.** The server forwarded to a gateway
+reselling Anthropic usage at a fraction of its list price — 1.500 ₫ to the
+dollar against Anthropic's own 26.000 — which is not a footing to sell
+something commercially on. DeepSeek serves the Messages API in Anthropic's
+shape and documents running Claude Code against it, so the switch is a
+different row in `upstreams` and the prices, nothing in the route: the
+`claude` is still the user's own, and only what answers it changed. Every
+surface that said `every model` now says DeepSeek, because somebody paying
+for credits should know which model they are paying for. What DeepSeek does
+not do is said here once: a PDF read (`document` blocks) fails, `cache_control`
+is ignored (it caches on its own), and the agent is weaker than Claude at long
+runs of tool calls. Its servers are in China, which a user's code now goes
+to; the privacy policy has to say so.
 
 **The token is a file, read by an `apiKeyHelper`, not a variable.** An access
 token lives an hour and a chat session can stay open all day; a token fixed
@@ -886,12 +901,19 @@ ninety-day session.
 
 **Every model is offered, and every alias is pinned.** The free AI was Haiku
 alone once, pinned three times over (`forFreeAi` at send, a Haiku-only picker,
-every alias pointed at Haiku); that is withdrawn — a free chat picks any model,
-and pays for it at that model's price out of the same credits. What
-stays is `freeAiEnv` pointing the `opus`/`sonnet`/`haiku` aliases at
-`FREE_AI_MODELS`: the CLI asks for models on its own — a subagent, the default
-behind `Inherit` — and an id of its own choosing would be charged at a price
-the server only guesses from its family.
+every alias pointed at Haiku); that is withdrawn — a free chat picks either
+model, and pays for it at that model's price out of the same credits. What
+stays is `freeAiEnv` pointing the `opus`/`fable`/`sonnet`/`haiku` aliases at
+`FREE_AI_MODELS` — V4 Pro behind the first two, Flash behind the rest — and
+naming them through the CLI's `_NAME` / `_DESCRIPTION` variables: the CLI asks
+for models on its own — a subagent, the default behind `Inherit` — and a
+`claude-*` id would be answered by whatever DeepSeek maps it to, under a name
+drawn as Claude's. Four aliases over two models is two rows each, so main
+drops the repeats for this account (`distinctModels`). `Default` is Flash
+(`ANTHROPIC_DEFAULT_MODEL`): the CLI's own default is `opus[1m]`, four times
+the price for somebody who never opened the picker, and `ANTHROPIC_MODEL`
+would have pinned every chat to it whatever it picked — measured, the
+`DEFAULT` variable moves the `Default` row alone.
 
 **The server refuses no model.** It had a list, `NITRO_ALLOWED_MODELS`, and
 refused everything off it — and a production list narrower than the code's
@@ -908,8 +930,11 @@ A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
 key exported there would win over the helper and be sent to this app's server.
 Measured too: with one exported, the server saw the studio's token alone.
 
-**No prompt goes past 100K tokens**, where every token of the request is
-charged at a higher rate. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
+**No prompt goes past 100K tokens.** That was where Haiku charged every token
+of the request at a higher rate; DeepSeek has a 1M window and no such rate,
+and the cap stays because every request of a chat re-sends its whole prompt,
+so a chat left to grow costs more per turn the longer it runs.
+`freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
 `FREE_AI_MAX_PROMPT` (100K, also the least the CLI accepts), so a long chat
 compacts at the CLI's own threshold; the server refuses anything longer anyway,
 as `prompt is too long: N tokens > 100000 maximum` — Anthropic's own wording,
@@ -1064,7 +1089,7 @@ second press of Buy reopens the user's own unpaid order for that pack
 (`heldOrder`) rather than opening another.
 
 **Written as dollars, counted as before.** Every balance, pack and charge is
-shown as the dollars of Anthropic's list price it is — `$1.00` for the small
+shown as the dollars of the provider's list price it is — `$1.00` for the small
 pack, `$8.63` left, `$0.135` under an Opus reply — and never as a count
 (`formatCredits`, `CREDITS_PER_USD` in `shared/credits.ts`). It was `10M
 credits`, `1.3M credits`, and the figure sat beside token counts on the same
@@ -1092,6 +1117,28 @@ only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
 charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is
 chosen and `POST /api/checkout` refuses it. The paragraph below on what a pack
 costs is the earlier table's reasoning, kept for the record.
+
+**Repriced for DeepSeek, at 30.000 ₫ to the dollar.** With the server on
+DeepSeek (§ The free AI) a dollar of usage is a dollar paid at DeepSeek's list
+price, about 26.300 ₫, and 2.000 ₫ to it was a loss of some 24.000 ₫ on every
+dollar sold. `VND_PER_USD` is 30.000 ₫ — about 15% over cost — and the packs
+are what their price buys at it, the bonus applied to the size rather than
+written beside it: 20.000 ₫ is $0.667, 50.000 ₫ $1.67, 100.000 ₫ $3.67 (+10%),
+200.000 ₫ $8.00 (+20%). Small figures for a dollar, but a dollar is a lot of
+DeepSeek — some 3.3M fresh Flash input tokens, and thirty times that read from
+its cache. A credit is still a ten-millionth of a dollar, now DeepSeek's, and
+a request is its tokens at the model's price (`weighted` there, `creditsOf`
+here): Flash $0.30 in, $0.006 from cache, $1.20 out per million; V4 Pro $1.32,
+$0.044, $3.96. That is **the peak rate, charged all day** — off-peak is half,
+and which hour a request ran in is DeepSeek's to say, so the half is margin
+rather than a loss. A cache write is charged as a miss, since DeepSeek has no
+price for one. **Balances bought before were divided by fifteen**
+(`vsclaude-cloud/scripts/deepseek-credits.sql`, run once, guarded by a
+`migrations` row): what somebody paid in đồng is what they still hold, at the
+new rate. `used` is divided too, so the bars do not jump; `transactions`
+keeps what each purchase added at the time, which makes a Paddle refund of an
+older pack take back up to fifteen times its share — capped at the balance,
+and the card side is off.
 
 **Used and left, in numbers.** The dialog's strip shows the credits as used
 and left — a balance alone does not say whether a pack lasted a week or an afternoon. The

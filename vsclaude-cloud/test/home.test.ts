@@ -41,10 +41,10 @@ describe("packsForSale", () => {
 
   test("shows each pack's credits as the studio writes them", () => {
     expect(packsForSale().map((pack) => pack.credits)).toEqual([
-      "$10.00",
-      "$25.00",
-      "$55.00",
-      "$120.00",
+      "$0.667",
+      "$1.67",
+      "$3.67",
+      "$8.00",
     ])
     expect(packsForSale()[0]!.credits).toBe(
       formatCredits(CREDIT_PACKS["vnd-20k"].credits)

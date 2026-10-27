@@ -313,11 +313,11 @@ const en: Copy = {
       },
       {
         q: "How far does a pack go?",
-        a: "Every reply on credits shows what it cost, in dollars, so you never have to guess. As a rough guide, one call to Sonnet with a mostly cached prompt is around $0.01–0.015, and a Claude Code message makes a few of them. Haiku costs a twentieth of that and Opus twice as much.",
+        a: "Every reply on credits shows what it cost, in dollars, so you never have to guess. As a rough guide, one call to DeepSeek Flash with a mostly cached prompt is around $0.002, and a Claude Code message makes a few of them. DeepSeek V4 Pro is about $0.006 a call.",
       },
       {
         q: "Where do my requests go?",
-        a: "On credits, through this server to Anthropic, which is how they are charged; your sign-in token is never passed on. On your own accounts, straight from the app to Anthropic, without this server.",
+        a: "On credits, through this server to DeepSeek, which answers chats on credits and is how they are charged — what you send there, code included, is processed on DeepSeek's servers. Your sign-in token is never passed on. On your own Claude accounts, straight from the app to Anthropic, without this server.",
       },
       {
         q: "How do I pay?",
@@ -561,11 +561,11 @@ const vi: Copy = {
       },
       {
         q: "Một gói dùng được bao lâu?",
-        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã tốn bao nhiêu đô la, nên bạn không phải đoán. Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng $0,01–0,015, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ tốn một phần hai mươi, Opus gấp đôi.",
+        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã tốn bao nhiêu đô la, nên bạn không phải đoán. Ước chừng, một lần gọi DeepSeek Flash với prompt phần lớn đã cache tốn khoảng $0,002, và một tin nhắn Claude Code thường gọi vài lần như vậy. DeepSeek V4 Pro khoảng $0,006 mỗi lần gọi.",
       },
       {
         q: "Yêu cầu của tôi được gửi đi đâu?",
-        a: "Khi dùng credit, yêu cầu đi qua server này đến Anthropic, và đó là cách chúng được tính phí. Token đăng nhập của bạn không bao giờ được chuyển tiếp. Khi dùng tài khoản riêng, yêu cầu đi thẳng từ ứng dụng đến Anthropic, không qua server này.",
+        a: "Khi dùng credit, yêu cầu đi qua server này đến DeepSeek, model trả lời chat bằng credit, và đó là cách chúng được tính phí. Vì vậy những gì bạn gửi, kể cả code, được xử lý trên server của DeepSeek. Token đăng nhập của bạn không bao giờ được chuyển tiếp. Khi dùng tài khoản Claude riêng, yêu cầu đi thẳng từ ứng dụng đến Anthropic, không qua server này.",
       },
       {
         q: "Thanh toán thế nào?",

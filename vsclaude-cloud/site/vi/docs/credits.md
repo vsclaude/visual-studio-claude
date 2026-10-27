@@ -25,28 +25,33 @@ Bấm **Buy credits** trong menu tài khoản, chọn gói và cách thanh toán
 
 | Bạn trả   | Nhận được (credit) | Ghi chú          |
 | --------- | ------------------ | ---------------- |
-| 20.000 ₫  | $10                | Chỉ chuyển khoản |
-| 50.000 ₫  | $25                |                  |
-| 100.000 ₫ | $55                | Tặng thêm 10%    |
-| 200.000 ₫ | $120               | Tặng thêm 20%    |
+| 20.000 ₫  | $0,667             | Chỉ chuyển khoản |
+| 50.000 ₫  | $1,67              |                  |
+| 100.000 ₫ | $3,67              | Tặng thêm 10%    |
+| 200.000 ₫ | $8,00              | Tặng thêm 20%    |
 
 Credit được cộng ngay khi thanh toán xong, và ứng dụng sẽ báo cho bạn.
 
 ## Chat bằng credit
 
-Mở menu **Account** của chat và chọn **Pay with credits**. Chat mới bắt đầu với
-Haiku, model rẻ nhất; bạn có thể chọn Sonnet hay Opus trong menu model bất cứ
-lúc nào.
+Mở menu **Account** của chat và chọn **Pay with credits**. Chat bằng credit được
+trả lời bởi **DeepSeek**, không phải Claude: Claude Code vẫn chạy chat, nhưng
+model phía sau là của DeepSeek. Chat mới bắt đầu với **DeepSeek Flash**, model
+rẻ hơn; bạn có thể chọn **DeepSeek V4 Pro** trong menu model khi cần suy luận
+mạnh hơn.
+
+DeepSeek không đọc được file PDF, nên chat bằng credit sẽ lỗi nếu được yêu cầu
+đọc một file PDF.
 
 ## Mỗi câu trả lời tốn bao nhiêu
 
-Credit tính bằng đô la theo đúng bảng giá niêm yết của Anthropic, và mỗi model
-trừ theo giá riêng: Sonnet gấp 20 lần Haiku, Opus gấp 40 lần. Mỗi câu trả lời
-chạy bằng credit đều ghi rõ đã trừ bao nhiêu, nên bạn không phải đoán.
+Credit tính bằng đô la theo đúng bảng giá niêm yết của DeepSeek, và mỗi model
+trừ theo giá riêng: V4 Pro đắt khoảng gấp bốn lần Flash. Mỗi câu trả lời chạy
+bằng credit đều ghi rõ đã trừ bao nhiêu, nên bạn không phải đoán.
 
-Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng
-$0,01–0,015, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ
-tốn một phần hai mươi, Opus gấp đôi.
+Ước chừng, một lần gọi Flash với prompt phần lớn đã cache tốn khoảng $0,002, và
+một tin nhắn Claude Code thường gọi vài lần như vậy. V4 Pro khoảng $0,006 mỗi
+lần gọi.
 
 ::: tip
 Cuộc chat càng dài thì mỗi tin nhắn càng tốn, vì toàn bộ cuộc chat được gửi đi
@@ -56,7 +61,8 @@ mỗi lần. Khi dùng credit, chat sẽ tự được thu gọn (compact) trư�
 
 ## Yêu cầu của bạn đi đâu
 
-Khi dùng credit, yêu cầu đi qua server của Vey Studio đến Anthropic, đó là cách
-chúng được tính phí. Thông tin đăng nhập của bạn không bao giờ được chuyển tiếp.
-Khi dùng tài khoản riêng, yêu cầu đi thẳng từ ứng dụng đến Anthropic, không qua
-server.
+Khi dùng credit, yêu cầu đi qua server của Vey Studio đến DeepSeek, đó là cách
+chúng được tính phí. Vì vậy những gì bạn gửi trong chat bằng credit, kể cả code,
+được xử lý trên server của DeepSeek. Thông tin đăng nhập của bạn không bao giờ
+được chuyển tiếp. Khi dùng tài khoản Claude riêng, yêu cầu đi thẳng từ ứng dụng
+đến Anthropic, không qua server.

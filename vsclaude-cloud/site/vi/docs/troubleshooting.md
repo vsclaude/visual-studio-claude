@@ -45,4 +45,4 @@ mới hoặc nhờ Claude tóm tắt trước.
 Project của bạn vẫn nằm nguyên chỗ cũ. Dữ liệu riêng của Vey Studio — danh sách
 project, cài đặt, chat và các phiên đăng nhập tài khoản Claude — nằm trong
 `~/.veystudio` trên máy bạn. Request từ tài khoản Claude của bạn đi thẳng tới
-Anthropic; chỉ chat bằng credit mới đi qua server của Vey Studio.
+Anthropic; chỉ chat bằng credit mới đi qua server của Vey Studio, đến DeepSeek.

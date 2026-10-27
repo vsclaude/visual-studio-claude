@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk"
 
 import { CHAT_EFFORTS, type AgentModel, type ChatEffort } from "../shared/api"
 import { claudeBinary } from "./claude-bin"
-import { accountEnv } from "./free-ai"
+import { accountEnv, freeAiDir } from "./free-ai"
 import { locate, spawnEnvironment } from "./shell-env"
 
 /**
@@ -118,13 +118,32 @@ async function ask(configDir: string | null): Promise<AgentModel[]> {
       conversation.supportedModels(),
       timeout(),
     ])
-    return models.map(readModel)
+    const rows = models.map(readModel)
+    return configDir !== null && configDir === freeAiDir()
+      ? distinctModels(rows)
+      : rows
   } finally {
     // Both, in this order: the abort is what the never-arriving prompt above is
     // waiting on, and `return()` is what tears the transport down.
     held.abort()
     await conversation.return?.(undefined).catch(() => {})
   }
+}
+
+/**
+ * The rows with a model no earlier row already resolves to — for Studio AI,
+ * whose two DeepSeek models sit behind the CLI's four aliases, and which
+ * would otherwise list `DeepSeek Flash` twice and `DeepSeek V4 Pro` twice.
+ * `default` is always kept: it is the row a new chat's toolbar names.
+ */
+export function distinctModels(models: AgentModel[]): AgentModel[] {
+  const seen = new Set<string>()
+  return models.filter((model) => {
+    if (model.value === "default" || !model.resolvedModel) return true
+    if (seen.has(model.resolvedModel)) return false
+    seen.add(model.resolvedModel)
+    return true
+  })
 }
 
 function timeout(): Promise<never> {

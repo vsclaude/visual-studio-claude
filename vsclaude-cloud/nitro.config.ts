@@ -117,8 +117,9 @@ export default defineConfig({
      * to Cloudflare Email Service, e.g. `Vey Studio <hello@example.com>`.
      * Empty sends nothing (`server/utils/email.ts`). */
     emailFrom: "",
-    /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded. 100K is where
-     * Haiku 5.5's price goes up fivefold; 0 turns the check off. */
+    /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded, the studio's
+     * compact window: every request of a long chat re-sends the whole prompt,
+     * so a turn's price grows with it. 0 turns the check off. */
     maxPromptTokens: 100_000,
   },
 })

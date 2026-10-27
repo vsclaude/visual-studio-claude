@@ -1,22 +1,19 @@
 /**
- * What a request cost, read off Anthropic's own answer — what it takes off
- * the user's credits.
+ * What a request cost, read off the provider's own answer (DeepSeek's, in
+ * Anthropic's shape) — what it takes off the user's credits.
  *
- * Credits are counted in **input-token equivalents** rather than raw tokens,
- * so one number covers a request that is mostly cache reads and one that is
- * mostly output: each kind is weighted by its price relative to an uncached
- * input token (Anthropic's ratios — cache writes 1.25×, cache reads 0.1×,
- * output 5×). A million credits are then "what a million fresh Haiku input
- * tokens would cost", whatever the mix — and whatever the model, since
- * Sonnet and Opus are counted at their own price (`MODEL_PRICES`).
+ * A credit is a ten-millionth of a dollar of **DeepSeek's list price**, and a
+ * request costs its tokens at that price (`PRICES`). The unit is never shown
+ * as a count: the studio and every page here write a balance, a pack or a
+ * charge as **dollars** (`CREDITS_PER_USD`), and only the database, the
+ * webhooks and the `usage` log line carry the integer.
  *
- * The unit is never shown as a count: a million of it is $0.10, so the studio
- * and every page here write a balance, a pack or a charge as **dollars**
- * (`CREDITS_PER_USD`), and only the database, the webhooks and the `usage`
- * log line carry the integer.
+ * It was one Haiku input token at Anthropic's price, with every other kind of
+ * token and model weighted against it; the integer is the same size, so a
+ * balance converted once (`scripts/deepseek-credits.sql`) reads on as before.
  */
 
-/** Ten million of the unit are $1.00 of Anthropic's list price. Kept in step
+/** Ten million of the unit are $1.00 of DeepSeek's list price. Kept in step
  * with the app's `src/shared/credits.ts` by hand. */
 export const CREDITS_PER_USD = 10_000_000
 
@@ -50,50 +47,42 @@ export const NO_USAGE: Usage = {
 }
 
 /**
- * Haiku 5.5 charges every token of a request fivefold once its prompt passes
- * 100K. The route refuses such prompts, but a count that could not be had lets
- * one through, and the credits should then be spent at what it really cost.
+ * DeepSeek's prices, dollars per million tokens, at the **peak** rate
+ * (api-docs.deepseek.com/quick_start/pricing, read 2026-10-27). Off-peak is
+ * half, and charging peak all day is deliberate: the clock a request ran by
+ * is DeepSeek's to decide, and a credit charged at the lower rate in the
+ * wrong hour is a loss, where the other way is margin.
+ *
+ * A cache write has no price of its own there — a prompt not read from the
+ * cache is a miss — so it is charged as one. There is no long-prompt rate.
  */
-export const LONG_PROMPT = 100_000
+type ModelPrice = { input: number; cacheRead: number; output: number }
+
+const FLASH: ModelPrice = { input: 0.3, cacheRead: 0.006, output: 1.2 }
+const PRO: ModelPrice = { input: 1.32, cacheRead: 0.044, output: 3.96 }
 
 /**
- * What a model's tokens cost against Haiku's, the unit credits are counted
- * in: Sonnet 5.5's input is $2/MTok and Opus 5.5's $4 against Haiku's $0.10.
- * An Opus turn has to spend credits at Opus's price, or a pack is a promise
- * of forty times what it says.
- *
- * Their cache reads are 0.05× input rather than Haiku's 0.1×, and neither has
- * Haiku's long-prompt surcharge — the full context is one price.
- * (platform.claude.com/docs/en/about-claude/pricing, read 2026-10-18.)
+ * The price of the model DeepSeek will answer on. It answers a `claude-opus*`
+ * name on V4 Pro and every other `claude-*` on Flash, so a model the CLI asks
+ * for on its own is charged as what it ran on. Anything else is at the dearest
+ * price: a model this table has not learnt is overcharged, not given away.
  */
-type ModelPrice = { factor: number; cacheRead: number; longPrompt: boolean }
-
-const HAIKU: ModelPrice = { factor: 1, cacheRead: 0.1, longPrompt: true }
-const SONNET: ModelPrice = { factor: 20, cacheRead: 0.05, longPrompt: false }
-const OPUS: ModelPrice = { factor: 40, cacheRead: 0.05, longPrompt: false }
-
-/** By family, and an unknown model at the dearest price: a model added to a
- * the credit models before this table learns it is overcharged rather than
- * given away. */
 function priceOf(model: string): ModelPrice {
-  if (/haiku/i.test(model)) return HAIKU
-  if (/sonnet/i.test(model)) return SONNET
-  return OPUS
+  if (/pro|opus/i.test(model)) return PRO
+  if (/flash|^claude-/i.test(model)) return FLASH
+  return PRO
 }
 
-export function weighted(usage: Usage, model = "claude-haiku-5-5"): number {
+export function weighted(usage: Usage, model: string): number {
   const price = priceOf(model)
-  const prompt =
-    usage.input_tokens +
-    usage.cache_creation_input_tokens +
-    usage.cache_read_input_tokens
+  const dollarsPerMillion =
+    (usage.input_tokens + usage.cache_creation_input_tokens) * price.input +
+    usage.cache_read_input_tokens * price.cacheRead +
+    usage.output_tokens * price.output
+  // Rounded before the ceiling: a flash token is 3.0000000000000004 credits
+  // in floating point, and every request would be a credit dearer for it.
   return Math.ceil(
-    (usage.input_tokens +
-      usage.cache_creation_input_tokens * 1.25 +
-      usage.cache_read_input_tokens * price.cacheRead +
-      usage.output_tokens * 5) *
-      price.factor *
-      (price.longPrompt && prompt > LONG_PROMPT ? 5 : 1)
+    Number(((dollarsPerMillion * CREDITS_PER_USD) / 1_000_000).toFixed(6))
   )
 }
 

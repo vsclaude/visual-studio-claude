@@ -1,7 +1,8 @@
 /**
  * The free AI: chats run through this app's own server rather than an account
- * of the user's, for anybody signed in to the studio — on any of
- * `FREE_AI_MODELS`, paid for out of credits the user buys.
+ * of the user's, for anybody signed in to the studio — on DeepSeek's models
+ * (`FREE_AI_MODELS`), paid for out of credits the user buys. The `claude` is
+ * still the user's own; only what answers it is DeepSeek.
  *
  * It is an account in the composer's menu like a profile, but **not a
  * profile**: nothing in Settings names it, renames it or deletes it, and it is
@@ -21,21 +22,43 @@ export const FREE_PROFILE_ID = "vsclaude-free"
  *
  * The server is sent the signed-in user's access token on every request,
  * as `Authorization: Bearer` and as `x-api-key` both (the CLI's own habit with
- * an `apiKeyHelper`), and is expected to verify it and forward to Anthropic
- * with a key of its own, on whichever model the request names.
+ * an `apiKeyHelper`), and is expected to verify it and forward to DeepSeek's
+ * Anthropic-compatible API with a key of its own, on whichever model the
+ * request names.
  */
 export const FREE_AI_URL = ""
 
 /**
- * The models the server runs, by alias — full ids, because they are what every
- * alias is pointed at (`freeAiEnv`). Keep in step with the server's `MODELS`
- * (`limits.ts` there), the ones it prices as 5.5s.
+ * The models the server runs, by the CLI's alias each is put behind — full
+ * ids, because they are what every alias is pointed at (`freeAiEnv`). Keep in
+ * step with the server's `MODELS` (`limits.ts` there) and its prices
+ * (`usage.ts`). DeepSeek has two models for the CLI's four aliases, so the
+ * picker drops the repeats (`distinctModels` in `main/agent-models.ts`).
  */
 export const FREE_AI_MODELS = {
-  haiku: "claude-haiku-5-5",
-  sonnet: "claude-sonnet-5-5",
-  opus: "claude-opus-5-5",
+  haiku: "deepseek-flash",
+  sonnet: "deepseek-flash",
+  opus: "deepseek-v4-pro",
+  fable: "deepseek-v4-pro",
 } as const
+
+/** What `Default` is: Flash, the cheap one. Left to the CLI it is `opus[1m]`,
+ * four times the price for somebody who never opened the picker. Handed over
+ * as `ANTHROPIC_DEFAULT_MODEL`, which moves `Default` alone — measured — where
+ * `ANTHROPIC_MODEL` would pin every chat whatever it picked. */
+export const FREE_AI_DEFAULT_MODEL = FREE_AI_MODELS.sonnet
+
+/** What the picker calls each, through the CLI's `_NAME` / `_DESCRIPTION`
+ * variables — its own words would be `Opus` for a model that is not one. */
+const FREE_AI_MODEL_NAMES: Record<
+  keyof typeof FREE_AI_MODELS,
+  readonly [string, string]
+> = {
+  haiku: ["DeepSeek Flash", "Quick tasks"],
+  sonnet: ["DeepSeek Flash", "Fast and inexpensive"],
+  opus: ["DeepSeek V4 Pro", "Stronger reasoning, about four times the price"],
+  fable: ["DeepSeek V4 Pro", "Stronger reasoning, about four times the price"],
+}
 
 /** The largest prompt the server forwards — `maxPromptTokens` there. */
 export const FREE_AI_MAX_PROMPT = 100_000
@@ -67,8 +90,9 @@ export function normalizeAiUrl(input: string): string | null {
  *
  * **Every alias is pointed at a model the server runs**, not left to the CLI's
  * own idea of what `opus` or `sonnet` means today: the CLI asks for models on
- * its own — a subagent, the default behind `Inherit` — and an id the server
- * does not serve would be a request refused halfway through a turn.
+ * its own — a subagent, the default behind `Inherit` — and a `claude-*` id
+ * would be answered by whichever model DeepSeek maps it to, under a name the
+ * chat's usage line would draw as Claude.
  *
  * **The user's own credentials are emptied**: a spawned `claude` gets the login
  * shell's whole env, and an `ANTHROPIC_API_KEY` exported there would win over
@@ -78,20 +102,32 @@ export function normalizeAiUrl(input: string): string | null {
  * The helper is re-run every five minutes, well inside the hour an access
  * token lives, so a session open all afternoon keeps sending a live one.
  *
- * **The conversation is compacted before 100K**, where the price goes up: the server refuses a longer prompt (in words the CLI compacts on),
- * but compacting at the CLI's own threshold costs one summary instead of a
- * refused request first. 100K is also the least the CLI accepts here.
+ * **The conversation is compacted before 100K.** DeepSeek has a 1M window
+ * and no long-prompt price, but every request of a chat re-sends its whole
+ * prompt, so a chat left to grow costs more per turn the longer it runs. The
+ * server refuses a longer prompt (in words the CLI compacts on), but
+ * compacting at the CLI's own threshold costs one summary instead of a refused
+ * request first. 100K is also the least the CLI accepts here.
  */
 export function freeAiEnv(url: string): Record<string, string> {
+  const aliases = Object.entries(FREE_AI_MODELS).flatMap(([alias, model]) => {
+    const prefix = `ANTHROPIC_DEFAULT_${alias.toUpperCase()}_MODEL`
+    const [name, description] =
+      FREE_AI_MODEL_NAMES[alias as keyof typeof FREE_AI_MODELS]
+    return [
+      [prefix, model],
+      [`${prefix}_NAME`, name],
+      [`${prefix}_DESCRIPTION`, description],
+    ]
+  })
   return {
     ANTHROPIC_BASE_URL: url,
     ANTHROPIC_API_KEY: "",
     ANTHROPIC_AUTH_TOKEN: "",
     CLAUDE_CODE_OAUTH_TOKEN: "",
     CLAUDE_CODE_API_KEY_HELPER_TTL_MS: String(5 * 60_000),
-    ANTHROPIC_DEFAULT_OPUS_MODEL: FREE_AI_MODELS.opus,
-    ANTHROPIC_DEFAULT_SONNET_MODEL: FREE_AI_MODELS.sonnet,
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: FREE_AI_MODELS.haiku,
+    ...Object.fromEntries(aliases),
+    ANTHROPIC_DEFAULT_MODEL: FREE_AI_DEFAULT_MODEL,
     CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(FREE_AI_MAX_PROMPT),
   }
 }

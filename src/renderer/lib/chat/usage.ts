@@ -242,6 +242,16 @@ export function totalOf(lines: AssistantMessage[]): ChatTotal | null {
 export function modelLabel(model: string | null): string | null {
   if (!model) return null
 
+  // Studio AI's, which are not Claude's shape: `deepseek-v4-pro` as
+  // `DeepSeek V4 Pro`, not `Deepseek v4.pro`.
+  if (model.startsWith("deepseek-")) {
+    const words = model.slice("deepseek-".length).split("-")
+    const named = words.map(
+      (word) => word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    return ["DeepSeek", ...named].join(" ")
+  }
+
   // A provider-qualified id — `us.anthropic.claude-opus-4-1-20250805-v1:0` — is
   // the same model with a routing prefix in front of it, so the label starts
   // wherever `claude-` does.

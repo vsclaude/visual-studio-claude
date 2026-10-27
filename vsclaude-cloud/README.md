@@ -1,16 +1,16 @@
 # vsclaude-cloud
 
 The server behind Vey Studio's **free AI**: anybody signed in to the
-studio can chat on Haiku, Sonnet or Opus without a Claude account of their
-own, paid for with credits they buy — there is no free allowance. The studio's
-`claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends an access token this
-server signed when the user signed in with Google; this server checks it,
-refuses a user with no credits, and forwards the request to Anthropic with its
-own API key. Who the users are, what they paid and how much is left all live
+studio can chat on DeepSeek's Flash or V4 Pro without a Claude account of
+their own, paid for with credits they buy — there is no free allowance. The
+studio's `claude` is pointed here (`ANTHROPIC_BASE_URL`) and sends an access
+token this server signed when the user signed in with Google; this server
+checks it, refuses a user with no credits, and forwards the request to
+DeepSeek's Anthropic-compatible API with its own API key. Who the users are, what they paid and how much is left all live
 here, in D1.
 
 ```
-studio's claude ──(access token)──▶ vsclaude-cloud ──(server API key)──▶ api.anthropic.com
+studio's claude ──(access token)──▶ vsclaude-cloud ──(server API key)──▶ api.deepseek.com/anthropic
 ```
 
 The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
@@ -22,7 +22,7 @@ The app's half is `src/shared/free-ai.ts` and `src/main/free-ai.ts` in
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `GET /`, `/vi/`, `/docs/…`       | The home page and the user's guide: static, built from `site/` (VitePress) into `public/`.                     |
 | `POST /v1/messages`              | Passed through, streamed; charged to the user's credits.                                                       |
-| `POST /v1/messages/count_tokens` | Passed through; not counted (free at Anthropic).                                                               |
+| `POST /v1/messages/count_tokens` | Passed through; not counted.                                                                                   |
 | `GET /v1/models`                 | The models served, in Anthropic's list shape.                                                                  |
 | `GET /api/usage`                 | The user's credits: `{ models, credits, creditsUsed }`.                                                        |
 | `POST /api/orders`               | `{ item }` → `{ url }`: a bank-transfer order and its `/pay` page.                                             |
@@ -53,31 +53,29 @@ A 400 or a 500 with the header is shown at once.
   token belongs, or not signed with `NITRO_SESSION_SECRET`).
 - `400 invalid_request_error` — a model other than the allowed ones, or no
   credits left.
-- `500 api_error` — no Anthropic key configured, or Anthropic refused it (its
-  own 401 is not passed on, for the reason above).
+- `500 api_error` — no provider configured, or every one refused its key (a
+  provider's own 401 is not passed on, for the reason above).
 - `400 invalid_request_error`, `prompt is too long: N tokens > 100000 maximum`
   — Anthropic's own wording, which the CLI answers by compacting and retrying.
   Only a body over 100K **bytes** is counted (`count_tokens`, free), since a
   token is never less than a byte; the studio also sets the CLI's
   `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to 100K, so this is the backstop.
 
-The user's token is never forwarded; Anthropic sees only this server's key.
+The user's token is never forwarded; DeepSeek sees only this server's key.
 
 ## What a request costs
 
-In **input-token equivalents**: each kind of token is weighted by its price
-against an uncached Haiku input token — cache writes 1.25×, cache reads 0.1×,
-output 5× (`server/utils/usage.ts`) — and the whole request 5× if its prompt
-passed 100K, for one let through when the count failed. Read off Anthropic's
-own `usage` (streamed or not); a request cut off by Stop is still charged for
-what was generated. A request that starts with credits left is finished even if
-it costs more than is left; the balance stops at 0 and the next one is refused.
+Its tokens at **DeepSeek's list price**, at the peak rate all day
+(`server/utils/usage.ts`), per million: Flash $0.30 in, $0.006 from cache,
+$1.20 out; V4 Pro $1.32, $0.044, $3.96. A cache write is charged as a miss.
+A `claude-opus*` name is charged as V4 Pro and any other `claude-*` as Flash,
+since that is what DeepSeek answers them on; an unknown model counts as V4 Pro.
+Read off the provider's own `usage` (streamed or not); a request cut off by
+Stop is still charged for what was generated. A request that starts with
+credits left is finished even if it costs more than is left; the balance stops
+at 0 and the next one is refused.
 
-**Sonnet and Opus are counted at their own price** — 20× and 40× Haiku's, with
-their 0.05× cache reads and no long-prompt surcharge — so a credit is the same
-money whichever model spends it. An unknown model counts as Opus.
-
-**The unit is shown as dollars.** Ten million of it are $1.00 of Anthropic's
+**The unit is shown as dollars.** Ten million of it are $1.00 of DeepSeek's
 list price (`CREDITS_PER_USD` in `usage.ts`), and that is how the studio, the
 landing page and the payment pages write every balance, pack and charge —
 `$1.00`, `$0.135`— never as a count. The database, the webhooks,`/api/usage`and the`usage` log line carry the integer.
@@ -107,8 +105,8 @@ sold is **credit packs**, in VND, by the app's own item ids
 
 What credits pay for:
 
-- **Every request, on every model**, at that model's family's price — Haiku,
-  Sonnet, and anything else at Opus's (`server/utils/usage.ts`). No model is
+- **Every request, on every model**, at that model's price — Flash, V4 Pro,
+  and anything unknown at V4 Pro's (`server/utils/usage.ts`). No model is
   refused: `NITRO_ALLOWED_MODELS` is removed, and `MODELS` in
   `server/utils/limits.ts` is only what `/v1/models` lists. There is no free allowance: a user with no
   credits is refused before anything is spent. (There was a daily budget per
@@ -190,7 +188,7 @@ All in `nitro.config.ts` › `runtimeConfig`, overridden by environment variable
 | `NITRO_PADDLE_WEBHOOK_SECRET`                               | —                    | The notification destination's secret. Without it every webhook is refused.                                         |
 | `NITRO_PADDLE_CLIENT_TOKEN`                                 | —                    | Paddle.js's, for `/checkout`.                                                                                       |
 | `NITRO_PADDLE_PRICE_VND50K` / `_VND100K` / `_VND200K`       | —                    | The credit packs' `pri_…` ids.                                                                                      |
-| `NITRO_MAX_PROMPT_TOKENS`                                   | `100000`             | Largest prompt forwarded (Haiku 5.5 is 5× past 100K). `0` = no limit.                                               |
+| `NITRO_MAX_PROMPT_TOKENS`                                   | `100000`             | Largest prompt forwarded, the studio's compact window. `0` = no limit.                                              |
 | `NITRO_GOOGLE_CLIENT_ID` / `NITRO_GOOGLE_CLIENT_SECRET`     | —                    | The Web application OAuth client sign-in goes through. Without them nobody can sign in.                             |
 | `NITRO_SESSION_SECRET`                                      | —                    | Signs the session and access tokens. Without it nobody can sign in, and nothing is let through.                     |
 
@@ -216,6 +214,24 @@ wrangler d1 execute vsclaude --remote --command "INSERT INTO upstreams (name, ba
 wrangler d1 execute vsclaude --remote --command "UPDATE upstreams SET enabled = 0 WHERE name = 'provider-a'"
 ```
 
+**Switching to DeepSeek** — once, in this order, so the minutes between the
+steps undercharge rather than overcharge: new prices before the new provider,
+and the old balances divided last.
+
+```sh
+# 1. Deploy this server (DeepSeek's prices, the new packs).
+# 2. DeepSeek in; the old provider off rather than deleted.
+wrangler d1 execute vsclaude --remote --command "INSERT INTO upstreams (name, base_url, api_key, priority, note) VALUES ('deepseek', 'https://api.deepseek.com/anthropic', 'sk-…', 0, 'platform.deepseek.com')"
+wrangler d1 execute vsclaude --remote --command "UPDATE upstreams SET enabled = 0 WHERE name != 'deepseek'"
+# 3. Every balance ÷ 15 — 2.000 ₫ to the dollar then, 30.000 ₫ now. Guarded:
+#    a second run changes nothing.
+wrangler d1 execute vsclaude --remote --file scripts/deepseek-credits.sql
+```
+
+Then release the studio with the matching `src/shared/` — until a user
+updates, their app names Claude models, which DeepSeek answers on Flash
+(Opus on V4 Pro) and this server charges as such.
+
 **`credit_usd` is a note, not a stock.** Every pack is sold whatever the
 keys add up to; nothing is refused as sold out. Keeping enough usage behind
 what has been sold is whoever adds the keys' job. **Disable a key rather than
@@ -239,8 +255,8 @@ and a `usage` line when a streamed answer ends, joined to its request by `rid`:
 
 ```
 2026-10-18T03:50:01.120Z start google_client=set session_secret=set max_prompt_tokens=100000
-2026-10-18T03:50:02.410Z request method=POST path=/v1/messages status=200 ms=812 uid=google:1043… model=claude-haiku-5-5 bytes=82422 rid=req_011… upstream_status=200
-2026-10-18T03:50:04.977Z usage uid=google:1043… rid=req_011… in=12 out=180 cache_read=21000 cache_write=0 weighted=3012 credits_charged=3012 ended=done
+2026-10-18T03:50:02.410Z request method=POST path=/v1/messages status=200 ms=812 uid=google:1043… model=deepseek-flash bytes=82422 rid=req_011… upstream_status=200
+2026-10-18T03:50:04.977Z usage uid=google:1043… rid=req_011… in=12 out=180 cache_read=21000 cache_write=0 weighted=3456 credits_charged=3456 ended=done
 2026-10-18T03:51:10.003Z request method=POST path=/v1/messages status=400 ms=2 refused="the token has expired"
 ```
 
@@ -276,5 +292,5 @@ outlast a long turn (several minutes).
 
 ## Not done yet
 
-- **A ceiling on the whole service.** Set a monthly spend limit on the Anthropic
-  key itself in the Console — that is the hard stop.
+- **A ceiling on the whole service.** DeepSeek is prepaid: the balance topped
+  up on platform.deepseek.com is the hard stop.

@@ -17,7 +17,7 @@ import { check, finish, section } from "./harness"
  */
 
 const account = (credits: number): StudioAccount => ({
-  models: ["claude-haiku-5-5"],
+  models: ["deepseek-flash"],
   credits,
   creditsUsed: 0,
 })
@@ -68,7 +68,7 @@ check(
   "a transfer buys all four",
   packsFor("bank")
     .map((pack) => `${pack.price}:${formatCredits(pack.credits)}`)
-    .join() === "20000:$10.00,50000:$25.00,100000:$55.00,200000:$120.00"
+    .join() === "20000:$0.667,50000:$1.67,100000:$3.67,200000:$8.00"
 )
 check(
   "a card buys from 50.000 ₫ up",
@@ -106,7 +106,8 @@ check(
 )
 
 // The same arithmetic as the server's `weighted`, checked against the line
-// its README quotes: in=12 out=180 cache_read=21000 → weighted=3012 on Haiku.
+// its README quotes: in=12 out=180 cache_read=21000 → weighted=3456 on Flash.
+// A credit is $0.0000001, so a token at $X/MTok is 10·X credits.
 section("creditsOf")
 const tokens = (over: Partial<Parameters<typeof creditsOf>[0]> = {}) => ({
   input: 0,
@@ -116,35 +117,36 @@ const tokens = (over: Partial<Parameters<typeof creditsOf>[0]> = {}) => ({
   ...over,
 })
 check(
-  "the server's own example on Haiku",
+  "the server's own example on Flash",
   creditsOf(
     tokens({ input: 12, output: 180, cacheRead: 21_000 }),
-    "claude-haiku-5-5"
-  ) === 3_012
+    "deepseek-flash"
+  ) === 3_456
 )
 check(
-  "a cache write is a quarter over full price",
-  creditsOf(tokens({ cacheWrite: 1_000 }), "claude-haiku-5-5") === 1_250
+  "a cache write is a miss, at full price",
+  creditsOf(tokens({ cacheWrite: 1_000 }), "deepseek-flash") === 3_000
 )
 check(
-  "Sonnet is twenty times Haiku, with cache reads at a twentieth",
+  "V4 Pro at its own price",
   creditsOf(
     tokens({ input: 1_000, cacheRead: 20_000, output: 1_000 }),
-    "claude-sonnet-5-5"
+    "deepseek-v4-pro"
   ) ===
-    (1_000 + 20_000 * 0.05 + 1_000 * 5) * 20
+    13_200 + 8_800 + 39_600
 )
 check(
-  "Opus is forty times",
-  creditsOf(tokens({ input: 100 }), "claude-opus-5-5") === 4_000
+  "a Claude name is priced as what DeepSeek answers it on",
+  creditsOf(tokens({ input: 100 }), "claude-opus-5-5") === 1_320 &&
+    creditsOf(tokens({ input: 100 }), "claude-sonnet-5-5") === 300
 )
 check(
-  "a model nobody priced is charged as Opus, not given away",
-  creditsOf(tokens({ input: 100 }), "claude-fable-5-1") === 4_000
+  "a model nobody priced is charged as V4 Pro, not given away",
+  creditsOf(tokens({ input: 100 }), "deepseek-v5") === 1_320
 )
 check(
   "rounded up, never down",
-  creditsOf(tokens({ cacheRead: 1 }), "claude-haiku-5-5") === 1
+  creditsOf(tokens({ cacheRead: 1 }), "deepseek-flash") === 1
 )
 
 finish()

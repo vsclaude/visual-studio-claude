@@ -7,7 +7,7 @@
  * pack bought either way adds to the same balance.
  *
  * There are no plans any more, no daily free budget, and no model held back:
- * Haiku, Sonnet and Opus all run on credits, each at its own price
+ * DeepSeek's Flash and V4 Pro both run on credits, each at its own price
  * (`usage.ts`). An account written while plans were sold
  * keeps its `subscription` and `prepaid` keys on disk, and nothing reads them.
  *
@@ -18,24 +18,31 @@ import { CREDITS_PER_USD } from "./usage.ts"
 
 export type CreditItem = "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
 
-/** A pack's size written as the dollars it is sold as, in `usage.ts`'s unit. */
-function usd(dollars: number): number {
-  return Math.round(dollars * CREDITS_PER_USD)
+/**
+ * What a dollar of usage sells for. DeepSeek is paid in dollars at about
+ * 26.300 ₫ each, so this is roughly 15% over cost before the bonuses — and
+ * more in DeepSeek's off-peak hours, which `usage.ts` charges at peak.
+ */
+export const VND_PER_USD = 30_000
+
+/** What `price` buys at `VND_PER_USD`, plus `bonus` percent, in `usage.ts`'s
+ * unit. */
+function packOf(price: number, bonus = 0): number {
+  return Math.round((price / VND_PER_USD) * (1 + bonus / 100) * CREDITS_PER_USD)
 }
 
 /**
  * Credit packs: the price a transfer must reach, and what the pack adds, in
- * `usage.ts`'s unit — written as the dollars of Anthropic's list price it
+ * `usage.ts`'s unit — written as the dollars of DeepSeek's list price it
  * buys, which is also how every page and the studio show it. Keep in step
  * with the app's `src/shared/credits.ts`, which draws them: a dialog promising
  * another price is a customer who paid what they were shown and is told it
  * was short.
  *
- * The rate is $1.00 of usage per 2.000 ₫, then a bonus on the bigger packs.
- * It is set against the gateway this server forwards to, which sells $10.00
- * of usage for 15.000 ₫ — 1.500 ₫ to the dollar. **It is below cost against
- * Anthropic's own API**, where $1.00 is about 26.000 ₫, and has to be
- * repriced before this server is pointed at `api.anthropic.com`.
+ * The rate is `VND_PER_USD`, then a bonus on the bigger packs. It was 2.000 ₫
+ * to the dollar while this server forwarded to a gateway reselling Anthropic
+ * at 1.500 ₫; against a provider billed at its list price that is a loss of
+ * some 24.000 ₫ on every dollar sold.
  *
  * **Four packs**, the four amounts a Vietnamese transfer is made in — 20.000, 50.000, 100.000 and 200.000 ₫ — with 10% and
  * 20% more on the two biggest. For a while only the 20.000 ₫ one was sold and
@@ -50,10 +57,10 @@ export const CREDIT_PACKS: Record<
   CreditItem,
   { price: number; credits: number; bankOnly?: true; retired?: true }
 > = {
-  "vnd-20k": { price: 20_000, credits: usd(10), bankOnly: true },
-  "vnd-50k": { price: 50_000, credits: usd(25) },
-  "vnd-100k": { price: 100_000, credits: usd(55) },
-  "vnd-200k": { price: 200_000, credits: usd(120) },
+  "vnd-20k": { price: 20_000, credits: packOf(20_000), bankOnly: true },
+  "vnd-50k": { price: 50_000, credits: packOf(50_000) },
+  "vnd-100k": { price: 100_000, credits: packOf(100_000, 10) },
+  "vnd-200k": { price: 200_000, credits: packOf(200_000, 20) },
 }
 
 /** Whether it is a pack at all — one still sold or one somebody may already

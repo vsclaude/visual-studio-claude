@@ -109,9 +109,9 @@ export const projects: Messages["projects"] = {
     signingIn: "Đang đăng nhập…",
     meter: "Giới hạn {window}: đã dùng {percent}",
     meterWithReset: "Giới hạn {window}: đã dùng {percent} · {reset}",
-    creditsPitch: "Mọi model, dùng bao nhiêu trả bấy nhiêu",
+    creditsPitch: "Model DeepSeek, dùng bao nhiêu trả bấy nhiêu",
     creditsPitchLong:
-      "Mọi model, dùng bao nhiêu trả bấy nhiêu — không bao giờ có phí hằng tháng",
+      "Model DeepSeek, dùng bao nhiêu trả bấy nhiêu — không bao giờ có phí hằng tháng",
     buyCredits: "Mua credit",
     creditsLeft: "Còn {amount}",
     kindPlan: "Gói Claude {plan} — có giới hạn 5 giờ và theo tuần",
@@ -181,7 +181,7 @@ export const projects: Messages["projects"] = {
     card: "Thẻ · quốc tế",
     title: "Mua credit",
     description:
-      "Credit trả cho mọi model theo mức bạn dùng — không bao giờ có phí hằng tháng.",
+      "Credit trả cho các model DeepSeek theo mức bạn dùng — không bao giờ có phí hằng tháng.",
     mostPopular: "Phổ biến nhất",
     inCredits: "{amount} credit",
     bonus: "Thưởng +{bonus}%",

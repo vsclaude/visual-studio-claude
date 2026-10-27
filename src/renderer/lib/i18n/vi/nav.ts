@@ -15,7 +15,7 @@ export const nav: Messages["nav"] = {
     signIn: "Đăng nhập bằng Google",
     buyCredits: "Mua credit",
     creditsLeft: "Còn {credits}",
-    creditsPitch: "Mọi model, không phí hàng tháng",
+    creditsPitch: "Model DeepSeek, không phí hàng tháng",
     signOut: "Đăng xuất",
     finishInBrowser: "Hoàn tất đăng nhập trong trình duyệt…",
   },

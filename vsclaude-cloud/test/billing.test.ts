@@ -106,12 +106,14 @@ describe("items", () => {
   })
   test("all four packs are on sale, cheapest first", () => {
     expect(ON_SALE).toEqual(["vnd-20k", "vnd-50k", "vnd-100k", "vnd-200k"])
+    // 30.000 ₫ to the dollar, and 10% and 20% more on the two biggest.
     expect(CREDIT_PACKS["vnd-20k"]).toMatchObject({
       price: 20_000,
-      credits: 10 * CREDITS_PER_USD,
+      credits: 6_666_667,
     })
-    expect(CREDIT_PACKS["vnd-100k"].credits).toBe(55 * CREDITS_PER_USD)
-    expect(CREDIT_PACKS["vnd-200k"].credits).toBe(120 * CREDITS_PER_USD)
+    expect(CREDIT_PACKS["vnd-50k"].credits).toBe(16_666_667)
+    expect(CREDIT_PACKS["vnd-100k"].credits).toBe(36_666_667)
+    expect(CREDIT_PACKS["vnd-200k"].credits).toBe(8 * CREDITS_PER_USD)
     expect(isOnSale("vnd-200k")).toBe(true)
     expect(isOnSale("plus")).toBe(false)
   })
@@ -218,19 +220,31 @@ describe("weighted by model", () => {
     cache_read_input_tokens: 1000,
     output_tokens: 10,
   }
-  test("Sonnet at 20× Haiku, with its cheaper cache reads", () => {
-    expect(weighted(usage, "claude-sonnet-5-5")).toBe((100 + 50 + 50) * 20)
+  // A credit is $0.0000001, so a token at $X/MTok is 10·X credits.
+  test("Flash at $0.30 in, $0.006 cached, $1.20 out", () => {
+    expect(weighted(usage, "deepseek-flash")).toBe(300 + 60 + 120)
   })
-  test("Opus at 40×", () => {
-    expect(weighted(usage, "claude-opus-5-5")).toBe((100 + 50 + 50) * 40)
+  test("V4 Pro at $1.32 in, $0.044 cached, $3.96 out", () => {
+    expect(weighted(usage, "deepseek-v4-pro")).toBe(1320 + 440 + 396)
   })
-  test("an unknown model at the dearest price", () => {
-    expect(weighted(usage, "claude-next")).toBe(
-      weighted(usage, "claude-opus-5-5")
+  test("a Claude name is charged as what DeepSeek answers it on", () => {
+    expect(weighted(usage, "claude-opus-5-5")).toBe(
+      weighted(usage, "deepseek-v4-pro")
+    )
+    expect(weighted(usage, "claude-sonnet-5-5")).toBe(
+      weighted(usage, "deepseek-flash")
+    )
+    expect(weighted(usage, "claude-haiku-5-5")).toBe(
+      weighted(usage, "deepseek-flash")
     )
   })
-  test("no long-prompt surcharge past Haiku", () => {
+  test("an unknown model at the dearest price", () => {
+    expect(weighted(usage, "deepseek-next")).toBe(
+      weighted(usage, "deepseek-v4-pro")
+    )
+  })
+  test("no long-prompt rate", () => {
     const long = { ...usage, input_tokens: 150_000 }
-    expect(weighted(long, "claude-sonnet-5-5")).toBe((150_000 + 50 + 50) * 20)
+    expect(weighted(long, "deepseek-flash")).toBe(450_000 + 60 + 120)
   })
 })

@@ -67,7 +67,21 @@ check(
   "every alias is a model the server runs, itself",
   env.ANTHROPIC_DEFAULT_OPUS_MODEL === FREE_AI_MODELS.opus &&
     env.ANTHROPIC_DEFAULT_SONNET_MODEL === FREE_AI_MODELS.sonnet &&
-    env.ANTHROPIC_DEFAULT_HAIKU_MODEL === FREE_AI_MODELS.haiku,
+    env.ANTHROPIC_DEFAULT_HAIKU_MODEL === FREE_AI_MODELS.haiku &&
+    env.ANTHROPIC_DEFAULT_FABLE_MODEL === FREE_AI_MODELS.fable,
+  env
+)
+check(
+  "every alias is a DeepSeek model, and named as one in the picker",
+  Object.values(FREE_AI_MODELS).every((id) => id.startsWith("deepseek-")) &&
+    ["OPUS", "SONNET", "HAIKU", "FABLE"].every((alias) =>
+      env[`ANTHROPIC_DEFAULT_${alias}_MODEL_NAME`]?.startsWith("DeepSeek ")
+    ),
+  env
+)
+check(
+  "Default is the cheap one",
+  env.ANTHROPIC_DEFAULT_MODEL === "deepseek-flash",
   env
 )
 check(

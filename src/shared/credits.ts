@@ -20,25 +20,31 @@
  */
 
 /**
- * **A credit is a ten-millionth of a dollar** of Anthropic's list price, so a
+ * **A credit is a ten-millionth of a dollar** of DeepSeek's list price, so a
  * balance of ten million is $1.00 of API usage — and that is how every balance,
  * pack and charge is **written**: `$1.00`, never `10M credits`.
  *
- * The unit itself is the server's (`usage.ts` there): one Haiku input token,
- * with every other kind of token and every other model weighted by its price.
- * The number stayed and the words changed, because a figure that looks like a
- * token count is read as one: a 67-token answer on Opus charged `1.3M credits`
- * read as the app miscounting by a factor of forty, where `$0.13` beside
- * `33.4k prompt` says what happened. The balance in D1, the charge on every
- * usage line and the packs' sizes are all still in the integer unit — a dollar
- * figure would lose a Haiku request's $0.0003 to rounding — and only the
- * formatting knows the rate.
+ * The unit itself is the server's (`usage.ts` there). The number stayed and
+ * the words changed, because a figure that looks like a token count is read as
+ * one: a 67-token answer on Opus charged `1.3M credits` read as the app
+ * miscounting by a factor of forty, where `$0.13` beside `33.4k prompt` says
+ * what happened. The balance in D1, the charge on every usage line and the
+ * packs' sizes are all still in the integer unit — a dollar figure would lose
+ * a cached Flash request's $0.0001 to rounding — and only the formatting knows
+ * the rate.
  */
 export const CREDITS_PER_USD = 10_000_000
 
-/** A pack's size written as the dollars it is, in the integer unit. */
-function usd(dollars: number): number {
-  return Math.round(dollars * CREDITS_PER_USD)
+/**
+ * What a dollar of usage sells for — the server's `VND_PER_USD`. DeepSeek is
+ * paid at about 26.300 ₫ to the dollar, so this is some 15% over cost.
+ */
+export const VND_PER_USD = 30_000
+
+/** What `price` buys at `VND_PER_USD`, plus `bonus` percent, in the integer
+ * unit. */
+function packOf(price: number, bonus = 0): number {
+  return Math.round((price / VND_PER_USD) * (1 + bonus / 100) * CREDITS_PER_USD)
 }
 
 export type CreditPack = {
@@ -66,23 +72,29 @@ export type CreditPack = {
  * Credits, which every Studio AI request is paid for out of, on any model —
  * they do not expire.
  *
- * $1.00 of usage per 2.000 ₫, plus the bonus the bigger packs are badged
- * with: 100.000 ₫ is $50 and 10% more, 200.000 ₫ is $100 and 20% more, so
- * the badge and the number say the same thing. Four amounts, the ones a
- * Vietnamese transfer is made in; the 20.000 ₫ one is `bankOnly`. Why the rate is the server's `billing.ts`. An id is its price, and is also
- * the server's item name.
+ * $1.00 of usage per `VND_PER_USD`, plus the bonus the bigger packs are
+ * badged with — the bonus is an argument of the size, so the badge and the
+ * number cannot say different things. Four amounts, the ones a Vietnamese
+ * transfer is made in; the 20.000 ₫ one is `bankOnly`. Why the rate is the
+ * server's `billing.ts`. An id is its price, and is also the server's item
+ * name.
  */
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "vnd-20k", price: 20_000, credits: usd(10), bankOnly: true },
-  { id: "vnd-50k", price: 50_000, credits: usd(25) },
+  { id: "vnd-20k", price: 20_000, credits: packOf(20_000), bankOnly: true },
+  { id: "vnd-50k", price: 50_000, credits: packOf(50_000) },
   {
     id: "vnd-100k",
     price: 100_000,
-    credits: usd(55),
+    credits: packOf(100_000, 10),
     bonus: 10,
     popular: true,
   },
-  { id: "vnd-200k", price: 200_000, credits: usd(120), bonus: 20 },
+  {
+    id: "vnd-200k",
+    price: 200_000,
+    credits: packOf(200_000, 20),
+    bonus: 20,
+  },
 ]
 
 const VND = new Intl.NumberFormat("vi-VN", {
@@ -157,22 +169,26 @@ export function creditsLeft(account: StudioAccount): {
 }
 
 /**
+ * DeepSeek's prices, dollars per million tokens, at the peak rate the server
+ * charges all day. A cache write has no price of its own there and is a miss.
+ */
+const FLASH = { input: 0.3, cacheRead: 0.006, output: 1.2 }
+const PRO = { input: 1.32, cacheRead: 0.044, output: 3.96 }
+
+/**
  * What a turn's tokens come to in credits, the way the server charges them.
  *
- * A credit is one Haiku input token's worth, a ten-millionth of a dollar:
- * every kind of token is weighted by its price against that — cache writes
- * 1.25×, output 5×, cache reads 0.1× on Haiku and 0.05× on Sonnet and Opus —
- * and the whole is multiplied by the model's price against Haiku's, 20× for
- * Sonnet and 40× for Opus. Anything not recognised is Opus, the dearest, as
- * the server has it. The result is written as dollars (`formatCredits`).
+ * Each kind of token at the model's price, a credit being a ten-millionth of
+ * a dollar. DeepSeek answers a `claude-opus*` name on V4 Pro and any other
+ * `claude-*` on Flash, so those are priced as what ran; anything not
+ * recognised is V4 Pro, the dearest, as the server has it. The result is
+ * written as dollars (`formatCredits`).
  *
  * **A copy of `weighted` in `vsclaude-cloud/server/utils/usage.ts`, kept in
  * step by hand** — the two packages share no code, and a figure on the row
- * that disagrees with what came off the balance is worse than no figure. Two
- * ways it can still differ, both small: the server rounds up per request and
- * this per turn, and Haiku's long-prompt price is charged per request where
- * this sees only the turn's sum — a case the server refuses before it costs
- * anything, so it is left out here rather than guessed at.
+ * that disagrees with what came off the balance is worse than no figure. The
+ * one way it can still differ is small: the server rounds up per request and
+ * this per turn.
  */
 export function creditsOf(
   usage: {
@@ -183,15 +199,19 @@ export function creditsOf(
   },
   model: string
 ): number {
-  const haiku = /haiku/i.test(model)
-  const factor = haiku ? 1 : /sonnet/i.test(model) ? 20 : 40
-  const cacheRead = haiku ? 0.1 : 0.05
+  const price = /pro|opus/i.test(model)
+    ? PRO
+    : /flash|^claude-/i.test(model)
+      ? FLASH
+      : PRO
+  const dollarsPerMillion =
+    (usage.input + usage.cacheWrite) * price.input +
+    usage.cacheRead * price.cacheRead +
+    usage.output * price.output
+  // Rounded before the ceiling, as the server does: a Flash token is
+  // 3.0000000000000004 credits in floating point.
   return Math.ceil(
-    (usage.input +
-      usage.cacheWrite * 1.25 +
-      usage.cacheRead * cacheRead +
-      usage.output * 5) *
-      factor
+    Number(((dollarsPerMillion * CREDITS_PER_USD) / 1_000_000).toFixed(6))
   )
 }
 

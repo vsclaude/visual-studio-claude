@@ -521,6 +521,11 @@ section("the model's name, and the numbers")
     "so is a provider-qualified one",
     modelLabel("us.anthropic.claude-opus-4-1-20250805-v1:0") === "Opus 4.1"
   )
+  check(
+    "Studio AI's DeepSeek models",
+    modelLabel("deepseek-v4-pro") === "DeepSeek V4 Pro" &&
+      modelLabel("deepseek-flash") === "DeepSeek Flash"
+  )
   check("an alias is drawn as it stands", modelLabel("opus") === "Opus")
   check("and nothing is nothing", modelLabel(null) === null)
 
@@ -536,20 +541,20 @@ section("the model's name, and the numbers")
 section("a turn paid in credits")
 {
   const spent = {
-    "claude-sonnet-5-5": {
+    "deepseek-v4-pro": {
       inputTokens: 1_000,
       cacheReadInputTokens: 20_000,
       outputTokens: 1_000,
     },
-    "claude-haiku-5-5": { cacheReadInputTokens: 10_000, outputTokens: 100 },
+    "deepseek-flash": { cacheReadInputTokens: 10_000, outputTokens: 100 },
   }
   const charged = usageOf(result(spent), null, null, null, true)
   // Each model at its own price, as the server charges — the busiest's price
-  // over the whole turn would have been 20× too much for the Haiku half.
+  // over the whole turn would have been several times too much for the Flash
+  // half. A token at $X/MTok is 10·X credits.
   check(
     "each model at its own price, added up",
-    charged.credits ===
-      (1_000 + 20_000 * 0.05 + 1_000 * 5) * 20 + (1_000 + 500),
+    charged.credits === 13_200 + 8_800 + 39_600 + (600 + 1_200),
     charged
   )
   check(

@@ -46,4 +46,4 @@ happens, start a new chat or ask Claude to summarise first.
 Your projects stay where they are. Vey Studio's own data — the list of projects,
 your settings, chats and Claude account logins — is under `~/.veystudio` on your
 machine. Requests from your own Claude accounts go straight to Anthropic; only
-chats on credits go through Vey Studio's server.
+chats on credits go through Vey Studio's server, to DeepSeek.

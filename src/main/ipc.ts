@@ -3,7 +3,6 @@ import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 
 import {
-  CHAT_NOTIFICATIONS_KEY,
   IPC,
   TELEMETRY_KEY,
   type ChatImage,
@@ -350,10 +349,6 @@ export function createIpc(host: Host): {
    */
   const announce = async (notice: ChatNotice | null): Promise<void> => {
     if (!notice) return
-    // Off by default is the wrong default for the one feature that says "your
-    // agent finished"; an unset key reads as on.
-    if ((await store.getSetting(CHAT_NOTIFICATIONS_KEY)) === "off") return
-
     // Any window of this app's, not only the studio's: a chat popped out into
     // its own window and being read there is one nobody needs calling back to.
     if (host.focused()) return

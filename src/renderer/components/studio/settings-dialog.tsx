@@ -18,7 +18,6 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
   ArrowUpCircle,
-  Bell,
   Columns2,
   ExternalLink,
   Palette,
@@ -54,14 +53,9 @@ import {
   type MessageKey,
 } from "@/lib/i18n"
 import { installLabel, pendingUpdate, useUpdates } from "@/lib/updates"
-import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
-import { useAgentModels } from "@/lib/chat/models"
-import { useFreeAi } from "@/lib/free-ai"
-import { FREE_PROFILE_ID } from "@shared/free-ai"
 import { IconButton } from "./icon-button"
 import { OfficialBadge } from "./official-badge"
 import { UpdateProgressBar } from "./update-progress"
-import { ModelMenu, ProfileMenu } from "./chat/chat-composer"
 
 /**
  * The studio's preferences — **Settings…** in the application menu, ⌘,.
@@ -144,8 +138,6 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <AppearanceSection onReplayTour={onClose} />
             ) : section === "tabs" ? (
               <TabsSection />
-            ) : section === "chats" ? (
-              <ChatsSection />
             ) : section === "plugins" ? (
               <PluginsSection />
             ) : (
@@ -158,7 +150,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-type SectionId = "appearance" | "tabs" | "chats" | "plugins" | "updates"
+type SectionId = "appearance" | "tabs" | "plugins" | "updates"
 
 /** The sections, in the order they are listed. Each one is a heading, a line
  * saying what it covers, and the rows below — kept together so adding a
@@ -180,12 +172,6 @@ const SECTIONS: {
     label: "settings.sections.tabs",
     blurb: "settings.sections.tabsBlurb",
     icon: Columns2,
-  },
-  {
-    id: "chats",
-    label: "settings.sections.chats",
-    blurb: "settings.sections.chatsBlurb",
-    icon: Bell,
   },
   {
     id: "plugins",
@@ -507,79 +493,6 @@ function TabsSection() {
         description={t("settings.tabs.gitBlameDescription")}
       >
         <Switch checked={gitBlame} onCheckedChange={setGitBlame} />
-      </Row>
-    </Card>
-  )
-}
-
-/**
- * What a chat does when nobody is watching it.
- *
- * Its own section rather than a row under `Appearance`, because this is not
- * about how the studio looks: several chats answering at once is the thing this
- * app is for, and what makes that workable is being called back to one. The
- * section is where the rest of that belongs as it arrives.
- *
- * The commit-draft row came here from the Claude section when that went: the
- * accounts it listed are managed in the projects column's Accounts foot now,
- * and this was the one row of it that was not an account.
- */
-function ChatsSection() {
-  const on = useSettings((state) => state.chatNotifications)
-  const setOn = useSettings((state) => state.setChatNotifications)
-  const t = useT()
-
-  const profiles = useClaudeProfiles((state) => state.profiles)
-  const models = useAgentModels()
-  const freeReady = useFreeAi((state) => state.ready)
-  const reviewModel = useSettings((state) => state.reviewModel)
-  const reviewEffort = useSettings((state) => state.reviewEffort)
-  const reviewProfileId = useSettings((state) => state.reviewProfileId)
-  const setReviewModel = useSettings((state) => state.setReviewModel)
-  const setReviewProfileId = useSettings((state) => state.setReviewProfileId)
-
-  return (
-    <Card>
-      {/*
-        On by default, which is the other way round from every other switch in
-        this dialog and is argued for on `CHAT_NOTIFICATIONS_KEY`: a user who
-        has to find this row first has already missed the turn they walked away
-        from.
-      */}
-      <Row
-        title={t("settings.chats.notify")}
-        description={t("settings.chats.notifyDescription")}
-      >
-        <Switch checked={on} onCheckedChange={setOn} />
-      </Row>
-      {/* The one turn in the app with no toolbar of its own — a drafted
-          commit message runs on whatever is picked here rather than on
-          something asked per turn, since it is not a conversation somebody
-          sits in front of. See `main/one-turn-agent.ts`; the `review*` field
-          names are what is already on disk. */}
-      <Row
-        title={t("settings.chats.commitDrafts")}
-        description={t("settings.chats.commitDraftsDescription")}
-      >
-        <div className="flex items-center gap-1.5">
-          <ModelMenu
-            models={models}
-            model={reviewModel}
-            effort={reviewEffort}
-            onPick={setReviewModel}
-          />
-          {/* The composer's own condition: credits are a choice even for
-              somebody with no profile of their own. */}
-          {(profiles.length > 0 ||
-            freeReady ||
-            reviewProfileId === FREE_PROFILE_ID) && (
-            <ProfileMenu
-              profiles={profiles}
-              profileId={reviewProfileId}
-              onPick={setReviewProfileId}
-            />
-          )}
-        </div>
       </Row>
     </Card>
   )

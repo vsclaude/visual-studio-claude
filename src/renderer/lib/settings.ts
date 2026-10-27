@@ -1,10 +1,6 @@
 import { create } from "zustand"
 
-import {
-  CHAT_NOTIFICATIONS_KEY,
-  TELEMETRY_KEY,
-  type ChatEffort,
-} from "@shared/api"
+import { TELEMETRY_KEY, type ChatEffort } from "@shared/api"
 import {
   DEFAULT_APPEARANCE,
   isAccentPalette,
@@ -173,23 +169,11 @@ type SettingsState = Stored & {
    * default for a frame and correcting itself. */
   loaded: boolean
 
-  /**
-   * Whether a chat that finishes, fails or stops to ask rings an OS
-   * notification while the window is unfocused.
-   *
-   * Outside `Stored` because the main process reads it — it is what rings the
-   * bell — and a bag only the renderer parses is not a thing both sides can
-   * name. **On by default**, which is the one
-   * default in this file that goes the other way from the switches around it;
-   * `CHAT_NOTIFICATIONS_KEY` says why.
-   */
-  chatNotifications: boolean
-  /** Whether the anonymous usage counts are sent. Main reads it, so it has a
-   * key of its own like `chatNotifications`; on by default —
-   * `TELEMETRY_KEY`. */
+  /** Whether the anonymous usage counts are sent. Outside `Stored` because
+   * main reads it, and a bag only the renderer parses is not a thing both
+   * sides can name; on by default — `TELEMETRY_KEY`. */
   telemetry: boolean
 
-  setChatNotifications: (on: boolean) => void
   setTelemetry: (on: boolean) => void
   setDiffSideBySide: (sideBySide: boolean) => void
   setDiffWhitespace: (show: boolean) => void
@@ -310,17 +294,8 @@ export const useSettings = create<SettingsState>((set, get) => {
     accountsCollapsed: false,
     defaultAccountLabel: null,
     language: "system",
-    chatNotifications: true,
     telemetry: true,
     loaded: false,
-
-    setChatNotifications(chatNotifications) {
-      set({ chatNotifications })
-      // Its own key rather than `save()`'s bag, because main reads it. Written
-      // as the two words main matches on, and only `"off"` means anything —
-      // see `CHAT_NOTIFICATIONS_KEY`.
-      void setSetting(CHAT_NOTIFICATIONS_KEY, chatNotifications ? "on" : "off")
-    },
 
     setTelemetry(telemetry) {
       set({ telemetry })
@@ -424,9 +399,8 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     restore() {
       restorePromise ??= (async () => {
-        const [stored, notifications, telemetry] = await Promise.all([
+        const [stored, telemetry] = await Promise.all([
           recall(SETTINGS_KEY, isStored),
-          getSetting(CHAT_NOTIFICATIONS_KEY).catch(() => null),
           getSetting(TELEMETRY_KEY).catch(() => null),
         ])
         set({
@@ -435,8 +409,7 @@ export const useSettings = create<SettingsState>((set, get) => {
           ...stored,
           // Only `"off"` switches it off, so an unreadable or absent key is on
           // — the same reading main does, and the two must agree or the switch
-          // would show one thing while the bell did another.
-          chatNotifications: notifications !== "off",
+          // would show one thing while the counts did another.
           telemetry: telemetry !== "off",
           loaded: true,
         })

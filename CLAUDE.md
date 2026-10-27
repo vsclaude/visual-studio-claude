@@ -416,7 +416,8 @@ path, branch, `+ Chat`), the chats in **Needs you / Running / Recent**
 each account's five-hour bar and the credits left (`project/accounts.tsx`),
 resizable by its top edge and folded by its heading,
 and where accounts are added, signed in, renamed and removed: **there is no
-Settings › Claude** any more, and its commit-draft row is under Chats. A login
+Settings › Claude** (nor Settings › Chats — the commit-draft model is the gear
+beside `Draft`, with the rules). A login
 is one dialog: the account kind (`claude auth login`'s own flags), then the
 browser step and a field for the page's code. **The list shows nothing of a
 login until it has worked**, so closing the dialog cancels it

@@ -7,8 +7,6 @@ export const settings = {
     appearanceBlurb: "How the studio looks.",
     tabs: "Tabs & editor",
     tabsBlurb: "The tab strip and the editor.",
-    chats: "Chats",
-    chatsBlurb: "Notifications, and the model commit drafts run on.",
     plugins: "Plugins",
     pluginsBlurb: "Code of your own, run in the studio.",
     updates: "Updates",
@@ -53,14 +51,6 @@ export const settings = {
     allProjectTabsDescription: "Off: only the project you are working in.",
     gitBlame: "Show who last changed the line",
     gitBlameDescription: "Git blame after the current line, like GitLens.",
-  },
-  chats: {
-    notify: "Notify me when a chat finishes",
-    notifyDescription:
-      "When a chat finishes, fails or asks something, while the window is in the background.",
-    commitDrafts: "Commit message drafts",
-    commitDraftsDescription:
-      "Model and account the Git tab's Draft button runs on.",
   },
   plugins: {
     warning:

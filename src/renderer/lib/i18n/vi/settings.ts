@@ -8,8 +8,6 @@ export const settings: Messages["settings"] = {
     appearanceBlurb: "Studio trông như thế nào.",
     tabs: "Tab & trình soạn thảo",
     tabsBlurb: "Dải tab và trình soạn thảo.",
-    chats: "Chat",
-    chatsBlurb: "Thông báo, và model dùng để soạn commit.",
     plugins: "Plugin",
     pluginsBlurb: "Mã của riêng bạn, chạy trong studio.",
     updates: "Cập nhật",
@@ -54,13 +52,6 @@ export const settings: Messages["settings"] = {
     allProjectTabsDescription: "Tắt: chỉ dự án bạn đang làm.",
     gitBlame: "Hiện người sửa dòng gần nhất",
     gitBlameDescription: "Git blame sau dòng hiện tại, giống GitLens.",
-  },
-  chats: {
-    notify: "Thông báo khi chat xong",
-    notifyDescription:
-      "Khi một chat xong, lỗi hoặc cần hỏi bạn, lúc cửa sổ đang ở nền.",
-    commitDrafts: "Soạn commit message",
-    commitDraftsDescription: "Model và tài khoản mà nút Draft ở tab Git dùng.",
   },
   plugins: {
     warning:

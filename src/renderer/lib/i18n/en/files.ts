@@ -115,8 +115,12 @@ export const files = {
     stop: "Stop",
     draft: "Draft",
     commit: "Commit",
-    rulesTitle: "Rules the drafted message follows",
-    rules: "Commit message rules",
+    settingsTitle: "Commit message settings",
+    settings: "Commit message settings",
+    settingsDescription: "How the Draft button writes a message.",
+    model: "Model",
+    modelDescription: "The model and account the Draft button runs on.",
+    rules: "Rules",
     rulesDescription:
       "What every drafted message must follow. They win over the style of the recent commits.",
     rulesPlaceholder:

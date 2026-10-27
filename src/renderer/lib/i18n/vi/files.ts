@@ -117,8 +117,12 @@ export const files: Messages["files"] = {
     stop: "Dừng",
     draft: "Soạn bằng AI",
     commit: "Commit",
-    rulesTitle: "Rule cho message được soạn",
-    rules: "Rule cho commit message",
+    settingsTitle: "Cài đặt commit message",
+    settings: "Cài đặt commit message",
+    settingsDescription: "Cách nút Soạn bằng AI viết message.",
+    model: "Model",
+    modelDescription: "Model và tài khoản mà nút Soạn bằng AI dùng.",
+    rules: "Rule",
     rulesDescription:
       "Quy tắc mà mọi message được soạn phải theo. Ưu tiên hơn style của các commit gần đây.",
     rulesPlaceholder:

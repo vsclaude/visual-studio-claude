@@ -1068,24 +1068,10 @@ export type McpServerState =
   "connected" | "failed" | "needs-auth" | "pending" | "disabled" | "unknown"
 
 /**
- * Whether a chat that finishes, fails or stops to ask rings an OS notification
- * while the window is unfocused. `"off"` switches it off; **anything else,
- * including unset, is on**.
- *
- * That default is deliberate and is the one place in Settings where an unset
- * key does not mean "no". Several chats answering at once is what this app is
- * for, and the only thing that makes walking away from them workable is being
- * called back — a user who has to find the switch first has already lost the
- * turn they walked away from.
- */
-export const CHAT_NOTIFICATIONS_KEY = "chats.notifications"
-
-/**
  * Whether the app sends its anonymous usage counts — that it was opened, and
  * for how many minutes it was in front of somebody (`main/telemetry.ts`).
- * `"off"` switches it off; anything else, including unset, is on, read the
- * same way as `CHAT_NOTIFICATIONS_KEY` so the two sides cannot disagree about
- * an absent key.
+ * `"off"` switches it off; anything else, including unset, is on, so the two
+ * sides cannot disagree about an absent key.
  */
 export const TELEMETRY_KEY = "telemetry"
 
@@ -2286,7 +2272,7 @@ export type DesktopApi = {
     model: string | null,
     effort: ChatEffort | null,
     profileId: string | null,
-    /** Settings › Chats' commit message rules, empty for none. */
+    /** The commit box's own message rules, empty for none. */
     rules: string | null
   ) => Promise<AgentTurnAnswer>
   /**

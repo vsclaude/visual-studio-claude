@@ -209,8 +209,11 @@ notification while the window is unfocused; clicking it opens the chat
 (`IPC.revealChat`). `ChatNotices` in `main/notify.ts` turns the event
 stream into edges and is free of `electron` so `test/notify.ts` can hold it to
 them — the failures are ringing twice and swallowing a quiet. The title is read
-when the notice is due, since `retitle` renames a chat mid-turn. On by default
-(`CHAT_NOTIFICATIONS_KEY`).
+when the notice is due, since `retitle` renames a chat mid-turn. **There is no
+switch for it**: Settings › Chats had one, `Notify me when a chat finishes`,
+and nobody wanted it off — a user who walked away from three running chats is
+exactly who it is for. `CHAT_NOTIFICATIONS_KEY` went with it; a `"off"` still on
+somebody's disk is no longer read.
 
 ### The dock badge
 
@@ -667,7 +670,11 @@ strip.
 ## Settings
 
 A dialog (⌘,), applied as picked — no Save. Sections: **Appearance**, **Tabs &
-editor**, **Chats**, **Plugins**, **Updates**.
+editor**, **Plugins**, **Updates**.
+
+**There is no Chats section any more.** It held two rows: the notification
+switch, deleted (§ The notification), and the model and account commit drafts
+run on, which moved beside `Draft` (§ Committing).
 
 **There is no Claude section any more.** It held the named profiles, each a
 `CLAUDE_CONFIG_DIR`, with a status per row, and the Credits card — and the one
@@ -686,7 +693,7 @@ record, so a name given to it is a setting, `defaultAccountLabel`, and
 renaming it to nothing gives it its email back. Credits are a row
 there too: a click buys more, and somebody signed out of Vey Studio gets `Sign
 in`. Its last row, the model and account **commit message drafts** run on, moved
-to **Chats**.
+to Chats and then beside `Draft` (§ Committing).
 
 The app names the directory (`workspace/claude-profiles/<slug>`, in main,
 because the renderer cannot see `VEYSTUDIO_DATA_DIR`) and runs `claude auth
@@ -1416,6 +1423,12 @@ diff and the last ten subjects — a button pressed, its output text in a box
 somebody still has to commit, which is why it passes the rule against helper
 turns. A failed commit **rejects** and keeps the message.
 
+**What a draft runs on is set beside it**: the gear next to `Draft` opens one
+dialog with the model, the account and the rules a message must follow, all
+held until Save. It was a Settings row (model and account) and a rules button
+of its own; both are wanted at the moment a draft comes back wrong, which is in
+front of this box, not a dialog away. The gear is lit while there are rules.
+
 **A draft is one commit.** It was a plan of several once — a JSON answer,
 read against the staged paths, shown as a card a commit — and it came out as
 the wrong shape for the box: a staged change is one message, and a split the
@@ -1621,7 +1634,7 @@ alone), so `bun run dev` against `nitro dev` can be watched end to end without
 a developer's restarts reaching the real counts.
 
 It is **on unless switched off** — Settings › Updates, `TELEMETRY_KEY`, read
-the way `CHAT_NOTIFICATIONS_KEY` is (only `"off"` is off). The update check
+(only `"off"` is off). The update check
 has no switch because it carries nothing about the user; this does — that they
 were here, and for how long — so it gets one. The sentence under the switch is
 the whole of what is sent, and has to stay true. Time counted while it is off

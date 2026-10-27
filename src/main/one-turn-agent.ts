@@ -218,7 +218,7 @@ export type DraftCommitRequest = {
   effort?: string | null
   configDir?: string | null
   disabledTools?: string[]
-  /** Settings › Chats' own rules for a message, typed by the user. They go
+  /** The commit box's own rules for a message, typed by the user. They go
    * in the prompt rather than the system prompt, which stays the one every
    * draft shares, and they outrank the log: somebody who wrote a rule down
    * wants it followed even where the history does otherwise. */

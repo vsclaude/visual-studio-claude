@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react"
-import { ListChecks } from "lucide-react"
+import { Settings } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,11 +13,16 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { Claude } from "@/components/ui/svgs/claude"
 import { Textarea } from "@/components/ui/textarea"
+import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
+import { useAgentModels } from "@/lib/chat/models"
 import { useCommitBox, useCommitBoxes } from "@/lib/files/commit-box"
 import type { FileRoot } from "@/lib/files/roots"
 import { useT } from "@/lib/i18n"
+import { useFreeAi } from "@/lib/free-ai"
 import { useSettings } from "@/lib/settings"
 import { isStudioShortcut } from "@/lib/shortcuts"
+import { FREE_PROFILE_ID } from "@shared/free-ai"
+import { ModelMenu, ProfileMenu } from "../chat/chat-composer"
 
 /**
  * The message, and the button that ends a reading of the diff.
@@ -99,7 +104,7 @@ export function CommitBox({ root }: { root: FileRoot }) {
           )}
           {drafting ? t("files.commitBox.stop") : t("files.commitBox.draft")}
         </Button>
-        <CommitRulesButton />
+        <CommitSettingsButton />
 
         <div className="min-w-0 flex-1 truncate text-[0.6875rem] text-muted-foreground">
           {error && (
@@ -124,13 +129,14 @@ export function CommitBox({ root }: { root: FileRoot }) {
 }
 
 /**
- * The rules a draft follows, edited beside the button that drafts.
+ * What a draft runs on and the rules it follows, edited beside the button that
+ * drafts.
  *
- * Here and nowhere else — not a Settings row — because a rule is wanted at the
+ * Here and nowhere else — not a Settings row — because both are wanted at the
  * moment a draft comes back wrong, which is in front of this box. Lit while
  * there are rules, so somebody reading a draft can tell it was steered.
  */
-function CommitRulesButton() {
+function CommitSettingsButton() {
   const t = useT()
   const rules = useSettings((state) => state.commitRules)
   const [open, setOpen] = useState(false)
@@ -143,30 +149,47 @@ function CommitRulesButton() {
         variant="ghost"
         onClick={() => setOpen(true)}
         className="relative size-6 p-0"
-        title={t("files.commitBox.rulesTitle")}
-        aria-label={t("files.commitBox.rulesTitle")}
+        title={t("files.commitBox.settingsTitle")}
+        aria-label={t("files.commitBox.settingsTitle")}
       >
-        <ListChecks className="size-3.5" />
+        <Settings className="size-3.5" />
         {set && (
           <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-primary" />
         )}
       </Button>
-      {/* Mounted only while open, so the field starts from what is saved
-          rather than from whatever was typed and cancelled last time. */}
-      {open && <CommitRulesDialog onClose={() => setOpen(false)} />}
+      {/* Mounted only while open, so the fields start from what is saved
+          rather than from whatever was picked and cancelled last time. */}
+      {open && <CommitSettingsDialog onClose={() => setOpen(false)} />}
     </>
   )
 }
 
-function CommitRulesDialog({ onClose }: { onClose: () => void }) {
+/**
+ * Everything here is held until Save, the model included, so Cancel undoes the
+ * whole dialog rather than only the half of it that was a text field.
+ *
+ * The model and account are the one turn in the app with no toolbar of its own
+ * — a draft is not a conversation somebody sits in front of — so they are asked
+ * here rather than per turn. See `main/one-turn-agent.ts`; the `review*` field
+ * names are what is already on disk.
+ */
+function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
   const t = useT()
-  const rules = useSettings((state) => state.commitRules)
-  const setRules = useSettings((state) => state.setCommitRules)
-  const [text, setText] = useState(rules)
+  const saved = useSettings.getState()
+  const [rules, setRules] = useState(saved.commitRules)
+  const [model, setModel] = useState(saved.reviewModel)
+  const [effort, setEffort] = useState(saved.reviewEffort)
+  const [profileId, setProfileId] = useState(saved.reviewProfileId)
+  const profiles = useClaudeProfiles((state) => state.profiles)
+  const models = useAgentModels()
+  const freeReady = useFreeAi((state) => state.ready)
   const field = useRef<HTMLTextAreaElement>(null)
 
   const save = () => {
-    setRules(text.trim())
+    const settings = useSettings.getState()
+    settings.setCommitRules(rules.trim())
+    settings.setReviewModel(model, effort)
+    settings.setReviewProfileId(profileId)
     onClose()
   }
 
@@ -179,24 +202,61 @@ function CommitRulesDialog({ onClose }: { onClose: () => void }) {
     >
       <DialogContent initialFocus={field} className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("files.commitBox.rules")}</DialogTitle>
+          <DialogTitle>{t("files.commitBox.settings")}</DialogTitle>
           <DialogDescription>
-            {t("files.commitBox.rulesDescription")}
+            {t("files.commitBox.settingsDescription")}
           </DialogDescription>
         </DialogHeader>
-        <Textarea
-          ref={field}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
-            if (!isStudioShortcut(event.nativeEvent, "enter")) return
-            event.preventDefault()
-            save()
-          }}
-          placeholder={t("files.commitBox.rulesPlaceholder")}
-          spellCheck={false}
-          className="min-h-40 font-mono text-xs"
-        />
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">{t("files.commitBox.model")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("files.commitBox.modelDescription")}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <ModelMenu
+              models={models}
+              model={model}
+              effort={effort}
+              onPick={(nextModel, nextEffort) => {
+                setModel(nextModel)
+                setEffort(nextEffort)
+              }}
+            />
+            {/* The composer's own condition: credits are a choice even for
+                somebody with no profile of their own. */}
+            {(profiles.length > 0 ||
+              freeReady ||
+              profileId === FREE_PROFILE_ID) && (
+              <ProfileMenu
+                profiles={profiles}
+                profileId={profileId}
+                onPick={setProfileId}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">{t("files.commitBox.rules")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("files.commitBox.rulesDescription")}
+          </p>
+          <Textarea
+            ref={field}
+            value={rules}
+            onChange={(event) => setRules(event.target.value)}
+            onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+              if (!isStudioShortcut(event.nativeEvent, "enter")) return
+              event.preventDefault()
+              save()
+            }}
+            placeholder={t("files.commitBox.rulesPlaceholder")}
+            spellCheck={false}
+            className="min-h-40 font-mono text-xs"
+          />
+        </div>
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             {t("common.cancel")}

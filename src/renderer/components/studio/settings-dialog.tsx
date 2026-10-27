@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import {
   ArrowUpCircle,
@@ -537,6 +538,11 @@ function ChatsSection() {
   const reviewProfileId = useSettings((state) => state.reviewProfileId)
   const setReviewModel = useSettings((state) => state.setReviewModel)
   const setReviewProfileId = useSettings((state) => state.setReviewProfileId)
+  const commitRules = useSettings((state) => state.commitRules)
+  const setCommitRules = useSettings((state) => state.setCommitRules)
+  // Written on blur rather than per keystroke: the bag is rewritten whole on
+  // every save. Seeded once, from settings restored at launch.
+  const [rulesDraft, setRulesDraft] = useState(commitRules)
 
   return (
     <Card>
@@ -581,6 +587,25 @@ function ChatsSection() {
           )}
         </div>
       </Row>
+      <div className="space-y-2 p-4">
+        <div className="space-y-1">
+          <p className="text-sm leading-none font-medium">
+            {t("settings.chats.commitRules")}
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t("settings.chats.commitRulesDescription")}
+          </p>
+        </div>
+        <Textarea
+          value={rulesDraft}
+          onChange={(event) => setRulesDraft(event.target.value)}
+          onBlur={() => {
+            if (rulesDraft !== commitRules) setCommitRules(rulesDraft)
+          }}
+          placeholder={t("settings.chats.commitRulesPlaceholder")}
+          className="min-h-24 font-mono text-xs"
+        />
+      </div>
     </Card>
   )
 }

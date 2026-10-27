@@ -53,6 +53,12 @@ type Stored = {
   reviewEffort: ChatEffort | null
   reviewProfileId: string | null
   /**
+   * What a drafted commit message must follow — a convention, a ticket prefix,
+   * a language — as the user wrote it. Empty for none, which leaves the draft
+   * to the style of the recent subjects alone.
+   */
+  commitRules: string
+  /**
    * Whether the first-launch tour has been seen through or skipped. Written
    * here with the preferences rather than in its own key because Settings has
    * the button that unsets it — **Replay the tour** — and a flag the dialog
@@ -124,6 +130,8 @@ function isStored(value: unknown): value is Stored {
     (record.reviewProfileId === undefined ||
       record.reviewProfileId === null ||
       typeof record.reviewProfileId === "string") &&
+    (record.commitRules === undefined ||
+      typeof record.commitRules === "string") &&
     // The appearance choices are checked against their lists rather than as
     // strings: a name this build has no rule for would leave `data-palette`
     // pointing at nothing and the picker with no row lit.
@@ -180,6 +188,7 @@ type SettingsState = Stored & {
    * hands them over. */
   setReviewModel: (model: string | null, effort: ChatEffort | null) => void
   setReviewProfileId: (profileId: string | null) => void
+  setCommitRules: (rules: string) => void
   /** The appearance choices, applied to the document by `applyAppearance`
    * (`lib/appearance.ts`) through a subscription rather than from here. */
   setPalette: (palette: Appearance["palette"]) => void
@@ -228,6 +237,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       reviewModel,
       reviewEffort,
       reviewProfileId,
+      commitRules,
       palette,
       fontSans,
       fontMono,
@@ -248,6 +258,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       reviewModel,
       reviewEffort,
       reviewProfileId,
+      commitRules,
       palette,
       fontSans,
       fontMono,
@@ -272,6 +283,7 @@ export const useSettings = create<SettingsState>((set, get) => {
     reviewModel: null,
     reviewEffort: null,
     reviewProfileId: null,
+    commitRules: "",
     ...DEFAULT_APPEARANCE,
     // False until the tour has been seen: absent from anything written before
     // the tour existed, which is read as "show it once" rather than as a
@@ -318,6 +330,11 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setReviewProfileId(reviewProfileId) {
       set({ reviewProfileId })
+      save()
+    },
+
+    setCommitRules(commitRules) {
+      set({ commitRules })
       save()
     },
 

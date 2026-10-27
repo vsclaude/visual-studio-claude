@@ -101,7 +101,8 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
           root.folderId,
           settings.reviewModel,
           settings.reviewEffort,
-          settings.reviewProfileId
+          settings.reviewProfileId,
+          settings.commitRules.trim() || null
         )
         .catch((failed: unknown) => ({
           error: failed instanceof Error ? failed.message : String(failed),

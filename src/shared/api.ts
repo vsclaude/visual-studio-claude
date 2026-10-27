@@ -2268,7 +2268,9 @@ export type DesktopApi = {
     folderId: string,
     model: string | null,
     effort: ChatEffort | null,
-    profileId: string | null
+    profileId: string | null,
+    /** Settings › Chats' commit message rules, empty for none. */
+    rules: string | null
   ) => Promise<AgentTurnAnswer>
   /**
    * Stops the folder's running draft, if there is one. Its pending

@@ -218,6 +218,11 @@ export type DraftCommitRequest = {
   effort?: string | null
   configDir?: string | null
   disabledTools?: string[]
+  /** Settings › Chats' own rules for a message, typed by the user. They go
+   * in the prompt rather than the system prompt, which stays the one every
+   * draft shares, and they outrank the log: somebody who wrote a rule down
+   * wants it followed even where the history does otherwise. */
+  rules?: string | null
   /** `Stop` in the commit box — the session is closed and the answer is an
    * error nobody draws. */
   signal?: AbortSignal
@@ -268,6 +273,13 @@ export async function draftCommitMessage(
           "",
           "The last few commits here, newest first — follow their style:",
           ...subjects.map((subject) => `- ${subject}`),
+        ]
+      : []),
+    ...(request.rules?.trim()
+      ? [
+          "",
+          "The rules for a commit message here. Follow them over the recent subjects wherever the two disagree:",
+          request.rules.trim(),
         ]
       : []),
   ].join("\n")

@@ -995,7 +995,8 @@ export function createIpc(host: Host): {
       folderId: string,
       model: string | null,
       effort: string | null,
-      profileId: string | null
+      profileId: string | null,
+      rules: string | null
     ) => {
       // A second press for the same folder replaces the first rather than
       // running beside it: the box has one message to put an answer in.
@@ -1018,6 +1019,7 @@ export function createIpc(host: Host): {
           model,
           effort,
           configDir: await configDirOf(profileId),
+          rules,
           signal: controller.signal,
         })
       } finally {

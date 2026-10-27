@@ -61,6 +61,11 @@ export const settings = {
     commitDrafts: "Commit message drafts",
     commitDraftsDescription:
       "Model and account the Git tab's Draft button runs on.",
+    commitRules: "Commit message rules",
+    commitRulesDescription:
+      "What every drafted message must follow. They win over the style of the recent commits.",
+    commitRulesPlaceholder:
+      "e.g. Conventional Commits: feat|fix|chore(scope): subject, in English, subject under 72 characters.",
   },
   plugins: {
     warning:

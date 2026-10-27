@@ -144,6 +144,7 @@ const {
   watchers,
   noteFilePath,
   pluginFilePath,
+  telemetry,
 } = registerIpc(
   () => mainWindow,
   (chatId) => openChatWindow(chatId)
@@ -344,6 +345,8 @@ app.on("before-quit", (event) => {
         // A turn in flight is a `claude` this app spawned; it goes with the app
         // rather than being left talking to a window that has gone.
         allChats.dispose(),
+        // The minutes since the last heartbeat, which nothing else will send.
+        telemetry.shutdown(),
       ]),
       // A wedged daemon must not leave the app unquittable.
       new Promise((resolve) => setTimeout(resolve, CLEANUP_TIMEOUT_MS)),

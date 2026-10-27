@@ -13,7 +13,7 @@ export const settings: Messages["settings"] = {
     plugins: "Plugin",
     pluginsBlurb: "Mã của riêng bạn, chạy trong studio.",
     updates: "Cập nhật",
-    updatesBlurb: "Phiên bản và cập nhật.",
+    updatesBlurb: "Phiên bản, cập nhật và số liệu sử dụng.",
   },
   appearance: {
     language: "Ngôn ngữ",
@@ -86,5 +86,8 @@ export const settings: Messages["settings"] = {
     couldNotCheck: "Không kiểm tra được",
     releases: "Các bản phát hành",
     installerLog: "Log của trình cài đặt nằm ở",
+    telemetry: "Gửi số liệu sử dụng ẩn danh",
+    telemetryDescription:
+      "Việc mở ứng dụng và số phút sử dụng, kèm phiên bản, hệ điều hành và quốc gia — gửi về server của chính Vey Studio. Không bao giờ gửi file, project hay chat của bạn.",
   },
 }

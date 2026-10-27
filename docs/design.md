@@ -1501,6 +1501,48 @@ the old version, it takes effect from the update _after_ the one that ships it;
 a machine stuck like this one needs the installer run once by hand with the app
 and the daemon closed.
 
+## Usage counts
+
+How many machines run the app, how often and for how long was not knowable:
+GitHub's `download_count` is one running total per file, with no time, and it
+counts every in-app update as a download. So the app sends **two events**
+(`main/telemetry.ts`): `app_opened` at launch, and a `heartbeat` every fifteen
+minutes carrying the focused seconds since the last one — flushed on quit, so
+only a crash loses time. Each carries the version, OS and CPU, under a random
+id minted on first launch (`telemetry.installId` in the manifest's settings).
+
+They go to **the free AI's own server**, `POST /api/telemetry` on
+`vsclaude-cloud`, one row each in its D1 `app_events` table
+(`server/utils/app-usage.ts`), with the server's clock as `at` and
+Cloudflare's reading of the country — the address itself is not kept. Same
+`freeAiUrl()` as sign-in, so a build without a server sends nothing.
+
+PostHog was the first version and was taken out the same week: it put the
+counts with a third party for nothing the questions needed — a day's active
+machines, the minutes, the versions are each one `GROUP BY` over two event
+kinds — and its key had to ship in the bundle. The endpoint takes no sign-in,
+since the counts are of machines and not people; what stands in for one is
+that `appUsageOf` lets a row hold nothing but those few fields, each held to a
+shape, and a heartbeat at most an hour (`test/app-usage.test.ts` there).
+
+What it deliberately does not carry is the rule: **no path, project, chat,
+account or email**. A count is all this is for, and what somebody works on
+never leaves the machine. A send that fails is not retried: a count missed
+offline is a count, not somebody's work.
+
+Only **focused** minutes count — an app left open behind everything all day is
+not a day of use. A **dev build** reports only to a server on this machine
+(`reportsTo`: plain `http:`, which `normalizeAiUrl` allows for localhost
+alone), so `bun run dev` against `nitro dev` can be watched end to end without
+a developer's restarts reaching the real counts.
+
+It is **on unless switched off** — Settings › Updates, `TELEMETRY_KEY`, read
+the way `CHAT_NOTIFICATIONS_KEY` is (only `"off"` is off). The update check
+has no switch because it carries nothing about the user; this does — that they
+were here, and for how long — so it gets one. The sentence under the switch is
+the whole of what is sent, and has to stay true. Time counted while it is off
+is dropped, not sent later (`test/telemetry.ts`).
+
 ## The name
 
 The app was **Yasuo**. The first run moves `~/.yasuo` to `~/.vsclaude`

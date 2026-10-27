@@ -12,7 +12,7 @@ export const settings = {
     plugins: "Plugins",
     pluginsBlurb: "Code of your own, run in the studio.",
     updates: "Updates",
-    updatesBlurb: "Version and updates.",
+    updatesBlurb: "Version, updates and usage counts.",
   },
   appearance: {
     language: "Language",
@@ -86,5 +86,8 @@ export const settings = {
     couldNotCheck: "Could not check",
     releases: "Releases",
     installerLog: "The installer’s own output is in",
+    telemetry: "Send anonymous usage counts",
+    telemetryDescription:
+      "That the app was opened and how many minutes it was in use, with its version, OS and country — to Vey Studio’s own server. Never your files, projects or chats.",
   },
 }

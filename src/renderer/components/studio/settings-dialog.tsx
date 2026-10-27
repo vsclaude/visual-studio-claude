@@ -790,6 +790,8 @@ function UpdatesSection() {
   // Dismissal is the pill's business, not this page's.
   const update = useUpdates((state) => pendingUpdate(state, false))
   const [versions, setVersions] = useState<ClaudeVersions | null>(null)
+  const telemetry = useSettings((state) => state.telemetry)
+  const setTelemetry = useSettings((state) => state.setTelemetry)
   const t = useT()
 
   const askVersions = () =>
@@ -905,6 +907,16 @@ function UpdatesSection() {
           <code className="font-mono">~/.veystudio/update.log</code>.
         </p>
       )}
+
+      {/* Beside the version because it is the other thing this app says to a
+          server on its own, and the sentence under it is the whole of what is
+          sent — see `main/telemetry.ts`. */}
+      <Row
+        title={t("settings.updates.telemetry")}
+        description={t("settings.updates.telemetryDescription")}
+      >
+        <Switch checked={telemetry} onCheckedChange={setTelemetry} />
+      </Row>
     </Card>
   )
 }

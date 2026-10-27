@@ -5,6 +5,7 @@ import path from "node:path"
 import {
   CHAT_NOTIFICATIONS_KEY,
   IPC,
+  TELEMETRY_KEY,
   type ChatImage,
   type ChatPlace,
   type ChatSeed,
@@ -89,6 +90,7 @@ import { draftCommitMessage } from "./one-turn-agent"
 import type { Host } from "./host"
 import { expandHome, quote, spawnEnvironment } from "./shell-env"
 import { systemUsage } from "./system-usage"
+import { startTelemetry, type Telemetry } from "./telemetry"
 import {
   FREE_AI_DIR,
   PLUGIN_DATA_DIR,
@@ -212,11 +214,23 @@ export function createIpc(host: Host): {
   watchers: { closeAll: () => void }
   noteFilePath: (fileName: string) => string
   pluginFilePath: (id: string, file: PluginFile) => string
+  /** Flushed on quit, so the last minutes before it are counted. */
+  telemetry: Telemetry
 } {
   // Before anything reads the tree: the store, the daemon's socket, the logs.
   migrateLegacyDataDir()
   migrateChatFiles()
   const store = new Store()
+  const telemetry = startTelemetry({
+    version: host.version,
+    packaged: host.packaged,
+    serverUrl: freeAiUrl(),
+    focused: host.focused,
+    fetch: host.fetch,
+    getSetting: (key) => store.getSetting(key),
+    setSetting: (key, value) => store.setSetting(key, value),
+    enabled: async () => (await store.getSetting(TELEMETRY_KEY)) !== "off",
+  })
   setFreeAiDir(path.join(dataDir(), WORKSPACE_DIR, FREE_AI_DIR))
 
   /**
@@ -1607,6 +1621,7 @@ export function createIpc(host: Host): {
 
   return {
     handlers,
+    telemetry,
     allChats,
     terminals,
     tsServers,

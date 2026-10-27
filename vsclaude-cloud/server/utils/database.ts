@@ -16,7 +16,8 @@ import { useDatabase } from "nitro/database"
  * read this database can read the keys), how the key is sent, `priority`
  * (lowest tried first), `enabled` (`upstream-store.ts`, `upstreams.ts`), and
  * `credit_usd`, the usage the key was bought with — a note for whoever keeps
- * the keys; nothing is sold against it. No JSON inside a cell —
+ * the keys; nothing is sold against it. `app_events` is the studio's
+ * anonymous usage counts, one row per event (`app-usage.ts`). No JSON inside a cell —
  * a payment is a statement about the rows it changes rather than a whole
  * record read, edited and written back.
  */
@@ -25,6 +26,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
   `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_events (install_id TEXT NOT NULL, event TEXT NOT NULL CHECK (event IN ('app_opened', 'heartbeat')), at TEXT NOT NULL, active_seconds INTEGER, version TEXT, os TEXT, arch TEXT, country TEXT)`,
+  `CREATE INDEX IF NOT EXISTS app_events_at ON app_events (at)`,
+  `CREATE INDEX IF NOT EXISTS app_events_install ON app_events (install_id, at)`,
   `CREATE TABLE IF NOT EXISTS upstreams (name TEXT PRIMARY KEY, base_url TEXT NOT NULL, api_key TEXT NOT NULL, auth TEXT NOT NULL DEFAULT 'x-api-key' CHECK (auth IN ('x-api-key', 'bearer')), priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, credit_usd REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
 ]
 

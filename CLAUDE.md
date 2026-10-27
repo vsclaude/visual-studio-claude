@@ -157,6 +157,12 @@ imports may reach `electron`.
   the app's own cleanup — and it closes any copy still running. Free of `electron` —
   the version and the script's path are arguments — so `test/updates.ts` can
   import `isNewer`. `docs/design.md` § Updating has the rest.
+- **`telemetry.ts`** — the anonymous usage counts, posted from main to the
+  free AI's server (`POST /api/telemetry`, rows of its D1 `app_events`):
+  `app_opened` and a quarter-hourly `heartbeat` of focused seconds, under a
+  random install id, with the version and OS and **nothing about what is
+  worked on**. A dev build reports only to a localhost server; off without
+  `freeAiUrl()`, off by `TELEMETRY_KEY`. `docs/design.md` § Usage counts.
 - **`tsserver.ts`** — one per Explorer root, using _that root's own_
   `typescript`, and nothing if it has none.
 - **`mcp-servers.ts`** — which MCP servers the user's own `claude` has, asked of

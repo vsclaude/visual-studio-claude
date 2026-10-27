@@ -1080,6 +1080,15 @@ export type McpServerState =
  */
 export const CHAT_NOTIFICATIONS_KEY = "chats.notifications"
 
+/**
+ * Whether the app sends its anonymous usage counts — that it was opened, and
+ * for how many minutes it was in front of somebody (`main/telemetry.ts`).
+ * `"off"` switches it off; anything else, including unset, is on, read the
+ * same way as `CHAT_NOTIFICATIONS_KEY` so the two sides cannot disagree about
+ * an absent key.
+ */
+export const TELEMETRY_KEY = "telemetry"
+
 /** One tool a server offers, as a row of the Settings listing draws it. */
 export type McpToolInfo = {
   /** The tool's own name, without the `mcp__<server>__` the CLI prefixes it

@@ -1,6 +1,10 @@
 import { create } from "zustand"
 
-import { CHAT_NOTIFICATIONS_KEY, type ChatEffort } from "@shared/api"
+import {
+  CHAT_NOTIFICATIONS_KEY,
+  TELEMETRY_KEY,
+  type ChatEffort,
+} from "@shared/api"
 import {
   DEFAULT_APPEARANCE,
   isAccentPalette,
@@ -163,8 +167,13 @@ type SettingsState = Stored & {
    * `CHAT_NOTIFICATIONS_KEY` says why.
    */
   chatNotifications: boolean
+  /** Whether the anonymous usage counts are sent. Main reads it, so it has a
+   * key of its own like `chatNotifications`; on by default —
+   * `TELEMETRY_KEY`. */
+  telemetry: boolean
 
   setChatNotifications: (on: boolean) => void
+  setTelemetry: (on: boolean) => void
   setDiffSideBySide: (sideBySide: boolean) => void
   setDiffWhitespace: (show: boolean) => void
   /** Sets the model and its effort together, the way a chat's `ModelMenu`
@@ -276,6 +285,7 @@ export const useSettings = create<SettingsState>((set, get) => {
     accountsCollapsed: false,
     language: "system",
     chatNotifications: true,
+    telemetry: true,
     loaded: false,
 
     setChatNotifications(chatNotifications) {
@@ -284,6 +294,11 @@ export const useSettings = create<SettingsState>((set, get) => {
       // as the two words main matches on, and only `"off"` means anything —
       // see `CHAT_NOTIFICATIONS_KEY`.
       void setSetting(CHAT_NOTIFICATIONS_KEY, chatNotifications ? "on" : "off")
+    },
+
+    setTelemetry(telemetry) {
+      set({ telemetry })
+      void setSetting(TELEMETRY_KEY, telemetry ? "on" : "off")
     },
 
     setDiffSideBySide(diffSideBySide) {
@@ -373,9 +388,10 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     restore() {
       restorePromise ??= (async () => {
-        const [stored, notifications] = await Promise.all([
+        const [stored, notifications, telemetry] = await Promise.all([
           recall(SETTINGS_KEY, isStored),
           getSetting(CHAT_NOTIFICATIONS_KEY).catch(() => null),
+          getSetting(TELEMETRY_KEY).catch(() => null),
         ])
         set({
           // Nothing stored is the default, not a failure: the spread of a null
@@ -385,6 +401,7 @@ export const useSettings = create<SettingsState>((set, get) => {
           // — the same reading main does, and the two must agree or the switch
           // would show one thing while the bell did another.
           chatNotifications: notifications !== "off",
+          telemetry: telemetry !== "off",
           loaded: true,
         })
       })()

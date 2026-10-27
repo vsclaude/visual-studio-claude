@@ -91,7 +91,7 @@ export const projects: Messages["projects"] = {
     use: "Dùng “{value}”",
   },
   accounts: {
-    thisAccount: "Tài khoản này",
+    defaultAccount: "Tài khoản mặc định",
     credits: "Credit",
     heading: "Tài khoản",
     add: "Thêm tài khoản",
@@ -99,12 +99,11 @@ export const projects: Messages["projects"] = {
     resizeHint: "Kéo để đổi kích thước, nhấp đúp để đặt lại",
     removeTitle: "Gỡ {name}?",
     removeDescription:
-      "Các chat từng chạy trên hồ sơ đó sẽ chạy trên “Tài khoản này” từ tin nhắn tiếp theo. Thư mục đăng nhập của nó vẫn được giữ trên ổ đĩa.",
+      "Các chat từng chạy trên hồ sơ đó sẽ chạy trên tài khoản mặc định từ tin nhắn tiếp theo. Thư mục đăng nhập của nó vẫn được giữ trên ổ đĩa.",
     signInAsAnother: "Đăng nhập bằng tài khoản khác…",
     signInMenu: "Đăng nhập…",
     checkAgain: "Kiểm tra lại",
     remove: "Gỡ…",
-    settingUp: "Đang thiết lập…",
     notSignedIn: "Chưa đăng nhập",
     signIn: "Đăng nhập",
     signingIn: "Đang đăng nhập…",
@@ -115,6 +114,10 @@ export const projects: Messages["projects"] = {
       "Mọi model, dùng bao nhiêu trả bấy nhiêu — không bao giờ có phí hằng tháng",
     buyCredits: "Mua credit",
     creditsLeft: "Còn {amount}",
+    kindPlan: "Gói Claude {plan} — có giới hạn 5 giờ và theo tuần",
+    kindApi: "Anthropic Console — tính phí theo token, không có giới hạn 5 giờ",
+    kindToken: "Token dài hạn (CLAUDE_CODE_OAUTH_TOKEN)",
+    kindCloud: "Nhà cung cấp cloud — Amazon Bedrock hoặc Google Vertex AI",
     accountName: "Tên tài khoản",
   },
   profiles: {
@@ -127,12 +130,51 @@ export const projects: Messages["projects"] = {
     numbered: "Hồ sơ {number}",
   },
   login: {
+    addTitle: "Thêm tài khoản Claude",
     title: "Đăng nhập — {name}",
-    follow:
+    kind: "Loại tài khoản",
+    claudeai: "Gói Claude",
+    claudeaiHint: "Pro, Max, Team hoặc Enterprise trên claude.ai",
+    console: "Anthropic Console",
+    consoleHint: "Tính phí theo lượng dùng API",
+    sso: "Đăng nhập một lần (SSO)",
+    ssoHint: "SSO của tổ chức bạn",
+    browserNote:
+      "Trình duyệt sẽ mở để hoàn tất. Đang đăng nhập claude.ai bằng tài khoản khác? Hãy đăng xuất ở đó trước, nếu không tài khoản đó sẽ bị thêm lại.",
+    open: "Tiếp tục trên trình duyệt",
+    starting: "Đang khởi động…",
+    waiting: "Đang chờ trình duyệt…",
+    checking: "Đang kiểm tra…",
+    failed: "Chưa đăng nhập được",
+    failedHint:
+      "Phiên đăng nhập đã kết thúc trước khi có tài khoản nào đăng nhập. Hãy thử lại, hoặc mở phần claude in ra bên dưới.",
+    exitCode: "Đăng nhập kết thúc với mã {code}",
+    stepBrowser: "Hoàn tất đăng nhập trên trình duyệt",
+    stepBrowserHint:
+      "Trang đăng nhập đã mở trong trình duyệt. Lỡ đóng, hoặc không thấy mở? Mở lại hoặc copy link.",
+    linkPending: "Đang chờ link…",
+    stepCode: "Trình duyệt hiện mã?",
+    stepCodeHint:
+      "Dán vào đây. Trang sẽ hiện mã khi không tự trả kết quả đăng nhập về được.",
+    cancelLogin: "Huỷ đăng nhập",
+    duplicate: "Trùng với {name}",
+    duplicateHint:
+      "Trình duyệt đã duyệt bằng tài khoản nó đang đăng nhập sẵn. Hãy đăng xuất claude.ai ở đó rồi thử lại.",
+    openPage: "Mở trang",
+    copyLink: "Copy link",
+    copied: "Đã copy",
+    code: "Mã từ trình duyệt",
+    codePlaceholder: "Dán mã",
+    codeSent: "Đã gửi mã — đang chờ claude…",
+    send: "Gửi",
+    detailsTitle: "Những gì claude in ra",
+    retry: "Thử lại",
+    dialogFollow:
       "Làm theo hướng dẫn — `claude` sẽ mở trình duyệt để hoàn tất đăng nhập.",
-    done: "Xong. Tài khoản của hồ sơ này đã được kiểm tra lại.",
-    failed:
+    dialogDone: "Xong. Tài khoản của hồ sơ này đã được kiểm tra lại.",
+    dialogFailed:
       "Đăng nhập kết thúc với mã {code}. Đóng hộp thoại này và thử lại, hoặc đọc thông báo ở trên.",
+    keep: "Vẫn giữ",
   },
   credits: {
     bank: "Ngân hàng Việt Nam · VietQR",

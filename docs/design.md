@@ -674,22 +674,106 @@ editor**, **Chats**, **Plugins**, **Updates**.
 thing anybody did there, signing a profile in after seeing it was not, was a
 dialog away from the projects column's Accounts foot, where `Not signed in` was
 actually being read. So the foot is where accounts are managed
-(`project/accounts.tsx`): `+` beside the heading adds a profile and goes
-straight on to its login; a row that is not signed in carries `Sign in`; a
+(`project/accounts.tsx`): `+` beside the heading adds an account (§ Adding an
+account, below); a row that is not signed in carries `Sign in`; a
 click or a right-click on any row gives `Sign in…` / `Sign in as another
-account…`, `Check again`, and for a profile `Rename` (in place) and `Remove…`
-(confirmed — chats on it fall back to the default login). Credits are a row
+account…`, `Check again`, `Rename` (in place) and, for a profile, `Remove…`
+(confirmed — chats on it fall back to the default login). The **default
+login** — `~/.claude`, the one the user's own `claude` uses — is named by its
+email once read, `Default account` until then (`defaultAccountName`; it was
+`This account`, which said nothing in a list of accounts). It has no profile
+record, so a name given to it is a setting, `defaultAccountLabel`, and
+renaming it to nothing gives it its email back. Credits are a row
 there too: a click buys more, and somebody signed out of Vey Studio gets `Sign
 in`. Its last row, the model and account **commit message drafts** run on, moved
 to **Chats**.
 
-What did not change is how an account is added: the app names the directory
-(`workspace/claude-profiles/<slug>`, in main, because the renderer cannot see
-`VEYSTUDIO_DATA_DIR`) and runs `claude auth login` in a pty with that directory
-set — on the command line too, since a `.zshrc` export would otherwise win.
-Whether a directory is signed in and as whom is **asked of the CLI** (`claude
-auth status --json`); a missing directory is never spawned into, since the CLI
-would create it. The composer's account menu shows each profile's email.
+The app names the directory (`workspace/claude-profiles/<slug>`, in main,
+because the renderer cannot see `VEYSTUDIO_DATA_DIR`) and runs `claude auth
+login` in a pty with that directory set — on the command line too, since a
+`.zshrc` export would otherwise win. Whether a directory is signed in and as
+whom is **asked of the CLI** (`claude auth status --json`); a missing directory
+is never spawned into, since the CLI would create it. The composer's account
+menu shows each profile's email.
+
+### Adding an account
+
+`+` and a row's `Sign in` open **one dialog for the whole login**
+(`LoginDialog`, `project/account-login.tsx`). It asks first for the kind of
+account — subscription, Console or SSO — and `Continue in browser`. Those are `claude auth login`'s own flags
+(`--claudeai` / `--console` / `--sso`), so the question the CLI used to ask with
+the arrow keys is answered before it starts, and nothing is left for its
+terminal but the browser. **There is no email field**: the CLI's `--email` only
+fills in the sign-in page, it does not choose which account signs in, and the
+row is named after whoever did sign in anyway — a field that asked for an
+answer nothing used was taken off.
+
+**The same dialog then shows the login as two steps**: finish in the browser,
+with the page's link written out beside `Copy` and `Open page`, and, if the
+browser shows a code, paste it here. The code is written into the CLI's prompt,
+for when the page cannot reach its localhost redirect and shows a code instead.
+**The field is always on screen while the CLI waits**: it was behind a `Paste
+code` link at first, and somebody holding a code from the browser did not find
+where it went. **A code the CLI refuses is said under the field**, in the CLI's
+own words (`Invalid code. Please make sure the full code was copied`), read off
+what the pty printed after that code was sent (`loginErrorIn`). Before this, a
+wrong code got no answer anywhere except the CLI's folded screen. The line a
+failed login exits on (`Login failed: …`) is read the same way, so a failure
+reads as the CLI's sentence rather than an exit code. Under the steps, the
+CLI's own screen folds open in the dialog.
+It closes by itself once the account has signed in.
+
+That is the third shape. The first was a terminal in a dialog, which blocked
+the studio for a step that happens in the browser. The second was a popover,
+then a few lines under the row, and that was too small to follow: the code
+field was a sliver of the column, and `Open page` / `Copy link` were links
+nobody read as steps.
+
+**The list shows nothing of a login until it has worked.** The second shape put
+a dashed row where a new account would land, and kept the login running
+after its dialog was closed, with a line on the row to open it again. That was
+two places telling one story, and a row that was not an account yet sat among
+the accounts. Now the dialog is the only place, so **closing it cancels the
+login**: Escape, `×` and `Cancel sign-in` all kill the pty. A login left
+waiting with nothing on screen to say so would be a `claude` nobody could find.
+A click outside is ignored while a login runs, because a stray click should
+not throw a half-finished sign-in away.
+
+**A new account is written down only once it has signed in.** It used to be
+saved on `+` and signed in after, so a login somebody closed left a `Profile 2
+· Not signed in` row for ever. Now `claudeLogin` takes `configDir: null` for an
+unsaved profile and main names the directory then (`Store.newClaudeProfileDir`,
+clear of the saved profiles' and of other logins in flight); the profile is
+saved with it when the CLI exits signed in, **named after the account** — its
+email, then its organisation — rather than `Profile 2`. A cancelled login's
+directory is left where it is, like every other directory of a user's.
+
+**The duplicate check is against the browser.** claude.ai still signed in as
+the first account approves the second login as that account, in one click
+nobody reads. So a login that comes back as an email and organisation already
+on the list is not saved: the dialog says `Same account as …`, with `Try again`
+and `Keep anyway`, and its first step says so beforehand. One email in two
+organisations is two accounts.
+
+**The URL is read off the pty, and only read**: an OSC 8 hyperlink's target,
+or the text with a hard-wrapped address joined back up
+(`lib/chat/claude-login-text.ts`, `test/claude-login.ts`). The CLI owns its
+screen; a URL not found costs the dialog `Open page` and `Copy link`, and the
+CLI's own screen under the steps still has its words. The pty is started 200 columns wide for
+that reason, while nobody is looking at it.
+
+**A row carries what its account bills against** (`accountKindOf`), beside
+its name: the plan for a subscription (`Pro`, `Max`, `Team`, `Ent`), quietly,
+and `API`, tinted, for a Console login — which pays per token and has no
+windows, so its row has no meters and without the badge reads like one not
+read yet. Read off `claude auth status`'s own `authMethod` (`claude.ai`,
+`api_key`, `oauth_token`, `third_party`). **SSO gets no badge**: it is a way to
+sign in to a subscription or a Console organisation, not a third kind, and the
+CLI does not say it was used.
+
+The first-launch setup still signs the default login in through
+`ClaudeLoginDialog`, a terminal in a dialog, since that page has nothing else
+on it to keep usable.
 
 **Background** (Appearance) is one picture behind the whole window — the
 canvas the cards sit on. Chosen in the OS picker and **copied** into

@@ -44,14 +44,13 @@ type ClaudeProfilesState = {
    */
   checkUnknown: (configDirs: string[]) => void
   /**
-   * A new profile — a name and nothing else.
-   *
-   * Its directory is main's to name (`main/claude-profiles.ts`), which is why
-   * this does not take one and there is no setter for it below: the path is
-   * under the store's own workspace directory, and `VEYSTUDIO_DATA_DIR` can move
-   * that somewhere this side cannot see.
+   * A new profile, **once its login has worked** — so it arrives with the
+   * directory main named for that login (`ClaudeLoginRequest.configDir`), and
+   * there is no setter for it below: the path is under the store's own
+   * workspace directory, which `VEYSTUDIO_DATA_DIR` can move somewhere this
+   * side cannot see. See `lib/chat/claude-login.ts`.
    */
-  create: (name: string) => void
+  add: (profile: ClaudeProfile) => Promise<void>
   rename: (id: string, name: string) => void
   remove: (id: string) => void
 }
@@ -111,12 +110,17 @@ export const useClaudeProfiles = create<ClaudeProfilesState>((set, get) => ({
     }
   },
 
-  create(name) {
-    // No `configDir`: main fills one in and `save` takes its answer back.
-    save(set, [
-      ...get().profiles,
-      { id: crypto.randomUUID(), name, configDir: "" },
-    ])
+  // Written before it is drawn, unlike `save`: the row's plan usage is asked
+  // of main by profile id the moment it appears, and a profile main has not
+  // stored yet is answered as the default login's.
+  async add(profile) {
+    const profiles = [...get().profiles, profile]
+    try {
+      set({ profiles: await window.desktop.saveClaudeProfiles(profiles) })
+    } catch (error) {
+      console.error("Could not save the Claude profiles", error)
+      set({ profiles })
+    }
   },
 
   rename(id, name) {
@@ -206,6 +210,80 @@ export function accountCaption(account: ClaudeAccount | undefined): string {
   return [account.email, account.organization, account.plan, account.method]
     .filter(Boolean)
     .join(" · ")
+}
+
+/**
+ * What the default login is called — the one with no `CLAUDE_CONFIG_DIR`,
+ * which is `~/.claude` and the account the user's own `claude` in a terminal
+ * is signed in to.
+ *
+ * **The name somebody gave it, then its address once that is known**, like
+ * every profile a login has named: it was `This account`, which said nothing
+ * beside a list of other accounts that are all equally "this" one. `Default
+ * account` is only for while it has not been read, or is signed out.
+ */
+export function defaultAccountName(
+  account: ClaudeAccount | undefined,
+  label: string | null
+): string {
+  if (label?.trim()) return label.trim()
+  return account?.state === "signedIn" && account.email
+    ? account.email
+    : t("projects.accounts.defaultAccount")
+}
+
+/**
+ * What an account bills against — the badge beside its name in the Accounts
+ * foot — or null when there is nothing worth a badge.
+ *
+ * **By billing, not by how it signed in**, because that is what changes how
+ * the row is read: a subscription has five-hour and weekly windows, a Console
+ * login pays per token and has none, so a row with no meters is either "not
+ * read yet" or "nothing to read" and only the badge says which. SSO is not
+ * among them: it is a way to sign in to either, and `claude auth status` does
+ * not say it was used.
+ *
+ * Read off the CLI's own `authMethod`: `claude.ai` carries the plan, `api_key`
+ * is a Console login (its `/login managed key`) or `ANTHROPIC_API_KEY`,
+ * `oauth_token` is `CLAUDE_CODE_OAUTH_TOKEN`, `third_party` Bedrock or Vertex.
+ */
+export type AccountKind =
+  | { kind: "plan"; label: string }
+  | { kind: "api" | "token" | "cloud"; label: string }
+
+export function accountKindOf(
+  account: ClaudeAccount | undefined
+): AccountKind | null {
+  if (account?.state !== "signedIn") return null
+  switch (account.method) {
+    case "claude.ai":
+      return account.plan
+        ? { kind: "plan", label: planLabel(account.plan) }
+        : null
+    case "api_key":
+    case "api_key_helper":
+      return { kind: "api", label: "API" }
+    case "oauth_token":
+      return { kind: "token", label: "Token" }
+    case "third_party":
+      return { kind: "cloud", label: "Cloud" }
+    default:
+      return null
+  }
+}
+
+/** A plan's name as the badge spells it — short, because it sits beside a
+ * name in a column a few hundred pixels wide. */
+function planLabel(plan: string): string {
+  const known: Record<string, string> = {
+    pro: "Pro",
+    max: "Max",
+    team: "Team",
+    enterprise: "Ent",
+  }
+  return (
+    known[plan.toLowerCase()] ?? plan.charAt(0).toUpperCase() + plan.slice(1)
+  )
 }
 
 /**

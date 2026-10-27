@@ -3,6 +3,8 @@ import { readAuthStatus } from "../src/main/claude-auth"
 import { profileDir, withConfigDirs } from "../src/main/claude-profiles"
 import {
   accountCaption,
+  accountKindOf,
+  defaultAccountName,
   accountLabel,
   accountLine,
 } from "../src/renderer/lib/chat/claude-profiles"
@@ -103,6 +105,66 @@ check(
   "an API-key login's caption is what it has",
   accountCaption(key) === "apiKey",
   accountCaption(key)
+)
+
+section("accountKindOf: what the badge says it bills against")
+
+check("a subscription is its plan", accountKindOf(account)?.label === "Team")
+check(
+  "enterprise is cut short",
+  accountKindOf({ ...account, plan: "enterprise" })?.label === "Ent"
+)
+check(
+  "an unknown plan is still named",
+  accountKindOf({ ...account, plan: "ultra" })?.label === "Ultra"
+)
+check(
+  "a Console login is API",
+  accountKindOf({ ...account, method: "api_key", plan: null })?.kind === "api"
+)
+check(
+  "a token login",
+  accountKindOf({ ...account, method: "oauth_token" })?.kind === "token"
+)
+check(
+  "Bedrock or Vertex",
+  accountKindOf({ ...account, method: "third_party" })?.kind === "cloud"
+)
+check(
+  "claude.ai without a plan has no badge",
+  accountKindOf({ ...account, plan: null }) === null
+)
+check(
+  "signed out has no badge",
+  accountKindOf({ ...account, state: "signedOut" }) === null
+)
+check(
+  "a method this app does not know has none",
+  accountKindOf({ ...account, method: "something-new" }) === null
+)
+
+section("defaultAccountName: the login with no CLAUDE_CONFIG_DIR")
+
+check(
+  "its address once read",
+  defaultAccountName(account, null) === "hung@example.com"
+)
+check(
+  "a name while it has not been read",
+  defaultAccountName(undefined, null) === "Default account"
+)
+check(
+  "and while signed out, whose address is gone",
+  defaultAccountName({ ...account, state: "signedOut", email: null }, null) ===
+    "Default account"
+)
+check(
+  "a name somebody gave it wins",
+  defaultAccountName(account, "Work") === "Work"
+)
+check(
+  "a blank name is no name",
+  defaultAccountName(account, "  ") === "hung@example.com"
 )
 
 section("accountLine: the one line the composer's picker has room for")

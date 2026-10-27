@@ -1491,6 +1491,7 @@ export function ProfileMenu({
   const accounts = useClaudeProfiles((state) => state.accounts)
   const checking = useClaudeProfiles((state) => state.checking)
   const checkUnknown = useClaudeProfiles((state) => state.checkUnknown)
+  const defaultLabel = useSettings((state) => state.defaultAccountLabel)
   const freeReady = useFreeAi((state) => state.ready)
   const free = profileId === FREE_PROFILE_ID
   const credits = useStudioAccount((state) => state.account?.credits)
@@ -1541,12 +1542,12 @@ export function ProfileMenu({
           <PickerRow
             onSelect={() => onPick(null)}
             tile={<PickerTile icon={UserRound} />}
-            title={t("chat.profile.thisAccount")}
+            title={defaultLabel ?? t("chat.profile.defaultAccount")}
             detail={
               <AccountLine
                 account={accounts[""]}
                 busy={checking.includes("")}
-                fallback={t("chat.profile.thisAccountFallback")}
+                fallback={t("chat.profile.defaultAccountFallback")}
               />
             }
             selected={profileId === null}

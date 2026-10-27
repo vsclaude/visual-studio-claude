@@ -11,7 +11,12 @@ import {
 
 import { formatCredits } from "@shared/credits"
 import { FREE_PROFILE_ID } from "@shared/free-ai"
-import type { ClaudeProfile, PlanUsage, PlanWindow } from "@shared/api"
+import type {
+  ClaudeLoginMethod,
+  ClaudeProfile,
+  PlanUsage,
+  PlanWindow,
+} from "@shared/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +37,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAccount } from "@/lib/account"
+import { useClaudeLogin } from "@/lib/chat/claude-login"
 import {
   accountCaption,
+  accountKindOf,
+  defaultAccountName,
   accountLabel,
+  type AccountKind,
   nextProfileName,
   useClaudeProfiles,
 } from "@/lib/chat/claude-profiles"
@@ -52,7 +61,6 @@ import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import { useFreeAi } from "@/lib/free-ai"
 import { useT } from "@/lib/i18n"
 import { useSettings } from "@/lib/settings"
-import { ClaudeLoginDialog } from "../claude-login-dialog"
 import {
   CREDITS_GRADIENT,
   CREDITS_SURFACE,
@@ -62,6 +70,7 @@ import {
 import { IconButton } from "../icon-button"
 import { ProfileAvatar } from "../profile-avatar"
 import { useMenuFocusHandoff } from "../rename-row"
+import { LoginDialog, type LoginView } from "./account-login"
 
 /**
  * The accounts a chat can run on, in the order the column lists them: the
@@ -77,6 +86,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   const usage = usePlanUsage((state) => state.byProfile)
   const freeReady = useFreeAi((state) => state.ready)
   const credits = useStudioAccount((state) => state.account?.credits)
+  const defaultLabel = useSettings((state) => state.defaultAccountLabel)
   const t = useT()
 
   // An account nobody has checked is `usable`: not knowing is not the same as
@@ -89,7 +99,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   const list: ColumnAccount[] = [
     {
       profileId: null,
-      name: t("projects.accounts.thisAccount"),
+      name: defaultAccountName(accounts[""], defaultLabel),
       utilization: fiveHour(usage[""]),
       usable: signedIn(""),
     },
@@ -123,13 +133,14 @@ function fiveHour(usage: PlanUsage | undefined): number | null {
 /** What the column calls an account — the picker's own names. */
 export function useAccountName(profileId: string | null): string {
   const profiles = useClaudeProfiles((state) => state.profiles)
-  const t = useT()
-  if (profileId === null) return t("projects.accounts.thisAccount")
-  if (profileId === FREE_PROFILE_ID) return t("projects.accounts.credits")
-  return (
-    profiles.find((profile) => profile.id === profileId)?.name ??
-    t("projects.accounts.thisAccount")
+  const fallback = defaultAccountName(
+    useClaudeProfiles((state) => state.accounts[""]),
+    useSettings((state) => state.defaultAccountLabel)
   )
+  const t = useT()
+  if (profileId === null) return fallback
+  if (profileId === FREE_PROFILE_ID) return t("projects.accounts.credits")
+  return profiles.find((profile) => profile.id === profileId)?.name ?? fallback
 }
 
 /**
@@ -172,13 +183,14 @@ export function AccountAvatar({
   return <ProfileAvatar profile={profile} className={className} />
 }
 
-/** A login dialog's subject: which directory, under which name, and whose
- * plan usage to re-read once it closes. */
-type LoginTarget = {
-  profileId: string | null
-  configDir: string
-  name: string
-}
+/** An account on the list a login is asked for (`profileId` null being the
+ * default login). */
+type LoginTarget = { profileId: string | null; configDir: string; name: string }
+
+/** What the login dialog is open on: the question, for an account on the list
+ * or (null) a new one, or a login under way, by its key. */
+type LoginDialogState =
+  { kind: "ask"; target: LoginTarget | null } | { kind: "login"; key: string }
 
 /**
  * The foot of the projects column: every account, how much of its five-hour
@@ -195,9 +207,13 @@ type LoginTarget = {
  * thing anybody did there — sign a profile in after seeing it was not — was a
  * dialog away from where `Not signed in` was being read. So the row is the
  * control: `Sign in` on the line that says it is not, the rest (check again,
- * rename, remove) on a click or a right-click, and `+` beside the heading,
- * which goes straight on to the login because a profile nobody signed into is
- * a row saying `Not signed in`.
+ * rename, remove) on a click or a right-click, and `+` beside the heading.
+ *
+ * Both open the same dialog (`LoginDialog`): which kind of account, then the
+ * login's steps in the same window, and **nothing on the list until it has
+ * worked** — a new account arrives as its row, named after whoever signed in
+ * (`lib/chat/claude-login.ts`). Closing the dialog cancels the login, since
+ * nothing else on screen would say it was still waiting.
  */
 export function AccountsFooter() {
   const accounts = useColumnAccounts()
@@ -205,27 +221,53 @@ export function AccountsFooter() {
   const load = usePlanUsage((state) => state.load)
   const profiles = useClaudeProfiles((state) => state.profiles)
   const checkUnknown = useClaudeProfiles((state) => state.checkUnknown)
-  const create = useClaudeProfiles((state) => state.create)
   const remove = useClaudeProfiles((state) => state.remove)
+  const logins = useClaudeLogin((state) => state.logins)
+  const startLogin = useClaudeLogin((state) => state.start)
+  const cancelLogin = useClaudeLogin((state) => state.cancel)
+  const added = useClaudeLogin((state) => state.added)
+  const clearAdded = useClaudeLogin((state) => state.clearAdded)
   const freeReady = useFreeAi((state) => state.ready)
   const busy = useChats((state) => state.sending.length)
   const t = useT()
 
   const [renaming, setRenaming] = useState<string | null>(null)
   const [removing, setRemoving] = useState<ClaudeProfile | null>(null)
-  const [loggingIn, setLoggingIn] = useState<LoginTarget | null>(null)
-  // A profile just added, waiting on main to name its directory — one round
-  // trip (`save` in `lib/chat/claude-profiles.ts`). Its login opens the
-  // moment there is one: an empty `CLAUDE_CONFIG_DIR` is the *default* login,
-  // and signing that in under the new profile's name would be signing in the
-  // wrong account.
-  const [adding, setAdding] = useState<string | null>(null)
-  const added = profiles.find((profile) => profile.id === adding)
-  const login: LoginTarget | null =
-    loggingIn ??
-    (added?.configDir.trim()
-      ? { profileId: added.id, configDir: added.configDir, name: added.name }
-      : null)
+  const [loginDialog, setLoginDialog] = useState<LoginDialogState | null>(null)
+  const newLogins = logins.filter((login) => login.isNew)
+  const shownLogin =
+    loginDialog?.kind === "login"
+      ? logins.find((login) => login.key === loginDialog.key)
+      : undefined
+  // A login that has worked, or was cancelled, takes its dialog with it — and
+  // must not leave it waiting to reopen on the next login under the same key.
+  if (loginDialog?.kind === "login" && !shownLogin) setLoginDialog(null)
+
+  const loginView: LoginView | null =
+    loginDialog?.kind === "ask"
+      ? {
+          kind: "ask",
+          title: loginDialog.target
+            ? t("projects.login.title", { name: loginDialog.target.name })
+            : t("projects.login.addTitle"),
+        }
+      : shownLogin
+        ? {
+            kind: "login",
+            title: shownLogin.isNew
+              ? t("projects.login.addTitle")
+              : t("projects.login.title", { name: shownLogin.name }),
+            login: shownLogin,
+          }
+        : null
+
+  // The mark on an account that has just arrived, for as long as it takes to
+  // be seen.
+  useEffect(() => {
+    if (!added) return
+    const timer = window.setTimeout(clearAdded, 2400)
+    return () => window.clearTimeout(timer)
+  }, [added, clearAdded])
 
   const collapsed = useSettings((state) => state.accountsCollapsed)
   const setCollapsed = useSettings((state) => state.setAccountsCollapsed)
@@ -239,11 +281,35 @@ export function AccountsFooter() {
     reset: resetResize,
   } = useFootResize()
 
-  const add = () => {
-    create(nextProfileName(profiles.length))
-    setAdding(useClaudeProfiles.getState().profiles.at(-1)?.id ?? null)
-    // The row it adds has to be seen to be signed in afterwards.
+  const begin = (method: ClaudeLoginMethod) => {
+    const target = loginDialog?.kind === "ask" ? loginDialog.target : null
+    // Where the account arrives has to be seen when the dialog closes on it.
     if (collapsed) setCollapsed(false)
+
+    if (target) {
+      const key = target.profileId ?? ""
+      setLoginDialog({ kind: "login", key })
+      startLogin({
+        key,
+        profileId: target.profileId,
+        isNew: false,
+        name: target.name,
+        method,
+        configDir: target.configDir,
+      })
+      return
+    }
+    const id = crypto.randomUUID()
+    setLoginDialog({ kind: "login", key: id })
+    startLogin({
+      key: id,
+      profileId: id,
+      isNew: true,
+      // Provisional: the row is renamed after whoever signs in.
+      name: nextProfileName(profiles.length + newLogins.length),
+      method,
+      configDir: null,
+    })
   }
 
   const plans = accounts
@@ -339,7 +405,7 @@ export function AccountsFooter() {
         <IconButton
           label={t("projects.accounts.add")}
           className="size-6"
-          onClick={add}
+          onClick={() => setLoginDialog({ kind: "ask", target: null })}
         >
           <Plus />
         </IconButton>
@@ -370,11 +436,15 @@ export function AccountsFooter() {
               renaming={renaming === key}
               windows={windows}
               now={now}
+              arrived={added === key}
               onLogin={() =>
-                setLoggingIn({
-                  profileId: account.profileId,
-                  configDir: profile?.configDir ?? "",
-                  name: account.name,
+                setLoginDialog({
+                  kind: "ask",
+                  target: {
+                    profileId: account.profileId,
+                    configDir: profile?.configDir ?? "",
+                    name: account.name,
+                  },
                 })
               }
               onRename={() => setRenaming(key)}
@@ -391,19 +461,14 @@ export function AccountsFooter() {
           the way in, which Settings used to be. */}
       {!collapsed && <CreditsCard signIn={!freeReady} />}
 
-      {login && (
-        <ClaudeLoginDialog
-          configDir={login.configDir}
-          name={login.name}
-          onClose={() => {
-            setLoggingIn(null)
-            setAdding(null)
-            // `fresh`: main holds an answer a minute, and the one it holds is
-            // from before the login.
-            void load(login.profileId, true)
-          }}
-        />
-      )}
+      <LoginDialog
+        view={loginView}
+        onStart={begin}
+        onClose={() => {
+          if (shownLogin) cancelLogin(shownLogin.key)
+          setLoginDialog(null)
+        }}
+      />
 
       <AlertDialog
         open={removing !== null}
@@ -512,6 +577,7 @@ function PlanRow({
   renaming,
   windows,
   now,
+  arrived,
   onLogin,
   onRename,
   onRenamed,
@@ -525,6 +591,9 @@ function PlanRow({
    * than with empty ones. */
   windows: PlanWindow[]
   now: Date
+  /** Just added by a login — marked while it is new. */
+  arrived: boolean
+  /** Opens the login dialog for this account. */
   onLogin: () => void
   onRename: () => void
   onRenamed: () => void
@@ -536,28 +605,38 @@ function PlanRow({
   const checking = useClaudeProfiles((state) => state.checking.includes(key))
   const check = useClaudeProfiles((state) => state.check)
   const rename = useClaudeProfiles((state) => state.rename)
+  const setDefaultLabel = useSettings((state) => state.setDefaultAccountLabel)
   const load = usePlanUsage((state) => state.load)
   const [open, setOpen] = useState(false)
   const menuFocus = useMenuFocusHandoff()
   const t = useT()
 
-  // A profile whose directory main has not named yet has nothing to check
-  // or sign in — the empty key is the *default* login's.
-  const settingUp = account.profileId !== null && !key
   const caption = accountCaption(known)
+  const kind = accountKindOf(known)
   const signedIn = known?.state === "signedIn"
 
   return (
-    <li>
+    <li
+      className={cn(
+        "rounded-md transition-colors duration-700",
+        arrived && "animate-rise bg-accent/70"
+      )}
+    >
       <div className="flex items-center gap-1">
-        {renaming && account.profileId ? (
+        {renaming ? (
           <div className={cn(ROW, "hover:bg-transparent")}>
             <AccountAvatar profileId={account.profileId} />
             <InlineName
               name={account.name}
               onDone={(name) => {
-                if (name && name !== account.name) {
-                  rename(account.profileId!, name)
+                if (account.profileId === null) {
+                  // Cleared, it goes back to its address rather than being
+                  // refused: the default login has a name without one.
+                  if (name !== null && name !== account.name) {
+                    setDefaultLabel(name)
+                  }
+                } else if (name && name !== account.name) {
+                  rename(account.profileId, name)
                 }
                 onRenamed()
               }}
@@ -579,11 +658,13 @@ function PlanRow({
               }
             >
               <AccountAvatar profileId={account.profileId} />
-              <span className="min-w-0 flex-1 truncate leading-4">
-                {account.name}
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="min-w-0 truncate leading-4">
+                  {account.name}
+                </span>
+                {kind && <KindBadge kind={kind} />}
               </span>
               {account.usable &&
-                !settingUp &&
                 (checking ? (
                   <span className="shrink-0 text-[0.6875rem] leading-4 text-muted-foreground">
                     {t("common.checking")}
@@ -609,14 +690,14 @@ function PlanRow({
                 {caption || accountLabel(known).label}
               </p>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={settingUp} onClick={onLogin}>
+              <DropdownMenuItem onClick={onLogin}>
                 <KeyRound />
                 {signedIn
                   ? t("projects.accounts.signInAsAnother")
                   : t("projects.accounts.signInMenu")}
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={settingUp || checking}
+                disabled={checking}
                 onClick={() => {
                   void check(key)
                   void load(account.profileId, true)
@@ -625,44 +706,35 @@ function PlanRow({
                 <RefreshCw />
                 {t("projects.accounts.checkAgain")}
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  menuFocus.handOff()
+                  onRename()
+                }}
+              >
+                <Pencil />
+                {t("common.rename")}
+              </DropdownMenuItem>
               {onRemove && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      menuFocus.handOff()
-                      onRename()
-                    }}
-                  >
-                    <Pencil />
-                    {t("common.rename")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onClick={onRemove}>
-                    <Trash2 />
-                    {t("projects.accounts.remove")}
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem variant="destructive" onClick={onRemove}>
+                  <Trash2 />
+                  {t("projects.accounts.remove")}
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        {settingUp ? (
-          <span className="shrink-0 pr-1 text-[0.6875rem] text-muted-foreground">
-            {t("projects.accounts.settingUp")}
-          </span>
-        ) : (
-          !account.usable &&
-          !renaming && (
-            <Button
-              size="xs"
-              variant="ghost"
-              className="shrink-0 text-destructive hover:text-destructive"
-              title={t("projects.accounts.notSignedIn")}
-              onClick={onLogin}
-            >
-              {t("projects.accounts.signIn")}
-            </Button>
-          )
+        {!account.usable && !renaming && (
+          <Button
+            size="xs"
+            variant="ghost"
+            className="shrink-0 text-destructive hover:text-destructive"
+            title={t("projects.accounts.notSignedIn")}
+            onClick={onLogin}
+          >
+            {t("projects.accounts.signIn")}
+          </Button>
         )}
       </div>
     </li>
@@ -682,6 +754,36 @@ const METER_WINDOWS = ["five_hour", "seven_day"]
 function meterLabel(id: string): string {
   return id === "five_hour" ? "5h" : id === "seven_day" ? "w" : windowShort(id)
 }
+
+/**
+ * What an account bills against, beside its name — see `accountKindOf`.
+ *
+ * A subscription's plan is quiet, since it is what most rows are; a Console
+ * login is tinted, because it reads differently — no meters, every turn paid
+ * for — and a row without meters otherwise looks like one not read yet.
+ */
+function KindBadge({ kind }: { kind: AccountKind }) {
+  const t = useT()
+  return (
+    <span
+      title={
+        kind.kind === "plan"
+          ? t("projects.accounts.kindPlan", { plan: kind.label })
+          : t(`projects.accounts.kind${KIND_KEY[kind.kind]}`)
+      }
+      className={cn(
+        "shrink-0 rounded-sm border px-1 text-[0.5625rem] leading-3.5 font-medium tracking-wide uppercase",
+        kind.kind === "api"
+          ? "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+          : "border-border text-muted-foreground"
+      )}
+    >
+      {kind.label}
+    </span>
+  )
+}
+
+const KIND_KEY = { api: "Api", token: "Token", cloud: "Cloud" } as const
 
 /**
  * One window as a short bar, its percent and its name, on one line — stacked
@@ -825,8 +927,9 @@ function CreditsCard({ signIn }: { signIn: boolean }) {
   )
 }
 
-/** A profile's name as a field, in place: Enter or a click away keeps it,
- * Escape leaves it as it was — the column's other renames. */
+/** An account's name as a field, in place: Enter or a click away keeps it,
+ * Escape leaves it as it was — the column's other renames. What is kept may be
+ * empty, which the default login reads as "back to its address". */
 function InlineName({
   name,
   onDone,
@@ -850,9 +953,9 @@ function InlineName({
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onFocus={(event) => event.target.select()}
-      onBlur={() => finish(value.trim() || null)}
+      onBlur={() => finish(value.trim())}
       onKeyDown={(event) => {
-        if (event.key === "Enter") finish(value.trim() || null)
+        if (event.key === "Enter") finish(value.trim())
         if (event.key === "Escape") finish(null)
       }}
       className="h-5 min-w-0 flex-1 rounded-sm border bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50"

@@ -81,7 +81,7 @@ section("stoppedOnLimit")
     id: "l",
     role: "limit",
     profileId: null,
-    name: "This account",
+    name: "Default account",
     window: "five_hour",
     resetsAt: null,
     text: "Usage limit reached.",
@@ -142,14 +142,14 @@ section("limitSentence")
   check(
     "no window, the CLI's own words",
     limitSentence(
-      "This account",
+      "Default account",
       {
         window: null,
         resetsAt: null,
         text: "You've hit your limit · resets 3pm",
       },
       now
-    ) === "Stopped. This account: You've hit your limit · resets 3pm"
+    ) === "Stopped. Default account: You've hit your limit · resets 3pm"
   )
 }
 

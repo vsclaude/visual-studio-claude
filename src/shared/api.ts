@@ -1557,6 +1557,23 @@ export type ClaudeAccount = {
   error: string | null
 }
 
+/** `claude auth login`'s own choice of account kind, each one of its flags:
+ * a claude.ai subscription, an Anthropic Console (API billing) login, or SSO. */
+export type ClaudeLoginMethod = "claudeai" | "console" | "sso"
+
+/** What `claudeLogin` is asked to sign in. */
+export type ClaudeLoginRequest = {
+  /**
+   * The directory to sign in — an existing profile's, or the empty string for
+   * the default login — or **null for a profile not saved yet**, whose
+   * directory main names after `name`. A profile is written down only once its
+   * login has worked, so a login somebody abandoned leaves no row behind.
+   */
+  configDir: string | null
+  name: string
+  method: ClaudeLoginMethod
+}
+
 /**
  * What a chat's own toolbar decides, held per chat.
  *
@@ -2579,14 +2596,14 @@ export type DesktopApi = {
    * with that directory as `CLAUDE_CONFIG_DIR`. Resolves with the id its output
    * is tagged with — `onTerminalData`, `terminalWrite`, `terminalResize`,
    * `terminalKill` and `onTerminalExit` carry it from there, the same as a
-   * shell's.
+   * shell's — and with the directory, which main names when the request is
+   * for a profile not saved yet.
    *
-   * **A pty rather than something quieter, because the login is a
-   * conversation**: the CLI prints a URL, opens a browser, asks which account,
-   * and can stop for an SSO prompt. Anything that hid that would be this app
-   * guessing at a flow the CLI is free to change, so what the user gets is the
-   * CLI's own screen — the difference from running it in a terminal is only
-   * that they did not have to know which variable to export.
+   * **Still a pty, but no longer the first thing anybody sees.** The CLI's own
+   * flags answer the one question it would otherwise stop to ask — which kind
+   * of account (`ClaudeLoginRequest.method`) — so what is left of the
+   * conversation is the browser, a pasted code at most, and the terminal is
+   * behind `Details` on the row (`docs/design.md` § Adding an account).
    *
    * The directory is **created** if it is not there, unlike `claudeAccount`,
    * which refuses to: that one probes a path somebody may still be typing, and
@@ -2594,10 +2611,10 @@ export type DesktopApi = {
    * login, and creates nothing.
    */
   claudeLogin: (
-    configDir: string,
+    request: ClaudeLoginRequest,
     cols: number,
     rows: number
-  ) => Promise<string>
+  ) => Promise<{ terminalId: string; configDir: string }>
   /** Every chat in every project — the listing; the lines are read one chat
    * at a time. */
   listChats: () => Promise<Chat[]>

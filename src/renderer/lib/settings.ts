@@ -99,6 +99,12 @@ type Stored = {
   /** The Accounts foot folded down to its heading. */
   accountsCollapsed: boolean
   /**
+   * What the default login is called, when somebody has named it — null for
+   * its address (`defaultAccountName`). Here rather than with the profiles
+   * because it is not one: it has no record of its own, being `~/.claude`.
+   */
+  defaultAccountLabel: string | null
+  /**
    * The language the UI is drawn in — `lib/i18n`. `system` by default, so a
    * machine set to Vietnamese opens in Vietnamese without anybody finding the
    * row first.
@@ -155,6 +161,9 @@ function isStored(value: unknown): value is Stored {
       typeof record.accountsHeight === "number") &&
     (record.accountsCollapsed === undefined ||
       typeof record.accountsCollapsed === "boolean") &&
+    (record.defaultAccountLabel === undefined ||
+      record.defaultAccountLabel === null ||
+      typeof record.defaultAccountLabel === "string") &&
     (record.language === undefined || isLanguageChoice(record.language))
   )
 }
@@ -202,6 +211,8 @@ type SettingsState = Stored & {
   setComposerHeight: (height: number | null) => void
   setAccountsHeight: (height: number | null) => void
   setAccountsCollapsed: (collapsed: boolean) => void
+  /** Null gives the default login its address back. */
+  setDefaultAccountLabel: (label: string | null) => void
   setAllProjectTabs: (on: boolean) => void
   /** Applied to the UI by `applyLanguage` through a subscription, the way
    * the appearance is. */
@@ -250,6 +261,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       composerHeight,
       accountsHeight,
       accountsCollapsed,
+      defaultAccountLabel,
       language,
     } = get()
     remember(SETTINGS_KEY, {
@@ -271,6 +283,7 @@ export const useSettings = create<SettingsState>((set, get) => {
       composerHeight,
       accountsHeight,
       accountsCollapsed,
+      defaultAccountLabel,
       language,
     })
   }
@@ -295,6 +308,7 @@ export const useSettings = create<SettingsState>((set, get) => {
     composerHeight: null,
     accountsHeight: null,
     accountsCollapsed: false,
+    defaultAccountLabel: null,
     language: "system",
     chatNotifications: true,
     telemetry: true,
@@ -395,6 +409,11 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setAccountsCollapsed(accountsCollapsed) {
       set({ accountsCollapsed })
+      save()
+    },
+
+    setDefaultAccountLabel(label) {
+      set({ defaultAccountLabel: label?.trim() || null })
       save()
     },
 

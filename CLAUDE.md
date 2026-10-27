@@ -416,12 +416,20 @@ path, branch, `+ Chat`), the chats in **Needs you / Running / Recent**
 each account's five-hour bar and the credits left (`project/accounts.tsx`),
 resizable by its top edge and folded by its heading,
 and where accounts are added, signed in, renamed and removed: **there is no
-Settings › Claude** any more, and its commit-draft row is under Chats.
+Settings › Claude** any more, and its commit-draft row is under Chats. A login
+is one dialog: the account kind (`claude auth login`'s own flags), then the
+browser step and a field for the page's code. **The list shows nothing of a
+login until it has worked**, so closing the dialog cancels it
+(`project/account-login.tsx`, `lib/chat/claude-login.ts`). A new account is
+saved only once it has signed in, named by its email, and one that comes back
+as an account already listed is held as a duplicate (`docs/design.md`
+§ Adding an account).
 Each row is its title and one state, `chatStateOf` — no avatar ahead of
 the title, which was tried and taken off:
 waiting over working over **limited** over unread. Limited is
 `Chat.limit`, written on the listing by `Chats.append` with the `limit` line
-and cleared by the next main-loop `user` line, `clear` or `edit`; such a chat is
+and cleared by the next main-loop `user` line, a move that carries the turn on
+(`account` with `resumed`), `clear` or `edit`; such a chat is
 a card with **`Continue with …`** (`limitWayOut`, tested), which moves it
 to the first other account with room and sends `Continue.` — or, with none,
 offers to buy credits (or sign in for them); the transcript's last limit line
@@ -642,9 +650,13 @@ by `lib/editor-conflicts.ts` in the file editor (`test/conflicts.ts`),
 `lib/files/block-doc.ts`, `lib/chat/mention-text.ts`
 (`test/chat-mentions.ts`), `lib/chat/mcp-servers.ts` with
 `main/mcp-servers.ts`'s own `readServer` (`test/mcp-servers.ts`),
-`lib/chat/claude-profiles.ts`'s `accountLabel` / `accountCaption` with
+`lib/chat/claude-profiles.ts`'s `accountLabel` / `accountCaption` /
+`accountKindOf` (the row's plan or `API` badge) with
 `main/claude-auth.ts`'s own `readAuthStatus` and `main/claude-profiles.ts`'s
 naming of a profile's directory (`test/claude-account.ts`),
+`lib/chat/claude-login-text.ts` — the sign-in URL and the CLI's error read off
+the login's pty,
+a new account's name and the duplicate check (`test/claude-login.ts`),
 `lib/chat/plan-usage.ts` — the usage meter's words, with
 `main/plan-usage.ts`'s own `readPlanUsage` (`test/plan-usage.ts`),
 `plugins/usage/src/spend.ts` — the usage dashboard's grouping by day, project,

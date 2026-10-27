@@ -19,7 +19,7 @@ import type {
   WorkspaceRecord,
 } from "../shared/api"
 import { inOrder } from "../shared/folder-order"
-import { withConfigDirs } from "./claude-profiles"
+import { profileDir, withConfigDirs } from "./claude-profiles"
 import { dataDir } from "./data-dir"
 
 /**
@@ -434,6 +434,21 @@ export class Store {
     const filled = withConfigDirs(profiles, this.claudeProfilesDir)
     await this.writeList(CLAUDE_PROFILES_FILE, filled)
     return filled
+  }
+
+  /**
+   * A directory for a profile that is not on the list yet — one signing in
+   * before it is written down (`IPC.claudeLogin`). Clear of every saved
+   * profile's and of `reserved`, the ones other logins in flight were given.
+   * A directory left by a login somebody abandoned is free again from the
+   * next launch, and reused.
+   */
+  async newClaudeProfileDir(name: string, reserved: string[]): Promise<string> {
+    const saved = await this.listClaudeProfiles()
+    return profileDir(this.claudeProfilesDir, name, [
+      ...saved.map((profile) => profile.configDir.trim()),
+      ...reserved,
+    ])
   }
 
   /** Where a profile's own `CLAUDE_CONFIG_DIR` goes. Not created here: the

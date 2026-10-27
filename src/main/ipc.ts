@@ -9,6 +9,7 @@ import {
   type ChatImage,
   type ChatPlace,
   type ChatSeed,
+  type ClaudeLoginRequest,
   type ClaudeProfile,
   type FileDiff,
   type PlanUsage,
@@ -136,6 +137,14 @@ const MAX_IMAGE_PREVIEW_BYTES = 20 * 1024 * 1024
  * `Commits` view re-reads everything it has shown on every commit, in one call,
  * so this is also how far it can be paged before a re-read stops covering it. */
 const MAX_LOG_PAGE = 1000
+
+/** `claude auth login`'s account kinds — the request names one, and anything
+ * else from the renderer is the default rather than a word on a command line. */
+const LOGIN_METHODS: ClaudeLoginRequest["method"][] = [
+  "claudeai",
+  "console",
+  "sso",
+]
 
 /**
  * Where `install.sh` puts the app, and so the bundle the updater reopens.
@@ -459,6 +468,9 @@ export function createIpc(host: Host): {
 
   handle(IPC.claudeVersions, () => claudeVersions())
 
+  /** The directories handed to a new profile's login this run. */
+  const loginDirs = new Set<string>()
+
   /**
    * `claude auth login` for one profile's directory, in a pty of its own.
    *
@@ -469,8 +481,16 @@ export function createIpc(host: Host): {
    */
   handle(
     IPC.claudeLogin,
-    async (_event, configDir: string, cols: number, rows: number) => {
-      const dir = configDir.trim() ? expandHome(configDir.trim()) : ""
+    async (_event, request: ClaudeLoginRequest, cols: number, rows: number) => {
+      const dir =
+        request.configDir === null
+          ? await store.newClaudeProfileDir(request.name, [...loginDirs])
+          : request.configDir.trim()
+            ? expandHome(request.configDir.trim())
+            : ""
+      // Two profiles added at once are both unsaved while they sign in, so the
+      // store's list cannot keep them off each other's directory; this can.
+      if (request.configDir === null) loginDirs.add(dir)
 
       // Made here rather than left to the CLI, which is the opposite of what
       // `claudeAccount` does with the same path: that one probes something
@@ -483,9 +503,14 @@ export function createIpc(host: Host): {
       // Quoted only when it is a path: `CLAUDE_BIN` can name a file with a
       // space in it, while a bare `claude` is often an alias or a shell
       // function, and quoting one stops the shell expanding it at all.
-      const command = `${binary.includes("/") ? quote(binary) : binary} auth login`
+      // The flag answers the CLI's first question, which was asked with the
+      // arrow keys — the step that made the login a terminal at all.
+      const method = LOGIN_METHODS.includes(request.method)
+        ? request.method
+        : "claudeai"
+      const command = `${binary.includes("/") ? quote(binary) : binary} auth login --${method}`
 
-      return terminals.create(
+      const terminalId = await terminals.create(
         {
           // The user's home rather than a project, for `claudeAccount`'s
           // reason: a login is about the config directory, and a repository's
@@ -507,6 +532,7 @@ export function createIpc(host: Host): {
         cols,
         rows
       )
+      return { terminalId, configDir: dir }
     }
   )
 

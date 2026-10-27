@@ -90,7 +90,7 @@ export const projects = {
     use: "Use “{value}”",
   },
   accounts: {
-    thisAccount: "This account",
+    defaultAccount: "Default account",
     credits: "Credits",
     heading: "Accounts",
     add: "Add account",
@@ -98,12 +98,11 @@ export const projects = {
     resizeHint: "Drag to resize, double-click to reset",
     removeTitle: "Remove {name}?",
     removeDescription:
-      "Chats that ran on it run on This account from their next message. Its login directory is left on disk.",
+      "Chats that ran on it run on the default account from their next message. Its login directory is left on disk.",
     signInAsAnother: "Sign in as another account…",
     signInMenu: "Sign in…",
     checkAgain: "Check again",
     remove: "Remove…",
-    settingUp: "Setting up…",
     notSignedIn: "Not signed in",
     signIn: "Sign in",
     signingIn: "Signing in…",
@@ -113,6 +112,10 @@ export const projects = {
     creditsPitchLong: "Every model, paid as you go — never a monthly fee",
     buyCredits: "Buy credits",
     creditsLeft: "{amount} left",
+    kindPlan: "Claude {plan} subscription — five-hour and weekly limits",
+    kindApi: "Anthropic Console — billed per token, no five-hour limit",
+    kindToken: "A long-lived token (CLAUDE_CODE_OAUTH_TOKEN)",
+    kindCloud: "A cloud provider — Amazon Bedrock or Google Vertex AI",
     accountName: "Account name",
   },
   profiles: {
@@ -125,12 +128,51 @@ export const projects = {
     numbered: "Profile {number}",
   },
   login: {
+    addTitle: "Add a Claude account",
     title: "Sign in — {name}",
-    follow:
+    kind: "Account type",
+    claudeai: "Claude subscription",
+    claudeaiHint: "Pro, Max, Team or Enterprise on claude.ai",
+    console: "Anthropic Console",
+    consoleHint: "Billed by API usage",
+    sso: "Single sign-on",
+    ssoHint: "Your organization's SSO",
+    browserNote:
+      "Your browser opens to finish. Signed in to claude.ai as a different account? Sign out there first, or that account is added again.",
+    open: "Continue in browser",
+    starting: "Starting…",
+    waiting: "Waiting for the browser…",
+    checking: "Checking…",
+    failed: "Not signed in",
+    failedHint:
+      "The login ended before an account signed in. Try again, or open what claude printed below.",
+    exitCode: "The login ended with {code}",
+    stepBrowser: "Finish signing in in your browser",
+    stepBrowserHint:
+      "The sign-in page has opened in your browser. Closed it, or it never opened? Open it again or copy the link.",
+    linkPending: "Waiting for the link…",
+    stepCode: "Browser showing a code?",
+    stepCodeHint:
+      "Paste it here. The page shows one when it cannot hand the login back by itself.",
+    cancelLogin: "Cancel sign-in",
+    duplicate: "Same account as {name}",
+    duplicateHint:
+      "The browser approved the account it was already signed in as. Sign out of claude.ai there and try again.",
+    openPage: "Open page",
+    copyLink: "Copy link",
+    copied: "Copied",
+    code: "Code from the browser",
+    codePlaceholder: "Paste the code",
+    codeSent: "Code sent — waiting for claude…",
+    send: "Send",
+    detailsTitle: "What claude printed",
+    retry: "Try again",
+    dialogFollow:
       "Follow the prompts — `claude` opens a browser to finish the login.",
-    done: "Done. The account beside this profile has been re-checked.",
-    failed:
+    dialogDone: "Done. The account beside this profile has been re-checked.",
+    dialogFailed:
       "The login ended with {code}. Close this and try again, or read what it said above.",
+    keep: "Keep anyway",
   },
   credits: {
     bank: "Vietnamese bank · VietQR",

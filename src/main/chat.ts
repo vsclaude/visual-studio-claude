@@ -1453,7 +1453,7 @@ export class Chats {
 
   /** What the composer's picker calls a profile, for the `account` line. */
   private async profileName(profileId: string | null): Promise<string> {
-    if (profileId === null) return "This account"
+    if (profileId === null) return "Default account"
     if (profileId === FREE_PROFILE_ID) return "Credits"
     const profiles = await this.source.claudeProfiles()
     return (
@@ -2248,7 +2248,10 @@ export class Chats {
 
         // What the projects column says about a chat stuck on a plan limit —
         // see `Chat.limit`. A message sent is the way out, whichever account it
-        // went to, so it is what clears the mark.
+        // went to, so it is what clears the mark. So is a move that carries the
+        // turn on (`setOptions`): its `CARRY_ON` is sent quietly, writes no
+        // user line, and left the chat marked limited — offering a way out of
+        // the account it had just left. Stopped again, it is marked again.
         const limit =
           message.role === "limit"
             ? {
@@ -2257,7 +2260,8 @@ export class Chats {
                 resetsAt: message.resetsAt,
                 text: message.text,
               }
-            : message.role === "user" && !message.parent
+            : (message.role === "user" && !message.parent) ||
+                (message.role === "account" && message.resumed)
               ? undefined
               : existing.limit
 

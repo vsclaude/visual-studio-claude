@@ -832,7 +832,8 @@ export async function startAgentSession(
    *
    * Two messages because the CLI sends two: a `rate_limit_event` saying which
    * window and until when, and an assistant message flagged `rate_limit`
-   * carrying its own sentence for the transcript. That sentence is held here
+   * carrying its own sentence for the transcript (or `billing_error`, an API
+   * key out of balance, which has no event). That sentence is held here
    * rather than drawn — the turn's `limit` line says it, with the reset in it.
    */
   let rateLimit: SDKRateLimitInfo | null = null
@@ -1055,9 +1056,14 @@ export async function startAgentSession(
           rateLimit = message.rate_limit_info
           continue
         }
+        // An API-key account out of balance (`Credit balance is too low`) is
+        // `billing_error`, not `rate_limit` — but it is the same stop, with
+        // the same ways on: another account, or credits. Read as one, it gets
+        // the limit line and its card rather than a red line with no way out.
         if (
           message.type === "assistant" &&
-          message.error === "rate_limit" &&
+          (message.error === "rate_limit" ||
+            message.error === "billing_error") &&
           !message.parent_tool_use_id
         ) {
           limitText = textOf(message.message.content) || "Usage limit reached."

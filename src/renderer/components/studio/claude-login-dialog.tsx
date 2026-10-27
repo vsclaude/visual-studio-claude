@@ -13,6 +13,11 @@ import { TerminalView, type TerminalHandle } from "./terminal-view"
 /**
  * Signing a profile's directory in, without leaving the app.
  *
+ * **The first-launch setup's alone now** (`claude-setup.tsx`), signing in the
+ * default login as a claude.ai subscription. The Accounts foot runs its logins
+ * as rows instead (`project/account-login.tsx`), asking the account kind up
+ * front so the terminal is behind `Details` rather than the whole of it.
+ *
  * **The whole of adding an account is now a click, a login and nothing else.**
  * It used to be: read the paragraph under the section, invent a path, type it
  * into the row, open Terminal.app, export the variable the paragraph named, run
@@ -69,8 +74,12 @@ export function ClaudeLoginDialog({
       let unsubscribeExit: (() => void) | undefined
 
       void window.desktop
-        .claudeLogin(configDir, terminal.cols, terminal.rows)
-        .then((created) => {
+        .claudeLogin(
+          { configDir, name, method: "claudeai" },
+          terminal.cols,
+          terminal.rows
+        )
+        .then(({ terminalId: created }) => {
           // The dialog closed while the CLI was starting; it would otherwise be
           // left holding a login nobody is watching.
           if (disposed) {
@@ -131,7 +140,7 @@ export function ClaudeLoginDialog({
         if (current) void window.desktop.terminalKill(current)
       }
     },
-    [configDir, check]
+    [configDir, name, check]
   )
 
   const onResize = useCallback((size: { cols: number; rows: number }) => {
@@ -164,10 +173,10 @@ export function ClaudeLoginDialog({
 
         <footer className="shrink-0 border-t px-5 py-3 text-xs text-muted-foreground">
           {exitCode === null
-            ? t("projects.login.follow")
+            ? t("projects.login.dialogFollow")
             : exitCode === 0
-              ? t("projects.login.done")
-              : t("projects.login.failed", { code: exitCode })}
+              ? t("projects.login.dialogDone")
+              : t("projects.login.dialogFailed", { code: exitCode })}
         </footer>
       </DialogContent>
     </Dialog>

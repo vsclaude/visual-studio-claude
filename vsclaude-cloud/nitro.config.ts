@@ -58,6 +58,10 @@ export default defineConfig({
           database_id: "91126c97-849b-41f6-8719-0e2be12f688e",
         },
       ],
+      // Cloudflare Email Service (`server/utils/email.ts`). Sends only once
+      // the sender's domain is onboarded under Email Service › Email Sending;
+      // under `nitro dev` Miniflare logs a message rather than sending it.
+      send_email: [{ name: "EMAIL" }],
     },
   },
 
@@ -109,6 +113,10 @@ export default defineConfig({
     /** NITRO_PUBLIC_URL — this server's own address, for the `/pay` links
      * the studio opens. Empty is the origin each request came in on. */
     publicUrl: "",
+    /** NITRO_EMAIL_FROM — the address mail is sent from, on a domain onboarded
+     * to Cloudflare Email Service, e.g. `Vey Studio <hello@example.com>`.
+     * Empty sends nothing (`server/utils/email.ts`). */
+    emailFrom: "",
     /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded. 100K is where
      * Haiku 5.5's price goes up fivefold; 0 turns the check off. */
     maxPromptTokens: 100_000,

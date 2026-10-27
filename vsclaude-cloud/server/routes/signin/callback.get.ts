@@ -2,9 +2,11 @@ import { defineHandler } from "nitro"
 import { useRuntimeConfig } from "nitro/runtime-config"
 
 import { saveUser } from "../../utils/accounts.ts"
+import { sendEmailLater } from "../../utils/email.ts"
 import { exchangeCode, googleConfig } from "../../utils/google.ts"
 import { noteRequest } from "../../utils/log.ts"
-import { signSession } from "../../utils/session.ts"
+import { welcomeEmail } from "../../utils/mail.ts"
+import { signSession, type User } from "../../utils/session.ts"
 import { publicUrlOf } from "../../utils/sepay.ts"
 import {
   isNonce,
@@ -16,8 +18,9 @@ import {
 /**
  * `GET /signin/callback?code&state` — where Google sends the browser back
  * (`google.ts`). `state` is the sign-in's nonce. The code is exchanged for who
- * signed in, they are written to `users`, and a session token of this
- * server's own is left under the nonce for the studio to collect.
+ * signed in, they are written to `users` — and mailed a welcome, the first
+ * time — and a session token of this server's own is left under the nonce for
+ * the studio to collect.
  *
  * A refusal — the user pressed Cancel at Google, the code was stale — is left
  * under the nonce too, so the studio stops waiting and says why.
@@ -30,7 +33,10 @@ export default defineHandler(async (event) => {
     return page({ kind: "failed", reason: "This is not a Vey Studio sign-in." })
   }
 
-  const outcome = await signIn(params, publicUrlOf(event))
+  const origin = publicUrlOf(event)
+  const outcome = await signIn(params, origin, (user) =>
+    sendEmailLater(event, welcomeEmail(user, origin))
+  )
   if (typeof outcome === "string") {
     noteRequest(event, { refused: outcome })
     await saveAnswer(nonce, { error: outcome })
@@ -48,10 +54,12 @@ export default defineHandler(async (event) => {
   return page({ kind: "done" })
 })
 
-/** The session the callback's code is worth, or why there is none. */
+/** The session the callback's code is worth, or why there is none.
+ * `onFirst` is told about a user signing in for the first time. */
 async function signIn(
   params: URLSearchParams,
-  origin: string
+  origin: string,
+  onFirst: (user: User) => void
 ): Promise<{ uid: string; token: string } | string> {
   const refused = params.get("error")
   if (refused) {
@@ -72,7 +80,7 @@ async function signIn(
     googleConfig()
   )
   if (typeof user === "string") return user
-  await saveUser(user)
+  if ((await saveUser(user)).first) onFirst(user)
   return { uid: user.uid, token: await signSession(user, secret) }
 }
 

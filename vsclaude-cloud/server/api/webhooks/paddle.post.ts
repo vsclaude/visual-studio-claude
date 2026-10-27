@@ -3,10 +3,13 @@ import { defineHandler } from "nitro"
 import {
   creditPaddleTransaction,
   getAccount,
+  getUser,
   linkToUser,
   refundPaddleTransaction,
   userOf,
 } from "../../utils/accounts.ts"
+import { sendEmailLater } from "../../utils/email.ts"
+import { paymentEmail } from "../../utils/mail.ts"
 import {
   applyWebhook,
   refsOf,
@@ -14,6 +17,7 @@ import {
 } from "../../utils/paddle-billing.ts"
 import { noteRequest } from "../../utils/log.ts"
 import { paddleConfig } from "../../utils/paddle.ts"
+import { publicUrlOf } from "../../utils/sepay.ts"
 
 /**
  * `POST /api/webhooks/paddle` — what Paddle says was bought or refunded,
@@ -90,12 +94,30 @@ export default defineHandler(async (event) => {
   }
 
   if (applied.kind === "credits") {
-    await creditPaddleTransaction(
+    const added = await creditPaddleTransaction(
       uid,
       applied.transactionId,
       applied.added,
       applied.purchase
     )
+    // Only the delivery that added the credits says thank you — Paddle
+    // retries a `transaction.completed` it has no 200 for.
+    const user = added ? await getUser(uid) : null
+    if (user) {
+      sendEmailLater(
+        event,
+        paymentEmail(
+          user,
+          {
+            credits: applied.added,
+            amount: applied.purchase.amount,
+            currency: applied.purchase.currency,
+            order: applied.transactionId,
+          },
+          publicUrlOf(event)
+        )
+      )
+    }
   } else {
     await refundPaddleTransaction(uid, applied.transactionId)
   }

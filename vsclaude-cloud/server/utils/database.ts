@@ -23,7 +23,7 @@ import { useDatabase } from "nitro/database"
  */
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, email TEXT, name TEXT, picture TEXT, signed_in_at TEXT, credits INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, PRIMARY KEY (provider, id))`,
+  `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, paid_at TEXT, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
   `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_events (install_id TEXT NOT NULL, event TEXT NOT NULL CHECK (event IN ('app_opened', 'heartbeat')), at TEXT NOT NULL, active_seconds INTEGER, version TEXT, os TEXT, arch TEXT, country TEXT)`,
@@ -35,11 +35,13 @@ const SCHEMA = [
 /** Columns added since a table was first made — added to one made before,
  * which keeps its rows; each is its definition, name first. `users` gained who
  * somebody is when sign-in moved here from Firebase; `transactions` gained the
- * currency a Paddle charge was in; `upstreams` gained what a key was bought
- * with when the stock moved onto it. */
+ * currency a Paddle charge was in, and when a purchase was paid — a transfer
+ * can land hours after its order was opened, and a day's takings are counted
+ * by the day the money came (a row paid before it has none); `upstreams`
+ * gained what a key was bought with when the stock moved onto it. */
 const ADDED_COLUMNS: Record<string, string[]> = {
   users: ["email TEXT", "name TEXT", "picture TEXT", "signed_in_at TEXT"],
-  transactions: ["currency TEXT"],
+  transactions: ["currency TEXT", "paid_at TEXT"],
   upstreams: ["credit_usd REAL NOT NULL DEFAULT 0"],
 }
 
@@ -68,7 +70,7 @@ type Database = ReturnType<typeof useDatabase>
  * transactions on D1, and `batch` is D1's own. */
 type D1 = {
   prepare(sql: string): { bind(...values: unknown[]): unknown }
-  batch(statements: unknown[]): Promise<unknown>
+  batch(statements: unknown[]): Promise<{ meta?: { changes?: number } }[]>
 }
 
 let ready: Promise<void> | undefined
@@ -151,11 +153,15 @@ export function statement(
  * Runs the statements in order as one transaction — all of them or none.
  * A later statement can depend on what an earlier one did, which is how a
  * payment marks itself applied and adds its credits without a second delivery
- * adding them again.
+ * adding them again. Answers how many rows each statement changed, which is
+ * how the caller tells that delivery from the second.
  */
-export async function atomically(...statements: Statement[]): Promise<void> {
+export async function atomically(
+  ...statements: Statement[]
+): Promise<number[]> {
   const d1 = (await (await database()).getInstance()) as D1
-  await d1.batch(
+  const results = await d1.batch(
     statements.map(({ sql, params }) => d1.prepare(sql).bind(...params))
   )
+  return results.map((result) => Number(result?.meta?.changes ?? 0))
 }

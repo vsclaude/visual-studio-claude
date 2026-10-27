@@ -4,16 +4,19 @@ import {
   addShortfall,
   getAccount,
   getOrder,
+  getUser,
   payOrder,
 } from "../../utils/accounts.ts"
+import { sendEmailLater } from "../../utils/email.ts"
 import { noteRequest } from "../../utils/log.ts"
+import { paymentEmail } from "../../utils/mail.ts"
 import {
   applyTransfer,
   orderCodeOf,
   transferOf,
   webhookAuthentic,
 } from "../../utils/sepay-billing.ts"
-import { sepayConfig } from "../../utils/sepay.ts"
+import { publicUrlOf, sepayConfig } from "../../utils/sepay.ts"
 
 /**
  * `POST /api/webhooks/sepay` — a transfer SePay saw arrive in the account,
@@ -83,7 +86,26 @@ export default defineHandler(async (event) => {
     noteRequest(event, { short_of: paid.order.amount })
     return DONE()
   }
-  await payOrder(order, transfer.id, paid.added)
+  // The thank-you goes with the delivery that added the credits, not with a
+  // retry of it.
+  if (await payOrder(order, transfer.id, paid.added)) {
+    const user = await getUser(order.uid)
+    if (user) {
+      sendEmailLater(
+        event,
+        paymentEmail(
+          user,
+          {
+            credits: paid.added,
+            amount: transfer.transferAmount,
+            currency: "VND",
+            order: order.code,
+          },
+          publicUrlOf(event)
+        )
+      )
+    }
+  }
   noteRequest(event, { credits_added: paid.added })
   return DONE()
 })

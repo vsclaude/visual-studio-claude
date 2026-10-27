@@ -105,6 +105,25 @@ one added from another window meanwhile — after the named ones, because a
 reorder must never be how a project leaves the workspace. `Ungrouped` is not
 a project and is not dragged.
 
+**Every workspace has a default project**, `Chat`, for a conversation about
+nothing on this machine in particular. A chat needs a `cwd` — `Chats.run`
+deliberately has no fallback — so a free chat is not a chat without a project
+but a chat in a project the app made itself: `workspace/default/` under the
+data directory, recorded with `builtIn` and made by `Store.getWorkspace` on
+the first read that finds it missing (a manifest from before it gets one too),
+first in the rail with a chat icon. Under the app's own files rather than the
+home directory, because in `Edits` or `Full access` a chat writes wherever it
+runs. Its header has no path under the name — the app's own directory says
+nothing to somebody who never chose it. It is an ordinary project in every
+other way — Explorer, the dock's shell, renaming, its icon, the drag — and it
+cannot be removed, by the menus or by `removeFolder`, since the next read
+would only make it again under a new id its chats do not name; `New worktree…`
+is off its menu, as it is no repository. A chat-less mode that runs nowhere
+was the alternative, and it would have meant a `ChatPlace` with no folder
+threaded through the composer's MCP and slash command listings, the tab
+strip's scope and the edit rewind, for a place that behaves exactly like a
+folder anyway (`test/default-project.ts`).
+
 It was a **tree** of every project, each folded open or shut, a shut one
 saying what was inside it with a count (`2 · 1!`). That is the wrong shape for
 what this app is for — several chats on several accounts at once — because the

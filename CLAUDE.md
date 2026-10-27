@@ -92,7 +92,10 @@ imports may reach `electron`.
 - **`store.ts`** — all state on disk under `~/.veystudio`: `manifest.json` for the
   workspace and its settings, `workspace/` for the panels' own files. A
   folder's own files are never under here — the manifest records an absolute
-  path and they are read where they are. The manifest also carries a
+  path and they are read where they are — except the **default project**,
+  `workspace/default/`, which `getWorkspace` makes and marks `builtIn` so a
+  chat with no project in mind has a `cwd`; it cannot be removed
+  (`docs/design.md` § Projects and chats). The manifest also carries a
   `databases?: unknown` nothing reads: it is the deleted Database panel's
   records, kept because a manifest is rewritten whole and dropping the key would
   delete somebody's saved connections. A **Claude profile's `CLAUDE_CONFIG_DIR`** is one of those workspace files —

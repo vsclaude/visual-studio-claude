@@ -528,7 +528,9 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             }}
             finalFocus={menuFocus.finalFocus}
             onRename={() => setRenamingFolder(folder)}
-            onRemove={() => setRemovingFolder(folder)}
+            onRemove={
+              folder.builtIn ? undefined : () => setRemovingFolder(folder)
+            }
             onAddFolder={onAddFolder}
             onPaste={copied ? () => paste(shown.path) : undefined}
           />
@@ -923,7 +925,8 @@ function RootMenu({
   expanded: boolean
   onCreate: (kind: "file" | "directory") => void
   onRename: () => void
-  onRemove: () => void
+  /** Absent for the default project, which cannot be removed. */
+  onRemove?: () => void
   onAddFolder: () => void
   /** Absent while nothing has been copied. */
   onPaste?: () => void
@@ -983,10 +986,12 @@ function RootMenu({
         <Pencil />
         {t("files.tree.renameEllipsis")}
       </ContextMenuItem>
-      <ContextMenuItem variant="destructive" onClick={onRemove}>
-        <Trash2 />
-        {t("files.tree.removeNamed", { name: folder.name })}
-      </ContextMenuItem>
+      {onRemove && (
+        <ContextMenuItem variant="destructive" onClick={onRemove}>
+          <Trash2 />
+          {t("files.tree.removeNamed", { name: folder.name })}
+        </ContextMenuItem>
+      )}
     </ContextMenuContent>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from "react"
-import { FolderX, Plus } from "lucide-react"
+import { FolderX, MessagesSquare, Plus } from "lucide-react"
 
 import {
   ContextMenu,
@@ -240,6 +240,12 @@ function ProjectIcon({
                 draggable={false}
                 className="size-full rounded-[inherit] object-contain"
               />
+            ) : folder.builtIn ? (
+              // Not its initial: `C` in a hue says nothing about a project
+              // nobody added, and every workspace has this one.
+              <span className="flex size-full items-center justify-center rounded-[inherit] bg-primary text-primary-foreground">
+                <MessagesSquare className="size-4" />
+              </span>
             ) : (
               <span
                 className="flex size-full items-center justify-center rounded-[inherit] text-[0.8125rem] font-semibold text-white"

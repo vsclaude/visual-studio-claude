@@ -106,6 +106,18 @@ export const DRAWINGS_DIR = "drawings"
  */
 export const NOTE_FILES_DIR = "note-files"
 
+/**
+ * The default project's directory — see `Store.getWorkspace`. Under the
+ * workspace's own files rather than the user's home: in `Edits` or
+ * `Full access` a chat writes wherever its `cwd` is, and a chat started without
+ * a project in mind should not be able to reach every file somebody owns.
+ */
+export const DEFAULT_FOLDER_DIR = "default"
+
+/** What the default project is called until somebody renames it — a word
+ * that reads the same in every language the UI has. */
+const DEFAULT_FOLDER_NAME = "Chat"
+
 /** The pictures chosen for projects' rows — see `Store.projectIconPath`. */
 export const PROJECT_ICONS_DIR = "project-icons"
 
@@ -266,9 +278,48 @@ export class Store {
     )
   }
 
-  /** The workspace and its folders. */
+  /**
+   * The workspace and its folders — always including the default project.
+   *
+   * A chat has to run somewhere (`Chats.run` refuses one with no folder), so a
+   * workspace with no project in it was a studio nobody could say anything
+   * in. The default project is made here, on the first read that finds it
+   * missing, rather than once at install: a manifest from before it existed
+   * gets one too. An earlier `Add project` of that same directory is marked
+   * rather than joined by a second record of it.
+   */
   getWorkspace(): Promise<WorkspaceRecord> {
-    return this.enqueue(async () => (await this.readManifest()).workspace)
+    return this.enqueue(async () => {
+      const manifest = await this.readManifest()
+      const { folders } = manifest.workspace
+      if (folders.some((folder) => folder.builtIn)) return manifest.workspace
+
+      const dir = await this.defaultFolderDir()
+      const added = folders.find((folder) => path.resolve(folder.path) === dir)
+      if (added) {
+        added.builtIn = true
+      } else {
+        // First, since it is the one project every workspace has; the rail's
+        // drag can still move it.
+        folders.unshift({
+          id: randomUUID(),
+          name: DEFAULT_FOLDER_NAME,
+          path: dir,
+          addedAt: new Date().toISOString(),
+          builtIn: true,
+        })
+      }
+      await this.writeManifest(manifest)
+      return manifest.workspace
+    })
+  }
+
+  /** The default project's directory, made if it is not there, and resolved
+   * through symlinks the way `addFolder` resolves a path. */
+  private async defaultFolderDir(): Promise<string> {
+    const dir = path.join(this.workspaceDir, DEFAULT_FOLDER_DIR)
+    await mkdir(dir, { recursive: true })
+    return realpath(dir)
   }
 
   /**
@@ -341,6 +392,15 @@ export class Store {
   removeFolder(id: string): Promise<WorkspaceRecord> {
     return this.enqueue(async () => {
       const manifest = await this.readManifest()
+      // Refused rather than done: the next `getWorkspace` would make it again,
+      // under a new id its chats do not name.
+      if (
+        manifest.workspace.folders.some(
+          (folder) => folder.id === id && folder.builtIn
+        )
+      ) {
+        throw new Error("The default project cannot be removed.")
+      }
       manifest.workspace.folders = manifest.workspace.folders.filter(
         (folder) => folder.id !== id
       )
@@ -686,9 +746,19 @@ export class Store {
     )
   }
 
-  /** Where a folder's commands and sessions run. */
+  /**
+   * Where a folder's commands and sessions run.
+   *
+   * The default project's directory is made again if it has been deleted: it
+   * is the app's, nobody chose it, and a chat refused for its `cwd` having gone
+   * would have no other way back.
+   */
   resolveFolderDir(folderId: string): Promise<string> {
-    return this.enqueue(async () => (await this.folderOf(folderId)).path)
+    return this.enqueue(async () => {
+      const folder = await this.folderOf(folderId)
+      if (folder.builtIn) await mkdir(folder.path, { recursive: true })
+      return folder.path
+    })
   }
 }
 

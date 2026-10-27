@@ -115,6 +115,12 @@ export const files = {
     stop: "Stop",
     draft: "Draft",
     commit: "Commit",
+    rulesTitle: "Rules the drafted message follows",
+    rules: "Commit message rules",
+    rulesDescription:
+      "What every drafted message must follow. They win over the style of the recent commits.",
+    rulesPlaceholder:
+      "e.g. Conventional Commits: feat|fix|chore(scope): subject, in English, subject under 72 characters.",
   },
   commitDiff: {
     from: "from {path}",

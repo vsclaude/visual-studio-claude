@@ -22,8 +22,6 @@ export type CommitBoxState = {
   drafting: boolean
   /** git's own refusal, or the draft's — drawn until the next attempt. */
   error: string | null
-  /** What the last commit was, until the next word is typed. */
-  done: string | null
 }
 
 const EMPTY: CommitBoxState = {
@@ -31,7 +29,6 @@ const EMPTY: CommitBoxState = {
   committing: false,
   drafting: false,
   error: null,
-  done: null,
 }
 
 type CommitBoxes = {
@@ -61,9 +58,7 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
     byRoot: {},
 
     setMessage(rootId, message) {
-      // The last commit's line goes the moment the next message starts: it
-      // describes what is no longer on screen.
-      patch(rootId, { message, done: null })
+      patch(rootId, { message })
     },
 
     async commit(root) {
@@ -74,11 +69,10 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
       if (drafting) get().stopDraft(root)
       patch(root.id, { committing: true, error: null })
       try {
-        const written = await useChanges.getState().commit(root, message)
-        patch(root.id, {
-          message: "",
-          done: `${written.sha} · ${written.subject}`,
-        })
+        await useChanges.getState().commit(root, message)
+        // No receipt line: the commit is the top row of `Commits`, and a
+        // second copy of it here only crowded the buttons.
+        patch(root.id, { message: "" })
       } catch (failed) {
         patch(root.id, {
           error: failed instanceof Error ? failed.message : String(failed),
@@ -116,11 +110,7 @@ export const useCommitBoxes = create<CommitBoxes>((set, get) => {
       // Replaced, not appended, and this is the one place the draft touches
       // something the user may have typed — which is why the button is theirs
       // to press and why what lands is editable rather than committed.
-      patch(root.id, {
-        drafting: false,
-        message: answer.text.trim(),
-        done: null,
-      })
+      patch(root.id, { drafting: false, message: answer.text.trim() })
     },
 
     stopDraft(root) {

@@ -1,13 +1,22 @@
-import type { KeyboardEvent } from "react"
-import { Check } from "lucide-react"
+import { useRef, useState, type KeyboardEvent } from "react"
+import { ListChecks } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Claude } from "@/components/ui/svgs/claude"
 import { Textarea } from "@/components/ui/textarea"
 import { useCommitBox, useCommitBoxes } from "@/lib/files/commit-box"
 import type { FileRoot } from "@/lib/files/roots"
 import { useT } from "@/lib/i18n"
+import { useSettings } from "@/lib/settings"
 import { isStudioShortcut } from "@/lib/shortcuts"
 
 /**
@@ -36,7 +45,7 @@ export function CommitBox({ root }: { root: FileRoot }) {
   const t = useT()
   // In a store rather than `useState`: this box is unmounted by switching the
   // `Git` tab to `Commits`, and a draft or a typed message has to survive that.
-  const { message, committing, drafting, error, done } = useCommitBox(root.id)
+  const { message, committing, drafting, error } = useCommitBox(root.id)
   const boxes = useCommitBoxes.getState()
   const commit = () => boxes.commit(root)
   const draft = () => boxes.draft(root)
@@ -90,21 +99,14 @@ export function CommitBox({ root }: { root: FileRoot }) {
           )}
           {drafting ? t("files.commitBox.stop") : t("files.commitBox.draft")}
         </Button>
+        <CommitRulesButton />
 
         <div className="min-w-0 flex-1 truncate text-[0.6875rem] text-muted-foreground">
-          {/* One line, and the failure wins it: an error and a receipt are
-              never both news, and the error is the one somebody has to act
-              on. */}
-          {error ? (
+          {error && (
             <span className="text-destructive" title={error}>
               {error}
             </span>
-          ) : done ? (
-            <span className="flex items-center gap-1" title={done}>
-              <Check className="size-3 shrink-0" />
-              <span className="truncate">{done}</span>
-            </span>
-          ) : null}
+          )}
         </div>
 
         <Button
@@ -118,5 +120,92 @@ export function CommitBox({ root }: { root: FileRoot }) {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * The rules a draft follows, edited beside the button that drafts.
+ *
+ * Here and nowhere else — not a Settings row — because a rule is wanted at the
+ * moment a draft comes back wrong, which is in front of this box. Lit while
+ * there are rules, so somebody reading a draft can tell it was steered.
+ */
+function CommitRulesButton() {
+  const t = useT()
+  const rules = useSettings((state) => state.commitRules)
+  const [open, setOpen] = useState(false)
+  const set = rules.trim().length > 0
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => setOpen(true)}
+        className="relative size-6 p-0"
+        title={t("files.commitBox.rulesTitle")}
+        aria-label={t("files.commitBox.rulesTitle")}
+      >
+        <ListChecks className="size-3.5" />
+        {set && (
+          <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-primary" />
+        )}
+      </Button>
+      {/* Mounted only while open, so the field starts from what is saved
+          rather than from whatever was typed and cancelled last time. */}
+      {open && <CommitRulesDialog onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+function CommitRulesDialog({ onClose }: { onClose: () => void }) {
+  const t = useT()
+  const rules = useSettings((state) => state.commitRules)
+  const setRules = useSettings((state) => state.setCommitRules)
+  const [text, setText] = useState(rules)
+  const field = useRef<HTMLTextAreaElement>(null)
+
+  const save = () => {
+    setRules(text.trim())
+    onClose()
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
+      <DialogContent initialFocus={field} className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("files.commitBox.rules")}</DialogTitle>
+          <DialogDescription>
+            {t("files.commitBox.rulesDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <Textarea
+          ref={field}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+            if (!isStudioShortcut(event.nativeEvent, "enter")) return
+            event.preventDefault()
+            save()
+          }}
+          placeholder={t("files.commitBox.rulesPlaceholder")}
+          spellCheck={false}
+          className="min-h-40 font-mono text-xs"
+        />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" onClick={save}>
+            {t("common.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

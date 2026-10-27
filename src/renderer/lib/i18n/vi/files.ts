@@ -117,6 +117,12 @@ export const files: Messages["files"] = {
     stop: "Dừng",
     draft: "Soạn bằng AI",
     commit: "Commit",
+    rulesTitle: "Rule cho message được soạn",
+    rules: "Rule cho commit message",
+    rulesDescription:
+      "Quy tắc mà mọi message được soạn phải theo. Ưu tiên hơn style của các commit gần đây.",
+    rulesPlaceholder:
+      "Ví dụ: Conventional Commits: feat|fix|chore(scope): subject, viết tiếng Anh, subject dưới 72 ký tự.",
   },
   commitDiff: {
     from: "từ {path}",

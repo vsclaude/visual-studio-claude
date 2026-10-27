@@ -61,11 +61,6 @@ export const settings: Messages["settings"] = {
       "Khi một chat xong, lỗi hoặc cần hỏi bạn, lúc cửa sổ đang ở nền.",
     commitDrafts: "Soạn commit message",
     commitDraftsDescription: "Model và tài khoản mà nút Draft ở tab Git dùng.",
-    commitRules: "Rule cho commit message",
-    commitRulesDescription:
-      "Quy tắc mà mọi message được soạn phải theo. Ưu tiên hơn style của các commit gần đây.",
-    commitRulesPlaceholder:
-      "Ví dụ: Conventional Commits: feat|fix|chore(scope): subject, viết tiếng Anh, subject dưới 72 ký tự.",
   },
   plugins: {
     warning:

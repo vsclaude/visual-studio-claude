@@ -2,7 +2,7 @@ import { defineHandler } from "nitro"
 
 import { getOrder } from "../../utils/accounts.ts"
 import { arrivalCard, arrivalScript } from "../../utils/arrival-page.ts"
-import { CREDIT_PACKS, isCreditItem } from "../../utils/billing.ts"
+import { planOf } from "../../utils/billing.ts"
 import {
   html,
   htmlResponse,
@@ -13,21 +13,21 @@ import {
 import { paymentDocument } from "../../utils/payment-page.ts"
 import { qrUrl } from "../../utils/sepay-billing.ts"
 import { sepayConfig } from "../../utils/sepay.ts"
-import { formatCredits } from "../../utils/usage.ts"
 
 /**
  * `GET /pay/<code>` — the page a bank-transfer purchase opens in the browser:
  * the VietQR to scan, and the account, amount and content written out for
  * somebody typing them in by hand. It asks `GET /api/orders/<code>` every few
- * seconds and says so once the transfer has arrived — with the card of credits
- * it added, on this page.
+ * seconds and says so once the transfer has arrived — with a card saying Pro
+ * is on, on this page.
  *
  * In Vietnamese: it is the page for people paying from a Vietnamese bank.
  */
 
 function itemName(item: string): string {
-  if (!isCreditItem(item)) return "Đơn hàng"
-  return `Gói credit ${formatCredits(CREDIT_PACKS[item].credits)}`
+  const plan = planOf(item)
+  if (!plan) return "Đơn hàng"
+  return plan.seats > 1 ? `Vey Pro · ${plan.seats} thiết bị` : "Vey Pro"
 }
 
 /**
@@ -138,8 +138,7 @@ export default defineHandler(async (event) => {
             </p>
           </div>
           <p class="price">
-            <strong>${amount} ₫</strong
-            ><span>Credits không bao giờ hết hạn</span>
+            <strong>${amount} ₫</strong><span>Mua một lần, dùng mãi</span>
           </p>
         </div>
         <div class="grid">
@@ -173,9 +172,11 @@ export default defineHandler(async (event) => {
       </section>
       ${raw(
         arrivalCard({
-          title: "Đã cộng credits",
-          note: "Credits không bao giờ hết hạn. Quay lại Vey Studio để tiếp tục.",
+          title: "Vey Pro đã được bật",
+          note: "Quay lại Vey Studio — Pro đã bật trên máy này. Khoá licence đã được gửi qua email, để kích hoạt trên máy khác.",
           button: "Đóng",
+          amount: "Pro",
+          unit: "mua một lần, dùng mãi",
         })
       )}`,
     html`<script>
@@ -198,16 +199,16 @@ export default defineHandler(async (event) => {
           }, 1500)
         }
       }
-      ${raw(arrivalScript("vi-VN"))}
+      ${raw(arrivalScript())}
       const poll = async () => {
         try {
           const answer = await (await fetch("/api/orders/" + code)).json()
           if (answer.paid) {
             statusText.textContent =
-              "Đã nhận thanh toán. Quay lại Vey Studio — credits đã được cộng vào tài khoản."
+              "Đã nhận thanh toán. Quay lại Vey Studio — Pro đã được bật."
             status.classList.remove("warn")
             status.classList.add("done")
-            showArrival(answer.credits)
+            showArrival()
             return
           }
           if (answer.short > 0) {

@@ -1,7 +1,7 @@
 import { defineHandler } from "nitro"
 
 import { getOrder } from "../../utils/accounts.ts"
-import { CREDIT_PACKS, isCreditItem } from "../../utils/billing.ts"
+import { planOf } from "../../utils/billing.ts"
 
 /**
  * `GET /api/orders/<code>` — whether an order is paid, for the `/pay` page to
@@ -20,9 +20,7 @@ export default defineHandler(async (event) => {
     item: order.item,
     amount: order.amount,
     paid: order.paidBy !== null,
-    // What the pack adds, for the arrival card — the same figure the credits
-    // are added by (`CREDIT_PACKS`), so the card and the balance agree.
-    credits: isCreditItem(order.item) ? CREDIT_PACKS[order.item].credits : 0,
+    pro: planOf(order.item) !== null,
     // A transfer that carried the code but not enough — the page says so
     // rather than waiting forever.
     short: order.short,

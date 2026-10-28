@@ -4,6 +4,11 @@ Plain Claude Code ties a conversation to one login and stops it at that
 login's limit. Vey Studio lets you sign in to as many Claude accounts as you
 have, and move a chat between them without losing it.
 
+::: info
+Every Claude account and every custom API endpoint is free, as many as you
+have. [Vey Pro](/docs/pro) adds more than one project.
+:::
+
 ## Adding an account
 
 1. At the foot of the chats column, under the project's chats, find
@@ -19,10 +24,27 @@ to **Sign in…** again (or **Sign in as another account…** on one that is
 already signed in).
 
 Each account row also shows how much of its five-hour and weekly limit is
-used. The **Credits** row at the bottom is for chats on credits; **Sign in**
-there signs in to Vey Studio.
+used. Under the list, a line says how many days of Pro are left.
 
-![The Accounts section at the foot of the chats column: This account with its five-hour and weekly meters, and Credits](/screenshots/accounts.png)
+![The Accounts section at the foot of the chats column: This account with its five-hour and weekly meters](/screenshots/accounts.png)
+
+## Adding a custom API
+
+1. Click **+** beside **Accounts** and choose **Custom API**.
+2. Pick your provider to fill in the base URL, or type your own.
+3. Paste the API key. Fill in **Model** and **Fast model** if your provider's
+   Claude Code guide names them; left empty, the endpoint decides.
+4. Click **Save**. The endpoint appears in the list and in every chat's account
+   menu, like any account.
+
+To change it later, open its row's menu and choose **Edit endpoint…**. Leave
+the key empty to keep the one already saved.
+
+::: warning
+Use endpoints you have the right to use — your provider's own plan, or your
+company's gateway. Services reselling access to other people's Claude accounts
+break Anthropic's terms.
+:::
 
 ## Choosing the account a chat runs on
 
@@ -35,12 +57,9 @@ When an account reaches its limit, open the chat's **Account** menu and pick
 another one. The conversation moves with it: your next message carries on with
 everything said so far — no pasting, no starting over.
 
-If every account is out of its window, pick **Pay with credits** in the same
-menu. See [Credits](/docs/credits).
-
 ::: info
 Switching is always your choice. Vey Studio never moves a chat to another
-account, or onto credits, by itself.
+account by itself.
 :::
 
 ## How much of a plan is left

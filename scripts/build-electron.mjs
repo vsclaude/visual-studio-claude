@@ -83,7 +83,8 @@ const main = {
     js: `const __importMetaUrl = require("node:url").pathToFileURL(__filename).href;`,
   },
   // A URL, not a secret: anything defined here is readable in the bundle.
-  // Read back by `freeAiUrl`, where the variable at launch still wins.
+  // Read back by `serverUrl` (`main/studio-server.ts`), where the variable at
+  // launch still wins.
   // `VSCLAUDE_AI_URL` is the same variable under the app's old name, still
   // read so a `.env` or a CI variable written before the rename keeps working.
   define: {

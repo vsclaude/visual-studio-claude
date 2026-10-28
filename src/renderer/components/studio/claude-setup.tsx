@@ -3,8 +3,8 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Check,
-  Coins,
   Copy,
+  Crown,
   Download,
   Gauge,
   KeyRound,
@@ -628,8 +628,7 @@ function SignInStep({ versions }: { versions: ClaudeVersions | undefined }) {
  * The three problems the app exists to solve, not its panels: several chats
  * and the diffs beside them are what the tour shows anyway. Each line promises
  * no more than the code does — moving a chat is a button somebody presses
- * (`limitWayOut`), not a switch made for them, and credits are offered only
- * by a build with a credits server, hence "can".
+ * (`limitWayOut`), not a switch made for them.
  */
 const WELCOME_POINTS: {
   icon: LucideIcon
@@ -646,10 +645,11 @@ const WELCOME_POINTS: {
     title: "onboarding.setup.switchTitle",
     detail: "onboarding.setup.switchDetail",
   },
+  // Pro, said once up front (`shared/license.ts`).
   {
-    icon: Coins,
-    title: "onboarding.setup.creditsTitle",
-    detail: "onboarding.setup.creditsDetail",
+    icon: Crown,
+    title: "onboarding.setup.proTitle",
+    detail: "onboarding.setup.proDetail",
   },
 ]
 

@@ -444,19 +444,19 @@ figcaption {
   gap: 0.3rem;
 }
 .toolbar .model,
-.toolbar .credits {
+.toolbar .personal {
   color: var(--ink);
 }
 .claude {
   display: inline-flex;
   color: #d97757;
 }
-.credits > svg {
+.personal > svg {
   width: 0.9rem;
   height: 0.9rem;
 }
-/* The account the chat runs on: Work at its limit, then Credits, in one
-   slot. The last frame is Credits, so Work is hidden unless animated. */
+/* The account the chat runs on: Work at its limit, then Personal, in one
+   slot. The last frame is Personal, so Work is hidden unless animated. */
 .toolbar > .stack-in {
   display: inline-grid;
 }
@@ -740,84 +740,49 @@ section {
   height: auto;
 }
 
-/* The packs as the studio's Buy credits dialog draws them: a payment toggle,
-   then a card per pack — a coin, the price, what it buys, a bonus pill and
-   the button — with the popular one raised, ringed and filled. Separate
-   cards rather than the page's shared-border grid, since that is the
-   dialog's look; the column count follows the method (four, or three). */
+/* The plans, as the studio's Pro dialog has them: Free and the three device
+   plans side by side, the popular one raised, ringed and filled the way the
+   dialog's button is. Separate cards rather than the page's shared-border
+   grid, since that is the dialog's look. Nothing here buys — that is the
+   app's. */
 .buy {
-  max-width: 1040px;
+  max-width: 1180px;
   margin: 0 auto;
 }
-.methods {
-  display: flex;
-  width: fit-content;
-  margin: 0 auto 1.6rem;
-  padding: 3px;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 0.06);
-}
-.methods button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  height: 1.85rem;
-  padding: 0 0.8rem;
-  border-radius: 6px;
-  color: rgb(244 244 245 / 0.6);
-  font-size: 0.78rem;
-  font-weight: 500;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-.methods button:hover {
-  color: var(--ink);
-}
-.methods button.on {
-  color: var(--ink);
-  background: rgb(255 255 255 / 0.09);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-}
-.methods i,
-.pack-flag i {
-  display: inline-flex;
-}
-.methods svg {
-  width: 0.85rem;
-  height: 0.85rem;
-}
-.packs {
+/* Free and the three device plans. Four across where there is room, two by
+   two on a laptop's narrower window, one under the other on a phone. */
+.plans {
   display: grid;
-  grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: stretch;
 }
-.pack {
+.plan {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 0.5rem;
-  padding: 1.25rem;
+  padding: 1.5rem;
   border: 1px solid var(--edge);
   border-radius: 12px;
   background: var(--raised);
-  text-align: center;
 }
-/* Taller than its neighbours rather than scaled, as in the dialog. */
-.pack.popular {
-  margin: -0.5rem 0;
-  padding-block: 1.75rem;
+.plan.pro {
+  border-color: rgb(139 92 246 / 0.3);
+}
+/* The plan most people want, ringed and lifted the way the dialog marks it. */
+.plan.popular {
   border-color: rgb(139 92 246 / 0.6);
   background: linear-gradient(rgb(139 92 246 / 0.1), var(--raised));
   box-shadow:
     0 0 0 1px rgb(139 92 246 / 0.4),
     0 10px 24px -6px rgb(139 92 246 / 0.15);
 }
-.pack-flag {
+.plan-flag {
   position: absolute;
   top: -0.65rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -830,50 +795,87 @@ section {
   white-space: nowrap;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
 }
-.pack-flag svg {
+.plan-flag i {
+  display: inline-flex;
+}
+.plan-flag svg {
   width: 0.625rem;
   height: 0.625rem;
 }
-.pack-coin {
-  display: inline-flex;
-}
-.pack-price {
+.plan-name {
   margin: 0;
-  font-size: 1.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.plan-price {
+  margin: 0;
+  font-size: 1.6rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
-.pack-credits {
-  margin: 0;
+.plan-price span {
+  margin-left: 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.plan-sub {
+  margin: -0.25rem 0 0;
   color: var(--muted);
   font-size: 0.75rem;
 }
-.pack-bonus {
-  margin: 0;
-  padding: 0.12rem 0.5rem;
-  border-radius: 999px;
-  background: rgb(245 158 11 / 0.15);
-  color: #fbbf24;
-  font-size: 0.625rem;
-  font-weight: 600;
+.plan ul {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: var(--body);
+  font-size: 0.86rem;
+}
+.plan li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.plan li i {
+  display: inline-flex;
+  flex: none;
+  margin-top: 0.2rem;
+  color: var(--accent-soft);
+}
+.plan li svg {
+  width: 0.8rem;
+  height: 0.8rem;
 }
 /* The dialog's button, without its action: buying is the app's. */
-.pack-buy {
+.plan-buy {
   margin-top: auto;
-  width: 100%;
-  padding: 0.5rem 0;
+  padding: 0.55rem 0;
   border: 1px solid var(--edge-strong);
   border-radius: 7px;
   background: rgb(255 255 255 / 0.02);
+  text-align: center;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: default;
 }
-.pack.popular .pack-buy {
+.plan.popular .plan-buy {
   border-color: transparent;
   background: linear-gradient(to right, #8b5cf6, #fbbf24);
   color: #fff;
+}
+@media (max-width: 1100px) {
+  .plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 1.25rem;
+  }
 }
 .pay {
   margin: 1.4rem auto 0;
@@ -1281,14 +1283,11 @@ footer .copy {
   .grid > .cell:last-child {
     border-bottom: 0;
   }
-  /* Two by two on a narrow screen; the popular pack's flag needs the
-     row gap to sit in. */
-  .packs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 1.5rem;
-  }
-  .pack.popular {
-    margin: 0;
+  /* One under the other on a narrow screen; the popular plan's flag needs
+     the row gap to sit in. */
+  .plans {
+    grid-template-columns: 1fr;
+    row-gap: 1.25rem;
   }
   footer .wrap {
     grid-template-columns: 1fr 1fr;

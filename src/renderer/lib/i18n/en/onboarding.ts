@@ -37,9 +37,9 @@ export const onboarding = {
     switchTitle: "Switch without starting over",
     switchDetail:
       "A chat that hits its limit continues on another account, conversation and all.",
-    creditsTitle: "Keep going past the limit",
-    creditsDetail:
-      "With every plan used up, a chat can run on credits instead of waiting hours.",
+    proTitle: "Vey Pro, when you want more",
+    proDetail:
+      "Every project you work on, bought once. Every Claude account and custom API endpoint stays free.",
     copyCommand: "Copy the command",
   },
   tour: {
@@ -56,7 +56,7 @@ export const onboarding = {
       "Each chat is a claude conversation in one project's directory. Several can run at once, and the row in the column says which are answering and which are waiting on you.",
     accountsTitle: "Your accounts",
     accountsBody:
-      "Every Claude account you sign in to, with how much of its five-hour window is used. + adds another. A chat stopped by its limit offers to continue on one with room, or on credits.",
+      "Every Claude account you sign in to, with how much of its five-hour window is used. + adds another. A chat stopped by its limit offers to continue on one with room.",
     explorerTitle: "The Explorer",
     explorerBody:
       "Every file in the checkout, and under Git, what has changed since the last commit and the commits before it.",

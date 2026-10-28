@@ -1,106 +1,45 @@
 import { describe, expect, test } from "bun:test"
 
-import { moneyOf, paymentEmail, welcomeEmail } from "../server/utils/mail.ts"
-import { CREDITS_PER_USD } from "../server/utils/usage.ts"
+import { moneyOf, proEmail } from "../server/utils/mail.ts"
 
-/** The welcome and thank-you mails, as `sendEmail` is handed them. */
-
-const USER = {
-  uid: "google:1",
-  email: "an@example.com",
-  name: "An",
-  picture: null,
-}
+/** The Vey Pro mail, as `sendEmail` is handed it. */
 
 const ORIGIN = "https://vsclaude.example"
 
-describe("welcomeEmail", () => {
-  test("goes to the user's address, by name", () => {
-    const email = welcomeEmail(USER, ORIGIN)
-    expect(email?.to).toBe("an@example.com")
-    expect(email?.text).toStartWith("Chào An,")
-    expect(email?.html).toContain("Chào An,")
+describe("proEmail", () => {
+  const purchase = {
+    to: "an@example.com",
+    key: "VEY-AB12-CD34-EF56-GH78",
+    seats: 3,
+    amount: 199_000,
+    order: "VSC12345678",
+  }
+
+  test("goes to the buyer, with the key in it", () => {
+    const email = proEmail(purchase, ORIGIN)
+    expect(email.to).toBe("an@example.com")
+    expect(email.text).toContain("VEY-AB12-CD34-EF56-GH78")
+    expect(email.html).toContain("VEY-AB12-CD34-EF56-GH78")
+  })
+
+  test("says how many devices, and how to use it on another", () => {
+    const email = proEmail(purchase, ORIGIN)
+    expect(email.text).toContain("3 thiết bị")
+    expect(email.text).toContain("Đã có khoá?")
+  })
+
+  test("says what was paid, the order code, and the refund window", () => {
+    const email = proEmail(purchase, ORIGIN)
+    expect(email.text).toContain(moneyOf(199_000, "VND")!)
+    expect(email.text).toContain("Mã đơn hàng: VSC12345678")
+    expect(email.html).toContain("Số tiền đã thanh toán")
+    expect(email.text).toContain("7 ngày")
   })
 
   test("draws the logo from this server, as a PNG", () => {
-    expect(welcomeEmail(USER, `${ORIGIN}/`)?.html).toContain(
-      `src="${ORIGIN}/email-logo.png"`
+    expect(proEmail(purchase, `${ORIGIN}/`).html).toContain(
+      `${ORIGIN}/email-logo.png`
     )
-  })
-
-  test("a user with no name is greeted anyway", () => {
-    expect(welcomeEmail({ ...USER, name: null }, ORIGIN)?.text).toStartWith(
-      "Chào bạn,"
-    )
-  })
-
-  test("a user with no email is sent nothing", () => {
-    expect(welcomeEmail({ ...USER, email: null }, ORIGIN)).toBe(null)
-  })
-
-  test("a name is escaped in the markup", () => {
-    const email = welcomeEmail({ ...USER, name: "<b>An</b>" }, ORIGIN)
-    expect(email?.html).toContain("Chào &lt;b&gt;An&lt;/b&gt;")
-    expect(email?.html).not.toContain("<b>An</b>")
-  })
-})
-
-describe("paymentEmail", () => {
-  test("says what was paid and what was added", () => {
-    const email = paymentEmail(
-      USER,
-      {
-        credits: 25 * CREDITS_PER_USD,
-        amount: 50_000,
-        currency: "VND",
-        order: "VSC12345678",
-      },
-      ORIGIN
-    )
-    const paid = moneyOf(50_000, "VND")!
-    expect(email?.text).toContain("$25.00 credits")
-    expect(email?.text).toContain(paid)
-    expect(email?.html).toContain("Số tiền đã thanh toán")
-    expect(email?.html).toContain(paid)
-    expect(email?.html).toContain("$25.00")
-  })
-
-  test("carries the order code, for the buyer to quote back", () => {
-    const email = paymentEmail(
-      USER,
-      { credits: 1, amount: 20_000, currency: "VND", order: "VSC12345678" },
-      ORIGIN
-    )
-    expect(email?.text).toContain("Mã đơn hàng: VSC12345678")
-    expect(email?.html).toContain("Mã đơn hàng")
-    expect(email?.html).toContain("VSC12345678")
-  })
-
-  test("an unknown charge leaves the amount out", () => {
-    const email = paymentEmail(
-      USER,
-      {
-        credits: 25 * CREDITS_PER_USD,
-        amount: null,
-        currency: null,
-        order: "txn_01abc",
-      },
-      ORIGIN
-    )
-    expect(email?.text).toContain(
-      "Chúng tôi đã cộng $25.00 credits vào tài khoản của bạn."
-    )
-    expect(email?.html).not.toContain("Số tiền đã thanh toán")
-  })
-
-  test("a user with no email is sent nothing", () => {
-    expect(
-      paymentEmail(
-        { ...USER, email: null },
-        { credits: 1, amount: 1, currency: "VND", order: "VSC1" },
-        ORIGIN
-      )
-    ).toBe(null)
   })
 })
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Pin, PinOff } from "lucide-react"
 
-import { watchAccount } from "@/lib/account"
+import { watchPro } from "@/lib/license"
 import { applyAppearance } from "@/lib/appearance"
 import { applyLanguage, useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -13,7 +13,7 @@ import { useChats } from "@/lib/chat/store"
 import { IconButton } from "./icon-button"
 import { HAS_TRAFFIC_LIGHTS } from "./title-bar"
 import { ChatPane } from "./chat/chat-pane"
-import { CreditsDialog } from "./credits-dialog"
+import { ProDialog } from "./pro-dialog"
 
 /**
  * One chat in a window of its own — what `?chat=<id>` on the renderer's URL
@@ -43,9 +43,8 @@ export function ChatWindow({ chatId }: { chatId: string }) {
     void useStudio.getState().init()
     void useSettings.getState().restore()
     void useClaudeProfiles.getState().refresh()
-    // For the composer's Studio AI row, which the studio window learns of through
-    // its rail's account menu — a window this one has none of.
-    watchAccount()
+    // For the Pro dialog, which a second `Add project` can open here too.
+    watchPro()
     void Promise.all([
       useChats.getState().refresh(),
       // Before `select`, which moves the column's active project and writes
@@ -138,8 +137,8 @@ export function ChatWindow({ chatId }: { chatId: string }) {
           </div>
         )}
       </div>
-      {/* The composer's Studio AI row opens it, here as in the studio. */}
-      <CreditsDialog />
+      {/* The limit line's way out opens it, here as in the studio. */}
+      <ProDialog />
     </div>
   )
 }

@@ -158,11 +158,11 @@ imports may reach `electron`.
   the version and the script's path are arguments — so `test/updates.ts` can
   import `isNewer`. `docs/design.md` § Updating has the rest.
 - **`telemetry.ts`** — the anonymous usage counts, posted from main to the
-  free AI's server (`POST /api/telemetry`, rows of its D1 `app_events`):
+  studio's own server (`POST /api/telemetry`, rows of its D1 `app_events`):
   `app_opened` and a quarter-hourly `heartbeat` of focused seconds, under a
   random install id, with the version and OS and **nothing about what is
   worked on**. A dev build reports only to a localhost server; off without
-  `freeAiUrl()`, off by `TELEMETRY_KEY`. `docs/design.md` § Usage counts.
+  `serverUrl()`, off by `TELEMETRY_KEY`. `docs/design.md` § Usage counts.
 - **`tsserver.ts`** — one per Explorer root, using _that root's own_
   `typescript`, and nothing if it has none.
 - **`mcp-servers.ts`** — which MCP servers the user's own `claude` has, asked of
@@ -249,6 +249,33 @@ learnings…`, its dialog, `main/learnings.ts`, `shared/learnings.ts` and the
   export** (`plugins/chat-export/`, the chat row's export items) and the
   **usage dashboard** (`plugins/usage/`, the rail's `Usage` button) are built-in
   plugins. `docs/design.md` § Plugins has the argument.
+
+- **`license.ts`** — **Vey Pro**, the one thing sold: Free is every account
+  Anthropic signs in (and `Continue with …`) in **one project** — Pro adds the
+  rest (`canAddProject`, on adding only, worktrees not counted; checked by
+  `addProject` in `studio.tsx` and `IPC.addFolder`). The **custom API** is
+  free — a profile that is an Anthropic-compatible endpoint, not a login
+  (`claude-api.ts`: its key sealed by `Host.seal` under
+  `claudeApi.token.<id>`, never on the profile list; `accountEnv` adds the
+  endpoint by directory). Bought once by bank transfer through the studio's own
+  server (`studio-server.ts`), **per device** — one, three or five
+  (`PRO_PLANS`) — with **no sign-in** (`docs/design.md` § Signing in,
+  removed): a purchase makes a licence key `VEY-XXXX-…`, mailed to the buyer,
+  pasted on other devices and freed by `Deactivate this device`. What a device
+  keeps is an activation `VEY2.<payload>.<signature>`, Ed25519-signed by the
+  server and **verified here offline** against `LICENSE_PUBLIC_KEY` in
+  `shared/license.ts` **and this device's id** (`pro.device`, not
+  telemetry's), kept as `pro.activation` / `pro.key`; the launch checks in,
+  which is how a refunded key ends.
+  **There is no trial** (an older build's `pro.trialStartedAt` is left
+  unread); the title bar's `PlanBadge` says `Free` or `Pro`. The dialog is
+  `pro-dialog.tsx`,
+  the store `lib/license.ts`. **There are no credits and no free AI any
+  more** — chats run on the user's own accounts and nothing else
+  (`docs/design.md` § Credits and the free AI, removed). The server half is
+  `vsclaude-cloud/server/utils/license.ts` (README § Vey Pro there); the
+  private key is `license-private-key.local.pem`, gitignored.
+  `docs/design.md` § Pro. (`test/license.ts`, `test/claude-api.ts`)
 
 - **There is no `Preview` tab** in the dock any more, and so no `webviewTag`
   (`docs/design.md` § Preview, removed). `saveTextFile` is the one write
@@ -413,7 +440,7 @@ one `ProjectDialogs` mounted by `studio.tsx`. The icons **drag to reorder**
 (`test/folder-order.ts`). The column is a header (name,
 path, branch, `+ Chat`), the chats in **Needs you / Running / Recent**
 (`columnSections` in `lib/chat/column.ts`, tested), and an **Accounts** foot —
-each account's five-hour bar and the credits left (`project/accounts.tsx`),
+each account's five-hour bar (`project/accounts.tsx`),
 resizable by its top edge and folded by its heading,
 and where accounts are added, signed in, renamed and removed: **there is no
 Settings › Claude** (nor Settings › Chats — the commit-draft model is the gear
@@ -433,7 +460,7 @@ and cleared by the next main-loop `user` line, a move that carries the turn on
 (`account` with `resumed`), `clear` or `edit`; such a chat is
 a card with **`Continue with …`** (`limitWayOut`, tested), which moves it
 to the first other account with room and sends `Continue.` — or, with none,
-offers to buy credits (or sign in for them); the transcript's last limit line
+offers nothing; the transcript's last limit line
 carries the same action (`chat/chat-limit.tsx`). A project's icon
 carries one badge (`railBadgeOf`). The system bar still counts every chat with
 `activityOf`. Out of the window, that is a notification — see
@@ -621,10 +648,9 @@ and an open fold's rows with like calls merged (`test/tool-row.ts`),
 `lib/chat/unread.ts` (`test/chat-unread.ts`),
 `lib/chat/column.ts` — the projects column's sections, states, rail badges
 and `Continue with …` target (`test/chat-column.ts`),
-`lib/chat/credits-refusal.ts` — which failed turns are drawn as a way to buy
-credits rather than as an error line (`test/credits-refusal.ts`), with
-`shared/credits.ts`'s `creditsLeft`, the share every credits bar empties by
-(`test/credits.ts`),
+`shared/license.ts` with `main/license.ts` — Vey Pro's key, status and gate
+(`test/license.ts`), and `shared/studio-server.ts`'s address check
+(`test/studio-server.ts`),
 `lib/chat/reply.ts` — a selected run of the transcript as the quote
 the `Reply` button beside it types into the composer (`chat-reply.tsx`,
 `test/chat-reply.ts`),

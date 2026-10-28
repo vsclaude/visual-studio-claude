@@ -7,12 +7,7 @@
  */
 
 import type { PluginInfo, PluginInstall, PluginSource } from "./plugins"
-import type {
-  CreditPack,
-  PaymentMethod,
-  PurchaseResult,
-  StudioAccount,
-} from "./credits"
+import type { LicenseResult, ProStatus, PurchaseResult } from "./license"
 
 /**
  * One folder the workspace has been pointed at — a repository on this machine,
@@ -700,20 +695,6 @@ export type TurnUsage = {
    * from last week claiming its turns were instant.
    */
   durationMs: number | null
-  /**
-   * What the turn took off the Studio AI balance, in credits
-   * (`creditsOf` in `shared/credits.ts`), for a turn that ran on it.
-   *
-   * Written on the line rather than worked out when it is drawn, because the
-   * chat can move between a login and credits mid-conversation and the line has
-   * to keep saying what *that* turn was paid with. Counted per model before
-   * being added up, as the server charges: a Sonnet turn whose subagent ran on
-   * Haiku is two prices, not one.
-   *
-   * Null for a turn on the user's own `claude` — nothing was charged — and for
-   * every line written before this existed.
-   */
-  credits: number | null
 }
 
 /**
@@ -1239,7 +1220,7 @@ export const DEFAULT_CHAT_EFFORT: ChatEffort = "medium"
  * aliases in this file, and the trouble with it is not that it went stale — it
  * is that it was never right for anybody in particular: which models an install
  * offers is a property of that account and that CLI version, so one machine's
- * list has `Opus (1M context)` and a Fable that needs credits while another's
+ * list has `Opus (1M context)` and a Fable another's
  * has neither, and a hand-written `fable` was an alias no row on this machine's
  * list actually names. `agentModels` asks, and `CHAT_MODEL_FALLBACK` is what a
  * picker draws when the asking failed.
@@ -1514,6 +1495,34 @@ export type ClaudeProfile = {
    * do it.
    */
   configDir: string
+  /**
+   * Set for a **custom API** profile — an Anthropic-compatible endpoint
+   * rather than a login (`main/claude-api.ts`). Its key is not
+   * here: it is sealed in main and never crosses back. Absent for every
+   * profile that signs in.
+   */
+  api?: ClaudeApiEndpoint
+}
+
+/** Where a custom API profile's turns go, and the models they ask for. */
+export type ClaudeApiEndpoint = {
+  /** `ANTHROPIC_BASE_URL`. */
+  baseUrl: string
+  /** What `opus` and `sonnet` resolve to; empty leaves the endpoint's own. */
+  model: string
+  /** What `haiku` and the CLI's background calls use; empty is `model`. */
+  fastModel: string
+}
+
+/**
+ * A custom API profile to add or change. `token` null keeps the key already
+ * sealed — an edit that only renames the model need not ask for it again.
+ */
+export type ClaudeApiProfileInput = {
+  id: string
+  name: string
+  api: ClaudeApiEndpoint
+  token: string | null
 }
 
 /**
@@ -2578,6 +2587,14 @@ export type DesktopApi = {
    */
   saveClaudeProfiles: (profiles: ClaudeProfile[]) => Promise<ClaudeProfile[]>
   /**
+   * Adds or changes a custom API profile (`main/claude-api.ts`) — a channel of
+   * its own because it carries a key, which `saveClaudeProfiles`' list must
+   * never hold. Answers with the stored list.
+   */
+  saveClaudeApiProfile: (
+    input: ClaudeApiProfileInput
+  ) => Promise<ClaudeProfile[]>
+  /**
    * Whether one of those directories is signed in, and as whom — `claude auth
    * status` run with that `CLAUDE_CONFIG_DIR`, and with none at all for the
    * empty string, which is the account a chat with no profile picked uses.
@@ -2677,46 +2694,34 @@ export type DesktopApi = {
    */
   setBadgeCount: (count: number) => Promise<void>
   /**
-   * Signs in with Google, in the user's browser, on the free AI's server's
-   * `/signin` page — see `main/google-sign-in.ts` for why it is not a window
-   * of this app. Resolves with the server's session token, which the renderer
-   * keeps; rejects with no server configured, when the page
-   * reports a failure, or after five minutes.
+   * Whether this build has a studio server at all — `STUDIO_SERVER_URL`, or
+   * `VEYSTUDIO_AI_URL` in main's environment. Asked once: with neither, the
+   * purchase of Pro and the key field are drawn nowhere.
    */
-  signInWithGoogle: () => Promise<string>
-  /** Ends a sign-in that is waiting on the browser, as cancelled. For a tab
-   * that was closed before it answered. */
-  cancelSignInWithGoogle: () => Promise<void>
+  studioServerAvailable: () => Promise<boolean>
   /**
-   * Whether this build has a server for the free AI at all — `FREE_AI_URL`, or
-   * `VEYSTUDIO_AI_URL` in main's environment. Asked once: with neither, the free
-   * AI is drawn nowhere.
+   * Vey Pro — `shared/license.ts`. Where this device stands: an activation
+   * kept in the workspace's settings and checked here against the server's
+   * public key and this device's id, or Free.
    */
-  freeAiAvailable: () => Promise<boolean>
+  proStatus: () => Promise<ProStatus>
   /**
-   * The signed-in user's session token, handed over at launch and at sign-in,
-   * or null on sign-out. Main exchanges it for the hour-long access token the
-   * free AI's requests are sent with, and renews that itself
-   * (`main/free-ai.ts`). Resolves with whether a free turn can now run.
+   * Opens the purchase of Pro for `seats` devices in the browser — the
+   * server's VietQR page, for this device, with the key mailed to `email`.
+   * The licence is issued when the transfer lands; `claimLicense` fetches it.
    */
-  setFreeAiToken: (token: string | null) => Promise<boolean>
+  buyLicense: (seats: number, email: string) => Promise<PurchaseResult>
   /**
-   * The signed-in user's day and credits, asked of the free AI's server
-   * with the same token — or null while signed out, with no server, or when
-   * the server could not be reached (`main/free-ai.ts`).
+   * Asks the server where this device stands and keeps the answer — the
+   * licence a purchase here bought, once paid; or, with a key held, the
+   * launch's check-in, which is how a refunded key ends. Rejects with the
+   * sentence to show when a licence arrived that does not verify.
    */
-  studioAccount: () => Promise<StudioAccount | null>
-  /**
-   * Opens a purchase of a credit pack in the browser — a VietQR page for a
-   * bank transfer, Paddle's checkout for a card. The server creates it with
-   * the user's uid on it, so it lands on this account. Resolves once the
-   * browser is asked to open it, not when the purchase is done — the credits
-   * arrive when the payment provider tells the server.
-   */
-  buyCredits: (
-    item: CreditPack["id"],
-    method: PaymentMethod
-  ) => Promise<PurchaseResult>
+  claimLicense: () => Promise<ProStatus>
+  /** A licence key pasted into the Pro dialog, put on this device. */
+  activateLicense: (key: string) => Promise<LicenseResult>
+  /** This device taken off its key, freeing the seat for another. */
+  deactivateLicense: () => Promise<LicenseResult>
   /**
    * The left column's Search: `query` across every file in the workspace and
    * everything said in every chat — see `WorkspaceSearch`.
@@ -3118,6 +3123,7 @@ export const IPC = {
   removeMcpServer: "mcp:remove",
   listClaudeProfiles: "claude-profiles:list",
   saveClaudeProfiles: "claude-profiles:save",
+  saveClaudeApiProfile: "claude-profiles:save-api",
   claudeAccount: "claude-profiles:account",
   claudeVersions: "claude:versions",
   claudeLogin: "claude-profiles:login",
@@ -3131,12 +3137,12 @@ export const IPC = {
   setAlwaysOnTop: "window:set-always-on-top",
   isAlwaysOnTop: "window:is-always-on-top",
   setBadgeCount: "app:set-badge-count",
-  signInWithGoogle: "auth:sign-in-google",
-  cancelSignInWithGoogle: "auth:cancel-sign-in-google",
-  freeAiAvailable: "free-ai:available",
-  setFreeAiToken: "free-ai:token",
-  studioAccount: "free-ai:account",
-  buyCredits: "free-ai:buy",
+  studioServerAvailable: "studio-server:available",
+  proStatus: "pro:status",
+  buyLicense: "pro:buy",
+  claimLicense: "pro:claim",
+  activateLicense: "pro:activate",
+  deactivateLicense: "pro:deactivate",
   searchWorkspace: "search:workspace",
   replaceInFiles: "search:replace",
   deleteChat: "chats:delete",

@@ -8,10 +8,10 @@ import {
   type ChatImage,
   type ChatPlace,
   type ChatSeed,
+  type ClaudeApiProfileInput,
   type ClaudeLoginRequest,
   type ClaudeProfile,
   type FileDiff,
-  type PlanUsage,
   type FileIndexEntry,
   type ReplaceResult,
   type SearchFilter,
@@ -20,26 +20,32 @@ import {
   type ChatAnswer,
   type ChatOptions,
 } from "../shared/api"
-import { FREE_PROFILE_ID } from "../shared/free-ai"
 import type { PluginFile, PluginSource } from "../shared/plugins"
 import { pathFilterOf } from "../shared/search"
 import { agentCommands } from "./agent-commands"
 import { agentModels } from "./agent-models"
 import { claudeAccount } from "./claude-auth"
+import {
+  apiEnv,
+  apiTokenKey,
+  isApiDir,
+  setApiEnvs,
+  validBaseUrl,
+} from "./claude-api"
 import { claudeVersions } from "./claude-version"
 import { claudeBinary } from "./claude-bin"
 import { dataDir, migrateChatFiles, migrateLegacyDataDir } from "./data-dir"
 import { Chats } from "./chat"
 import { findFavicon, MAX_FAVICON_BYTES } from "./favicon"
+import { openServerPage, serverCall, serverUrl } from "./studio-server"
 import {
-  freeAiDir,
-  freeAiReady,
-  freeAiUrl,
-  openServerPage,
-  setFreeAiDir,
-  setFreeAiToken,
-  studioAccount,
-} from "./free-ai"
+  activateLicense,
+  claimLicense,
+  deactivateLicense,
+  deviceId,
+  proStatus,
+} from "./license"
+import { canAddProject } from "../shared/license"
 import * as files from "./files"
 import { MAX_INDEXED_FILES } from "./files"
 import {
@@ -69,7 +75,6 @@ import {
   workingTree,
 } from "./git"
 import { ChatNotices, noticeText, type ChatNotice } from "./notify"
-import { cancelSignInWithGoogle, signInWithGoogle } from "./google-sign-in"
 import { installedMcpServers, removeMcpServer } from "./mcp-servers"
 import { planUsage } from "./plan-usage"
 import {
@@ -91,13 +96,7 @@ import type { Host } from "./host"
 import { expandHome, quote, spawnEnvironment } from "./shell-env"
 import { systemUsage } from "./system-usage"
 import { startTelemetry, type Telemetry } from "./telemetry"
-import {
-  FREE_AI_DIR,
-  PLUGIN_DATA_DIR,
-  PLUGINS_DIR,
-  Store,
-  WORKSPACE_DIR,
-} from "./store"
+import { PLUGIN_DATA_DIR, PLUGINS_DIR, Store, WORKSPACE_DIR } from "./store"
 import { installedShells } from "./shells"
 import { TerminalManager } from "./terminal"
 import { TsServers } from "./tsserver"
@@ -232,27 +231,38 @@ export function createIpc(host: Host): {
   const telemetry = startTelemetry({
     version: host.version,
     packaged: host.packaged,
-    serverUrl: freeAiUrl(),
+    serverUrl: serverUrl(),
     focused: host.focused,
     fetch: host.fetch,
     getSetting: (key) => store.getSetting(key),
     setSetting: (key, value) => store.setSetting(key, value),
     enabled: async () => (await store.getSetting(TELEMETRY_KEY)) !== "off",
   })
-  setFreeAiDir(path.join(dataDir(), WORKSPACE_DIR, FREE_AI_DIR))
+
+  /** The stored profiles, for `Chats` — which resolves a chat's `profileId`
+   * to a directory through this list, and looks for a session's transcript in
+   * every directory on it. */
+  const chatProfiles = (): Promise<ClaudeProfile[]> => listProfiles()
 
   /**
-   * The stored profiles and the free AI as one more, for `Chats` — which
-   * resolves a chat's `profileId` to a directory through this list, and looks
-   * for a session's transcript in every directory on it. Not what Settings is
-   * sent: the free AI is nothing there can rename or delete.
+   * The profiles, with every custom API profile's endpoint handed to
+   * `claude-api.ts` on the way — so whatever reads the list before starting a
+   * `claude` starts it on the endpoint as it now stands. A key the keychain
+   * can no longer open holds nothing, and its row says why
+   * (`IPC.claudeAccount`).
    */
-  const chatProfiles = async (): Promise<ClaudeProfile[]> => {
-    const stored = await store.listClaudeProfiles()
-    const dir = freeAiDir()
-    return dir
-      ? [...stored, { id: FREE_PROFILE_ID, name: "Credits", configDir: dir }]
-      : stored
+  const listProfiles = async (): Promise<ClaudeProfile[]> => {
+    const profiles = await store.listClaudeProfiles()
+    const envs = new Map<string, Record<string, string>>()
+    for (const profile of profiles) {
+      if (!profile.api) continue
+      const sealed = await store.getSetting(apiTokenKey(profile.id))
+      const token = sealed ? host.unseal(sealed) : null
+      if (token)
+        envs.set(expandHome(profile.configDir), apiEnv(profile.api, token))
+    }
+    setApiEnvs(envs)
+    return profiles
   }
 
   const handlers = new Map<string, Handler>()
@@ -287,8 +297,7 @@ export function createIpc(host: Host): {
     profileId: string | null
   ): Promise<string | null> => {
     if (!profileId) return null
-    if (profileId === FREE_PROFILE_ID) return freeAiDir()
-    const profile = (await store.listClaudeProfiles()).find(
+    const profile = (await listProfiles()).find(
       (entry) => entry.id === profileId
     )
     return profile ? expandHome(profile.configDir) : null
@@ -403,18 +412,18 @@ export function createIpc(host: Host): {
   handle(
     IPC.planUsage,
     async (_event, profileId: string | null, fresh: boolean) => {
-      // The free AI spends this app's server, not a claude.ai plan, so there
-      // are no windows to draw — and no plan login to ask about them.
-      if (profileId === FREE_PROFILE_ID) {
+      const dir = await configDirOf(profileId)
+      // An endpoint that is not Anthropic's has no plan windows to read.
+      if (isApiDir(dir)) {
         return {
           available: false,
           subscription: null,
           windows: [],
           error: null,
           at: new Date().toISOString(),
-        } satisfies PlanUsage
+        }
       }
-      return planUsage(await configDirOf(profileId), fresh === true)
+      return planUsage(dir, fresh === true)
     }
   )
 
@@ -443,7 +452,7 @@ export function createIpc(host: Host): {
       : null
   }
 
-  handle(IPC.listClaudeProfiles, () => store.listClaudeProfiles())
+  handle(IPC.listClaudeProfiles, () => listProfiles())
 
   handle(IPC.saveClaudeProfiles, (_event, profiles: ClaudeProfile[]) =>
     // `~` expanded here, like `addFolder`'s path field: the SDK spawns
@@ -453,7 +462,7 @@ export function createIpc(host: Host): {
     // directory named `~` relative to the turn's cwd, not the user's home.
     // Nothing types one any more (the store names the directory itself), but
     // the profiles that field wrote are on people's disks.
-    store.saveClaudeProfiles(
+    saveProfiles(
       profiles.map((profile) => ({
         ...profile,
         configDir: expandHome(profile.configDir),
@@ -461,9 +470,82 @@ export function createIpc(host: Host): {
     )
   )
 
-  handle(IPC.claudeAccount, (_event, configDir: string) =>
-    claudeAccount(configDir)
+  /** Writes the list, drops the keys of profiles no longer on it, and
+   * re-reads the endpoints. */
+  const saveProfiles = async (
+    profiles: ClaudeProfile[]
+  ): Promise<ClaudeProfile[]> => {
+    const before = await store.listClaudeProfiles()
+    const saved = await store.saveClaudeProfiles(profiles)
+    for (const gone of before) {
+      if (gone.api && !saved.some((profile) => profile.id === gone.id)) {
+        await store.setSetting(apiTokenKey(gone.id), "")
+      }
+    }
+    return listProfiles().then(() => saved)
+  }
+
+  handle(
+    IPC.saveClaudeApiProfile,
+    async (_event, input: ClaudeApiProfileInput) => {
+      if (!validBaseUrl(input.api.baseUrl)) {
+        throw new Error(
+          "The base URL must be https:// (or http:// to this machine)."
+        )
+      }
+      const profiles = await store.listClaudeProfiles()
+      const existing = profiles.find((profile) => profile.id === input.id)
+      if (input.token !== null && input.token.trim()) {
+        await store.setSetting(
+          apiTokenKey(input.id),
+          host.seal(input.token.trim())
+        )
+      } else if (!existing) {
+        throw new Error("A custom API needs its key.")
+      }
+      const profile: ClaudeProfile = {
+        id: input.id,
+        name: input.name.trim() || existing?.name || "API",
+        configDir: existing?.configDir ?? "",
+        api: {
+          baseUrl: input.api.baseUrl.trim().replace(/\/+$/, ""),
+          model: input.api.model.trim(),
+          fastModel: input.api.fastModel.trim(),
+        },
+      }
+      return saveProfiles(
+        existing
+          ? profiles.map((entry) => (entry.id === input.id ? profile : entry))
+          : [...profiles, profile]
+      )
+    }
   )
+
+  // A custom API profile has no login to ask `claude` about: it is working if
+  // its endpoint is held (`listProfiles`), and otherwise says why not.
+  handle(IPC.claudeAccount, async (_event, configDir: string) => {
+    const dir = configDir.trim() ? expandHome(configDir.trim()) : ""
+    const profile = dir
+      ? (await listProfiles()).find(
+          (entry) => entry.api && expandHome(entry.configDir) === dir
+        )
+      : undefined
+    if (!profile?.api) return claudeAccount(configDir)
+    const blank = {
+      configDir: dir,
+      email: null,
+      organization: hostOf(profile.api.baseUrl),
+      method: "custom_api",
+      plan: null,
+      error: null,
+    }
+    if (isApiDir(dir)) return { ...blank, state: "signedIn" as const }
+    return {
+      ...blank,
+      state: "error" as const,
+      error: "The key for this endpoint could not be read. Enter it again.",
+    }
+  })
 
   handle(IPC.claudeVersions, () => claudeVersions())
 
@@ -579,52 +661,24 @@ export function createIpc(host: Host): {
     host.setBadgeCount(count)
   })
 
-  handle(IPC.signInWithGoogle, () => {
-    // The sign-in page is the server's: a build with none cannot sign in.
-    const server = freeAiUrl()
-    if (!server) {
-      throw new Error("This build has no server to sign in through.")
-    }
-    return signInWithGoogle(server, (url) => host.openExternal(url), {
-      fetch: host.fetch,
-    })
-  })
-  handle(IPC.cancelSignInWithGoogle, () => cancelSignInWithGoogle())
+  handle(IPC.studioServerAvailable, () => serverUrl() !== null)
 
-  handle(IPC.freeAiAvailable, () => freeAiUrl() !== null)
-
-  // Every window hands over the session it holds, at launch and on each
-  // `storage` event, so the same one arrives again and again. Only a change —
-  // signing out, or in as somebody else — takes the Credits sessions down: one
-  // left open spends on the old token for as long as the CLI caches it.
-  let freeSession: string | null = null
-  handle(IPC.setFreeAiToken, (_event, token: unknown) => {
-    const next = typeof token === "string" && token ? token : null
-    if (next !== freeSession) {
-      allChats.closeProfile(
-        FREE_PROFILE_ID,
-        next
-          ? "The Vey Studio sign-in changed — this turn was stopped."
-          : "Signed out of Vey Studio — this turn was stopped."
-      )
-    }
-    freeSession = next
-    return setFreeAiToken(next)
-  })
-
-  handle(IPC.studioAccount, () => studioAccount())
-
-  // The item is the server's to check against what it sells; main only passes
-  // a string on, to the side that takes that way of paying.
-  handle(IPC.buyCredits, (_event, item: unknown, method: unknown) =>
-    typeof item === "string"
-      ? openServerPage(
-          method === "card" ? "/api/checkout" : "/api/orders",
-          { item },
-          (url) => host.openExternal(url)
-        )
-      : { ok: false, error: "Nothing to buy." }
+  // Vey Pro — `main/license.ts`. The activation is checked here and kept in
+  // the settings; the server is asked for the page to pay on, for the licence
+  // a payment bought, and to put a key on or take it off this device.
+  handle(IPC.proStatus, () => proStatus(store))
+  handle(IPC.buyLicense, async (_event, seats: unknown, email: unknown) =>
+    openServerPage(
+      "/api/license/checkout",
+      { seats, email, device: await deviceId(store) },
+      (url) => host.openExternal(url)
+    )
   )
+  handle(IPC.claimLicense, () => claimLicense(store, serverCall))
+  handle(IPC.activateLicense, (_event, key: unknown) =>
+    activateLicense(store, serverCall, String(key ?? ""))
+  )
+  handle(IPC.deactivateLicense, () => deactivateLicense(store, serverCall))
 
   /*
    * The left column's Search. `searching` is the generation: each call takes
@@ -790,8 +844,18 @@ export function createIpc(host: Host): {
   // The two fields by name rather than a spread: `store.addFolder` also takes
   // `worktreeOf`, the mark that licenses `removeWorktree`, and a spread would
   // let the renderer write it onto any folder — `~` included.
-  handle(IPC.addFolder, (_event, input: { path: string; name: string }) =>
-    store.addFolder({ path: expandHome(input.path), name: input.name })
+  //
+  // Free holds one project (`canAddProject`); the renderer opens the Pro
+  // dialog before it gets here, this is for whatever did not.
+  handle(
+    IPC.addFolder,
+    async (_event, input: { path: string; name: string }) => {
+      const { folders } = await store.getWorkspace()
+      if (!canAddProject(await proStatus(store), folders)) {
+        throw new Error("More than one project is part of Vey Pro.")
+      }
+      return store.addFolder({ path: expandHome(input.path), name: input.name })
+    }
   )
 
   /*
@@ -1026,15 +1090,6 @@ export function createIpc(host: Host): {
       // A second press for the same folder replaces the first rather than
       // running beside it: the box has one message to put an answer in.
       drafts.get(folderId)?.abort()
-
-      // The rule a free chat's `send` keeps: a sentence rather than the CLI's
-      // own login error.
-      const free = profileId === FREE_PROFILE_ID
-      if (free && !freeAiReady()) {
-        return {
-          error: "Sign in to Vey Studio to pay with credits.",
-        }
-      }
 
       const controller = new AbortController()
       drafts.set(folderId, controller)
@@ -1659,5 +1714,14 @@ export function createIpc(host: Host): {
     /** For the `vsc-plugin://` handler, the same way — see `servePlugins`. */
     pluginFilePath: (id: string, file: PluginFile) =>
       pluginFilePath(pluginRootOf(pluginRoots, id), id, file),
+  }
+}
+
+/** An endpoint's host, for the row's caption. */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).host
+  } catch {
+    return null
   }
 }

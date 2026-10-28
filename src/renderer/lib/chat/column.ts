@@ -106,11 +106,10 @@ export function railBadgeOf(
  * An account a stopped chat could be moved to, as the column knows it.
  *
  * `profileId` is what `ChatOptions.profileId` takes — null for the login the
- * user's own `claude` has, `FREE_PROFILE_ID` for credits. `utilization` is the
- * five-hour window's percent when it has been asked, null when it has not or
- * the account has no plan window (an API key, credits). `usable` is false for
- * what cannot run a turn at all: a profile never signed into, credits with
- * none left.
+ * user's own `claude` has. `utilization` is the five-hour window's percent
+ * when it has been asked, null when it has not or the account has no plan
+ * window (an API key). `usable` is false for what cannot run a turn at all: a
+ * profile never signed into.
  */
 export type AccountChoice = {
   profileId: string | null
@@ -125,32 +124,26 @@ export type AccountChoice = {
  * Once the reset has passed, `continue` on the account it stopped on, which is
  * free again. Before that, the first other account that can run a turn and is
  * not itself at its limit, in the order given — the column's own: the user's
- * login, their profiles, credits last, so the plan somebody is already paying
- * for is offered before the one that costs per turn. An account whose usage
- * nobody has asked yet is offered rather than skipped: not knowing is not the
- * same as full, and the turn says so if it is.
+ * login, then their profiles. An account whose usage nobody has asked yet is
+ * offered rather than skipped: not knowing is not the same as full, and the
+ * turn says so if it is.
  *
- * With nowhere to go, credits are the way on rather than a wait of hours:
- * `buy` for somebody signed in to Vey Studio — credits at nothing are not
- * `usable`, and once a purchase lands they are, so the same card turns into
- * `continue` with no step of its own — and `signIn` for somebody who is not,
- * where credits are not offered at all. A user on one plan and nothing else
- * was the case that used to get no button, only the time to wait. Null for a
- * build with no credits server, where there is nothing to offer but the wait.
+ * With nowhere to go, the wait (null): an account to sign in to is not a
+ * button this card can be. Credits used to be the way on here, `buy` and
+ * `signIn`, and then Pro's custom API, `upgrade`; credits are deleted
+ * (`docs/design.md` § Credits and the free AI, removed) and the custom API is
+ * free, so Pro has nothing to offer a limit.
  *
  * `continue` carries `profileId: null` for the user's own login, which is why
  * this is a union and not a nullable id: the old `continueTarget` answered
  * null for "nowhere" too, and never offered that login back.
  */
-export type LimitWayOut =
-  | { kind: "continue"; profileId: string | null }
-  | { kind: "buy" }
-  | { kind: "signIn" }
+export type LimitWayOut = { kind: "continue"; profileId: string | null }
 
 export function limitWayOut(
   current: string | null,
   accounts: AccountChoice[],
-  { over, credits }: { over: boolean; credits: "ready" | "signedOut" | "none" }
+  { over }: { over: boolean }
 ): LimitWayOut | null {
   if (over) return { kind: "continue", profileId: current }
   for (const account of accounts) {
@@ -159,8 +152,6 @@ export function limitWayOut(
     if (account.utilization !== null && account.utilization >= 95) continue
     return { kind: "continue", profileId: account.profileId }
   }
-  if (credits === "ready") return { kind: "buy" }
-  if (credits === "signedOut") return { kind: "signIn" }
   return null
 }
 

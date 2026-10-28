@@ -1,14 +1,11 @@
 import type { Email } from "./email.ts"
 import { html, type SafeHtml } from "./html.ts"
-import type { User } from "./session.ts"
-import { formatCredits } from "./usage.ts"
 
 /**
- * The two mails this server sends, as `sendEmail` takes them: a welcome on a
- * user's first sign-in (`/signin/callback`) and a thank-you when a purchase
- * adds credits (the SePay and Paddle webhooks). In Vietnamese — the packs are
- * priced in đồng and most of the people buying them pay by Vietnamese bank
- * transfer. Pure, so `test/mail.test.ts` reads them without a Worker.
+ * The one mail this server sends, as `sendEmail` takes it: the Vey Pro
+ * licence key when its transfer lands (the SePay webhook). The welcome on a
+ * first sign-in went with the sign-in. In Vietnamese — Pro is priced in đồng
+ * and paid by Vietnamese bank transfer. Pure, so `test/mail.test.ts` reads them without a Worker.
  *
  * `origin` is this server's own address (`publicUrlOf`): the logo is
  * `/email-logo.png` under it, a PNG rendered from `resources/logo.svg`,
@@ -16,104 +13,75 @@ import { formatCredits } from "./usage.ts"
  * most clients.
  */
 
-/** The welcome mail, or null for a user Google gave no email for. */
-export function welcomeEmail(user: User, origin: string): Email | null {
-  if (!user.email) return null
-  const greeting = greetingOf(user.name)
-  return {
-    to: user.email,
-    subject: "Chào mừng bạn đến với Vey Studio",
-    text: [
-      `${greeting},`,
-      "",
-      "Bạn đã đăng nhập Vey Studio thành công. Từ giờ bạn có thể dùng AI miễn phí của Vey Studio ngay trong ứng dụng, trong hạn mức mỗi ngày — và nạp thêm credits khi cần dùng nhiều hơn.",
-      "",
-      "Nếu không phải bạn vừa đăng nhập, hãy trả lời email này để chúng tôi hỗ trợ.",
-      "",
-      "— Vey Studio",
-    ].join("\n"),
-    html: layout({
-      origin,
-      preview: "Bạn đã đăng nhập Vey Studio thành công.",
-      title: "Chào mừng bạn đến với Vey Studio",
-      body: html`
-        ${paragraph(html`${greeting},`)}
-        ${paragraph(
-          html`Bạn đã đăng nhập Vey Studio thành công. Từ giờ bạn có thể dùng
-            <strong>AI miễn phí</strong> của Vey Studio ngay trong ứng dụng,
-            trong hạn mức mỗi ngày — và nạp thêm credits khi cần dùng nhiều hơn.`
-        )}
-        ${note(
-          "Nếu không phải bạn vừa đăng nhập, hãy trả lời email này để chúng tôi hỗ trợ."
-        )}
-      `,
-    }),
-  }
-}
-
-export type Payment = {
-  /** Credits added, in `usage.ts`'s units. */
-  credits: number
-  /** What was charged, in the currency's smallest unit — Paddle's way; a
-   * bank transfer's đồng are already that. Null when it is not known. */
-  amount: number | null
-  currency: string | null
-  /** What the buyer can quote back: a bank transfer's order code
-   * (`VSC12345678`), or Paddle's transaction id (`txn_…`), which is also on
-   * Paddle's own receipt. */
-  order: string
-}
-
-/** The thank-you for a purchase, or null for a user with no email. */
-export function paymentEmail(
-  user: User,
-  payment: Payment,
+/**
+ * The licence key, after its transfer lands. The key **is** the content now:
+ * there is no sign-in to carry Pro to another machine, so this mail is where
+ * the buyer finds what to paste there — the device they bought on is already
+ * on it. Says how many devices the key is for, and the refund window.
+ */
+export function proEmail(
+  purchase: {
+    to: string
+    key: string
+    seats: number
+    amount: number
+    order: string
+  },
   origin: string
-): Email | null {
-  if (!user.email) return null
-  const greeting = greetingOf(user.name)
-  const credits = formatCredits(payment.credits)
-  const paid = moneyOf(payment.amount, payment.currency)
-  const line = paid
-    ? `Chúng tôi đã nhận ${paid} và cộng ${credits} credits vào tài khoản của bạn.`
-    : `Chúng tôi đã cộng ${credits} credits vào tài khoản của bạn.`
+): Email {
+  const paid = moneyOf(purchase.amount, "VND")
+  const devices = `${purchase.seats} thiết bị`
   return {
-    to: user.email,
-    subject: "Cảm ơn bạn đã nạp credits Vey Studio",
+    to: purchase.to,
+    subject: "Khoá licence Vey Pro của bạn",
     text: [
-      `${greeting},`,
+      "Chào bạn,",
       "",
-      `Cảm ơn bạn đã ủng hộ Vey Studio! ${line} Số dư mới đã có hiệu lực trong ứng dụng.`,
+      `Cảm ơn bạn đã mua Vey Pro cho ${devices}! ${paid ? `Chúng tôi đã nhận ${paid}. ` : ""}Pro đã được bật trên máy bạn vừa mua.`,
       "",
-      `Mã đơn hàng: ${payment.order}`,
+      "Khoá licence của bạn:",
       "",
-      "Nếu có gì chưa đúng, hãy trả lời email này kèm mã đơn hàng.",
+      `    ${purchase.key}`,
+      "",
+      `Khoá dùng được trên ${devices} cùng lúc. Trên máy khác, mở Vey Studio, bấm Upgrade ở góc trên bên phải, chọn "Đã có khoá?" và dán khoá vào. Muốn chuyển sang máy mới, huỷ kích hoạt trên máy cũ trong cùng hộp thoại đó.`,
+      "",
+      `Mã đơn hàng: ${purchase.order}`,
+      "",
+      "Hoàn tiền trong 7 ngày: trả lời email này kèm mã đơn hàng.",
       "",
       "— Vey Studio",
     ].join("\n"),
     html: layout({
       origin,
-      preview: `Đã cộng ${credits} credits vào tài khoản của bạn.`,
-      title: "Cảm ơn bạn đã nạp credits",
+      preview: `Khoá Vey Pro cho ${devices}: ${purchase.key}`,
+      title: "Cảm ơn bạn đã mua Vey Pro",
       body: html`
-        ${paragraph(html`${greeting},`)}
+        ${paragraph("Chào bạn,")}
         ${paragraph(
-          "Cảm ơn bạn đã ủng hộ Vey Studio! Giao dịch của bạn đã hoàn tất và số dư mới đã có hiệu lực trong ứng dụng."
+          `Cảm ơn bạn đã mua Vey Pro cho ${devices}! Pro đã được bật trên máy bạn vừa mua. Đây là khoá licence để kích hoạt trên các máy còn lại:`
+        )}
+        ${keyBlock(purchase.key)}
+        ${paragraph(
+          `Khoá dùng được trên ${devices} cùng lúc. Trên máy khác, mở Vey Studio, bấm Upgrade ở góc trên bên phải, chọn "Đã có khoá?" và dán khoá vào. Muốn chuyển sang máy mới, huỷ kích hoạt trên máy cũ trong cùng hộp thoại đó.`
         )}
         ${summary([
-          ["Mã đơn hàng", payment.order],
+          ["Mã đơn hàng", purchase.order],
           ...(paid ? [["Số tiền đã thanh toán", paid] as const] : []),
-          ["Credits đã cộng", credits],
+          ["Số thiết bị", devices],
         ])}
-        ${note("Nếu có gì chưa đúng, hãy trả lời email này kèm mã đơn hàng.")}
+        ${note("Hoàn tiền trong 7 ngày: trả lời email này kèm mã đơn hàng.")}
       `,
     }),
   }
 }
 
-function greetingOf(name: string | null): string {
-  const trimmed = name?.trim()
-  return trimmed ? `Chào ${trimmed}` : "Chào bạn"
+/** The key, set apart in a monospace box so it can be selected whole. */
+function keyBlock(key: string): SafeHtml {
+  return html`<p
+    style="margin:0 0 20px;padding:14px 16px;border-radius:10px;background:#f4f2fb;border:1px solid #e2ddf5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;font-weight:600;letter-spacing:0.06em;color:#2b2540;text-align:center"
+  >
+    ${key}
+  </p>`
 }
 
 /** `50.000 ₫`, `25,00 US$` — from the smallest unit, by the currency's own

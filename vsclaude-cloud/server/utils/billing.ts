@@ -1,93 +1,52 @@
 /**
- * What somebody has paid for, whichever way they paid: credits, which are the
- * only way to run a request — there is no free allowance.
+ * What is sold: **Vey Pro**, a licence for one, three or five devices, bought
+ * once by bank transfer (`sepay-billing.ts`). Free is one project; Pro is
+ * every project after it. A paid order for one of these plans makes a licence
+ * key with that many seats and activates the device it was bought on
+ * (`license.ts`); the key, mailed to the buyer, activates the others. The
+ * prices must match the app's `PRO_PLANS` (`src/shared/license.ts`).
  *
- * Two ways in. **Paddle** (`paddle-billing.ts`) is for cards from anywhere.
- * **SePay** (`sepay-billing.ts`) is for Vietnamese bank transfers by VietQR. A
- * pack bought either way adds to the same balance.
+ * No sign-in: an order is the device it was opened on and an email to send
+ * the key to (README § Vey Pro). `pro` is the one item sold while Pro
+ * belonged to a Google account — an order for it still in `transactions`
+ * reads as one device.
  *
- * There are no plans any more, no daily free budget, and no model held back:
- * Haiku, Sonnet and Opus all run on credits, each at its own price
- * (`usage.ts`). An account written while plans were sold
- * keeps its `subscription` and `prepaid` keys on disk, and nothing reads them.
+ * Credits were sold here once — packs by transfer and by Paddle card, spent on
+ * requests this server forwarded to Anthropic — and are deleted with the
+ * forwarding (README § Credits, removed). An order for a pack, or for a plan
+ * from before that, still in `transactions` grants nothing if paid now: that
+ * money is a human's to refund.
  *
- * Pure — no storage, no config — so `test/billing.test.ts` can feed it.
+ * Pure — no storage, no config.
  */
 
-import { CREDITS_PER_USD } from "./usage.ts"
-
-export type CreditItem = "vnd-20k" | "vnd-50k" | "vnd-100k" | "vnd-200k"
-
-/** A pack's size written as the dollars it is sold as, in `usage.ts`'s unit. */
-function usd(dollars: number): number {
-  return Math.round(dollars * CREDITS_PER_USD)
+export type ProPlan = {
+  /** The order's `item`. */
+  item: string
+  /** How many devices the key activates at once. */
+  seats: number
+  /** VND, once. */
+  price: number
 }
 
-/**
- * Credit packs: the price a transfer must reach, and what the pack adds, in
- * `usage.ts`'s unit — written as the dollars of Anthropic's list price it
- * buys, which is also how every page and the studio show it. Keep in step
- * with the app's `src/shared/credits.ts`, which draws them: a dialog promising
- * another price is a customer who paid what they were shown and is told it
- * was short.
- *
- * The rate is $1.00 of usage per 2.000 ₫, then a bonus on the bigger packs.
- * It is set against the gateway this server forwards to, which sells $10.00
- * of usage for 15.000 ₫ — 1.500 ₫ to the dollar. **It is below cost against
- * Anthropic's own API**, where $1.00 is about 26.000 ₫, and has to be
- * repriced before this server is pointed at `api.anthropic.com`.
- *
- * **Four packs**, the four amounts a Vietnamese transfer is made in — 20.000, 50.000, 100.000 and 200.000 ₫ — with 10% and
- * 20% more on the two biggest. For a while only the 20.000 ₫ one was sold and
- * the rest were `retired`; the flag stays for the next pack withdrawn. The
- * smallest is **`bankOnly`**: Paddle's
- * fixed $0.50 is about 13.000 ₫ of a 20.000 ₫ pack, and Paddle charges no
- * less than 20.276 ₫ in đồng anyway, so a card buys from 50.000 ₫ up. One
- * table otherwise for both ways of paying (`docs/design.md` § Credits). An
- * id is the pack's price, and `NITRO_PADDLE_PRICE_VND*` is named after it.
- */
-export const CREDIT_PACKS: Record<
-  CreditItem,
-  { price: number; credits: number; bankOnly?: true; retired?: true }
-> = {
-  "vnd-20k": { price: 20_000, credits: usd(10), bankOnly: true },
-  "vnd-50k": { price: 50_000, credits: usd(25) },
-  "vnd-100k": { price: 100_000, credits: usd(55) },
-  "vnd-200k": { price: 200_000, credits: usd(120) },
+export const PRO_PLANS: readonly ProPlan[] = [
+  // TEMPORARY (2026-10-28): 2.000 ₫ to test a real purchase end to end. The
+  // price is 99_000 — put it back here and in the app's `PRO_PLANS` together.
+  { item: "pro-1", seats: 1, price: 2_000 },
+  { item: "pro-3", seats: 3, price: 199_000 },
+  { item: "pro-5", seats: 5, price: 299_000 },
+]
+
+/** The Google-account era's one item: a licence for one device. */
+const LEGACY_PRO = "pro"
+
+/** The plan an order's item buys, or null for one nothing grants any more. */
+export function planOf(item: unknown): ProPlan | null {
+  if (item === LEGACY_PRO) return { item: LEGACY_PRO, seats: 1, price: 0 }
+  return PRO_PLANS.find((plan) => plan.item === item) ?? null
 }
 
-/** Whether it is a pack at all — one still sold or one somebody may already
- * have paid for. A `retired` pack is no longer sold but stays in the table:
- * an order opened before it was withdrawn is still credited when its transfer
- * lands, and a Paddle refund still knows what to take back. */
-export function isCreditItem(value: unknown): value is CreditItem {
-  return typeof value === "string" && value in CREDIT_PACKS
-}
-
-/** Whether a new purchase of it may be opened — any pack not `retired`. */
-export function isOnSale(value: unknown): value is CreditItem {
-  return isCreditItem(value) && !CREDIT_PACKS[value].retired
-}
-
-/** The packs on sale. */
-export const ON_SALE = (Object.keys(CREDIT_PACKS) as CreditItem[]).filter(
-  (item) => isOnSale(item)
-)
-
-export type Account = {
-  /** Left over from the packs bought, in `usage.ts`'s units. */
-  credits: number
-  /** Credits spent on requests, ever — what the studio shows as used beside
-   * what is left. Counted from when it was added; an older account starts at
-   * 0 rather than guessing. */
-  used: number
-  /** Paddle transactions already credited, and by how much — so a webhook
-   * delivered twice adds once, and a refund knows what to take back. */
-  orders: { id: string; credits: number }[]
-}
-
-export const NO_ACCOUNT: Account = {
-  credits: 0,
-  used: 0,
-  orders: [],
+/** A plan by its seat count, as the app asks for it. */
+export function planBySeats(seats: unknown): ProPlan | null {
+  return PRO_PLANS.find((plan) => plan.seats === seats) ?? null
 }

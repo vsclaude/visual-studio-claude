@@ -1,15 +1,10 @@
 import { defineHandler } from "nitro"
 
-import {
-  addShortfall,
-  getAccount,
-  getOrder,
-  getUser,
-  payOrder,
-} from "../../utils/accounts.ts"
+import { addShortfall, getOrder, payOrder } from "../../utils/accounts.ts"
 import { sendEmailLater } from "../../utils/email.ts"
+import { grantLicense } from "../../utils/license.ts"
 import { noteRequest } from "../../utils/log.ts"
-import { paymentEmail } from "../../utils/mail.ts"
+import { proEmail } from "../../utils/mail.ts"
 import {
   applyTransfer,
   orderCodeOf,
@@ -20,7 +15,7 @@ import { publicUrlOf, sepayConfig } from "../../utils/sepay.ts"
 
 /**
  * `POST /api/webhooks/sepay` — a transfer SePay saw arrive in the account,
- * applied to the order its content names (`sepay-billing.ts`).
+ * applied to the Vey Pro order its content names (`sepay-billing.ts`).
  *
  * SePay counts a delivery as done only on a 200 whose body is **exactly**
  * `{"success": true}`; anything else is retried up to seven times over half an
@@ -72,7 +67,7 @@ export default defineHandler(async (event) => {
     noteRequest(event, { ignored: "no such order" })
     return DONE()
   }
-  const paid = applyTransfer(order, await getAccount(order.uid), transfer)
+  const paid = applyTransfer(order, transfer)
   noteRequest(event, { uid: order.uid, applied: paid.kind })
   if (paid.kind === "ignored") {
     noteRequest(event, { ignored: paid.reason })
@@ -86,26 +81,41 @@ export default defineHandler(async (event) => {
     noteRequest(event, { short_of: paid.order.amount })
     return DONE()
   }
-  // The thank-you goes with the delivery that added the credits, not with a
-  // retry of it.
-  if (await payOrder(order, transfer.id, paid.added)) {
-    const user = await getUser(order.uid)
-    if (user) {
-      sendEmailLater(
-        event,
-        paymentEmail(
-          user,
-          {
-            credits: paid.added,
-            amount: transfer.transferAmount,
-            currency: "VND",
-            order: order.code,
-          },
-          publicUrlOf(event)
+  // The order is paid, then its key is made — one per order, with the plan's
+  // seats — the device it was bought on put on it, and the key mailed to the
+  // buyer for the others. The app on that device picks its activation up
+  // itself (`GET /api/license`).
+  //
+  // A key that could not be made is logged and the delivery still
+  // acknowledged: the order is paid now, so SePay's retry would be ignored,
+  // and `GET /api/license` makes it the next time the app asks
+  // (`grantLicense`) — once whatever threw here is fixed.
+  if (await payOrder(order, transfer.id)) {
+    try {
+      const license = await grantLicense(order)
+      noteRequest(event, { licensed: license !== null })
+      if (license && order.email) {
+        sendEmailLater(
+          event,
+          proEmail(
+            {
+              to: order.email,
+              key: license.key,
+              seats: license.seats,
+              amount: transfer.transferAmount,
+              order: order.code,
+            },
+            publicUrlOf(event)
+          )
         )
-      )
+      }
+    } catch (error) {
+      console.error("[sepay] paid, but the licence could not be granted", {
+        order: order.code,
+        error,
+      })
+      noteRequest(event, { licensed: false, license_error: String(error) })
     }
   }
-  noteRequest(event, { credits_added: paid.added })
   return DONE()
 })

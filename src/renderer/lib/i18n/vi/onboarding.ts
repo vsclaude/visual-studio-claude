@@ -38,9 +38,9 @@ export const onboarding: Messages["onboarding"] = {
     switchTitle: "Đổi tài khoản không phải làm lại",
     switchDetail:
       "Chat chạm giới hạn sẽ tiếp tục trên tài khoản khác, giữ nguyên cả cuộc trò chuyện.",
-    creditsTitle: "Tiếp tục khi đã hết giới hạn",
-    creditsDetail:
-      "Khi mọi gói đã dùng hết, chat có thể chạy bằng credits thay vì chờ hàng giờ.",
+    proTitle: "Vey Pro, khi cần thêm",
+    proDetail:
+      "Không giới hạn project, mua một lần. Mọi tài khoản Claude và endpoint API tuỳ chỉnh vẫn miễn phí.",
     copyCommand: "Sao chép lệnh",
   },
   tour: {
@@ -57,7 +57,7 @@ export const onboarding: Messages["onboarding"] = {
       "Mỗi chat là một cuộc trò chuyện với claude trong thư mục của một dự án. Nhiều chat có thể chạy cùng lúc, và dòng trong cột cho biết chat nào đang trả lời, chat nào đang chờ bạn.",
     accountsTitle: "Tài khoản của bạn",
     accountsBody:
-      "Mọi tài khoản Claude bạn đăng nhập, cùng mức đã dùng trong khung năm giờ. Nút + để thêm tài khoản. Chat bị dừng vì giới hạn sẽ đề nghị tiếp tục trên tài khoản còn trống, hoặc bằng credits.",
+      "Mọi tài khoản Claude bạn đăng nhập, cùng mức đã dùng trong khung năm giờ. Nút + để thêm tài khoản. Chat bị dừng vì giới hạn sẽ đề nghị tiếp tục trên tài khoản còn trống.",
     explorerTitle: "Explorer",
     explorerBody:
       "Mọi file trong thư mục làm việc, và trong tab Git: những gì đã đổi từ commit gần nhất cùng các commit trước đó.",

@@ -143,7 +143,7 @@ function terminal(): string {
     <clipPath id="term-clip"><rect class="a-typein" x="24" y="40" width="200" height="16"/></clipPath>
     <text x="24" y="52" ${mono} fill="${LILAC}">$</text>
     <text x="36" y="52" ${mono} fill="#e4e4e7" clip-path="url(#term-clip)">bun run test</text>
-    <text class="a-slide" style="--d:1.1s" x="24" y="72" ${mono} fill="${GREEN}">✓ credits-refusal  6 passed</text>
+    <text class="a-slide" style="--d:1.1s" x="24" y="72" ${mono} fill="${GREEN}">✓ license          6 passed</text>
     <text class="a-slide" style="--d:1.35s" x="24" y="88" ${mono} fill="${GREEN}">✓ landing         5 passed</text>
     <text class="a-slide" style="--d:1.6s" x="24" y="104" ${mono} fill="${INK}">128 checks passed in 1.4s</text>
     <text x="24" y="122" ${mono} fill="${LILAC}">$</text>
@@ -151,7 +151,7 @@ function terminal(): string {
 }
 
 /** The Accounts list under the chats: every account's 5-hour and weekly
- * meters at once, and the credits left — which one still has room. */
+ * meters at once — which one still has room. */
 function profiles(): string {
   const rows: [string, string, number, number][] = [
     ["Work", VIOLET, 1, 0.62],
@@ -182,13 +182,7 @@ function profiles(): string {
     <text x="24" y="25" font-size="8" letter-spacing="1.2" ${MONO} fill="${FAINT}">ACCOUNTS</text>
     <g class="a-pop" style="--d:1.2s"><rect x="280" y="14" width="16" height="16" rx="4" fill="${PANEL}" stroke="${LINE}"/><path d="M288 18.5v7M284.5 22h7" stroke="${INK}" stroke-width="1.5" stroke-linecap="round"/></g>
     ${body}
-    <g class="a-slide" style="--d:.8s">
-      <rect x="26" y="108" width="16" height="16" rx="4.5" fill="url(#prof-g)"/>
-      ${spark(34, 116, 5, "#fff")}
-      <text x="50" y="119.5" font-size="10.5" ${SANS} fill="#e4e4e7">Credits</text>
-      <text x="294" y="119.5" text-anchor="end" font-size="9.5" ${MONO} fill="${AMBER}">$54.99 left</text>
-    </g>`,
-    GRADIENT("prof-g")
+    <text class="a-slide" style="--d:.8s" x="24" y="122" font-size="8.5" ${MONO} fill="${FAINT}">Free · every Claude account</text>`
   )
 }
 
@@ -221,40 +215,26 @@ function handoff(): string {
   )
 }
 
-/** Every account used up: the chat's account menu, and credits picked. */
-function accounts(): string {
-  const avatar = (y: number, letter: string, color: string) =>
-    `<circle cx="38" cy="${y + 4}" r="8" fill="${color}" fill-opacity="0.22" stroke="${color}" stroke-opacity="0.7"/><text x="38" y="${y + 7.5}" text-anchor="middle" font-size="9" font-weight="600" ${SANS} fill="${color}">${letter}</text>`
-  const row = (
-    y: number,
-    tile: string,
-    name: string,
-    detail: string,
-    color: string,
-    d: number
-  ) =>
+/** Vey Pro, bought once — the Pro dialog's card. */
+function pro(): string {
+  const line = (y: number, text: string, d: number) =>
     `<g class="a-slide" style="--d:${d}s">
-      ${tile}
-      <text x="56" y="${y + 1}" font-size="10.5" ${SANS} fill="#e4e4e7">${name}</text>
-      <text x="56" y="${y + 13}" font-size="8.5" ${MONO} fill="${color}">${detail}</text>
+      <path d="M40 ${y - 3}l3 3 6-6" stroke="${LILAC}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="56" y="${y + 1}" font-size="10" ${SANS} fill="#e4e4e7">${text}</text>
     </g>`
   return svg(
     `<rect x="16" y="10" width="288" height="120" rx="10" fill="${PANEL}" stroke="${LINE}"/>
-    <g opacity="0.55">
-      ${row(28, avatar(28, "W", VIOLET), "Work", "5-hour limit · resets in 2h 14m", RED, 0)}
-      ${row(60, avatar(60, "P", AMBER), "Personal", "Weekly limit · resets Monday", RED, 0.2)}
+    <g class="a-pop" style="--d:.1s">
+      <rect x="30" y="22" width="22" height="22" rx="6" fill="url(#pro-g)"/>
+      <path d="M35 38h12l1.5-9-4.5 4-3-5-3 5-4.5-4z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
     </g>
-    <rect class="a-pop" style="--d:1s" x="22" y="86" width="276" height="36" rx="7" fill="rgb(139 92 246 / 0.14)" stroke="rgb(139 92 246 / 0.45)"/>
-    ${row(
-      94,
-      `<rect x="30" y="90" width="16" height="16" rx="4.5" fill="url(#acct-g)"/>${spark(38, 98, 5, "#fff")}`,
-      "Pay with credits",
-      "$54.99 left · never expires",
-      AMBER,
-      0.4
-    )}
-    <path class="a-pop" style="--d:1.2s" d="M276 100l4 4 8-8" stroke="${LILAC}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`,
-    GRADIENT("acct-g")
+    <text x="62" y="32" font-size="11.5" font-weight="600" ${SANS} fill="#e4e4e7">Vey Pro</text>
+    <text x="62" y="44" font-size="8.5" ${MONO} fill="${AMBER}">Every project · bought once</text>
+    <text x="292" y="38" text-anchor="end" font-size="10" ${MONO} fill="${FAINT}">from 99.000 ₫</text>
+    ${line(70, "As many projects as you work on", 0.4)}
+    ${line(88, "Worktrees, search and tabs across them", 0.6)}
+    ${line(106, "No subscription, no renewal", 0.8)}`,
+    GRADIENT("pro-g")
   )
 }
 
@@ -324,7 +304,7 @@ export const FEATURE_ART = {
   rewind,
   modes,
   terminal,
-  accounts,
+  pro,
   profiles,
   handoff,
   search,

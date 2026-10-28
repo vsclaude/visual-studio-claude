@@ -67,35 +67,9 @@ export default defineConfig({
 
   /*
    * Every key here is overridden by `NITRO_<UPPER_SNAKE>` in the environment —
-   * `.env` in development, the platform's variables in production. The
-   * providers requests go to, and the credits on sale, are not here: they are
-   * rows of D1's `upstreams` table (`server/utils/upstreams.ts`).
+   * `.env` in development, the platform's variables in production.
    */
   runtimeConfig: {
-    /** NITRO_GOOGLE_CLIENT_ID / NITRO_GOOGLE_CLIENT_SECRET — the Web
-     * application OAuth client the studio signs in through
-     * (`server/utils/google.ts`). Without them nobody can sign in. */
-    googleClientId: "",
-    googleClientSecret: "",
-    /** NITRO_SESSION_SECRET — signs the session and access tokens
-     * (`server/utils/session.ts`). Long and random; changing it signs
-     * everybody out. */
-    sessionSecret: "",
-    /** NITRO_PADDLE_ENVIRONMENT — `sandbox` or `production`. Two separate
-     * Paddle accounts: every Paddle value below belongs to the one named here. */
-    paddleEnvironment: "sandbox",
-    /** NITRO_PADDLE_API_KEY — creates checkouts. */
-    paddleApiKey: "",
-    /** NITRO_PADDLE_WEBHOOK_SECRET — the secret key of the notification
-     * destination pointed at `/api/webhooks/paddle`. */
-    paddleWebhookSecret: "",
-    /** NITRO_PADDLE_CLIENT_TOKEN — Paddle.js's, for the `/checkout` page. */
-    paddleClientToken: "",
-    /** NITRO_PADDLE_PRICE_<ITEM> — each item's `pri_…` id. An empty one is
-     * not on sale. */
-    paddlePriceVnd50k: "",
-    paddlePriceVnd100k: "",
-    paddlePriceVnd200k: "",
     /** NITRO_SEPAY_BANK_ACCOUNT, _BANK_CODE, _ACCOUNT_NAME — the account
      * bank transfers are paid into (the one linked in SePay), SePay's short
      * bank code for it (`qr.sepay.vn/banks.json`, e.g. `MBBank`), and the
@@ -110,6 +84,10 @@ export default defineConfig({
      * HMAC-SHA256; or NITRO_SEPAY_API_KEY, when it is set to API Key. */
     sepayWebhookSecret: "",
     sepayApiKey: "",
+    /** NITRO_LICENSE_PRIVATE_KEY — the Ed25519 private key, PKCS#8 PEM, that
+     * signs Vey Pro keys (`server/utils/license.ts`); its public half is in
+     * the app. Empty puts Pro off sale. */
+    licensePrivateKey: "",
     /** NITRO_PUBLIC_URL — this server's own address, for the `/pay` links
      * the studio opens. Empty is the origin each request came in on. */
     publicUrl: "",
@@ -117,8 +95,5 @@ export default defineConfig({
      * to Cloudflare Email Service, e.g. `Vey Studio <hello@example.com>`.
      * Empty sends nothing (`server/utils/email.ts`). */
     emailFrom: "",
-    /** NITRO_MAX_PROMPT_TOKENS — the largest prompt forwarded. 100K is where
-     * Haiku 5.5's price goes up fivefold; 0 turns the check off. */
-    maxPromptTokens: 100_000,
   },
 })

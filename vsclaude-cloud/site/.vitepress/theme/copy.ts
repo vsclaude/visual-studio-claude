@@ -1,3 +1,5 @@
+import { PRO_PLANS } from "../../../server/utils/billing.ts"
+
 /**
  * Every word of the home page, in each language it is written in.
  *
@@ -8,7 +10,8 @@
  *
  * **The page leads with what Vey Studio is for, told as three steps**: add
  * every Claude account, carry a stopped chat on with `Continue with …`, and
- * fall back on credits when every account is spent. Running chats side by
+ * every one of them free — Pro is every project after the first.
+ * Running chats side by
  * side and reading their diffs is the studio around that, and comes second.
  *
  * **Plain words first.** A visitor may not know what a "5-hour window" is, so
@@ -23,7 +26,7 @@
  * Claude any more.
  *
  * What stays English on purpose is the app's own vocabulary — the studio's UI
- * is English, so "Pay with credits", "Account" and the mode names are written
+ * is English, so "Continue with …", "Account" and the mode names are written
  * as the reader will find them on screen. The picture of the app in the hero
  * and the text inside the illustrations stay English for the same reason.
  *
@@ -32,6 +35,14 @@
  */
 
 export type Lang = "en" | "vi"
+
+/** `99.000 ₫` — the price as the checkout and the app's dialog write it. */
+export function formatVnd(amount: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount)
+}
 
 export const LANGS: Lang[] = ["en", "vi"]
 
@@ -60,6 +71,57 @@ export function docsStartOf(lang: Lang): string {
 export function installPathOf(lang: Lang): string {
   return `${pathOf(lang)}install`
 }
+
+type Plan = {
+  name: string
+  price: string
+  /** After the price — `once`, `forever`. */
+  term: string
+  /** The small line under the price — `No account required`. */
+  sub: string
+  items: string[]
+  /** The plan's button, drawn as the dialog draws it and inert: buying
+   * happens in the app. */
+  button: string
+  /** A device plan, drawn in Pro's colours. */
+  pro?: boolean
+  /** The flag over the plan most people want. */
+  flag?: string
+}
+
+/** The words of one device plan, by its seat count. */
+type DeviceWords = {
+  name: (seats: number) => string
+  term: string
+  sub: (seats: number) => string
+  items: (seats: number) => string[]
+  button: (seats: number) => string
+  flag: string
+}
+
+/** The plan the page flags — the app's `POPULAR_SEATS`. */
+const POPULAR_SEATS = 3
+
+/**
+ * The three device plans in a language, priced off `PRO_PLANS` — the server's
+ * own list, so the page cannot advertise a price the checkout does not
+ * charge (`test/home.test.ts`).
+ */
+function devicePlans(words: DeviceWords): Plan[] {
+  return PRO_PLANS.map(({ seats, price }) => ({
+    name: words.name(seats),
+    price: formatVnd(price),
+    term: words.term,
+    sub: words.sub(seats),
+    items: words.items(seats),
+    button: words.button(seats),
+    pro: true,
+    ...(seats === POPULAR_SEATS ? { flag: words.flag } : {}),
+  }))
+}
+
+/** The cheapest way into Pro, for the FAQ's price answer. */
+const FROM_PRICE = formatVnd(PRO_PLANS[0]!.price)
 
 type Section = {
   kicker: string
@@ -102,16 +164,11 @@ export type Copy = {
     kicker: string
     title: [plain: string, accent: string]
     body: string
-    popular: string
-    credits: string
-    bonus: (percent: number) => string
-    /** The payment toggle's two labels, as the studio's dialog has them. */
-    methods: { bank: string; card: string }
-    /** The pack's button — drawn as the dialog draws it, and inert: buying
-     * happens in the app, signed in. */
-    buy: string
-    /** The line under the packs, for the method chosen. */
-    pay: { bank: string; card: string }
+    /** Free, then the device plans, as the studio's Pro dialog has them —
+     * `devicePlans`, priced off the figures the checkout charges. */
+    plans: Plan[]
+    /** The line under the plans: how Pro is paid. */
+    pay: string
   }
   steps: {
     kicker: string
@@ -170,9 +227,9 @@ const en: Copy = {
   title:
     "Vey Studio: hit your Claude limit, keep working by switching accounts mid-chat",
   description:
-    "A free desktop app for Claude Code. Add all your Claude accounts; when one hits its usage limit, continue the same chat on another account or on credits, with one click and nothing lost.",
+    "A desktop app for Claude Code. Add all your Claude accounts; when one hits its usage limit, continue the same chat on another account with one click and nothing lost. Free with every account; Pro, bought once, adds every project you work on.",
   ogDescription:
-    "Hit your Claude limit? Continue the same chat on another account, or on credits, in one click.",
+    "Hit your Claude limit? Continue the same chat on another account in one click.",
   nav: {
     why: "How it works",
     features: "Features",
@@ -184,7 +241,7 @@ const en: Copy = {
   },
   eyebrow: "Free desktop app for Claude Code",
   h1: ["Hit your Claude limit?", "Keep working anyway."],
-  lede: "Add all your Claude accounts to Vey Studio. When one runs out, continue the same chat on another account or on credits in one click. Nothing to copy, nothing to explain again.",
+  lede: "Add all your Claude accounts to Vey Studio. When one runs out, continue the same chat on another account in one click. Nothing to copy, nothing to explain again.",
   cta: {
     download: "Download for free",
     downloadFor: "Download for ",
@@ -192,7 +249,7 @@ const en: Copy = {
   },
   fine: [
     "macOS · Windows · Linux",
-    "free with your own Claude accounts, credits only if you need them",
+    "free with every Claude account, Pro once for every project",
   ],
   pillars: {
     kicker: "How it works",
@@ -208,8 +265,8 @@ const en: Copy = {
         body: "A stopped chat shows when its limit resets and a “Continue with …” button. Press it and the chat moves to an account with room, picking up right where it stopped.",
       },
       {
-        title: "Every account used up? Use credits",
-        body: "Switch the chat to “Pay with credits” and keep going. This also works with no Claude plan at all. Pay as you go: no subscription, and credits never expire.",
+        title: "Free for every account",
+        body: "Every account, the switch between them and your own API endpoints — GLM, Kimi, DeepSeek or a company gateway — are free. Pro adds every project after the first, bought once, never a subscription.",
       },
     ],
   },
@@ -246,20 +303,39 @@ const en: Copy = {
   },
   pricing: {
     kicker: "Pricing",
-    title: ["Pay with ", "credits"],
-    body: "The app is free, and so is using it with your own Claude accounts. Credits are only for when you run out or have no Claude plan. Buy a pack once; it never expires.",
-    popular: "Most popular",
-    credits: "in credits",
-    bonus: (percent) => `+${percent}% bonus`,
-    methods: {
-      bank: "Vietnamese bank · VietQR",
-      card: "Card · international",
-    },
-    buy: "Buy credits",
-    pay: {
-      bank: "A page with the VietQR opens in your browser. Scan it in your banking app. Credits never expire.",
-      card: "Checkout opens in your browser and is handled by Paddle. Credits never expire.",
-    },
+    title: ["Free, then ", "Pro once"],
+    body: "Every Claude account and custom API endpoint is free, as many as you have, in one project. Pro adds every project after it — bought once, by bank transfer, never a subscription.",
+    plans: [
+      {
+        name: "Free",
+        price: "0 ₫",
+        term: "forever",
+        sub: "No account required",
+        items: [
+          "Unlimited Claude accounts — claude.ai, Console, SSO",
+          "“Continue with …” to another account when one hits its limit",
+          "Custom API endpoints — GLM, Kimi, DeepSeek, OpenRouter, a company gateway",
+          "One project — many chats at once, git, editor, terminal, search",
+          "Every update · macOS, Windows, Linux",
+        ],
+        button: "Download free",
+      },
+      ...devicePlans({
+        name: (n) => (n === 1 ? "1 Device" : `${n} Devices`),
+        term: "once",
+        sub: (n) =>
+          `${n === 1 ? "1 device" : `${n} devices`} · updates forever`,
+        items: (n) => [
+          "Everything in Free",
+          "Unlimited projects, each with its own chats, files and terminals",
+          "Worktrees, search and tabs across all of them",
+          `${n === 1 ? "1 device activation" : `${n} simultaneous activations`} · 7-day money-back guarantee`,
+        ],
+        button: (n) => (n === 1 ? "Buy 1 Device" : `Buy ${n} Devices`),
+        flag: "Most popular",
+      }),
+    ],
+    pay: "No account, no sign-in. Pick a plan in the app and enter your email; a VietQR page opens in your browser, Pro turns on for that device the moment the transfer arrives, and the licence key is mailed to you for the others.",
   },
   steps: {
     kicker: "Get started",
@@ -271,7 +347,7 @@ const en: Copy = {
       },
       {
         title: "Add your Claude accounts",
-        body: "With Claude Code installed, press + beside Accounts at the bottom of the chats column, once for each account. No account? Sign in with Google and use credits.",
+        body: "With Claude Code installed, press + beside Accounts at the bottom of the chats column, once for each account.",
       },
       {
         title: "Chat, and keep going",
@@ -285,7 +361,7 @@ const en: Copy = {
     items: [
       {
         q: "What is Vey Studio?",
-        a: "A free desktop app that runs Claude Code for you, in a window with your projects, several chats at once, your files, git and a terminal. What sets it apart: a chat can move between your Claude accounts, or onto credits, when a usage limit hits.",
+        a: "A desktop app that runs Claude Code for you, in a window with your projects, several chats at once, your files, git and a terminal. What sets it apart: a chat can move between your Claude accounts when a usage limit hits.",
       },
       {
         q: "What is the 5-hour limit?",
@@ -293,35 +369,35 @@ const en: Copy = {
       },
       {
         q: "What happens when I hit a limit?",
-        a: "The chat stops on a card saying which limit it hit and when it resets. “Continue with …” moves it to your next account with room (credits last) and sends it on. You can also pick an account yourself in the chat's composer. Either way the next message remembers everything said so far.",
+        a: "The chat stops on a card saying which limit it hit and when it resets. “Continue with …” moves it to your next account with room and sends it on. You can also pick an account yourself in the chat's composer. Either way the next message remembers everything said so far.",
       },
       {
         q: "How many Claude accounts can I add?",
-        a: "As many as you have. Each signs in once and stays signed in, so any chat can run on any of them.",
+        a: "As many as you have, on Free. Each signs in once and stays signed in, so any chat can run on any of them.",
       },
       {
-        q: "Do I need a Claude subscription?",
-        a: "No. With credits, the app runs every chat without a Claude account of your own. If you do have accounts, it uses them directly and costs you nothing.",
+        q: "What does Pro cost?",
+        a: `From ${FROM_PRICE} for one device — or three or five — once, by bank transfer. There is no subscription and nothing to renew; every update is included, and the licence never expires. Not happy? A refund within 7 days.`,
       },
       {
         q: "Do I need Claude Code installed?",
-        a: "For your own Claude accounts, yes. The app runs your own claude CLI and signs each account in through it. To chat on credits alone, no.",
+        a: "Yes. The app runs your own claude CLI and signs each account in through it.",
       },
       {
-        q: "Do credits expire?",
-        a: "Never. A pack is bought once and stays on your account until it is spent. There is no monthly fee.",
+        q: "What can I do without Pro?",
+        a: "Everything with Claude accounts, in one project: add as many accounts as you have, switch a chat between them, every panel of the app. Custom API endpoints too. Only a second project needs Pro.",
       },
       {
-        q: "How far does a pack go?",
-        a: "Every reply on credits shows what it cost, in dollars, so you never have to guess. As a rough guide, one call to Sonnet with a mostly cached prompt is around $0.01–0.015, and a Claude Code message makes a few of them. Haiku costs a twentieth of that and Opus twice as much.",
+        q: "Can I use Pro on another computer?",
+        a: "Yes, as many as your plan's devices. Paste the licence key from your email into the Vey Pro dialog on the other computer. Moving to a new one? Deactivate the old one in the same dialog to free its seat.",
       },
       {
         q: "Where do my requests go?",
-        a: "On credits, through this server to Anthropic, which is how they are charged; your sign-in token is never passed on. On your own accounts, straight from the app to Anthropic, without this server.",
+        a: "Straight from the app to Anthropic on your own accounts, or to the endpoint you set up. This server is only involved in buying Pro.",
       },
       {
         q: "How do I pay?",
-        a: "By bank transfer with VietQR, or by international card. Credits arrive as soon as the payment does, and the app tells you when.",
+        a: "By bank transfer with VietQR, from the app. Pro turns on the moment the transfer arrives, and the app tells you when.",
       },
       {
         q: "Which platforms?",
@@ -381,7 +457,7 @@ const en: Copy = {
         },
         {
           title: "Add your Claude accounts",
-          body: "Press + beside Accounts at the bottom of the chats column, once per account. No Claude plan? Sign in with Google and use credits.",
+          body: "Press + beside Accounts at the bottom of the chats column, once per account.",
           doc: "accounts",
           more: "Claude accounts",
         },
@@ -418,9 +494,9 @@ const vi: Copy = {
   title:
     "Vey Studio: chạm giới hạn Claude vẫn làm tiếp, đổi tài khoản ngay giữa cuộc chat",
   description:
-    "Ứng dụng desktop miễn phí cho Claude Code. Thêm mọi tài khoản Claude của bạn; khi một tài khoản chạm giới hạn, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác hoặc bằng credit, không mất gì.",
+    "Ứng dụng desktop cho Claude Code. Thêm mọi tài khoản Claude của bạn; khi một tài khoản chạm giới hạn, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác, không mất gì. Miễn phí với mọi tài khoản; Pro mua một lần, mở mọi project bạn làm.",
   ogDescription:
-    "Chạm giới hạn Claude? Một cú nhấp để tiếp tục cuộc chat trên tài khoản khác, hoặc bằng credit.",
+    "Chạm giới hạn Claude? Một cú nhấp để tiếp tục cuộc chat trên tài khoản khác.",
   nav: {
     why: "Cách hoạt động",
     features: "Tính năng",
@@ -432,7 +508,7 @@ const vi: Copy = {
   },
   eyebrow: "Ứng dụng desktop miễn phí cho Claude Code",
   h1: ["Chạm giới hạn Claude?", "Công việc vẫn tiếp tục."],
-  lede: "Thêm mọi tài khoản Claude của bạn vào Vey Studio. Khi một tài khoản hết lượt dùng, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác hoặc bằng credit. Không phải chép lại, không phải giải thích lại.",
+  lede: "Thêm mọi tài khoản Claude của bạn vào Vey Studio. Khi một tài khoản hết lượt dùng, chỉ một cú nhấp là cuộc chat tiếp tục trên tài khoản khác. Không phải chép lại, không phải giải thích lại.",
   cta: {
     download: "Tải miễn phí",
     downloadFor: "Tải cho ",
@@ -440,7 +516,7 @@ const vi: Copy = {
   },
   fine: [
     "macOS · Windows · Linux",
-    "miễn phí với tài khoản Claude của bạn, credit chỉ khi cần",
+    "miễn phí với mọi tài khoản Claude, Pro một lần cho mọi project",
   ],
   pillars: {
     kicker: "Cách hoạt động",
@@ -456,8 +532,8 @@ const vi: Copy = {
         body: "Chat bị dừng sẽ hiện thời điểm hạn mức reset và nút “Continue with …”. Bấm vào là chat chuyển sang tài khoản còn dư và tiếp tục đúng chỗ vừa dừng.",
       },
       {
-        title: "Hết sạch tài khoản? Dùng credit",
-        body: "Chuyển chat sang “Pay with credits” và làm tiếp, kể cả khi bạn không có gói Claude nào. Dùng bao nhiêu trả bấy nhiêu: không đăng ký hàng tháng, credit không bao giờ hết hạn.",
+        title: "Miễn phí với mọi tài khoản",
+        body: "Mọi tài khoản, việc chuyển giữa chúng và endpoint API riêng — GLM, Kimi, DeepSeek hay gateway công ty — đều miễn phí. Pro mở thêm project từ project thứ hai, mua một lần, không thuê bao.",
       },
     ],
   },
@@ -494,20 +570,38 @@ const vi: Copy = {
   },
   pricing: {
     kicker: "Bảng giá",
-    title: ["Trả bằng ", "credit"],
-    body: "Ứng dụng miễn phí, dùng với tài khoản Claude của bạn cũng miễn phí. Credit chỉ dành cho lúc bạn hết lượt hoặc không có gói Claude. Mua một lần, không bao giờ hết hạn.",
-    popular: "Phổ biến nhất",
-    credits: "credit",
-    bonus: (percent) => `tặng thêm ${percent}%`,
-    methods: {
-      bank: "Ngân hàng Việt Nam · VietQR",
-      card: "Thẻ · quốc tế",
-    },
-    buy: "Mua credit",
-    pay: {
-      bank: "Trang có mã VietQR mở trong trình duyệt, bạn quét bằng ứng dụng ngân hàng. Credit không bao giờ hết hạn.",
-      card: "Trang thanh toán mở trong trình duyệt, do Paddle xử lý. Credit không bao giờ hết hạn.",
-    },
+    title: ["Miễn phí, rồi ", "Pro một lần"],
+    body: "Mọi tài khoản Claude và endpoint API tuỳ chỉnh đều miễn phí, bao nhiêu cũng được, trong một project. Pro thêm không giới hạn project — mua một lần qua chuyển khoản, không thuê bao.",
+    plans: [
+      {
+        name: "Free",
+        price: "0 ₫",
+        term: "mãi mãi",
+        sub: "Không cần tài khoản",
+        items: [
+          "Không giới hạn tài khoản Claude — claude.ai, Console, SSO",
+          "“Continue with …” sang tài khoản khác khi một tài khoản chạm giới hạn",
+          "Endpoint API tuỳ chỉnh — GLM, Kimi, DeepSeek, OpenRouter, gateway công ty",
+          "Một project — nhiều chat cùng lúc, git, editor, terminal, tìm kiếm",
+          "Mọi bản cập nhật · macOS, Windows, Linux",
+        ],
+        button: "Tải miễn phí",
+      },
+      ...devicePlans({
+        name: (n) => `${n} thiết bị`,
+        term: "một lần",
+        sub: (n) => `${n} thiết bị · cập nhật mãi mãi`,
+        items: (n) => [
+          "Mọi thứ của Free",
+          "Không giới hạn project, mỗi project có chat, file và terminal riêng",
+          "Worktree, tìm kiếm và tab trên mọi project",
+          `${n === 1 ? "Kích hoạt 1 thiết bị" : `${n} thiết bị kích hoạt cùng lúc`} · hoàn tiền trong 7 ngày`,
+        ],
+        button: (n) => `Mua ${n} thiết bị`,
+        flag: "Phổ biến nhất",
+      }),
+    ],
+    pay: "Không tài khoản, không đăng nhập. Chọn gói trong ứng dụng và nhập email; trang VietQR mở trong trình duyệt, Pro bật cho máy đó ngay khi tiền về, và khoá licence được gửi qua email để dùng cho các máy còn lại.",
   },
   steps: {
     kicker: "Bắt đầu",
@@ -519,7 +613,7 @@ const vi: Copy = {
       },
       {
         title: "Thêm các tài khoản Claude",
-        body: "Khi đã cài Claude Code, bấm + cạnh Accounts ở cuối cột chat, mỗi tài khoản một lần. Chưa có tài khoản? Đăng nhập bằng Google và dùng credit.",
+        body: "Khi đã cài Claude Code, bấm + cạnh Accounts ở cuối cột chat, mỗi tài khoản một lần.",
       },
       {
         title: "Chat, và cứ thế làm tiếp",
@@ -533,7 +627,7 @@ const vi: Copy = {
     items: [
       {
         q: "Vey Studio là gì?",
-        a: "Một ứng dụng desktop miễn phí chạy Claude Code cho bạn, trong một cửa sổ có sẵn dự án, nhiều chat cùng lúc, file, git và terminal. Điểm khác biệt: một cuộc chat có thể chuyển giữa các tài khoản Claude của bạn, hoặc sang credit, khi chạm giới hạn sử dụng.",
+        a: "Một ứng dụng desktop chạy Claude Code cho bạn, trong một cửa sổ có sẵn dự án, nhiều chat cùng lúc, file, git và terminal. Điểm khác biệt: một cuộc chat có thể chuyển giữa các tài khoản Claude của bạn khi chạm giới hạn sử dụng.",
       },
       {
         q: "Giới hạn 5 giờ là gì?",
@@ -541,35 +635,35 @@ const vi: Copy = {
       },
       {
         q: "Chuyện gì xảy ra khi tôi chạm giới hạn?",
-        a: "Chat dừng lại với một thẻ báo đã chạm giới hạn nào và khi nào reset. “Continue with …” chuyển nó sang tài khoản tiếp theo còn dư (credit để sau cùng) và gửi tiếp. Bạn cũng có thể tự chọn tài khoản trong ô soạn tin của chat. Cách nào thì tin nhắn tiếp theo vẫn nhớ mọi điều đã nói.",
+        a: "Chat dừng lại với một thẻ báo đã chạm giới hạn nào và khi nào reset. “Continue with …” chuyển nó sang tài khoản tiếp theo còn dư và gửi tiếp. Bạn cũng có thể tự chọn tài khoản trong ô soạn tin của chat. Cách nào thì tin nhắn tiếp theo vẫn nhớ mọi điều đã nói.",
       },
       {
         q: "Tôi thêm được bao nhiêu tài khoản Claude?",
-        a: "Bao nhiêu cũng được. Mỗi tài khoản đăng nhập một lần và giữ nguyên trạng thái đăng nhập, nên chat nào cũng chạy được trên bất kỳ tài khoản nào.",
+        a: "Bao nhiêu cũng được, ngay với bản Free. Mỗi tài khoản đăng nhập một lần và giữ nguyên trạng thái đăng nhập, nên chat nào cũng chạy được trên bất kỳ tài khoản nào.",
       },
       {
-        q: "Tôi có cần gói Claude không?",
-        a: "Không. Với credit, ứng dụng chạy mọi chat mà không cần tài khoản Claude riêng. Nếu bạn có tài khoản, ứng dụng dùng chính tài khoản đó và bạn không tốn gì.",
+        q: "Pro giá bao nhiêu?",
+        a: `Từ ${FROM_PRICE} cho một thiết bị — hoặc ba, năm thiết bị — trả một lần qua chuyển khoản. Không thuê bao, không gia hạn; mọi bản cập nhật đều có, licence không bao giờ hết hạn. Không hài lòng? Hoàn tiền trong 7 ngày.`,
       },
       {
         q: "Tôi có cần cài Claude Code không?",
-        a: "Có, nếu dùng tài khoản Claude riêng. Ứng dụng chạy chính claude CLI của bạn và đăng nhập từng tài khoản qua nó. Nếu chỉ chat bằng credit thì không cần.",
+        a: "Có. Ứng dụng chạy chính claude CLI của bạn và đăng nhập từng tài khoản qua nó.",
       },
       {
-        q: "Credit có hết hạn không?",
-        a: "Không. Bạn mua một lần, credit nằm trong tài khoản cho đến khi dùng hết, và không có phí hàng tháng.",
+        q: "Không mua Pro thì dùng được gì?",
+        a: "Mọi thứ với tài khoản Claude, trong một project: thêm bao nhiêu tài khoản cũng được, chuyển chat giữa chúng, mọi panel của ứng dụng. Cả endpoint API tuỳ chỉnh. Chỉ project thứ hai mới cần Pro.",
       },
       {
-        q: "Một gói dùng được bao lâu?",
-        a: "Mỗi câu trả lời chạy bằng credit đều ghi rõ đã tốn bao nhiêu đô la, nên bạn không phải đoán. Ước chừng, một lần gọi Sonnet với prompt phần lớn đã cache tốn khoảng $0,01–0,015, và một tin nhắn Claude Code thường gọi vài lần như vậy. Haiku chỉ tốn một phần hai mươi, Opus gấp đôi.",
+        q: "Dùng Pro trên máy khác được không?",
+        a: "Được, tối đa số thiết bị của gói. Dán khoá licence trong email vào hộp thoại Vey Pro trên máy kia. Đổi máy mới? Huỷ kích hoạt máy cũ trong cùng hộp thoại để trả lại suất.",
       },
       {
         q: "Yêu cầu của tôi được gửi đi đâu?",
-        a: "Khi dùng credit, yêu cầu đi qua server này đến Anthropic, và đó là cách chúng được tính phí. Token đăng nhập của bạn không bao giờ được chuyển tiếp. Khi dùng tài khoản riêng, yêu cầu đi thẳng từ ứng dụng đến Anthropic, không qua server này.",
+        a: "Đi thẳng từ ứng dụng đến Anthropic bằng tài khoản của bạn, hoặc đến endpoint bạn tự cấu hình. Server này chỉ tham gia khi bạn mua Pro.",
       },
       {
         q: "Thanh toán thế nào?",
-        a: "Chuyển khoản ngân hàng qua VietQR, hoặc thẻ quốc tế. Credit được cộng ngay khi thanh toán hoàn tất, và ứng dụng sẽ thông báo cho bạn.",
+        a: "Chuyển khoản ngân hàng qua VietQR, ngay trong ứng dụng. Pro bật ngay khi tiền về, và ứng dụng sẽ thông báo cho bạn.",
       },
       {
         q: "Chạy được trên nền tảng nào?",
@@ -629,7 +723,7 @@ const vi: Copy = {
         },
         {
           title: "Thêm các tài khoản Claude",
-          body: "Bấm + cạnh Accounts ở cuối cột chat, mỗi tài khoản một lần. Không có gói Claude? Đăng nhập bằng Google và dùng credit.",
+          body: "Bấm + cạnh Accounts ở cuối cột chat, mỗi tài khoản một lần.",
           doc: "accounts",
           more: "Tài khoản Claude",
         },

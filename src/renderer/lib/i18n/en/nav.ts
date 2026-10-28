@@ -8,16 +8,12 @@ export const nav = {
     terminal: "Terminal",
     pluginFailed: "{label} failed: {error}",
   },
-  account: {
-    signedIn: "Signed in",
-    checking: "Checking your sign-in…",
-    signingIn: "Signing in…",
-    signIn: "Sign in with Google",
-    buyCredits: "Buy credits",
-    creditsLeft: "{credits} left",
-    creditsPitch: "Every model, never a monthly fee",
-    signOut: "Sign out",
-    finishInBrowser: "Finish signing in in your browser…",
+  plan: {
+    upgrade: "Upgrade",
+    freeTitle: "Free · one project — see Vey Pro",
+    pro: "Pro",
+    proTitle: "Vey Pro · {count} devices",
+    proTitle_one: "Vey Pro · 1 device",
   },
   systemBar: {
     feedback: "Feedback",

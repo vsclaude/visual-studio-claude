@@ -20,8 +20,8 @@ Code đặt khi có. Chuột phải vào chat và chọn **Rename** để tự �
 
 Mọi thứ quyết định tin nhắn tiếp theo chạy thế nào nằm ở thanh dưới ô nhập:
 
-- **Account** — chat chạy trên tài khoản Claude nào, hoặc **Pay with credits**.
-  Xem [Tài khoản Claude](/vi/docs/accounts).
+- **Account** — chat chạy trên tài khoản Claude nào. Xem
+  [Tài khoản Claude](/vi/docs/accounts).
 - **Model** và **effort** — Haiku, Sonnet hay Opus, và mức suy nghĩ (Low đến
   Max). Cả hai đổi được giữa các tin nhắn mà không phải khởi động lại chat.
 - **Quyền** — chat được tự làm những gì (xem dưới).
@@ -134,7 +134,7 @@ Vey Studio, không hoàn tác được; file của bạn không bị ảnh hư�
 
 ## Giới hạn và chat dài
 
-Khi một tài khoản chạm giới hạn, hãy chuyển chat sang tài khoản khác hoặc sang
-credit trong menu **Account** — không mất gì đã nói. Thanh đo cạnh khung soạn
+Khi một tài khoản chạm giới hạn, hãy chuyển chat sang tài khoản khác trong
+menu **Account** — không mất gì đã nói. Thanh đo cạnh khung soạn
 tin cho biết tài khoản đã dùng bao nhiêu hạn mức 5 giờ. Cuộc trò chuyện quá dài
 sẽ được Claude Code tự động nén lại.

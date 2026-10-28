@@ -1,13 +1,12 @@
 import { definePlugin } from "nitro"
 import { useRuntimeConfig } from "nitro/runtime-config"
 
+import { licenseReady } from "../utils/license.ts"
 import { logLine, notesOf } from "../utils/log.ts"
 
 /**
  * The request log: one line per request when its response is made, with
- * whatever the handler noted (`noteRequest`). A streamed answer's line is
- * written when the stream starts, so its usage comes later as a `usage` line
- * of its own (`index.post.ts`), joined to this one by `rid`.
+ * whatever the handler noted (`noteRequest`).
  *
  * And one line at start-up saying how the server is configured — whether a key
  * is set, never the key — since "no key" is the first thing to rule out.
@@ -15,12 +14,11 @@ import { logLine, notesOf } from "../utils/log.ts"
 export default definePlugin((nitroApp) => {
   const config = useRuntimeConfig()
   logLine("start", {
-    // The providers are rows in D1 (`upstreams`), not configuration, and there
-    // is no database at start-up to ask; each request's line names the one it
-    // went to, and an empty table is `refused="no upstream configured"`.
-    google_client: config.googleClientId ? "set" : "MISSING",
-    session_secret: config.sessionSecret ? "set" : "MISSING",
-    max_prompt_tokens: config.maxPromptTokens,
+    license_key: !config.licensePrivateKey
+      ? "MISSING"
+      : licenseReady()
+        ? "set"
+        : "UNREADABLE",
   })
 
   const started = new WeakMap<object, number>()

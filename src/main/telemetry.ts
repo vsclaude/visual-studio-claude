@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 
 /**
  * Anonymous usage counts: how many machines run the app, how often, and for
- * how long. Posted to the free AI's own server (`vsclaude-cloud`,
+ * how long. Posted to the studio's own server (`vsclaude-cloud`,
  * `POST /api/telemetry`), which keeps them as rows of its D1 database — no
  * third party. `docs/design.md` § Usage counts has the argument.
  *
@@ -72,7 +72,7 @@ export function usageClock({ send, enabled, focused }: UsageDeps) {
 export type TelemetryDeps = {
   version: string
   packaged: boolean
-  /** `freeAiUrl()` — the server the events go to; null sends nothing. */
+  /** `serverUrl()` — the server the events go to; null sends nothing. */
   serverUrl: string | null
   focused: () => boolean
   /** `host.fetch`, so the events go through the system proxy like the rest. */

@@ -10,6 +10,7 @@ import {
   net,
   Notification,
   powerMonitor,
+  safeStorage,
   shell,
   type IpcMainInvokeEvent,
   type OpenDialogOptions,
@@ -237,6 +238,25 @@ export function registerIpc(
       void shell.openExternal(url)
     },
     fetch: (url, init) => net.fetch(url, init),
+    // The keychain's key where there is one. Without it — a Linux desktop with
+    // no secret service — the text is kept as it is and marked so, rather
+    // than a custom API that cannot be saved at all.
+    seal(text) {
+      return safeStorage.isEncryptionAvailable()
+        ? `sealed:${safeStorage.encryptString(text).toString("base64")}`
+        : `plain:${text}`
+    },
+    unseal(sealed) {
+      try {
+        if (sealed.startsWith("plain:")) return sealed.slice("plain:".length)
+        if (!sealed.startsWith("sealed:")) return null
+        return safeStorage.decryptString(
+          Buffer.from(sealed.slice("sealed:".length), "base64")
+        )
+      } catch {
+        return null
+      }
+    },
     quitAndRun(task) {
       quitTask = { run: task, atSessionEnd: true }
       app.quit()

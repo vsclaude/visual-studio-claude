@@ -4,7 +4,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk"
 
 import type { PlanUsage, PlanWindow } from "../shared/api"
 import { claudeBinary } from "./claude-bin"
-import { accountEnv } from "./free-ai"
+import { accountEnv } from "./claude-profiles"
 import { locate, spawnEnvironment } from "./shell-env"
 
 /**

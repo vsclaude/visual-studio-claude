@@ -61,13 +61,9 @@ export const CLAUDE_PROFILES_FILE = "claude-profiles.json"
  */
 export const CLAUDE_PROFILES_DIR = "claude-profiles"
 
-/**
- * The free AI's `CLAUDE_CONFIG_DIR` — its transcripts, and the token file and
- * `apiKeyHelper` it is signed in with (`main/free-ai.ts`). Beside the profiles'
- * rather than among them, since it is not one a user named and a profile
- * called `Free` must not land on it.
- */
-export const FREE_AI_DIR = "claude-free"
+// `workspace/claude-free` was the free AI's `CLAUDE_CONFIG_DIR` (`docs/design.md`
+// § Credits and the free AI, removed). Nothing reads it any more, and nothing
+// deletes it either.
 
 /**
  * The chats held in the workspace's projects — their listing; each chat's lines

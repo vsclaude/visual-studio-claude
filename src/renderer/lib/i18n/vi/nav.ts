@@ -8,16 +8,12 @@ export const nav: Messages["nav"] = {
     terminal: "Terminal",
     pluginFailed: "{label} bị lỗi: {error}",
   },
-  account: {
-    signedIn: "Đã đăng nhập",
-    checking: "Đang kiểm tra đăng nhập…",
-    signingIn: "Đang đăng nhập…",
-    signIn: "Đăng nhập bằng Google",
-    buyCredits: "Mua credit",
-    creditsLeft: "Còn {credits}",
-    creditsPitch: "Mọi model, không phí hàng tháng",
-    signOut: "Đăng xuất",
-    finishInBrowser: "Hoàn tất đăng nhập trong trình duyệt…",
+  plan: {
+    upgrade: "Nâng cấp",
+    freeTitle: "Free · một project — xem Vey Pro",
+    pro: "Pro",
+    proTitle: "Vey Pro · {count} thiết bị",
+    proTitle_one: "Vey Pro · 1 thiết bị",
   },
   systemBar: {
     feedback: "Góp ý",

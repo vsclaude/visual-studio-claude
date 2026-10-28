@@ -30,8 +30,6 @@ import {
   SignalHigh,
   SignalLow,
   SignalMedium,
-  ChevronRight,
-  Coins,
   Square,
   Star,
   TextSelect,
@@ -76,15 +74,11 @@ import { useFiles } from "@/lib/files/store"
 import { useSettings } from "@/lib/settings"
 import { useT, type MessageKey } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { formatCredits } from "@shared/credits"
-import { FREE_PROFILE_ID } from "@shared/free-ai"
 import {
   accountLine,
   defaultAccountName,
   useClaudeProfiles,
 } from "@/lib/chat/claude-profiles"
-import { useFreeAi } from "@/lib/free-ai"
-import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
 import {
   defaultModelAlias,
   effortFor,
@@ -135,9 +129,7 @@ import { IconButton } from "../icon-button"
 import { ImageThumb } from "./chat-images"
 import { McpChip, McpDialog } from "./chat-mcp"
 import { PlanUsageMeter } from "./chat-plan-usage"
-import { CreditsBadge } from "../credits-badge"
 import { ProfileAvatar } from "../profile-avatar"
-import { CreditsMeter } from "./chat-credits-meter"
 
 /**
  * A chat's composer, with two menus: `@` over the checkout's folders and files,
@@ -399,10 +391,6 @@ export function ChatComposer({
   // Loaded once at launch (`studio.tsx`); read here for the profile picker,
   // which is drawn only once there is a profile to choose — see `ProfileMenu`.
   const profiles = useClaudeProfiles((state) => state.profiles)
-  // The free AI is a row of the same menu, and it is enough on its own to draw
-  // it — somebody with no profiles still has their own login to choose against.
-  const freeReady = useFreeAi((state) => state.ready)
-  const free = options.profileId === FREE_PROFILE_ID
 
   /* The draft as it stands, for the unmount below: the cleanup runs once and
    * would otherwise close over the empty string it was built with. */
@@ -985,7 +973,7 @@ export function ChatComposer({
                 permission={options.permission}
                 onPick={(permission) => onOptions({ ...options, permission })}
               />
-              {(profiles.length > 0 || freeReady || free) && (
+              {profiles.length > 0 && (
                 <ProfileMenu
                   profiles={profiles}
                   profileId={options.profileId ?? null}
@@ -1013,17 +1001,12 @@ export function ChatComposer({
               that nobody has asked the CLI yet — and the answer would be ~19k of
               system prompt, tools and memory files rather than nothing. */}
           {contextWindow && <WindowMeter of={contextWindow} />}
-          {/* A chat paying with credits has no plan windows to show, so the
-              slot shows what it does have: the balance it is spending. */}
-          {onOptions &&
-            (options.profileId === FREE_PROFILE_ID ? (
-              <CreditsMeter sending={sending} />
-            ) : (
-              <PlanUsageMeter
-                profileId={options.profileId ?? null}
-                sending={sending}
-              />
-            ))}
+          {onOptions && (
+            <PlanUsageMeter
+              profileId={options.profileId ?? null}
+              sending={sending}
+            />
+          )}
 
           <div className="ml-auto flex items-center gap-1">
             <DropdownMenu>
@@ -1164,8 +1147,8 @@ export function ToolbarButton({
  * `--model`, out of the list the user's own `claude` answered with.
  *
  * **The rows are the CLI's, not this app's.** Which models an install offers is
- * a property of the account behind it — `Opus (1M context)`, a Fable that wants
- * credits — so a picker written here could only be wrong in one of two
+ * a property of the account behind it — `Opus (1M context)`, a Fable — so a
+ * picker written here could only be wrong in one of two
  * directions: offering a model the account cannot use, which fails a turn after
  * somebody has typed a message, or hiding one they are paying for. See
  * `lib/chat/models.ts` and `main/agent-models.ts`.
@@ -1511,13 +1494,6 @@ export function ProfileMenu({
   // The Accounts foot's own name for it — the name given, else the address —
   // so the toolbar says *which* login rather than a bare `Account`.
   const defaultName = defaultAccountName(accounts[""], defaultLabel)
-  const freeReady = useFreeAi((state) => state.ready)
-  const free = profileId === FREE_PROFILE_ID
-  const credits = useStudioAccount((state) => state.account?.credits)
-  // Every Studio AI request is paid for out of credits, so none left is said
-  // here, before a send the server would refuse.
-  const broke = freeReady && credits !== undefined && credits <= 0
-  const stuck = !freeReady || broke
 
   return (
     <DropdownMenu
@@ -1532,20 +1508,8 @@ export function ProfileMenu({
       <DropdownMenuTrigger
         render={
           <ToolbarButton
-            icon={
-              free ? (
-                // The paid row's own badge, the menu's tile in small: a grey
-                // glyph among grey glyphs is the one thing this must not be.
-                <CreditsBadge size="xs" />
-              ) : chosen ? (
-                <ProfileAvatar profile={chosen} />
-              ) : (
-                <UserRound />
-              )
-            }
-            label={
-              free ? t("chat.profile.credits") : (chosen?.name ?? defaultName)
-            }
+            icon={chosen ? <ProfileAvatar profile={chosen} /> : <UserRound />}
+            label={chosen?.name ?? defaultName}
             title={t("chat.profile.title")}
             on={profileId !== null}
           />
@@ -1569,45 +1533,6 @@ export function ProfileMenu({
             }
             selected={profileId === null}
           />
-          {/* Kept on a chat already on it after a sign-out, so the menu still
-              says where the chat stands — `send` refuses it until sign-in. */}
-          {(freeReady || free) && (
-            <PickerRow
-              onSelect={() => onPick(FREE_PROFILE_ID)}
-              tile={<CreditsBadge size="sm" />}
-              title={t("chat.profile.payWithCredits")}
-              detail={
-                <span className={stuck ? "text-destructive" : undefined}>
-                  {!freeReady
-                    ? t("chat.profile.signedOut")
-                    : broke
-                      ? t("chat.profile.noCreditsLeft")
-                      : credits !== undefined
-                        ? t("chat.profile.creditsLeft", {
-                            credits: formatCredits(credits),
-                          })
-                        : t("chat.profile.everyModel")}
-                </span>
-              }
-              selected={free}
-            />
-          )}
-          {freeReady && (
-            <PickerRow
-              onSelect={() => useCreditsDialog.getState().show()}
-              tile={
-                <PickerTile
-                  icon={Coins}
-                  className="bg-amber-500/15 text-amber-500"
-                />
-              }
-              title={t("chat.credits.buy")}
-              detail={t("chat.profile.buyDetail")}
-              trailing={
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              }
-            />
-          )}
         </DropdownMenuGroup>
         {profiles.length > 0 && <DropdownMenuSeparator />}
         <DropdownMenuGroup>
@@ -1642,9 +1567,7 @@ export function ProfileMenu({
 
 /**
  * One row of the picker: a tile saying what kind of thing it is, the name and
- * what it is or costs underneath, and a check for the one in use. The tile is
- * the only thing that tells the paid row from the accounts — `CreditsBadge`
- * there, `PickerTile` everywhere else — so it is the one place that differs.
+ * what it is underneath, and a check for the one in use.
  */
 function PickerRow({
   onSelect,
@@ -1681,7 +1604,7 @@ function PickerRow({
   )
 }
 
-/** A plain row's tile, the size of `CreditsBadge size="sm"` beside it. */
+/** A plain row's tile, the size of a profile's `ProfileAvatar size="sm"`. */
 function PickerTile({
   icon: Icon,
   className,

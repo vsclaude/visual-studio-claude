@@ -3,6 +3,7 @@ import { join } from "node:path"
 
 import { defineConfig, type HeadConfig } from "vitepress"
 
+import { PRO_PLANS } from "../../server/utils/billing.ts"
 import { APP_MARK_URL } from "../../server/utils/brand.ts"
 import { COPY, installPathOf, LANGS, pathOf, type Lang } from "./theme/copy.ts"
 
@@ -58,7 +59,17 @@ function homeHead(lang: Lang): HeadConfig[] {
     inLanguage: lang,
     url: SITE_URL ? url : undefined,
     image,
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    // Free in one project; Pro, every project after it, bought once for one,
+    // three or five devices.
+    offers: [
+      { "@type": "Offer", name: "Free", price: "0", priceCurrency: "VND" },
+      ...PRO_PLANS.map((plan) => ({
+        "@type": "Offer",
+        name: `Pro · ${plan.seats} ${plan.seats === 1 ? "device" : "devices"}`,
+        price: String(plan.price),
+        priceCurrency: "VND",
+      })),
+    ],
   }
   const faq = {
     "@context": "https://schema.org",
@@ -249,7 +260,7 @@ export default defineConfig({
             items: [
               { text: "Getting started", link: "/docs/getting-started" },
               { text: "Claude accounts", link: "/docs/accounts" },
-              { text: "Credits", link: "/docs/credits" },
+              { text: "Vey Pro", link: "/docs/pro" },
             ],
           },
           {
@@ -287,7 +298,7 @@ export default defineConfig({
             items: [
               { text: "Bắt đầu", link: "/vi/docs/getting-started" },
               { text: "Tài khoản Claude", link: "/vi/docs/accounts" },
-              { text: "Credit", link: "/vi/docs/credits" },
+              { text: "Vey Pro", link: "/vi/docs/pro" },
             ],
           },
           {

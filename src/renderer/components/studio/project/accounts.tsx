@@ -9,8 +9,6 @@ import {
   UserRound,
 } from "lucide-react"
 
-import { formatCredits } from "@shared/credits"
-import { FREE_PROFILE_ID } from "@shared/free-ai"
 import type {
   ClaudeLoginMethod,
   ClaudeProfile,
@@ -36,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { useAccount } from "@/lib/account"
 import { useClaudeLogin } from "@/lib/chat/claude-login"
 import {
   accountCaption,
@@ -57,16 +54,8 @@ import {
   usePlanUsage,
 } from "@/lib/chat/plan-usage"
 import { useChats } from "@/lib/chat/store"
-import { useCreditsDialog, useStudioAccount } from "@/lib/credits"
-import { useFreeAi } from "@/lib/free-ai"
 import { useT } from "@/lib/i18n"
 import { useSettings } from "@/lib/settings"
-import {
-  CREDITS_GRADIENT,
-  CREDITS_SURFACE,
-  CreditsBadge,
-  CreditsBar,
-} from "../credits-badge"
 import { IconButton } from "../icon-button"
 import { ProfileAvatar } from "../profile-avatar"
 import { useMenuFocusHandoff } from "../rename-row"
@@ -74,9 +63,8 @@ import { LoginDialog, type LoginView } from "./account-login"
 
 /**
  * The accounts a chat can run on, in the order the column lists them: the
- * login the user's own `claude` already has, then their profiles, then credits
- * — the plan somebody is already paying for ahead of the one that costs per
- * turn. Each with what the column knows of whether it can take a turn.
+ * login the user's own `claude` already has, then their profiles. Each with
+ * what the column knows of whether it can take a turn.
  */
 export type ColumnAccount = AccountChoice & { name: string }
 
@@ -84,10 +72,7 @@ export function useColumnAccounts(): ColumnAccount[] {
   const profiles = useClaudeProfiles((state) => state.profiles)
   const accounts = useClaudeProfiles((state) => state.accounts)
   const usage = usePlanUsage((state) => state.byProfile)
-  const freeReady = useFreeAi((state) => state.ready)
-  const credits = useStudioAccount((state) => state.account?.credits)
   const defaultLabel = useSettings((state) => state.defaultAccountLabel)
-  const t = useT()
 
   // An account nobody has checked is `usable`: not knowing is not the same as
   // signed out, and a turn sent to one that is says so itself.
@@ -96,7 +81,7 @@ export function useColumnAccounts(): ColumnAccount[] {
     return state === undefined || state === "signedIn"
   }
 
-  const list: ColumnAccount[] = [
+  return [
     {
       profileId: null,
       name: defaultAccountName(accounts[""], defaultLabel),
@@ -110,15 +95,6 @@ export function useColumnAccounts(): ColumnAccount[] {
       usable: profile.configDir.trim() !== "" && signedIn(profile.configDir),
     })),
   ]
-  if (freeReady) {
-    list.push({
-      profileId: FREE_PROFILE_ID,
-      name: t("projects.accounts.credits"),
-      utilization: null,
-      usable: credits === undefined || credits > 0,
-    })
-  }
-  return list
 }
 
 /** The five-hour window's percent, or null when there is none to read. */
@@ -137,9 +113,7 @@ export function useAccountName(profileId: string | null): string {
     useClaudeProfiles((state) => state.accounts[""]),
     useSettings((state) => state.defaultAccountLabel)
   )
-  const t = useT()
   if (profileId === null) return fallback
-  if (profileId === FREE_PROFILE_ID) return t("projects.accounts.credits")
   return profiles.find((profile) => profile.id === profileId)?.name ?? fallback
 }
 
@@ -148,8 +122,8 @@ export function useAccountName(profileId: string | null): string {
  *
  * The thing the column never said: this app is for running chats on several
  * accounts, and which one a chat is spending was only in its composer's
- * toolbar. A letter in a hue per profile, the credits coin for credits, and a
- * person for the user's own login — and a profile that has since been deleted
+ * toolbar. A letter in a hue per profile, and a person for the user's own
+ * login — and a profile that has since been deleted
  * reads as that login, which is what `chat.ts` falls back to as well.
  */
 export function AccountAvatar({
@@ -162,9 +136,6 @@ export function AccountAvatar({
   const profiles = useClaudeProfiles((state) => state.profiles)
   const name = useAccountName(profileId)
 
-  if (profileId === FREE_PROFILE_ID) {
-    return <CreditsBadge size="xs" className={className} />
-  }
   const profile = profiles.find((entry) => entry.id === profileId)
   if (!profile) {
     return (
@@ -190,11 +161,13 @@ type LoginTarget = { profileId: string | null; configDir: string; name: string }
 /** What the login dialog is open on: the question, for an account on the list
  * or (null) a new one, or a login under way, by its key. */
 type LoginDialogState =
-  { kind: "ask"; target: LoginTarget | null } | { kind: "login"; key: string }
+  | { kind: "ask"; target: LoginTarget | null }
+  | { kind: "login"; key: string }
+  | { kind: "api"; profile: ClaudeProfile | null }
 
 /**
- * The foot of the projects column: every account, how much of its five-hour
- * window is gone, and the credits left — and where accounts are **managed**.
+ * The foot of the projects column: every account and how much of its
+ * five-hour window is gone — and where accounts are **managed**.
  *
  * The question the product exists to answer — which account can still take a
  * turn — asked of every account at once, where it used to be asked of one at a
@@ -227,7 +200,6 @@ export function AccountsFooter() {
   const cancelLogin = useClaudeLogin((state) => state.cancel)
   const added = useClaudeLogin((state) => state.added)
   const clearAdded = useClaudeLogin((state) => state.clearAdded)
-  const freeReady = useFreeAi((state) => state.ready)
   const busy = useChats((state) => state.sending.length)
   const t = useT()
 
@@ -244,22 +216,30 @@ export function AccountsFooter() {
   if (loginDialog?.kind === "login" && !shownLogin) setLoginDialog(null)
 
   const loginView: LoginView | null =
-    loginDialog?.kind === "ask"
+    loginDialog?.kind === "api"
       ? {
-          kind: "ask",
-          title: loginDialog.target
-            ? t("projects.login.title", { name: loginDialog.target.name })
-            : t("projects.login.addTitle"),
+          kind: "api",
+          title: loginDialog.profile
+            ? t("projects.api.editTitle", { name: loginDialog.profile.name })
+            : t("projects.api.addTitle"),
+          profile: loginDialog.profile,
         }
-      : shownLogin
+      : loginDialog?.kind === "ask"
         ? {
-            kind: "login",
-            title: shownLogin.isNew
-              ? t("projects.login.addTitle")
-              : t("projects.login.title", { name: shownLogin.name }),
-            login: shownLogin,
+            kind: "ask",
+            title: loginDialog.target
+              ? t("projects.login.title", { name: loginDialog.target.name })
+              : t("projects.login.addTitle"),
           }
-        : null
+        : shownLogin
+          ? {
+              kind: "login",
+              title: shownLogin.isNew
+                ? t("projects.login.addTitle")
+                : t("projects.login.title", { name: shownLogin.name }),
+              login: shownLogin,
+            }
+          : null
 
   // The mark on an account that has just arrived, for as long as it takes to
   // be seen.
@@ -312,10 +292,11 @@ export function AccountsFooter() {
     })
   }
 
-  const plans = accounts
-    .map((account) => account.profileId)
-    .filter((id) => id !== FREE_PROFILE_ID)
-  const plansKey = plans.join("|")
+  /** A custom API profile's form — a new one, or the row's. */
+  const openApi = (profile: ClaudeProfile | null) =>
+    setLoginDialog({ kind: "api", profile })
+
+  const plansKey = accounts.map((account) => account.profileId).join("|")
 
   useEffect(() => {
     checkUnknown(["", ...profiles.map((profile) => profile.configDir)])
@@ -422,9 +403,6 @@ export function AccountsFooter() {
               )
             : []
 
-          // Drawn as its own card under the list instead (`CreditsCard`).
-          if (account.profileId === FREE_PROFILE_ID) return null
-
           const profile = profiles.find(
             (entry) => entry.id === account.profileId
           )
@@ -437,15 +415,18 @@ export function AccountsFooter() {
               windows={windows}
               now={now}
               arrived={added === key}
+              api={profile?.api !== undefined}
               onLogin={() =>
-                setLoginDialog({
-                  kind: "ask",
-                  target: {
-                    profileId: account.profileId,
-                    configDir: profile?.configDir ?? "",
-                    name: account.name,
-                  },
-                })
+                profile?.api
+                  ? openApi(profile)
+                  : setLoginDialog({
+                      kind: "ask",
+                      target: {
+                        profileId: account.profileId,
+                        configDir: profile?.configDir ?? "",
+                        name: account.name,
+                      },
+                    })
               }
               onRename={() => setRenaming(key)}
               onRenamed={() => setRenaming(null)}
@@ -454,16 +435,10 @@ export function AccountsFooter() {
           )
         })}
       </ul>
-      {/* Credits are an account to `useColumnAccounts` (which `Continue with
-          …` reads), but not one more login: listed as a row they read as a
-          profile called "Credits". So a card of their own, pinned under the
-          list and in their own colours — and, until they can take a turn,
-          the way in, which Settings used to be. */}
-      {!collapsed && <CreditsCard signIn={!freeReady} />}
-
       <LoginDialog
         view={loginView}
         onStart={begin}
+        onCustomApi={() => openApi(null)}
         onClose={() => {
           if (shownLogin) cancelLogin(shownLogin.key)
           setLoginDialog(null)
@@ -573,6 +548,7 @@ const ROW =
  */
 function PlanRow({
   account,
+  api,
   configDir,
   renaming,
   windows,
@@ -584,6 +560,8 @@ function PlanRow({
   onRemove,
 }: {
   account: ColumnAccount
+  /** A custom API profile — no login: its menu edits the endpoint. */
+  api: boolean
   configDir: string
   renaming: boolean
   /** The windows to draw, in `METER_WINDOWS` order — none for an account
@@ -687,14 +665,16 @@ function PlanRow({
               finalFocus={menuFocus.finalFocus}
             >
               <p className="truncate px-1.5 py-1 text-xs text-muted-foreground">
-                {caption || accountLabel(known).label}
+                {caption || (api && known?.error) || accountLabel(known).label}
               </p>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogin}>
                 <KeyRound />
-                {signedIn
-                  ? t("projects.accounts.signInAsAnother")
-                  : t("projects.accounts.signInMenu")}
+                {api
+                  ? t("projects.accounts.editEndpoint")
+                  : signedIn
+                    ? t("projects.accounts.signInAsAnother")
+                    : t("projects.accounts.signInMenu")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={checking}
@@ -730,10 +710,12 @@ function PlanRow({
             size="xs"
             variant="ghost"
             className="shrink-0 text-destructive hover:text-destructive"
-            title={t("projects.accounts.notSignedIn")}
+            title={known?.error ?? t("projects.accounts.notSignedIn")}
             onClick={onLogin}
           >
-            {t("projects.accounts.signIn")}
+            {api
+              ? t("projects.accounts.fixEndpoint")
+              : t("projects.accounts.signIn")}
           </Button>
         )}
       </div>
@@ -775,7 +757,9 @@ function KindBadge({ kind }: { kind: AccountKind }) {
         "shrink-0 rounded-sm border px-1 text-[0.5625rem] leading-3.5 font-medium tracking-wide uppercase",
         kind.kind === "api"
           ? "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-          : "border-border text-muted-foreground"
+          : kind.kind === "custom"
+            ? "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+            : "border-border text-muted-foreground"
       )}
     >
       {kind.label}
@@ -783,7 +767,12 @@ function KindBadge({ kind }: { kind: AccountKind }) {
   )
 }
 
-const KIND_KEY = { api: "Api", token: "Token", cloud: "Cloud" } as const
+const KIND_KEY = {
+  api: "Api",
+  token: "Token",
+  cloud: "Cloud",
+  custom: "Custom",
+} as const
 
 /**
  * One window as a short bar, its percent and its name, on one line — stacked
@@ -840,90 +829,6 @@ function Meter({ window, now }: { window: PlanWindow; now: Date }) {
         {meterLabel(window.id)}
       </span>
     </span>
-  )
-}
-
-/**
- * Credits as a card under the accounts: the balance and the bar it empties,
- * and a click to buy more — or, for somebody not signed in to Vey Studio, a
- * line on what they are and `Sign in`, the way in Settings' Credits card used
- * to be. The gradient's wash is what keeps it from reading as a login.
- */
-function CreditsCard({ signIn }: { signIn: boolean }) {
-  const showCredits = useCreditsDialog((state) => state.show)
-  const busy = useAccount((state) => state.busy)
-  const start = useAccount((state) => state.signIn)
-  const account = useStudioAccount((state) => state.account)
-  const t = useT()
-
-  const card = cn(
-    "mt-1.5 flex w-full shrink-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs",
-    CREDITS_SURFACE
-  )
-
-  if (signIn) {
-    return (
-      <div className={card}>
-        <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">
-            {t("projects.accounts.credits")}
-          </p>
-          <p className="truncate text-[0.6875rem] text-muted-foreground">
-            {t("projects.accounts.creditsPitch")}
-          </p>
-        </div>
-        <Button
-          size="xs"
-          className={cn(
-            "shrink-0 border-0 text-white shadow-sm shadow-violet-500/25 hover:opacity-90",
-            CREDITS_GRADIENT
-          )}
-          title={t("projects.accounts.creditsPitchLong")}
-          disabled={busy}
-          onClick={() => void start()}
-        >
-          {busy
-            ? t("projects.accounts.signingIn")
-            : t("projects.accounts.signIn")}
-        </Button>
-      </div>
-    )
-  }
-
-  const broke = account !== null && account.credits <= 0
-  return (
-    <button
-      type="button"
-      title={t("projects.accounts.buyCredits")}
-      onClick={showCredits}
-      className={cn(
-        card,
-        "outline-none hover:border-violet-500/45 focus-visible:ring-2 focus-visible:ring-ring/50"
-      )}
-    >
-      <CreditsBadge size="sm" className="size-6 [&_svg]:size-3" />
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-baseline gap-2">
-          <span className="min-w-0 flex-1 truncate font-medium">
-            {t("projects.accounts.credits")}
-          </span>
-          {account && (
-            <span
-              className={cn(
-                "shrink-0 text-[0.6875rem] tabular-nums",
-                broke ? "text-destructive" : "text-muted-foreground"
-              )}
-            >
-              {t("projects.accounts.creditsLeft", {
-                amount: formatCredits(account.credits),
-              })}
-            </span>
-          )}
-        </div>
-        {account && <CreditsBar account={account} className="h-1" />}
-      </div>
-    </button>
   )
 }
 

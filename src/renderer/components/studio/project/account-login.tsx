@@ -14,7 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react"
 
-import type { ClaudeLoginMethod } from "@shared/api"
+import type { ClaudeLoginMethod, ClaudeProfile } from "@shared/api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -31,21 +31,25 @@ import { useClaudeLogin, type PendingLogin } from "@/lib/chat/claude-login"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { TerminalView, type TerminalHandle } from "../terminal-view"
+import { ApiForm } from "./account-api"
 
 /** The account kinds, in the order the form offers them — a subscription
  * first, since that is what almost everybody adding a second account has. */
 const METHODS: ClaudeLoginMethod[] = ["claudeai", "console", "sso"]
 
-/** What the login dialog is showing: the question before a login, or one
- * login under way. */
+/** What the login dialog is showing: the question before a login, one
+ * login under way, or a custom API's form — a new one, or a row's. */
 export type LoginView =
   | { kind: "ask"; title: string }
   | { kind: "login"; title: string; login: PendingLogin }
+  | { kind: "api"; title: string; profile: ClaudeProfile | null }
 
 function sameView(a: LoginView | null, b: LoginView | null): boolean {
   if (a === null || b === null) return a === b
   if (a.kind !== b.kind || a.title !== b.title) return false
-  return a.kind === "ask" || (b.kind === "login" && a.login === b.login)
+  if (a.kind === "login") return b.kind === "login" && a.login === b.login
+  if (a.kind === "api") return b.kind === "api" && a.profile === b.profile
+  return true
 }
 
 function isBusy(login: PendingLogin): boolean {
@@ -73,11 +77,14 @@ function isBusy(login: PendingLogin): boolean {
 export function LoginDialog({
   view,
   onStart,
+  onCustomApi,
   onClose,
 }: {
   /** Null is closed. */
   view: LoginView | null
   onStart: (method: ClaudeLoginMethod) => void
+  /** The fourth kind, which is not a login: its form. */
+  onCustomApi: () => void
   onClose: () => void
 }) {
   // What was showing, kept through the close: a login that has just worked is
@@ -101,29 +108,48 @@ export function LoginDialog({
       <DialogContent className="grid-cols-[minmax(0,1fr)] gap-5 sm:max-w-md">
         {shown?.kind === "login" ? (
           <LoginSteps title={shown.title} login={shown.login} />
+        ) : shown?.kind === "api" ? (
+          <ApiForm
+            key={shown.profile?.id ?? "new"}
+            title={shown.title}
+            profile={shown.profile}
+            onDone={onClose}
+            onCancel={onClose}
+          />
         ) : shown?.kind === "ask" ? (
-          <LoginForm title={shown.title} onStart={onStart} onCancel={onClose} />
+          <LoginForm
+            title={shown.title}
+            onStart={onStart}
+            onCustomApi={onCustomApi}
+            onCancel={onClose}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
   )
 }
 
+/** The login kinds and, last, the custom API, which is not one. */
+type Choice = ClaudeLoginMethod | "customApi"
+
 function LoginForm({
   title,
   onStart,
+  onCustomApi,
   onCancel,
 }: {
   title: string
   onStart: (method: ClaudeLoginMethod) => void
+  onCustomApi: () => void
   onCancel: () => void
 }) {
   const t = useT()
-  const [method, setMethod] = useState<ClaudeLoginMethod>("claudeai")
+  const [method, setMethod] = useState<Choice>("claudeai")
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onStart(method)
+    if (method === "customApi") onCustomApi()
+    else onStart(method)
   }
 
   return (
@@ -135,10 +161,10 @@ function LoginForm({
 
       <RadioGroup
         value={method}
-        onValueChange={(value) => setMethod(value as ClaudeLoginMethod)}
+        onValueChange={(value) => setMethod(value as Choice)}
         className="gap-1.5"
       >
-        {METHODS.map((value) => (
+        {[...METHODS, "customApi" as const].map((value) => (
           <label
             key={value}
             className={cn(
@@ -148,7 +174,7 @@ function LoginForm({
           >
             <RadioGroupItem value={value} className="mt-0.5" />
             <span className="min-w-0">
-              <span className="block text-sm font-medium">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
                 {t(`projects.login.${value}`)}
               </span>
               <span className="block text-xs text-muted-foreground">
@@ -161,16 +187,22 @@ function LoginForm({
 
       {/* Said before the browser opens, because after is too late: the
           browser approves whoever claude.ai is signed in as, in one click. */}
-      <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
-        <Info className="mt-0.5 size-3.5 shrink-0" />
-        {t("projects.login.browserNote")}
-      </p>
+      {method !== "customApi" && (
+        <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
+          <Info className="mt-0.5 size-3.5 shrink-0" />
+          {t("projects.login.browserNote")}
+        </p>
+      )}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           {t("common.cancel")}
         </Button>
-        <Button type="submit">{t("projects.login.open")}</Button>
+        <Button type="submit">
+          {method !== "customApi"
+            ? t("projects.login.open")
+            : t("projects.login.customApiNext")}
+        </Button>
       </DialogFooter>
     </form>
   )

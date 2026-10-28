@@ -3,9 +3,8 @@ import { APP_MARK, APP_MARK_URL, WORDMARK, WORDMARK_CSS } from "./brand.ts"
 import { html, raw, type SafeHtml } from "./html.ts"
 
 /**
- * The shell the two payment pages share — `/pay/<code>` (bank transfer, in
- * Vietnamese) and `/checkout` (Paddle, in English) — and the sign-in page
- * borrows (`signin.ts`): the landing's palette and
+ * The shell of the payment page — `/pay/<code>` (bank transfer, in
+ * Vietnamese): the landing's palette and
  * type, the app's mark at the top, and one card every state of the page is
  * drawn in. One self-contained document, like the landing — somebody arrives
  * here from the studio mid-purchase, and it should look like the same product.

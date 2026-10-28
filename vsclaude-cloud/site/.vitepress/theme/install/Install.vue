@@ -283,7 +283,7 @@ function step(by: number) {
         <a class="logo" :href="home" v-html="LOGO"></a>
         <nav>
           <a :href="`${home}#why`">{{ nav.why }}</a>
-          <a :href="`${home}#credits`">{{ nav.pricing }}</a>
+          <a :href="`${home}#pricing`">{{ nav.pricing }}</a>
           <a :href="`${docs}getting-started`">{{ nav.docs }}</a>
         </nav>
         <p class="copy">© {{ year }} Vey Studio</p>

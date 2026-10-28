@@ -20,8 +20,8 @@ it your own — a name you chose is never replaced.
 
 Everything about how the next message runs is in the bar under the text box:
 
-- **Account** — which Claude account the chat runs on, or **Pay with
-  credits**. See [Claude accounts](/docs/accounts).
+- **Account** — which Claude account the chat runs on. See
+  [Claude accounts](/docs/accounts).
 - **Model** and **effort** — Haiku, Sonnet or Opus, and how hard it thinks
   (Low to Max). Both can be changed between messages without restarting the
   chat.
@@ -136,7 +136,7 @@ conversation from Vey Studio, with no undo; it does not touch your files.
 
 ## Limits and long chats
 
-When an account reaches its limit, switch the chat to another account or to
-credits from the **Account** menu — nothing said so far is lost. The meter
+When an account reaches its limit, switch the chat to another account from
+the **Account** menu — nothing said so far is lost. The meter
 beside the composer shows how much of the account's five-hour window is used.
 Very long conversations are compacted automatically by Claude Code.

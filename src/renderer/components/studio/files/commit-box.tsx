@@ -18,10 +18,8 @@ import { useAgentModels } from "@/lib/chat/models"
 import { useCommitBox, useCommitBoxes } from "@/lib/files/commit-box"
 import type { FileRoot } from "@/lib/files/roots"
 import { useT } from "@/lib/i18n"
-import { useFreeAi } from "@/lib/free-ai"
 import { useSettings } from "@/lib/settings"
 import { isStudioShortcut } from "@/lib/shortcuts"
-import { FREE_PROFILE_ID } from "@shared/free-ai"
 import { ModelMenu, ProfileMenu } from "../chat/chat-composer"
 
 /**
@@ -182,7 +180,6 @@ function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
   const [profileId, setProfileId] = useState(saved.reviewProfileId)
   const profiles = useClaudeProfiles((state) => state.profiles)
   const models = useAgentModels(profileId)
-  const freeReady = useFreeAi((state) => state.ready)
   const field = useRef<HTMLTextAreaElement>(null)
 
   const save = () => {
@@ -223,11 +220,7 @@ function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
                 setEffort(nextEffort)
               }}
             />
-            {/* The composer's own condition: credits are a choice even for
-                somebody with no profile of their own. */}
-            {(profiles.length > 0 ||
-              freeReady ||
-              profileId === FREE_PROFILE_ID) && (
+            {profiles.length > 0 && (
               <ProfileMenu
                 profiles={profiles}
                 profileId={profileId}

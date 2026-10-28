@@ -18,9 +18,8 @@ import type {
   ChatWindowTone,
   TurnUsage,
 } from "../shared/api"
-import { creditsOf } from "../shared/credits"
 import { claudeBinary } from "./claude-bin"
-import { accountEnv } from "./free-ai"
+import { accountEnv } from "./claude-profiles"
 import { locate, spawnEnvironment } from "./shell-env"
 
 /**
@@ -169,17 +168,9 @@ export type AgentSessionOptions = {
    * Unset (or null) for the account the user's own `claude` is already signed
    * into — the same "leave it alone" default `model` and `effort` follow. Goes
    * through `environment`'s `extra`, which is the one place this app's own env
-   * wins over whatever the shell already exports — by way of `accountEnv`, so
-   * the free AI's directory brings its server with it.
+   * wins over whatever the shell already exports — by way of `accountEnv`.
    */
   configDir?: string | null
-  /**
-   * Whether the turns are paid for in Studio AI credits — the free profile's
-   * directory — so the result line can say what each one cost
-   * (`TurnUsage.credits`). Decided by the caller, which knows the profile; here
-   * a `configDir` is only a path.
-   */
-  charged?: boolean
   /** Directories outside `cwd` the turn may read. */
   addDirs?: string[]
   appendSystemPrompt?: string
@@ -1076,7 +1067,7 @@ export async function startAgentSession(
         }
         // An API-key account out of balance (`Credit balance is too low`) is
         // `billing_error`, not `rate_limit` — but it is the same stop, with
-        // the same ways on: another account, or credits. Read as one, it gets
+        // the same way on: another account. Read as one, it gets
         // the limit line and its card rather than a red line with no way out.
         if (
           message.type === "assistant" &&
@@ -1130,13 +1121,7 @@ export async function startAgentSession(
         if (message.type === "result") {
           stopLive()
           handlers.onUsage(
-            usageOf(
-              message,
-              previous,
-              context,
-              Date.now() - turnStartedAt,
-              session.charged === true
-            )
+            usageOf(message, previous, context, Date.now() - turnStartedAt)
           )
           previous = message
           context = null
@@ -1566,10 +1551,7 @@ export function usageOf(
   context?: number | null,
   /** How long the turn took, measured by the caller — see `durationMs` on
    * `TurnUsage` for why it is not read off the line. */
-  durationMs?: number | null,
-  /** Whether the turn was paid for in credits, and so gets a `credits` figure —
-   * see `AgentSessionOptions.charged`. */
-  charged = false
+  durationMs?: number | null
 ): TurnUsage {
   const before = previous?.modelUsage ?? {}
   const models = Object.entries(message.modelUsage ?? {}).map(([name, use]) => {
@@ -1610,13 +1592,6 @@ export function usageOf(
   )
 
   const cost = since(message.total_cost_usd, previous?.total_cost_usd)
-  // Per model and then summed, as the server charges each request: a turn on
-  // Sonnet whose subagent ran on Haiku is two prices, and the busiest model's
-  // alone would overstate it twentyfold. Null, not zero, for a turn that
-  // counted nothing — the same reason as `costUsd`.
-  const credits = charged
-    ? models.reduce((sum, [name, use]) => sum + creditsOf(use, name), 0)
-    : 0
   return {
     model: busiest?.[0] ?? null,
     ...total,
@@ -1626,7 +1601,6 @@ export function usageOf(
     costUsd: cost > 0 ? cost : null,
     context: context ?? null,
     durationMs: durationMs ?? null,
-    credits: credits > 0 ? credits : null,
   }
 }
 
@@ -1759,7 +1733,6 @@ export function liveUsageOf(replies: Iterable<LiveReply>): TurnUsage {
     // The line under the composer already moves with every reply.
     context: null,
     durationMs: null,
-    credits: null,
   }
 }
 

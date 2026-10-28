@@ -2,7 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk"
 
 import { CHAT_EFFORTS, type AgentModel, type ChatEffort } from "../shared/api"
 import { claudeBinary } from "./claude-bin"
-import { accountEnv } from "./free-ai"
+import { accountEnv } from "./claude-profiles"
 import { locate, spawnEnvironment } from "./shell-env"
 
 /**
@@ -12,7 +12,7 @@ import { locate, spawnEnvironment } from "./shell-env"
  * list of four aliases in `@shared/api`, and the problem with a written list is
  * not that it goes stale: which models an install offers is a property of the
  * account and the CLI version behind it, so one machine's list carries
- * `Opus (1M context)` and a Fable that wants credits while another's has
+ * `Opus (1M context)` and a Fable while another's has
  * neither. A picker offering a model the account cannot use is a turn that
  * fails after somebody has typed a message, and one hiding a model they are
  * paying for is worse.
@@ -106,8 +106,8 @@ async function ask(configDir: string | null): Promise<AgentModel[]> {
     prompt: nothing,
     options: {
       pathToClaudeCodeExecutable: binary,
-      // The account's own env, the free AI's included: the same one a chat on
-      // it is spawned with, so the default this answers is the chat's.
+      // The account's own env: the same one a chat on it is spawned with, so
+      // the default this answers is the chat's.
       env: await spawnEnvironment(accountEnv(configDir)),
       abortController: held,
     },

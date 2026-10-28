@@ -17,6 +17,9 @@ Refer to `node_modules/nitro/dist/docs/README.md` when working on server (your k
 
 ## What this server is
 
-The free AI behind Vey Studio — see `README.md`. Signed-in studio
-users (Google sign-in, tokens this server signs) get `POST /v1/messages` passed through to Anthropic
-on Haiku, Sonnet or Opus within a daily budget per user, and past it on credits.
+The server behind Vey Studio — see `README.md`: Vey Pro's purchase by SePay
+bank transfer, its licence keys and the devices they are activated on (an
+Ed25519-signed activation per device), the studio's anonymous usage counts,
+and the site. There is no sign-in (README § Sign-in, removed). No chat goes
+through it; the free AI that forwarded to Anthropic on credits is deleted
+(README § Credits, removed).

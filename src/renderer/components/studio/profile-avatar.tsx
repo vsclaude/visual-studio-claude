@@ -2,8 +2,7 @@ import { cn } from "@/lib/utils"
 import { avatarHue, avatarLetter } from "@/lib/chat/column"
 
 /** The two sizes an account is drawn at: a row's mark beside its name, and
- * a picker's tile — the boxes of `CreditsBadge` at `xs` and `sm`, so a
- * profile and credits sit in the same column wherever both are listed. */
+ * a picker's tile. */
 const SIZES = {
   xs: "size-4 text-[0.5625rem]",
   sm: "size-8 text-sm",

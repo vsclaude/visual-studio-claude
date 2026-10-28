@@ -41,8 +41,7 @@ Cần có FUSE (`sudo apt install libfuse2` trên Debian và Ubuntu).
 ## Claude Code
 
 Chat chạy trên chính `claude` của bạn, tức Claude Code CLI. Ứng dụng vẫn mở
-được khi chưa có CLI, nhưng bạn cần nó để chat bằng tài khoản Claude của mình.
-Nếu chưa có tài khoản Claude nào, bạn có thể chat bằng [credit](/vi/docs/credits).
+được khi chưa có CLI, nhưng bạn cần nó để chat.
 
 ## Cuộc chat đầu tiên
 

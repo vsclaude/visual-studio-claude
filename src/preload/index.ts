@@ -151,6 +151,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.planUsage, profileId, fresh),
   removeMcpServer: (input) => ipcRenderer.invoke(IPC.removeMcpServer, input),
   listClaudeProfiles: () => ipcRenderer.invoke(IPC.listClaudeProfiles),
+  saveClaudeApiProfile: (input) =>
+    ipcRenderer.invoke(IPC.saveClaudeApiProfile, input),
   saveClaudeProfiles: (profiles) =>
     ipcRenderer.invoke(IPC.saveClaudeProfiles, profiles),
   claudeAccount: (configDir) =>
@@ -168,13 +170,13 @@ const api: DesktopApi = {
   setAlwaysOnTop: (on) => ipcRenderer.invoke(IPC.setAlwaysOnTop, on),
   isAlwaysOnTop: () => ipcRenderer.invoke(IPC.isAlwaysOnTop),
   setBadgeCount: (count) => ipcRenderer.invoke(IPC.setBadgeCount, count),
-  signInWithGoogle: () => ipcRenderer.invoke(IPC.signInWithGoogle),
-  cancelSignInWithGoogle: () => ipcRenderer.invoke(IPC.cancelSignInWithGoogle),
-  freeAiAvailable: () => ipcRenderer.invoke(IPC.freeAiAvailable),
-  setFreeAiToken: (token) => ipcRenderer.invoke(IPC.setFreeAiToken, token),
-  studioAccount: () => ipcRenderer.invoke(IPC.studioAccount),
-  buyCredits: (item, method) =>
-    ipcRenderer.invoke(IPC.buyCredits, item, method),
+  studioServerAvailable: () => ipcRenderer.invoke(IPC.studioServerAvailable),
+  proStatus: () => ipcRenderer.invoke(IPC.proStatus),
+  buyLicense: (seats, email) =>
+    ipcRenderer.invoke(IPC.buyLicense, seats, email),
+  claimLicense: () => ipcRenderer.invoke(IPC.claimLicense),
+  activateLicense: (key) => ipcRenderer.invoke(IPC.activateLicense, key),
+  deactivateLicense: () => ipcRenderer.invoke(IPC.deactivateLicense),
   searchWorkspace: (query, options, filter) =>
     ipcRenderer.invoke(IPC.searchWorkspace, query, options, filter),
   replaceInFiles: (query, options, replacement, paths) =>

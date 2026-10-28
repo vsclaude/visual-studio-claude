@@ -41,8 +41,7 @@ It needs FUSE (`sudo apt install libfuse2` on Debian and Ubuntu).
 ## Claude Code
 
 Chats run on your own `claude` — the Claude Code CLI. The app opens without
-it, but you need it to chat with your own Claude accounts. If you have no
-Claude account at all, you can chat on [credits](/docs/credits) instead.
+it, but you need it to chat.
 
 ## Your first chat
 

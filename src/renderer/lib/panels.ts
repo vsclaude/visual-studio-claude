@@ -440,6 +440,28 @@ export function useHasOpenTabs(): boolean {
 }
 
 /**
+ * The tab each project was last showing, as the strip addresses it. In memory
+ * only, like the scope itself: it is this run's place in each project.
+ */
+const lastTabByRoot = new Map<string, string>()
+
+/**
+ * Records the tab on screen as its project's last one — called by the
+ * workbench whenever the strip's active tab changes.
+ *
+ * Checked against the scope rather than trusted: the frame after the project
+ * moves, the pane may still be on a tab of the one just left, and recording it
+ * under the new root would send the next return to the wrong project's tab.
+ */
+export function rememberActiveTab(id: string) {
+  const kind = kindOf(id)
+  if (!kind || !inScope(kind, bare(id, kind))) return
+
+  const root = activeRootId()
+  if (root !== null) lastTabByRoot.set(root, id)
+}
+
+/**
  * Puts something from *this* project on screen, when what was showing is not.
  *
  * Called when the context moves. Most ways of moving it already land on a tab
@@ -449,7 +471,8 @@ export function useHasOpenTabs(): boolean {
  * which would otherwise leave the pane drawing a file from the branch just left
  * while the strip no longer holds its tab.
  *
- * Prefers the pane already on screen, so switching project with a file open
+ * Prefers the tab this project was last showing (`rememberActiveTab`), then
+ * the pane already on screen, so switching project with a file open
  * lands on this project's file rather than on whatever the strip happens to
  * start with. Cannot loop: every id it selects is in scope, and the `setActive`
  * that a panel's `select` performs is a no-op for the root already current.
@@ -459,6 +482,16 @@ export function reconcileScope() {
 
   const own = PANELS[pane].active()
   if (own !== null && inScope(pane, own)) return
+
+  // The tab this project was last showing, when it is still open: without it,
+  // leaving a project and coming back landed on its first tab rather than the
+  // one being read.
+  const root = activeRootId()
+  const last = root === null ? undefined : lastTabByRoot.get(root)
+  if (last !== undefined && tabIds().includes(last)) {
+    selectTab(last)
+    return
+  }
 
   const mine = openInScope(pane)[0]
   if (mine !== undefined) {

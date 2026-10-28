@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Vey Studio
   text: The user's guide
-  tagline: Every Claude account in one menu, a chat that survives the switch, and credits for when every plan is out of its 5-hour window.
+  tagline: Every Claude account in one menu, and a chat that survives the switch when one plan is out of its 5-hour window.
   image:
     src: /logo.svg
     alt: Vey Studio
@@ -13,8 +13,8 @@ hero:
       text: Get started
       link: /docs/getting-started
     - theme: alt
-      text: Credits
-      link: /docs/credits
+      text: Vey Pro
+      link: /docs/pro
 
 features:
   - title: Every Claude account, one menu
@@ -23,7 +23,7 @@ features:
   - title: Switch mid-chat, lose nothing
     details: Move a conversation to another account and the next message carries on with everything said so far.
     link: /docs/accounts#switching-a-chat-to-another-account
-  - title: Past the 5-hour limit, on credits
-    details: Keep chatting when every account is out of its window. Pay once, no subscription — credits never expire.
-    link: /docs/credits
+  - title: Free, then Pro once
+    details: Every Claude account and custom API is free, in one project. Pro adds every project — bought once, no subscription.
+    link: /docs/pro
 ---

@@ -26,8 +26,9 @@ Mở **Settings** bằng `⌘,` hoặc biểu tượng bánh răng ở cuối d�
 
 ## Claude
 
-- **Credits** — đăng nhập Google, xem số dư và mua credit. Xem
-  [Credit](/vi/docs/credits).
+- **Vey Pro** — nút **Upgrade** (hoặc **Pro**) ở góc phải thanh tiêu đề: các
+  gói, khoá licence của bạn, và huỷ kích hoạt máy này. Xem
+  [Vey Pro](/vi/docs/pro).
 - **Your accounts** — các tài khoản Claude mà chat có thể chạy. Xem
   [Tài khoản Claude](/vi/docs/accounts).
 - **Helpers › Commit message drafts** — model và tài khoản nút **Draft** của tab

@@ -7,8 +7,6 @@ shell would. If it is installed somewhere your shell's `PATH` does not reach,
 set `CLAUDE_BIN` to the full path of the `claude` executable before starting
 the app. **Settings › Updates** shows which version was found.
 
-You do not need Claude Code at all to chat on [credits](/docs/credits).
-
 ## An account is not signed in
 
 Open the account's menu under **Accounts**, at the foot of the chats column.
@@ -18,7 +16,7 @@ one does not touch the others.
 ## A chat stopped at the limit
 
 That account is out of its five-hour (or weekly) window. Open the chat's
-**Account** menu and pick another account, or **Pay with credits**. The next
+**Account** menu and pick another account. The next
 message carries on with the whole conversation.
 
 ## A chat seems stuck
@@ -27,23 +25,20 @@ message carries on with the whole conversation.
   card above the composer.
 - Otherwise press **Stop**, then send your message again.
 
-## The credits I paid for have not arrived
+## I paid for Pro and it has not turned on
 
 Bank transfers are matched by the code in the transfer's content, so send it
-exactly as shown on the payment page. Credits usually land within a minute or
-two. If a transfer was short, or the content was changed, it is not added
-automatically — contact us with the transfer's details and it will be sorted
-out by hand.
-
-## A chat on credits says the prompt is too long
-
-On credits, a request is limited to 100K tokens. Vey Studio has Claude Code
-compact the conversation before it gets there, so this should be rare; if it
-happens, start a new chat or ask Claude to summarise first.
+exactly as shown on the payment page. Pro usually turns on within a minute or
+two, on the computer you bought it on — click into the app's window to make
+it ask again. On another computer, paste the licence key from your email. If
+a transfer was short, or the
+content was changed, it is not matched automatically — contact us with the
+transfer's details and it will be sorted out by hand.
 
 ## Where is my data?
 
 Your projects stay where they are. Vey Studio's own data — the list of projects,
-your settings, chats and Claude account logins — is under `~/.veystudio` on your
-machine. Requests from your own Claude accounts go straight to Anthropic; only
-chats on credits go through Vey Studio's server.
+your settings, chats and Claude account logins — is under
+`~/.veystudio` on your machine. Every chat goes straight from your own
+Claude accounts to Anthropic; Vey Studio's server is only involved in signing
+in and buying Pro.

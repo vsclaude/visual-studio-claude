@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import {
   copyFile,
   mkdir,
@@ -31,7 +31,6 @@ import {
   type ChatEvent,
   type ChatOptions,
 } from "../shared/api"
-import { FREE_PROFILE_ID } from "../shared/free-ai"
 import { contentTypeOf, extensionForType } from "../shared/note-files"
 import { spendRows } from "./chat-digest"
 import { forkPointIn, promptIdIn } from "./chat-fork"
@@ -48,7 +47,7 @@ import {
   type AskDecision,
   type AskRequest,
 } from "./claude-agent"
-import { freeAiReady, NO_CREDITS_LEFT, outOfCredits } from "./free-ai"
+import { apiEnvFor } from "./claude-api"
 import { expandHome } from "./shell-env"
 
 /**
@@ -888,14 +887,6 @@ export class Chats {
     // which is where a record older than either field is brought up to date.
     const options = chatOptions(chat.options)
 
-    // Refused here rather than left to fail in the CLI, whose answer to a
-    // missing token is "Not logged in · Please run /login" — the wrong login.
-    if (options.profileId === FREE_PROFILE_ID && !freeAiReady()) {
-      this.setBusy(id, false)
-      this.endTurn(id, "Sign in to Vey Studio to pay with credits.")
-      return
-    }
-
     // The line keeps the `[Image #n]` and the names of the note files the
     // renderer stored, never the picture: a transcript that carried base64
     // would be megabytes re-read every time the chat is opened.
@@ -909,14 +900,6 @@ export class Chats {
         text: prompt,
         ...(files.length > 0 && { images: files }),
       })
-    }
-    // After the message is written, unlike the sign-in refusal above: it is
-    // what the server's refusal would have left too, and what is sent again
-    // once credits are bought.
-    if (options.profileId === FREE_PROFILE_ID && (await outOfCredits())) {
-      this.setBusy(id, false)
-      this.endTurn(id, NO_CREDITS_LEFT)
-      return
     }
     await this.deliver(id, cwd, options, prompt, images)
   }
@@ -1454,7 +1437,6 @@ export class Chats {
   /** What the composer's picker calls a profile, for the `account` line. */
   private async profileName(profileId: string | null): Promise<string> {
     if (profileId === null) return "Default account"
-    if (profileId === FREE_PROFILE_ID) return "Credits"
     const profiles = await this.source.claudeProfiles()
     return (
       profiles.find((profile) => profile.id === profileId)?.name ??
@@ -1531,9 +1513,6 @@ export class Chats {
         model: options.model,
         effort: options.effort,
         configDir,
-        // On Studio AI every turn comes off the credit balance, and its usage
-        // line says by how much — see `TurnUsage.credits`.
-        charged: options.profileId === FREE_PROFILE_ID,
         // The mode's own policy, applied in this process and read per call. What
         // goes to the CLI is identical for every mode, which is what keeps one
         // cached prefix serving all five — see `permits` in `claude-agent.ts`.
@@ -1888,35 +1867,6 @@ export class Chats {
     live.session?.interrupt()
     // A Stop that raced the end of the turn: nothing will say quiet again.
     if (!live.busy) this.reap(id)
-  }
-
-  /**
-   * Closes every session running on one account, ending any turn mid-way with
-   * `reason` — the studio's sign-out, for the Credits one.
-   *
-   * A close and not a Stop. `send` refuses the next message on a signed-out
-   * account, but a session already open carries on regardless: the CLI caches
-   * its `apiKeyHelper`'s token for five minutes, so the turn went on spending
-   * the credits of somebody who had just signed out, and then — once the helper
-   * read a deleted file — died in the CLI's own words about the wrong login. An
-   * interrupt would still run whatever was queued behind the turn on that same
-   * cached token.
-   *
-   * Out of the map before the close, as `reap` does, so the `onExit` this
-   * causes is not news; a session still coming up finds its entry gone and
-   * closes itself (`open`).
-   */
-  closeProfile(profileId: string, reason: string): void {
-    for (const [id, live] of [...this.live]) {
-      if (live.options.profileId !== profileId) continue
-      this.live.delete(id)
-      if (live.idle) clearTimeout(live.idle)
-      live.session?.close()
-      if (live.busy) {
-        this.setBusy(id, false)
-        this.endTurn(id, reason)
-      }
-    }
   }
 
   /** Closes every session, for shutdown. */
@@ -2477,7 +2427,14 @@ function signatureOf(
   configDir: string | null,
   disabledTools: string[]
 ): string {
-  return [cwd, configDir ?? "", disabledTools.join("\n")].join("\0")
+  // A custom API profile's endpoint goes in too, hashed — it is in the
+  // process's environment, so a new key or model is a new process; and only
+  // hashed, since the key has no business sitting in a string in memory.
+  const endpoint = apiEnvFor(configDir)
+  const api = Object.keys(endpoint).length
+    ? createHash("sha256").update(JSON.stringify(endpoint)).digest("hex")
+    : ""
+  return [cwd, configDir ?? "", disabledTools.join("\n"), api].join("\0")
 }
 
 /**

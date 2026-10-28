@@ -7,8 +7,6 @@ của bạn. Nếu CLI được cài ở chỗ `PATH` của shell không với t
 `CLAUDE_BIN` thành đường dẫn đầy đủ tới file `claude` trước khi mở app.
 **Settings › Updates** cho biết phiên bản nào đã được tìm thấy.
 
-Bạn không cần Claude Code nếu chỉ chat bằng [credit](/vi/docs/credits).
-
 ## Tài khoản chưa đăng nhập
 
 Mở menu của tài khoản trong mục **Accounts** ở cuối cột chat. **Check again**
@@ -18,7 +16,7 @@ khoản này không ảnh hưởng tài khoản khác.
 ## Chat dừng vì chạm giới hạn
 
 Tài khoản đó đã hết hạn mức 5 giờ (hoặc hạn mức tuần). Mở menu **Account** của
-chat và chọn tài khoản khác, hoặc **Pay with credits**. Tin nhắn tiếp theo vẫn
+chat và chọn tài khoản khác. Tin nhắn tiếp theo vẫn
 nhớ toàn bộ cuộc trò chuyện.
 
 ## Chat có vẻ bị treo
@@ -27,22 +25,18 @@ nhớ toàn bộ cuộc trò chuyện.
   thẻ phía trên khung soạn tin.
 - Nếu không, bấm **Stop** rồi gửi lại tin nhắn.
 
-## Đã chuyển khoản nhưng chưa nhận được credit
+## Đã chuyển khoản mua Pro nhưng chưa thấy bật
 
 Chuyển khoản được đối chiếu bằng mã trong nội dung chuyển khoản, nên hãy giữ
-nguyên nội dung như trên trang thanh toán. Credit thường về trong một hai phút.
-Nếu chuyển thiếu tiền hoặc nội dung bị sửa, credit sẽ không được cộng tự động —
-hãy liên hệ kèm thông tin giao dịch để được xử lý thủ công.
-
-## Chat bằng credit báo prompt quá dài
-
-Khi dùng credit, mỗi request giới hạn 100K token. Vey Studio để Claude Code nén
-cuộc trò chuyện trước khi chạm mức đó nên hiếm khi xảy ra; nếu gặp, hãy mở chat
-mới hoặc nhờ Claude tóm tắt trước.
+nguyên nội dung như trên trang thanh toán. Pro thường bật trong một hai phút,
+trên máy đã mua — bấm vào cửa sổ ứng dụng để nó hỏi lại. Trên máy khác, hãy
+dán khoá licence trong email. Nếu chuyển thiếu tiền hoặc nội dung bị sửa, đơn sẽ
+không được đối chiếu tự động — hãy liên hệ kèm thông tin giao dịch để được xử
+lý thủ công.
 
 ## Dữ liệu của tôi nằm ở đâu?
 
 Project của bạn vẫn nằm nguyên chỗ cũ. Dữ liệu riêng của Vey Studio — danh sách
-project, cài đặt, chat và các phiên đăng nhập tài khoản Claude — nằm trong
-`~/.veystudio` trên máy bạn. Request từ tài khoản Claude của bạn đi thẳng tới
-Anthropic; chỉ chat bằng credit mới đi qua server của Vey Studio.
+project, cài đặt, khoá Pro, chat và các phiên đăng nhập tài khoản Claude — nằm trong
+`~/.veystudio` trên máy bạn. Mọi chat đi thẳng từ tài khoản Claude của bạn tới
+Anthropic; server của Vey Studio chỉ tham gia khi đăng nhập và mua Pro.

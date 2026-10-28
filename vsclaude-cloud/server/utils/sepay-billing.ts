@@ -1,15 +1,10 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto"
 
-import {
-  CREDIT_PACKS,
-  isCreditItem,
-  type Account,
-  type CreditItem,
-} from "./billing.ts"
+import { planOf } from "./billing.ts"
 
 /**
  * SePay's half of `billing.ts`: Vietnamese bank transfers by VietQR, one
- * credit pack each.
+ * Vey Pro licence each — for one, three or five devices.
  *
  * Each purchase is an `Order` whose code the transfer's content carries; SePay
  * watches the bank account and sends every incoming transfer to the webhook,
@@ -24,10 +19,18 @@ import {
  */
 export type Order = {
   code: string
+  /** `device:<id>` — the device it was opened on. A Google-era order is
+   * `google:<sub>`, and a credit-era one a Firebase uid. */
   uid: string
-  /** A credit pack — or, on an order written while plans were sold, a plan
-   * (`plus-3m`), which nothing grants any more. */
-  item: CreditItem | string
+  /** Where the key is sent. Null on an order from before there was no
+   * sign-in, whose address was the Google account's. */
+  email: string | null
+  /** The device the order activates once paid, or null for an older one. */
+  device: string | null
+  /** A Vey Pro plan (`PRO_PLANS`, or the Google era's `pro`) — or, on an
+   * order written while credit packs or plans were sold, one of those
+   * (`vnd-50k`, `plus-3m`), which nothing grants any more. */
+  item: string
   amount: number
   createdAt: string
   /** The SePay transaction that paid it, once one has. */
@@ -83,22 +86,18 @@ export function orderCodeOf(transfer: Transfer, prefix: string): string | null {
 export type Paid =
   | { kind: "ignored"; reason: string }
   | { kind: "short"; order: Order }
-  | { kind: "credits"; order: Order; account: Account; added: number }
+  /** Vey Pro: the webhook signs the buyer's key (`license.ts`). */
+  | { kind: "pro"; order: Order }
 
 /**
- * A transfer applied to the order its code names and the account behind it.
+ * A transfer applied to the order its code names.
  *
- * Paid at least in full, the order grants what it sells — even an old one: the
- * money arrived, and refusing it would be keeping somebody's payment. Short,
- * it grants nothing and is noted on the order. An order already paid is not
- * paid twice; a second transfer for it is left for a human to refund, and so
- * is one for a plan ordered before plans were withdrawn.
+ * Paid at least in full, a Pro order grants the licence. Short, it grants
+ * nothing and is noted on the order. An order already paid is not paid twice;
+ * a second transfer for it is left for a human to refund, and so is one for
+ * a credit pack or a plan ordered before either was withdrawn.
  */
-export function applyTransfer(
-  order: Order,
-  account: Account,
-  transfer: Transfer
-): Paid {
+export function applyTransfer(order: Order, transfer: Transfer): Paid {
   if (transfer.transferType !== "in") {
     return { kind: "ignored", reason: "money going out" }
   }
@@ -114,19 +113,10 @@ export function applyTransfer(
       },
     }
   }
-
-  if (!isCreditItem(order.item)) {
+  if (!planOf(order.item)) {
     return { kind: "ignored", reason: `${order.item} is no longer sold` }
   }
-
-  const paid = { ...order, paidBy: transfer.id }
-  const added = CREDIT_PACKS[order.item].credits
-  return {
-    kind: "credits",
-    order: paid,
-    added,
-    account: { ...account, credits: account.credits + added },
-  }
+  return { kind: "pro", order: { ...order, paidBy: transfer.id } }
 }
 
 /**

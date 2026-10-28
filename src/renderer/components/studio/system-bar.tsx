@@ -23,7 +23,7 @@ import { useSystemUsage } from "@/lib/system/usage"
 import { cn } from "@/lib/utils"
 import { useUpdateWatch } from "@/lib/updates"
 import { useT, type Translate } from "@/lib/i18n"
-import { VsGlyph } from "./credits-badge"
+import { VsGlyph } from "./vs-glyph"
 import { UpdatePill } from "./update-pill"
 
 /**

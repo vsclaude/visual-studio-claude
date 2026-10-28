@@ -105,38 +105,32 @@ section("the rail's badge")
 
 section("the way on from a limit")
 {
-  /** The answer as one comparable word: `continue:work`, `buy`, `signIn`. */
+  /** The answer as one comparable word: `continue:work`, `nothing`. */
   const wayOut = (
     current: string | null,
     accounts: AccountChoice[],
-    {
-      over = false,
-      credits = "ready",
-    }: { over?: boolean; credits?: "ready" | "signedOut" | "none" } = {}
+    { over = false }: { over?: boolean } = {}
   ) => {
-    const way = limitWayOut(current, accounts, { over, credits })
-    if (!way) return "nothing"
-    return way.kind === "continue"
-      ? `continue:${way.profileId ?? "login"}`
-      : way.kind
+    const way = limitWayOut(current, accounts, { over })
+    return way ? `continue:${way.profileId ?? "login"}` : "nothing"
   }
   const accounts = [
     { profileId: null, utilization: 100, usable: true },
     { profileId: "work", utilization: 40, usable: true },
-    { profileId: "credits", utilization: null, usable: true },
+    { profileId: "home", utilization: null, usable: true },
   ]
   check(
     "skips the account it stopped on",
     wayOut(null, accounts) === "continue:work"
   )
-  check("skips a full one", wayOut("work", accounts) === "continue:credits")
+  check("skips a full one", wayOut("work", accounts) === "continue:home")
   check(
     "skips one that cannot run a turn",
     wayOut(null, [
       { profileId: null, utilization: 100, usable: true },
       { profileId: "signed-out", utilization: null, usable: false },
-      { profileId: "credits", utilization: null, usable: true },
-    ]) === "continue:credits"
+      { profileId: "home", utilization: null, usable: true },
+    ]) === "continue:home"
   )
   check(
     "an account nobody has measured is offered",
@@ -157,23 +151,8 @@ section("the way on from a limit")
 
   const alone = [{ profileId: null, utilization: 100, usable: true }]
   check(
-    "one plan and nowhere to go buys credits",
-    wayOut(null, alone) === "buy"
-  )
-  check(
-    "credits at nothing are bought, not continued on",
-    wayOut(null, [
-      ...alone,
-      { profileId: "credits", utilization: null, usable: false },
-    ]) === "buy"
-  )
-  check(
-    "signed out of Vey Studio signs in first",
-    wayOut(null, alone, { credits: "signedOut" }) === "signIn"
-  )
-  check(
-    "a build with no credits offers only the wait",
-    wayOut(null, alone, { credits: "none" }) === "nothing"
+    "one plan and nowhere to go is the wait",
+    wayOut(null, alone) === "nothing"
   )
 }
 

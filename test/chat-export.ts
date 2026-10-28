@@ -32,7 +32,6 @@ const usage = (over: Partial<TurnUsage> = {}): TurnUsage => ({
   costUsd: 0.0054,
   context: null,
   durationMs: null,
-  credits: null,
   ...over,
 })
 

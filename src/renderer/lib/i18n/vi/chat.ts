@@ -63,52 +63,14 @@ export const chat: Messages["chat"] = {
     },
   },
   profile: {
-    credits: "Credit",
     title: "CLAUDE_CONFIG_DIR mà các lượt của chat này chạy theo",
     heading: "Tài khoản cho chat này",
     defaultAccountFallback: "Tài khoản mà `claude` của bạn đang đăng nhập",
-    payWithCredits: "Trả bằng credit",
-    signedOut: "Đã đăng xuất",
-    noCreditsLeft: "Hết credit · nạp thêm để tiếp tục",
-    creditsLeft: "Mọi model · còn {credits}",
-    everyModel: "Mọi model, trả bằng credit",
-    buyDetail: "Dùng bao nhiêu trả bấy nhiêu · không phí hằng tháng",
     noDirectory: "Chưa đặt thư mục",
   },
-  credits: {
-    buy: "Mua credit",
-    signingIn: "Đang đăng nhập…",
-    signInWithGoogle: "Đăng nhập bằng Google",
-  },
-  creditsMeter: {
-    label: "Credit",
-    noneTitle: "Hết credit — mua thêm để tiếp tục",
-    leftTitle: "Còn {credits} credit — mua thêm",
-    none: "Hết credit",
-    left: "Còn {credits}",
-  },
-  creditsRefusal: {
-    signInTitle: "Đăng nhập để trả bằng credit",
-    signInBody:
-      "Chat này chạy bằng credit — mọi model, dùng bao nhiêu trả bấy nhiêu, không phí hằng tháng. Hãy đăng nhập và gửi lại tin nhắn.",
-    signedInTitle: "Bạn đã đăng nhập",
-    backTitle: "Đã có credit trở lại",
-    backBody:
-      "Bạn đang có {credits} credit. Gửi lại tin nhắn để tiếp tục từ chỗ đã dừng.",
-    outTitle: "Bạn đã hết credit",
-    outBody:
-      "Tin nhắn này không bị tính phí. Nạp thêm để tiếp tục — credit dùng được cho mọi model và không bao giờ hết hạn.",
-  },
   limit: {
-    buyToKeepGoing: "Mua credit để tiếp tục",
-    signInToUse: "Đăng nhập để dùng credit",
     continue: "Tiếp tục",
     continueWith: "Tiếp tục với {name}",
-    noWait: "Không cần đợi đến lúc đặt lại",
-    buyBody:
-      "Tiếp tục bằng credit — mọi model, dùng bao nhiêu trả bấy nhiêu, và không bao giờ hết hạn. Chat này sẽ tiếp tục từ chỗ đã dừng.",
-    signInBody:
-      "Đăng nhập Vey Studio để tiếp tục bằng credit — mọi model, dùng bao nhiêu trả bấy nhiêu, không phí hằng tháng.",
   },
   ask: {
     allow: "Cho phép",

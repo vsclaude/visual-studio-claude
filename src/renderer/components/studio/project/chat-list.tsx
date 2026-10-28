@@ -34,7 +34,6 @@ import type { Chat } from "@shared/api"
 import { RenameRow, useMenuFocusHandoff } from "../rename-row"
 import { SideRow } from "../side-row"
 import { useLimitWayOut } from "../chat/chat-limit"
-import { CREDITS_GRADIENT } from "../credits-badge"
 
 /**
  * One plugin's chat menu item. A throw is reported in the plugin's name rather
@@ -313,8 +312,8 @@ function rowTitle(t: Translate, title: string, state: ChatState): string {
  * This is the case the app exists for — several accounts, so a limit on one is
  * not the end of the afternoon — and the column used to draw it exactly like a
  * chat that had finished. The card says which limit and when it resets, and
- * its button is `useLimitWayOut`'s: `Continue with …` another account, or
- * with nowhere to go, credits.
+ * its button is `useLimitWayOut`'s: `Continue with …` another account, and
+ * none with nowhere to go.
  *
  * A `div` rather than a `SideRow`: the card holds a button, and a button inside
  * a button is neither valid markup nor clickable.
@@ -382,12 +381,7 @@ function LimitedRow({
             type="button"
             disabled={action.busy}
             onClick={action.run}
-            className={cn(
-              "max-w-full truncate rounded-md px-2 py-0.5 text-[0.6875rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-50",
-              action.way.kind === "continue"
-                ? "bg-primary text-primary-foreground"
-                : cn("text-white", CREDITS_GRADIENT)
-            )}
+            className="max-w-full truncate rounded-md bg-primary px-2 py-0.5 text-[0.6875rem] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {action.label}
           </button>

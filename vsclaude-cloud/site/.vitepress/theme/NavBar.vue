@@ -38,7 +38,7 @@ const slug = computed(() => slugOf(page.value.relativePath))
     <div class="pill">
       <a :href="`${at}#why`">{{ t.why }}</a>
       <a :href="`${at}#features`">{{ t.features }}</a>
-      <a :href="`${at}#credits`">{{ t.pricing }}</a>
+      <a :href="`${at}#pricing`">{{ t.pricing }}</a>
       <a :href="`${at}#faq`">{{ t.faq }}</a>
       <a :href="docsStartOf(current)">{{ t.docs }}</a>
     </div>

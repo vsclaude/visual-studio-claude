@@ -28,8 +28,9 @@ Open **Settings** with `⌘,` or the gear at the bottom of the left rail.
 
 ## Claude
 
-- **Credits** — sign in with Google, see your balance and buy credits. See
-  [Credits](/docs/credits).
+- **Vey Pro** — the **Upgrade** button (or **Pro**) at the right of the title
+  bar: the plans, your licence key, and deactivating this device. See
+  [Vey Pro](/docs/pro).
 - **Your accounts** — the Claude logins a chat can run under. See
   [Claude accounts](/docs/accounts).
 - **Helpers › Commit message drafts** — the model and account the Git tab's

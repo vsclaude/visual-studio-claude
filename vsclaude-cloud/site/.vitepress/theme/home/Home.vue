@@ -10,21 +10,20 @@ import { ICON } from "../links.ts"
 import { FEATURE_ART } from "./art.ts"
 import { demoCss, FEATURE_ORDER, nth, PILLAR_ORDER, SPARKLE } from "./demo.ts"
 import css from "./home.css?inline"
-import { coin, METHOD_ICON, packsForSale, type PaymentMethod } from "./packs.ts"
 
 /*
- * The home page: what Vey Studio is, what credits cost, and where to download
- * it. The words are `copy.ts`', one set per language; the prices are
- * `CREDIT_PACKS`' (`packs.ts`).
+ * The home page: what Vey Studio is, what Pro costs, and where to download
+ * it. The words are `copy.ts`', one set per language; the price is
+ * `PRO_PRICE`' (`server/utils/billing.ts`, through `copy.ts`).
  *
  * **Restraint is the look.** The first version had a gradient on every
  * headline, glows, twinkling sparks and a ring of light round a price — and
  * read as generated. What is left: one accent colour, hairlines, small radii,
  * cells that share their borders like a table, a serif italic where a
  * headline wants weight, and motion only where it shows the product working.
- * The violet-to-amber gradient is the logo's — and the credits', as in the
- * studio, where it means "this is about credits": the packs borrow the buy
- * dialog's look so the page and the app sell the same thing the same way.
+ * The violet-to-amber gradient is the logo's — and Pro's, as in the studio:
+ * the plans borrow the Pro dialog's look so the page and the app sell the
+ * same thing the same way.
  *
  * Every animation arrives at what the markup already draws, so taking it
  * away — reduced motion, no script — leaves the page whole.
@@ -35,13 +34,6 @@ const t = computed(() => COPY[langOf(lang.value)])
 const home = computed(() => pathOf(langOf(lang.value)))
 // Every build, named — for a Mac the button guessed wrong for, or another OS.
 const downloads = computed(() => installPathOf(langOf(lang.value)))
-// Only the ways of paying something is sold by — cards are off for now
-// (`CARD_OFFERED` in `packs.ts`), so the card side would be an empty row.
-const METHODS = (["bank", "card"] as PaymentMethod[]).filter(
-  (m) => packsForSale(m).length > 0
-)
-const method = ref<PaymentMethod>("bank")
-const packs = computed(() => packsForSale(method.value))
 const year = new Date().getFullYear()
 const style = css + "\n" + demoCss()
 const LOGO = APP_MARK + WORDMARK
@@ -119,7 +111,7 @@ onBeforeUnmount(() => seen?.disconnect())
             ><span>{{ downloadLabel }}</span
             ><i v-html="downloadIcon"></i
           ></a>
-          <a class="button ghost" href="#credits"
+          <a class="button ghost" href="#pricing"
             ><span>{{ t.cta.pricing }}</span
             ><i v-html="ICON.arrow"></i
           ></a>
@@ -187,7 +179,7 @@ onBeforeUnmount(() => seen?.disconnect())
         </div>
       </section>
 
-      <section id="credits">
+      <section id="pricing">
         <div class="head reveal">
           <span class="kicker">{{ t.pricing.kicker }}</span>
           <h2>
@@ -196,49 +188,33 @@ onBeforeUnmount(() => seen?.disconnect())
           </h2>
           <p>{{ t.pricing.body }}</p>
         </div>
-        <!-- The studio's Buy credits dialog, drawn: the toggle switches the
-             packs shown, and nothing here buys — that is the app's. -->
+        <!-- The studio's Pro dialog, drawn: Free and the device plans, and
+             nothing here buys — that is the app's. -->
         <div class="buy reveal">
-          <div v-if="METHODS.length > 1" class="methods" role="radiogroup">
-            <button
-              v-for="m in METHODS"
-              :key="m"
-              type="button"
-              role="radio"
-              :aria-checked="method === m"
-              :class="{ on: method === m }"
-              @click="method = m"
-            >
-              <i v-html="METHOD_ICON[m]"></i>{{ t.pricing.methods[m] }}
-            </button>
-          </div>
-          <div class="packs" :style="`--n:${packs.length}`">
+          <div class="plans">
             <article
-              v-for="pack in packs"
-              :key="pack.id"
-              class="pack"
-              :class="{ popular: pack.popular }"
+              v-for="plan in t.pricing.plans"
+              :key="plan.name"
+              class="plan"
+              :class="{ pro: plan.pro, popular: plan.flag }"
             >
-              <span v-if="pack.popular" class="pack-flag"
-                ><i v-html="SPARKLE"></i>{{ t.pricing.popular }}</span
+              <span v-if="plan.flag" class="plan-flag"
+                ><i v-html="SPARKLE"></i>{{ plan.flag }}</span
               >
-              <span
-                class="pack-coin"
-                v-html="coin(`coin-${pack.id}`, pack.popular ? 34 : 28)"
-              ></span>
-              <p class="pack-price">{{ pack.price }}</p>
-              <p class="pack-credits">
-                {{ pack.credits }} {{ t.pricing.credits }}
+              <p class="plan-name">{{ plan.name }}</p>
+              <p class="plan-price">
+                {{ plan.price }}<span>{{ plan.term }}</span>
               </p>
-              <p v-if="pack.bonus" class="pack-bonus">
-                {{ t.pricing.bonus(pack.bonus) }}
-              </p>
-              <span class="pack-buy" aria-hidden="true">{{
-                t.pricing.buy
-              }}</span>
+              <p class="plan-sub">{{ plan.sub }}</p>
+              <ul>
+                <li v-for="item in plan.items" :key="item">
+                  <i v-html="ICON.check"></i>{{ item }}
+                </li>
+              </ul>
+              <span class="plan-buy" aria-hidden="true">{{ plan.button }}</span>
             </article>
           </div>
-          <p class="pay">{{ t.pricing.pay[method] }}</p>
+          <p class="pay">{{ t.pricing.pay }}</p>
         </div>
       </section>
 
@@ -302,7 +278,7 @@ onBeforeUnmount(() => seen?.disconnect())
               <a href="#features">{{ t.nav.features }}</a>
             </li>
             <li>
-              <a href="#credits">{{ t.nav.pricing }}</a>
+              <a href="#pricing">{{ t.nav.pricing }}</a>
             </li>
             <li>
               <a href="#faq">{{ t.nav.faq }}</a>

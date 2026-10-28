@@ -62,53 +62,15 @@ export const chat = {
     },
   },
   profile: {
-    credits: "Credits",
     title: "Which CLAUDE_CONFIG_DIR this chat's turns run under",
     heading: "Account for this chat",
     defaultAccountFallback:
       "Whichever your own `claude` is already signed into",
-    payWithCredits: "Pay with credits",
-    signedOut: "Signed out",
-    noCreditsLeft: "No credits left · top up to keep going",
-    creditsLeft: "Every model · {credits} left",
-    everyModel: "Every model, paid with credits",
-    buyDetail: "Pay as you go · no monthly fee",
     noDirectory: "No directory set",
   },
-  credits: {
-    buy: "Buy credits",
-    signingIn: "Signing in…",
-    signInWithGoogle: "Sign in with Google",
-  },
-  creditsMeter: {
-    label: "Credits",
-    noneTitle: "No credits left — buy more to keep going",
-    leftTitle: "{credits} in credits left — buy more",
-    none: "No credits",
-    left: "{credits} left",
-  },
-  creditsRefusal: {
-    signInTitle: "Sign in to pay with credits",
-    signInBody:
-      "This chat runs on credits — every model, paid as you go, never a monthly fee. Sign in and send your message again.",
-    signedInTitle: "You're signed in",
-    backTitle: "Credits are back",
-    backBody:
-      "You have {credits} in credits now. Send your message again to pick up where you left off.",
-    outTitle: "You're out of credits",
-    outBody:
-      "Nothing was charged for this message. Top up to keep going — credits work on every model and never expire.",
-  },
   limit: {
-    buyToKeepGoing: "Buy credits to keep going",
-    signInToUse: "Sign in to use credits",
     continue: "Continue",
     continueWith: "Continue with {name}",
-    noWait: "No need to wait for the reset",
-    buyBody:
-      "Keep going on credits — every model, paid as you go, and they never expire. This chat carries on where it stopped.",
-    signInBody:
-      "Sign in to Vey Studio to keep going on credits — every model, paid as you go, never a monthly fee.",
   },
   ask: {
     allow: "Allow",

@@ -1,15 +1,8 @@
-import { CREDITS_PER_USD } from "./usage.ts"
-
 /**
- * The card a payment page shows once the purchase's credits are on the account
- * — the page where the money was paid, not the studio, since that is where
- * somebody is looking when it lands. Shared by `/checkout` (Paddle) and
- * `/pay/<code>` (bank transfer), which poll for it differently and say it in
- * different languages.
- *
- * It is the studio's own celebration (`CreditsArrived` in the app, drawn the
- * same way — a coin landing with smaller ones thrown out, the amount counting
- * up), in plain CSS and SVG so the page needs nothing else.
+ * The card `/pay/<code>` shows once the purchase has landed — the page where
+ * the money was paid, not the studio, since that is where somebody is looking
+ * when it does. A coin landing with smaller ones thrown out, in plain CSS and
+ * SVG so the page needs nothing else.
  *
  * Hidden until `showArrival` is called from the page's own script, so a page
  * opened after the purchase was made shows nothing it did not just see happen.
@@ -56,7 +49,7 @@ export const ARRIVAL_CSS = `
     @media (prefers-reduced-motion: reduce) {
       .arrived .card, .arrived .halo, .arrived .coin, .arrived .spark { animation: none; } }`
 
-/** A gold coin, as the studio draws it (`Coin` in `credits-dialog.tsx`). */
+/** A gold coin, the card's one picture. */
 function coin(size: number, big: boolean, id: string): string {
   const star = big
     ? `<path d="M32 19l3.6 8.2 8.9.8-6.7 5.9 2 8.7L32 38.1l-7.8 4.5 2-8.7-6.7-5.9 8.9-.8z" fill="#d97706" fill-opacity=".85"/>`
@@ -78,7 +71,7 @@ function coin(size: number, big: boolean, id: string): string {
   </svg>`
 }
 
-/** Where the small coins land around the big one, and when — as the app's. */
+/** Where the small coins land around the big one, and when. */
 const SCATTER = [
   { x: -78, y: -18, size: 22, delay: 140 },
   { x: 74, y: -26, size: 18, delay: 200 },
@@ -88,7 +81,7 @@ const SCATTER = [
   { x: 30, y: 50, size: 12, delay: 380 },
 ]
 
-/** The sparkles' places, as the app's. */
+/** The sparkles' places. */
 const SPARKS = [
   { left: "18%", top: "22%", delay: 0 },
   { left: "80%", top: "18%", delay: 600 },
@@ -97,11 +90,14 @@ const SPARKS = [
   { left: "50%", top: "8%", delay: 900 },
 ]
 
-/** The markup, with `copy` written in the page's own language. */
+/** The markup, with `copy` written in the page's own language: what was
+ * bought in large (`amount`) and a line under it (`unit`). */
 export function arrivalCard(copy: {
   title: string
   note: string
   button: string
+  amount: string
+  unit: string
 }): string {
   const scatter = SCATTER.map(
     (c, i) =>
@@ -121,8 +117,8 @@ export function arrivalCard(copy: {
       </div>
       <div class="body">
         <h2>${copy.title}</h2>
-        <p class="amount" id="arrived-amount">+$0.00</p>
-        <p class="unit">in credits</p>
+        <p class="amount">${copy.amount}</p>
+        <p class="unit">${copy.unit}</p>
         <p class="note">${copy.note}</p>
         <button type="button" id="arrived-close">${copy.button}</button>
       </div>
@@ -130,32 +126,9 @@ export function arrivalCard(copy: {
   </div>`
 }
 
-/**
- * The script half: `showArrival(credits)` shows the card and counts the amount
- * up from zero over most of a second — straight to it when motion is reduced.
- * The amount arrives in the server's integer unit and is written as the
- * dollars it is (`CREDITS_PER_USD`), the way the studio and the packs say it;
- * `locale` is how that is grouped: `vi-VN` reads 1.234,56.
- */
-export function arrivalScript(locale: string): string {
+/** The script half: `showArrival()` shows the card, and its button hides it. */
+export function arrivalScript(): string {
   return `const arrived = document.getElementById("arrived")
-      const arrivedAmount = document.getElementById("arrived-amount")
       document.getElementById("arrived-close").onclick = () => { arrived.hidden = true }
-      const showArrival = (credits) => {
-        arrived.hidden = false
-        const dollars = new Intl.NumberFormat(${JSON.stringify(locale)}, { style: "currency", currency: "USD" })
-        const format = (value) => "+" + dollars.format(value / ${CREDITS_PER_USD})
-        if (credits <= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          arrivedAmount.textContent = format(credits)
-          return
-        }
-        const started = performance.now()
-        const step = (now) => {
-          const t = Math.min(1, (now - started) / 900)
-          // Ease out: most of the number at once, the last digits settling.
-          arrivedAmount.textContent = format(Math.round(credits * (1 - Math.pow(1 - t, 3))))
-          if (t < 1) requestAnimationFrame(step)
-        }
-        requestAnimationFrame(step)
-      }`
+      const showArrival = () => { arrived.hidden = false }`
 }

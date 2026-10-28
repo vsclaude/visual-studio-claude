@@ -70,14 +70,10 @@
      rather than as something asking to be clicked. */
   --animate-float: float 5s ease-in-out infinite;
 
-  /* Credits arriving (`credits-dialog.tsx`): the coin lands with one
-     overshoot, the small coins scatter out from behind it once, and the
-     sparkles twinkle on — the one place the studio celebrates, so the one
-     place allowed to be a little loud. */
-  --animate-coin-land: coin-land 640ms var(--ease-overshoot) backwards;
-  --animate-scatter: scatter 900ms var(--ease-out-quint) backwards;
-  --animate-twinkle: twinkle 2.2s ease-in-out infinite;
-  --animate-halo: halo 3.2s ease-in-out infinite;
+  /* The title bar's `Upgrade` (`PlanBadge`): one glint across it every few
+     seconds, then still — enough to be found at a glance, rare enough not to
+     tug at somebody reading a chat beside it. */
+  --animate-glint: glint 6s ease-in-out infinite;
 }
 
 @keyframes rise {
@@ -126,48 +122,22 @@
   }
 }
 
-@keyframes coin-land {
-  from {
-    opacity: 0;
-    transform: translateY(-1.5rem) scale(0.6) rotate(-18deg);
-  }
-}
-
-/* From the middle to wherever each small coin rests — its own transform, so
-   one keyframe sends six of them six ways, and with motion reduced they are
-   simply already there. */
-@keyframes scatter {
-  from {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.3);
-  }
-}
-
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.7);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes halo {
-  50% {
-    opacity: 0.55;
-    transform: scale(1.08);
-  }
-}
-
 @keyframes sweep {
   from {
     transform: translateX(-110%);
   }
   to {
     transform: translateX(260%);
+  }
+}
+
+@keyframes glint {
+  from,
+  80% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(320%) skewX(-20deg);
   }
 }
 
@@ -437,6 +407,7 @@
     --animate-trace-v: breathe 1.6s ease-in-out infinite;
     --animate-trace-s: breathe 1.6s ease-in-out infinite;
     --animate-shimmer: none;
+    --animate-glint: none;
     --animate-float: none;
     --animate-coin-land: fade 200ms ease-out backwards;
     --animate-scatter: fade 200ms ease-out backwards;

@@ -11,7 +11,12 @@ import { cn } from "@/lib/utils"
 import { usePalette } from "@/lib/palette"
 import { useFiles } from "@/lib/files/store"
 import { watchExpandedDirectories } from "@/lib/files/watch"
-import { reconcileScope, useActiveTabId, useHasOpenTabs } from "@/lib/panels"
+import {
+  reconcileScope,
+  rememberActiveTab,
+  useActiveTabId,
+  useHasOpenTabs,
+} from "@/lib/panels"
 import {
   isEditingRichText,
   isSearchShortcut,
@@ -47,7 +52,9 @@ import { CommandPalette } from "./command-palette"
 import { PluginNotices } from "./plugin-notices"
 import { NothingOpen } from "./nothing-open"
 import { OnboardingTour } from "./onboarding-tour"
-import { CreditsDialog } from "./credits-dialog"
+import { PlanBadge, ProDialog } from "./pro-dialog"
+import { usePro, watchPro } from "@/lib/license"
+import { canAddProject } from "@shared/license"
 import { FeedbackDialog } from "./feedback-dialog"
 import { WhatsNewDialog } from "./whats-new-dialog"
 import { SettingsDialog } from "./settings-dialog"
@@ -106,6 +113,7 @@ export function Studio() {
     void useProjects.getState().restore()
     void useChats.getState().restore()
     void useClaudeProfiles.getState().refresh()
+    watchPro()
     void useAppBackground.getState().restore()
     // The studio's window only: a popped-out chat is a second page, and a
     // plugin started in both would answer every event twice.
@@ -257,7 +265,7 @@ export function Studio() {
           !touring
         }
       />
-      <CreditsDialog />
+      <ProDialog />
       <FeedbackDialog />
       {/* The launch screen has nothing clickable, so the top of the window is
           its drag handle. Owned here rather than by the splash because it has to
@@ -276,6 +284,15 @@ function Workbench() {
   const backgroundImage = useAppBackground((state) => state.image)
 
   const [adding, setAdding] = useState(false)
+  // Every way to `Add project` comes through here, so Free's one project is
+  // one check (`canAddProject`): past it, the Pro dialog instead of the
+  // folder picker. Open until main has answered, like the custom API's gate.
+  const addProject = useCallback(() => {
+    const status = usePro.getState().status
+    const folders = useStudio.getState().folders
+    if (status && !canAddProject(status, folders)) usePro.getState().show()
+    else setAdding(true)
+  }, [])
   /** The Settings dialog — the application menu's ⌘, and nothing else, since
    * a preference is not a thing the workspace holds a row for. */
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -315,12 +332,12 @@ function Workbench() {
   useEffect(
     () =>
       window.desktop.onMenuCommand((command) => {
-        if (command === "add-folder") setAdding(true)
+        if (command === "add-folder") addProject()
         if (command === "open-settings") setSettingsOpen(true)
         if (command === "toggle-sidebar") toggleSidebar()
         if (command === "toggle-terminal") toggleDock()
       }),
-    [toggleSidebar, toggleDock]
+    [toggleSidebar, toggleDock, addProject]
   )
 
   // The tree follows the disk for as long as the workbench is up — here rather
@@ -339,6 +356,11 @@ function Workbench() {
    * later and in the layer that is allowed to know about both.
    */
   const activeFolderId = useProjects((state) => state.activeFolderId)
+  // Ahead of the reconcile below, so that coming back to a project can land on
+  // the tab it was last showing rather than its first.
+  useEffect(() => {
+    if (activeTabId !== null) rememberActiveTab(activeTabId)
+  }, [activeTabId, activeFolderId])
   // And when the strip goes back to one project: the pane may be on a tab of
   // another one that it was showing a moment ago.
   const allProjectTabs = useSettings((state) => state.allProjectTabs)
@@ -548,7 +570,7 @@ function Workbench() {
       <div className="flex min-h-0 flex-1 gap-1.5 px-1.5">
         <NavRail
           onOpenSettings={() => setSettingsOpen(true)}
-          onAddFolder={() => setAdding(true)}
+          onAddFolder={addProject}
         />
 
         <ResizablePanelGroup
@@ -594,7 +616,7 @@ function Workbench() {
                   !projectSidebar && "pointer-events-none opacity-0"
                 )}
               >
-                <WorkspaceSidebar onAddFolder={() => setAdding(true)} />
+                <WorkspaceSidebar onAddFolder={addProject} />
               </div>
             </div>
           </ResizablePanel>
@@ -762,7 +784,7 @@ function Workbench() {
                       !sidebar && "pointer-events-none opacity-0"
                     )}
                   >
-                    <FileTree onAddFolder={() => setAdding(true)} />
+                    <FileTree onAddFolder={addProject} />
                   </div>
                   <ExplorerRail />
                 </div>
@@ -868,7 +890,13 @@ function WindowTitleBar() {
         </kbd>
       </button>
 
-      <div className="drag-region h-full" />
+      {/* The tier in its own cell beside the drag region, never inside it —
+          the same `no-drag` holes the comment above is about. */}
+      <div className="flex h-full min-w-0 items-center">
+        <div className="drag-region h-full min-w-6 flex-1" />
+        <PlanBadge className="no-drag" />
+        <div className="drag-region h-full w-3 shrink-0" />
+      </div>
     </header>
   )
 }

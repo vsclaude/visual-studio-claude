@@ -6,43 +6,45 @@ import { useDatabase } from "nitro/database"
  * request asks for the database in an isolate; `IF NOT EXISTS` is what lets
  * every isolate run the same statements.
  *
- * Two tables hold the users and the money, described where they are read
- * (`accounts.ts`): `users`, one row per person who signed in, with who Google
- * says they are and their balance, and `transactions`, one row per purchase
- * from either provider. `sign_ins` is the third: a sign-in's answer, kept for
- * minutes until the studio collects it (`signin.ts`). `upstreams` is the
- * providers requests are forwarded to, one row each — its base URL, its key
- * (in plain text, so a provider can be added with one statement; whoever can
- * read this database can read the keys), how the key is sent, `priority`
- * (lowest tried first), `enabled` (`upstream-store.ts`, `upstreams.ts`), and
- * `credit_usd`, the usage the key was bought with — a note for whoever keeps
- * the keys; nothing is sold against it. `app_events` is the studio's
- * anonymous usage counts, one row per event (`app-usage.ts`). No JSON inside a cell —
- * a payment is a statement about the rows it changes rather than a whole
- * record read, edited and written back.
+ * Three tables hold the money and what it bought, described where they are
+ * read (`accounts.ts`): `transactions`, one row per purchase; `licenses`, one
+ * Vey Pro key per paid order, with how many devices it is for; and
+ * `activations`, the devices each key is on. `app_events` is the studio's
+ * anonymous usage counts, one row per event (`app-usage.ts`).
+ *
+ * **There is no sign-in any more** (README § Sign-in, removed): `users` —
+ * everybody who signed in with Google, and the key the Google era signed for
+ * them — is left as it stands and nothing reads it; `sign_ins` is dropped,
+ * since it only ever held answers minutes old. No JSON inside a
+ * cell — a payment is a statement about the rows it changes rather than a
+ * whole record read, edited and written back.
+ *
+ * The deleted credits leave three things nothing reads and nothing drops:
+ * `users.credits` and `users.used` on a table made before, the `paddle` rows
+ * of `transactions`, and the `upstreams` table of providers requests were
+ * forwarded to (README § Credits, removed). A database made now has none of
+ * the columns or the table.
  */
 const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, email TEXT, name TEXT, picture TEXT, signed_in_at TEXT, credits INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, paid_at TEXT, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
-  `CREATE TABLE IF NOT EXISTS sign_ins (nonce TEXT PRIMARY KEY, token TEXT, error TEXT, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS licenses (key TEXT PRIMARY KEY, email TEXT, seats INTEGER NOT NULL, order_code TEXT UNIQUE, issued_at TEXT NOT NULL, revoked_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS activations (license TEXT NOT NULL, device TEXT NOT NULL, activated_at TEXT NOT NULL, PRIMARY KEY (license, device))`,
+  `CREATE INDEX IF NOT EXISTS activations_device ON activations (device)`,
   `CREATE TABLE IF NOT EXISTS app_events (install_id TEXT NOT NULL, event TEXT NOT NULL CHECK (event IN ('app_opened', 'heartbeat')), at TEXT NOT NULL, active_seconds INTEGER, version TEXT, os TEXT, arch TEXT, country TEXT)`,
   `CREATE INDEX IF NOT EXISTS app_events_at ON app_events (at)`,
   `CREATE INDEX IF NOT EXISTS app_events_install ON app_events (install_id, at)`,
-  `CREATE TABLE IF NOT EXISTS upstreams (name TEXT PRIMARY KEY, base_url TEXT NOT NULL, api_key TEXT NOT NULL, auth TEXT NOT NULL DEFAULT 'x-api-key' CHECK (auth IN ('x-api-key', 'bearer')), priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, credit_usd REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
 ]
 
 /** Columns added since a table was first made — added to one made before,
- * which keeps its rows; each is its definition, name first. `users` gained who
- * somebody is when sign-in moved here from Firebase; `transactions` gained the
+ * which keeps its rows; each is its definition, name first. `transactions` gained the
  * currency a Paddle charge was in, and when a purchase was paid — a transfer
  * can land hours after its order was opened, and a day's takings are counted
- * by the day the money came (a row paid before it has none); `upstreams`
- * gained what a key was bought with when the stock moved onto it. */
+ * by the day the money came (a row paid before it has none); and the buyer's
+ * email and the device an order activates, when sign-in went. `users` is no
+ * longer made at all: a database made now has none. */
 const ADDED_COLUMNS: Record<string, string[]> = {
-  users: ["email TEXT", "name TEXT", "picture TEXT", "signed_in_at TEXT"],
-  transactions: ["currency TEXT", "paid_at TEXT"],
-  upstreams: ["credit_usd REAL NOT NULL DEFAULT 0"],
+  transactions: ["currency TEXT", "paid_at TEXT", "email TEXT", "device TEXT"],
 }
 
 /**
@@ -62,6 +64,9 @@ const RETIRED = [
   // Nothing was sold against either long enough to be worth carrying over.
   "pack_stock",
   "credit_pool",
+  // A Google sign-in's answer, held for minutes until the studio collected
+  // it. Sign-in is gone; an answer minutes old is nobody's loss.
+  "sign_ins",
 ]
 
 type Database = ReturnType<typeof useDatabase>
@@ -91,11 +96,6 @@ async function createTables(db: Database): Promise<void> {
   for (const table of RETIRED) await db.exec(`DROP TABLE IF EXISTS ${table}`)
   if (!(await hasColumn(db, "transactions", "provider"))) {
     await db.exec(`DROP TABLE IF EXISTS transactions`)
-  }
-  // It held a Google ID token for Firebase; what it holds now is this
-  // server's, and an answer minutes old is nobody's loss.
-  if (!(await hasColumn(db, "sign_ins", "token"))) {
-    await db.exec(`DROP TABLE IF EXISTS sign_ins`)
   }
   for (const statement of SCHEMA) await db.exec(statement)
   for (const [table, columns] of Object.entries(ADDED_COLUMNS)) {
@@ -152,8 +152,7 @@ export function statement(
 /**
  * Runs the statements in order as one transaction — all of them or none.
  * A later statement can depend on what an earlier one did, which is how a
- * payment marks itself applied and adds its credits without a second delivery
- * adding them again. Answers how many rows each statement changed, which is
+ * payment marks itself applied without a second delivery applying it again. Answers how many rows each statement changed, which is
  * how the caller tells that delivery from the second.
  */
 export async function atomically(

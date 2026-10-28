@@ -1,6 +1,10 @@
 import { create } from "zustand"
 
-import type { ClaudeAccount, ClaudeProfile } from "@shared/api"
+import type {
+  ClaudeAccount,
+  ClaudeApiProfileInput,
+  ClaudeProfile,
+} from "@shared/api"
 import { t } from "@/lib/i18n"
 
 /**
@@ -51,6 +55,12 @@ type ClaudeProfilesState = {
    * side cannot see. See `lib/chat/claude-login.ts`.
    */
   add: (profile: ClaudeProfile) => Promise<void>
+  /**
+   * Adds or changes a custom API profile — main's, since it carries a key
+   * (`IPC.saveClaudeApiProfile`). Throws main's sentence for the form to
+   * show; re-checks the row, whose endpoint may be the thing that changed.
+   */
+  saveApi: (input: ClaudeApiProfileInput) => Promise<void>
   rename: (id: string, name: string) => void
   remove: (id: string) => void
 }
@@ -121,6 +131,13 @@ export const useClaudeProfiles = create<ClaudeProfilesState>((set, get) => ({
       console.error("Could not save the Claude profiles", error)
       set({ profiles })
     }
+  },
+
+  async saveApi(input) {
+    const profiles = await window.desktop.saveClaudeApiProfile(input)
+    set({ profiles })
+    const saved = profiles.find((profile) => profile.id === input.id)
+    if (saved) await get().check(saved.configDir)
   },
 
   rename(id, name) {
@@ -207,7 +224,10 @@ export function accountLabel(account: ClaudeAccount | undefined): {
  */
 export function accountCaption(account: ClaudeAccount | undefined): string {
   if (!account || account.state !== "signedIn") return ""
-  return [account.email, account.organization, account.plan, account.method]
+  // `custom_api` is this app's word, not the CLI's: the endpoint's host is
+  // already the organisation.
+  const method = account.method === "custom_api" ? null : account.method
+  return [account.email, account.organization, account.plan, method]
     .filter(Boolean)
     .join(" · ")
 }
@@ -249,11 +269,16 @@ export function defaultAccountName(
  */
 export type AccountKind =
   | { kind: "plan"; label: string }
-  | { kind: "api" | "token" | "cloud"; label: string }
+  | { kind: "api" | "token" | "cloud" | "custom"; label: string }
 
 export function accountKindOf(
   account: ClaudeAccount | undefined
 ): AccountKind | null {
+  // Not the CLI's word: main answers it for a custom API profile, which has no
+  // login to ask about (`IPC.claudeAccount`) — signed in, or its key unread.
+  if (account?.method === "custom_api") {
+    return { kind: "custom", label: "Custom" }
+  }
   if (account?.state !== "signedIn") return null
   switch (account.method) {
     case "claude.ai":

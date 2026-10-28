@@ -23,6 +23,7 @@
 import path from "node:path"
 
 import type { ClaudeProfile } from "../shared/api"
+import { apiEnvFor } from "./claude-api"
 
 /**
  * The same profiles, with a directory filled in for any that has none — the
@@ -34,6 +35,19 @@ import type { ClaudeProfile } from "../shared/api"
  * because profiles written before the path was the app's to choose are sitting
  * on somebody's disk with an empty field and no field left to type into.
  */
+/**
+ * `CLAUDE_CONFIG_DIR` for a profile's directory — nothing at all for the
+ * default login — and, for a custom API profile, its endpoint
+ * (`claude-api.ts`). What every `claude` started on a profile is handed in
+ * place of building `{ CLAUDE_CONFIG_DIR }` itself: a chat's session, a
+ * rewind, the commit draft and the usage meter.
+ */
+export function accountEnv(configDir: string | null): Record<string, string> {
+  return configDir
+    ? { CLAUDE_CONFIG_DIR: configDir, ...apiEnvFor(configDir) }
+    : {}
+}
+
 export function withConfigDirs(
   profiles: ClaudeProfile[],
   root: string

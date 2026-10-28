@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
-import { CREDIT_PACKS } from "../server/utils/billing.ts"
+import { PRO_PLANS } from "../server/utils/billing.ts"
 import {
   COPY,
   docsPathOf,
@@ -9,56 +9,27 @@ import {
   langOf,
   pathOf,
 } from "../site/.vitepress/theme/copy.ts"
-import {
-  formatCredits,
-  packsForSale,
-} from "../site/.vitepress/theme/home/packs.ts"
 import { hashOf, osOfHash } from "../site/.vitepress/theme/download.ts"
 import { slugOf } from "../site/.vitepress/theme/links.ts"
+import { formatVnd } from "../site/.vitepress/theme/copy.ts"
 
 /**
- * The home page's one promise worth a test: the prices it advertises are the
- * ones the checkout charges, because both are read off `CREDIT_PACKS`. The
- * page itself is `site/` (VitePress); what is tested here is what it draws.
+ * The home page's one promise worth a test: the prices it advertises for Pro
+ * are the ones the checkout charges, because both are read off `PRO_PLANS`.
+ * The page itself is `site/` (VitePress); what is tested here is what it
+ * draws.
  */
 
-describe("packsForSale", () => {
-  test("every pack on sale is drawn, cheapest first, retired ones not", () => {
-    const packs = packsForSale()
-    expect(packs.map((pack): string => pack.id)).toEqual(
-      Object.entries(CREDIT_PACKS)
-        .filter(([, pack]) => !pack.retired)
-        .sort(([, a], [, b]) => a.price - b.price)
-        .map(([id]) => id)
-    )
-    expect(packs.map((pack): string => pack.id)).toEqual([
-      "vnd-20k",
-      "vnd-50k",
-      "vnd-100k",
-      "vnd-200k",
-    ])
-  })
-
-  test("shows each pack's credits as the studio writes them", () => {
-    expect(packsForSale().map((pack) => pack.credits)).toEqual([
-      "$10.00",
-      "$25.00",
-      "$55.00",
-      "$120.00",
-    ])
-    expect(packsForSale()[0]!.credits).toBe(
-      formatCredits(CREDIT_PACKS["vnd-20k"].credits)
-    )
-  })
-
-  test("nothing is sold by card", () => {
-    expect(packsForSale("card")).toEqual([])
-  })
-
-  test("one pack, at most, is the popular one", () => {
-    expect(
-      packsForSale().filter((pack) => pack.popular).length
-    ).toBeLessThanOrEqual(1)
+describe("pricing", () => {
+  test("Free, then a card per device plan at the price charged", () => {
+    for (const lang of ["en", "vi"] as const) {
+      const [free, ...devices] = COPY[lang].pricing.plans
+      expect(free?.pro).toBeUndefined()
+      expect(devices.map((plan) => plan.price)).toEqual(
+        PRO_PLANS.map((plan) => formatVnd(plan.price))
+      )
+      expect(devices.filter((plan) => plan.flag)).toHaveLength(1)
+    }
   })
 })
 
@@ -85,7 +56,7 @@ describe("languages", () => {
     expect(slugOf("index.md")).toBe("")
     expect(slugOf("vi/index.md")).toBe("")
     expect(slugOf("docs/index.md")).toBe("docs/")
-    expect(slugOf("vi/docs/credits.md")).toBe("docs/credits")
+    expect(slugOf("vi/docs/pro.md")).toBe("docs/pro")
     expect(slugOf("vi/install.md")).toBe("install")
   })
 

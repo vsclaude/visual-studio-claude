@@ -1,7 +1,9 @@
 import { createHmac } from "node:crypto"
 import { describe, expect, test } from "bun:test"
 
-import { CREDIT_PACKS, NO_ACCOUNT } from "../server/utils/billing.ts"
+import { PRO_PLANS } from "../server/utils/billing.ts"
+
+const PRO_PRICE = PRO_PLANS[0]!.price
 import {
   applyTransfer,
   newOrderCode,
@@ -14,21 +16,23 @@ import {
 } from "../server/utils/sepay-billing.ts"
 
 /**
- * Bank transfers through SePay: which transfer pays an order, and what it adds
- * — with webhook payloads in the shape SePay's docs give.
+ * Bank transfers through SePay: which transfer pays a Vey Pro order — with
+ * webhook payloads in the shape SePay's docs give.
  */
 
 const NOW = new Date("2026-10-18T00:00:00Z")
 
 function order(
-  item: Order["item"] = "vnd-100k",
+  item: Order["item"] = "pro-1",
   fields: Partial<Order> = {}
 ): Order {
   return {
     code: "VSC12345678",
-    uid: "uid-1",
+    uid: "device:1",
+    email: "an@example.com",
+    device: "00000000-0000-4000-8000-000000000001",
     item,
-    amount: 60_000,
+    amount: PRO_PRICE,
     createdAt: NOW.toISOString(),
     paidBy: null,
     short: 0,
@@ -42,7 +46,7 @@ function transfer(fields: Partial<Transfer> = {}): Transfer {
     code: "VSC12345678",
     content: "VSC12345678 chuyen tien",
     transferType: "in",
-    transferAmount: 60_000,
+    transferAmount: PRO_PRICE,
     ...fields,
   }
 }
@@ -99,57 +103,55 @@ describe("matching a transfer to its order", () => {
 })
 
 describe("applyTransfer", () => {
-  test("a full transfer adds the pack's credits and marks the order paid", () => {
-    const paid = applyTransfer(
-      order(),
-      { ...NO_ACCOUNT, credits: 5 },
-      transfer()
-    )
-    expect(paid.kind).toBe("credits")
-    if (paid.kind !== "credits") return
-    expect(paid.order.paidBy).toBe(92704)
-    expect(paid.account.credits).toBe(CREDIT_PACKS["vnd-100k"].credits + 5)
+  test("a full transfer is the licence, and marks the order paid", () => {
+    const paid = applyTransfer(order(), transfer())
+    expect(paid.kind).toBe("pro")
+    expect(paid.kind === "pro" && paid.order.paidBy).toBe(92704)
   })
 
   test("more than asked still pays it", () => {
     expect(
-      applyTransfer(order(), NO_ACCOUNT, transfer({ transferAmount: 100_000 }))
-        .kind
-    ).toBe("credits")
+      applyTransfer(order(), transfer({ transferAmount: PRO_PRICE + 1 })).kind
+    ).toBe("pro")
   })
 
   test("a short transfer grants nothing and is noted", () => {
     const paid = applyTransfer(
       order(),
-      NO_ACCOUNT,
-      transfer({ transferAmount: 50_000 })
+      transfer({ transferAmount: PRO_PRICE - 1_000 })
     )
     expect(paid.kind).toBe("short")
     if (paid.kind !== "short") return
-    expect(paid.order.short).toBe(50_000)
+    expect(paid.order.short).toBe(PRO_PRICE - 1_000)
     expect(paid.order.paidBy).toBeNull()
   })
 
   test("a paid order is not paid twice", () => {
     expect(
-      applyTransfer(order(undefined, { paidBy: 1 }), NO_ACCOUNT, transfer())
-        .kind
+      applyTransfer(order(undefined, { paidBy: 1 }), transfer()).kind
     ).toBe("ignored")
   })
 
   test("money going out is not a payment", () => {
-    expect(
-      applyTransfer(order(), NO_ACCOUNT, transfer({ transferType: "out" })).kind
-    ).toBe("ignored")
+    expect(applyTransfer(order(), transfer({ transferType: "out" })).kind).toBe(
+      "ignored"
+    )
   })
 
-  test("a plan ordered before plans were withdrawn grants nothing", () => {
-    const paid = applyTransfer(
-      order("plus-1m", { amount: 99_000 }),
-      NO_ACCOUNT,
-      transfer({ transferAmount: 99_000 })
-    )
-    expect(paid.kind).toBe("ignored")
+  test("every plan is a licence, and so is the Google era's pro", () => {
+    for (const item of ["pro-3", "pro-5", "pro"]) {
+      expect(applyTransfer(order(item), transfer()).kind).toBe("pro")
+    }
+  })
+
+  test("a credit pack or a plan ordered before they were withdrawn grants nothing", () => {
+    for (const item of ["vnd-50k", "plus-1m"]) {
+      const paid = applyTransfer(
+        order(item, { amount: 50_000 }),
+        transfer({ transferAmount: 50_000 })
+      )
+      expect(paid.kind).toBe("ignored")
+    }
   })
 })
 

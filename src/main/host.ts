@@ -69,6 +69,12 @@ export type Host = {
    */
   fetch: (url: string, init?: RequestInit) => Promise<Response>
 
+  /** A secret as text that is safe to write to disk — Electron's
+   * `safeStorage`, the OS keychain's key — and back. `unseal` answers null
+   * for what it cannot read: another machine's, or a keychain reset. */
+  seal: (text: string) => string
+  unseal: (sealed: string) => string | null
+
   /** The number on the app's own icon — the dock's red badge on macOS, the
    * launcher's count on Linux. Zero clears it. */
   setBadgeCount: (count: number) => void

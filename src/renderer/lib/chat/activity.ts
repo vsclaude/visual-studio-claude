@@ -267,9 +267,6 @@ export function usageOfAll(lines: AssistantMessage[]): AssistantMessage | null {
   const durations = usages.flatMap(({ usage }) =>
     usage.durationMs ? [usage.durationMs] : []
   )
-  const credits = usages.flatMap(({ usage }) =>
-    usage.credits ? [usage.credits] : []
-  )
   const context = usages
     .map(({ usage }) => usage.context)
     .filter(Boolean)
@@ -292,7 +289,6 @@ export function usageOfAll(lines: AssistantMessage[]): AssistantMessage | null {
       context: context ?? null,
       durationMs:
         durations.length > 0 ? durations.reduce((a, b) => a + b, 0) : null,
-      credits: credits.length > 0 ? credits.reduce((a, b) => a + b, 0) : null,
     },
   }
 }

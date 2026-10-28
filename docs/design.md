@@ -130,16 +130,15 @@ its branch, `+ Chat` and the `…` — then the chats in three sections
 
 Each row is the title, one state mark and its age (`since`, coarse: `9h`,
 `now`). It carried the **account's avatar** ahead of the title for a while — a
-letter in a hue per profile, the credits coin, a person for the user's own
-login — and the user had it taken off: an icon in front of every title is a
+letter in a hue per profile, a person for the user's own login — and the user had it taken off: an icon in front of every title is a
 column of icons to read past, and which account a chat runs on is its
 composer's toolbar. The letter stays where it marks the account itself —
 the Accounts foot, and the composer's account picker and its toolbar button,
 which drew a key glyph per profile until then — as one `ProfileAvatar`, so a
 profile is the same colour wherever it is met. At the column's foot,
 **every account** with its five-hour and weekly windows as two short bars
-stacked at the row's end (`5h`, `w`; when each resets is its tooltip), and
-the credits left (`AccountsFooter`) — asked on mount and again whenever a turn
+stacked at the row's end (`5h`, `w`; when each resets is its tooltip)
+(`AccountsFooter`) — asked on mount and again whenever a turn
 ends, main holding a minute per account. It is also where accounts are added,
 signed in, renamed and removed; § Settings has why that left Settings.
 The foot is at most 70% of the column, its list scrolling under a heading that
@@ -155,22 +154,20 @@ empty space under them.
 Drawn as a card in `Needs you`: which limit, when it resets (counted down
 once a minute), and **`Continue with …`**, which moves the chat to the first
 other account that can take a turn and is not itself full (`limitWayOut`,
-tested — the user's login, their profiles, credits last) and sends
+tested — the user's login, then their profiles) and sends
 `Continue.`; the transcript goes with it (`carryTranscript`). Once the reset
 has passed the button continues on the same account.
 
-With **nowhere to go** — somebody on one plan and nothing else, or whose
-credits are at nothing — the button is **credits**: `Buy credits to keep
-going` for somebody signed in to Vey Studio, `Sign in to use credits` for
-somebody who is not, nothing on a build with no credits server. This was the
-one stopped chat that got no button at all, only the hours to wait, and it is
-the moment somebody is most ready to pay. A purchase needs no step of its own
-afterwards: credits above nothing are `usable`, so the same card becomes
-`Continue with Credits`. The same action (`useLimitWayOut`,
+With **nowhere to go** — somebody on one plan and nothing else — the button
+is **Pro** for somebody on Free, `Add another account with Pro`, since a
+second account is exactly what Pro sells (§ Pro). Somebody already on Pro
+with one account gets no button, only the time to wait: there is nothing left
+to sell them, only an account to sign in to. Credits were the way on here
+once (§ Credits and the free AI, removed). The same action (`useLimitWayOut`,
 `chat/chat-limit.tsx`) is drawn **under the transcript's limit line** too —
 the last one, while `Chat.limit` stands — so somebody reading the chat does
-not have to find the column to learn they need not wait; credits get a card
-there rather than a button, since for a user on one plan they are news.
+not have to find the column to learn they need not wait; Pro gets a card
+there rather than a button, since for a user on one plan it is news.
 
 The column knows a chat
 is stopped without opening it because main writes the mark on the listing:
@@ -693,7 +690,7 @@ switch, deleted (§ The notification), and the model and account commit drafts
 run on, which moved beside `Draft` (§ Committing).
 
 **There is no Claude section any more.** It held the named profiles, each a
-`CLAUDE_CONFIG_DIR`, with a status per row, and the Credits card — and the one
+`CLAUDE_CONFIG_DIR`, with a status per row — and the one
 thing anybody did there, signing a profile in after seeing it was not, was a
 dialog away from the projects column's Accounts foot, where `Not signed in` was
 actually being read. So the foot is where accounts are managed
@@ -706,9 +703,7 @@ login** — `~/.claude`, the one the user's own `claude` uses — is named by it
 email once read, `Default account` until then (`defaultAccountName`; it was
 `This account`, which said nothing in a list of accounts). It has no profile
 record, so a name given to it is a setting, `defaultAccountLabel`, and
-renaming it to nothing gives it its email back. Credits are a row
-there too: a click buys more, and somebody signed out of Vey Studio gets `Sign
-in`. Its last row, the model and account **commit message drafts** run on, moved
+renaming it to nothing gives it its email back. Its last row, the model and account **commit message drafts** run on, moved
 to Chats and then beside `Draft` (§ Committing).
 
 The app names the directory (`workspace/claude-profiles/<slug>`, in main,
@@ -838,334 +833,160 @@ stage) stay English inside Vietnamese sentences, the way Vietnamese developers
 say them. Not every surface is translated yet; an untranslated string is simply
 English.
 
-### The free AI
+### Signing in, removed
 
-Anybody signed in to the studio (Google, through the server) can chat on
-**Haiku, Sonnet or Opus through this app's own server**, paid for with
-credits and with no Claude account of their own — the way in for somebody who has not got one. It is a row of the composer's
-account menu, `Studio AI`, and **not a profile**: Settings has nothing to rename or
-delete, and it is offered exactly while somebody is signed in. A chat on it
-carries `FREE_PROFILE_ID` as its `profileId`, and main resolves that to a
-`CLAUDE_CONFIG_DIR` of its own, `workspace/claude-free`. A new chat opens on it
-only for somebody whose own `claude` is signed out and who has no profiles —
-somebody already spending their own plan is not moved onto the server. It
-opens on the same default model a chat on a login does — it used to start on
-Haiku, the cheapest on credits, and that pin is withdrawn: the picker is where
-somebody chooses a cheaper model, not the account. The server is
-`FREE_AI_URL` in `shared/free-ai.ts`, empty until there is one (which hides the
-whole thing), or `VEYSTUDIO_AI_URL` in main's environment for one on this
-machine — a line in the repository's gitignored `.env`, which `scripts/dev.mjs`
-loads, so it need not be typed in each shell's own syntax. A packaged app reads
-no `.env` and is launched with none of the builder's variables, so
-`scripts/build-electron.mjs` bakes the `VEYSTUDIO_AI_URL` the build saw into
-`main.cjs` — from `.env` locally, from the repository variable of that name in
-`release.yml` — and the variable at launch still wins over it.
+There was a Google sign-in until 2026-10-28, and it existed for one thing:
+Pro belonged to the Google account that paid, so another machine got it by
+signing in as the buyer. It ran in the user's own browser on the studio's
+server — Google will not sign in inside an embedded browser — with a nonce the
+app polled for (`main/google-sign-in.ts`, through `net.fetch` so the asking
+went the browser's way), a ninety-day session in `localStorage` read by
+`lib/session.ts`, hour-long access tokens held and renewed by
+`main/studio-server.ts`, and an avatar menu at the foot of the rail
+(`account-menu.tsx`). Before that it was Firebase, and before that a server on
+`localhost` per attempt.
 
-**What the server is sent is an access token of its own**, as
-`Authorization: Bearer` and as `x-api-key` both. It verifies it
-(against its own secret) and forwards to Anthropic with a key of its own, on
-whichever model the request names — so every request is this app's
-API spend, charged per uid to that user's credits by the server, and no user credential is ever
-forwarded.
+**It is deleted, app and server**: the four `auth:*`/`studio-server:session`
+channels, `lib/account.ts`, `lib/session.ts`, the account menu and its avatar,
+`test/google-sign-in.ts`, `test/account-session.ts`; on the server `/signin`,
+`/api/signin`, `/api/session`, `auth.ts`, `session.ts`, `signin.ts`,
+`google.ts`, the welcome mail and the OAuth client. Pro is per device now and
+carried by a licence key (§ Pro), so a sign-in for nothing else was a browser
+round-trip, an OAuth client and a signing secret to keep, and an account
+somebody had to make before they could pay — the one step most likely to
+lose a sale. What is on disk stays: a session in `localStorage`, the `users`
+table and its `VEY1` keys are read by nothing.
 
-**The token is a file, read by an `apiKeyHelper`, not a variable.** An access
-token lives an hour and a chat session can stay open all day; a token fixed
-into a process's env at spawn is a session that fails at minute sixty. So the
-free directory's own `settings.json` names an `apiKeyHelper` that prints
-`vsclaude-token` (`type` on Windows, where the CLI runs it through `cmd.exe` —
-measured; `cat` elsewhere), the CLI re-runs it every five minutes
-(`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), and main renews the file from the
-session the renderer hands it (`setFreeAiToken` → `POST /api/session`), ten
-minutes before each hour is up. The file is `0600` and deleted on sign-out; it
-is not sealed by the keychain, because the CLI has to `cat` it and it is dead
-within the hour anyway — which is why it holds the hour's token and never the
-ninety-day session.
+### Pro
 
-**Every model is offered, and every alias is pinned.** The free AI was Haiku
-alone once, pinned three times over (`forFreeAi` at send, a Haiku-only picker,
-every alias pointed at Haiku); that is withdrawn — a free chat picks any model,
-and pays for it at that model's price out of the same credits. What
-stays is `freeAiEnv` pointing the `opus`/`sonnet`/`haiku` aliases at
-`FREE_AI_MODELS`: the CLI asks for models on its own — a subagent, the default
-behind `Inherit` — and an id of its own choosing would be charged at a price
-the server only guesses from its family.
+**What is sold is a second project; accounts and the custom API are free.**
+It took three tries in a day, 2026-10-28, and the first two are kept below for
+the argument. Credits
+were reselling Anthropic's API at 1.6× to 1.9× — a thin margin under a payment
+provider's fees, and at odds with what the studio is for. The first Pro sold
+the second account instead (two Pro plans at $40 a month against a Max at
+$100), and was reversed the same week, on 2026-10-28: it gated the one thing
+anybody installs this app to do, so a new user met the wall before the value.
+Now **Free is every account Anthropic signs in** — claude.ai plans, Console,
+SSO, as many as somebody has, and `Continue with …` between them — and **Vey
+Pro was the custom API** (`main/claude-api.ts`) for a day: a profile that is an
+Anthropic-compatible endpoint rather than a login, with its base URL, a key and
+the model names the CLI's aliases resolve to. That is the demand in Vietnam:
+GLM, Kimi and DeepSeek coding plans, OpenRouter and company gateways, run
+today by hand-editing `ANTHROPIC_BASE_URL` in a shell profile. It still passes
+the test a paid feature has to — **it saves more than it costs**: a coding
+plan at a few dollars a month in place of a $100 Max. Bought once, by VietQR
+through the studio's own server and a SePay order (`PRO_ITEM`, `PRO_PRICE` in
+`vsclaude-cloud/server/utils/billing.ts` then), never a subscription: a dev in
+Vietnam will pay once for a tool and will not pay monthly for one.
 
-**The server refuses no model.** It had a list, `NITRO_ALLOWED_MODELS`, and
-refused everything off it — and a production list narrower than the code's
-default was a credits chat stuck on Haiku whatever the picker said. The list is
-removed: a request is forwarded on the model it names and charged at that
-model's family's price (`usage.ts` there), an unknown family at Opus's. The
-cost, accepted: an older model dearer than its 5.5 namesake — a Claude 3 Opus
-at $15/MTok — is charged as Opus 5.5's $4, so the gap is this app's.
-`MODELS` in the server's `limits.ts` is only what `/v1/models` lists.
+It could not be enforced against somebody determined: a `claude` is handed the
+login shell's whole environment, so an `ANTHROPIC_BASE_URL` in `~/.zshrc`
+reaches every account. **The custom API was made free the same day**: a gate
+anybody could step round with one line in a shell profile was a gate on the
+honest only, and the rows that showed it — `Fix` in red on an endpoint that
+worked yesterday — read as the app being broken. It is now an account like
+any other; `canUseCustomApi`, the refusal in `IPC.saveClaudeApiProfile`, the
+`custom_api` row's Pro error and `limitWayOut`'s `upgrade` are deleted (Pro
+has nothing to offer a limit any more, so with nowhere to go the card offers
+nothing).
 
-**The user's own credentials are emptied** — `ANTHROPIC_API_KEY`,
-`ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` go over as empty strings.
-A spawned `claude` gets the login shell's whole env (`mergeShellEnv`), and a
-key exported there would win over the helper and be sent to this app's server.
-Measured too: with one exported, the server saw the studio's token alone.
+**Free is one project; Pro is every one after it** (2026-10-28, the same day).
+The custom API sold to the few running a coding plan; somebody with
+three repositories meets the second `Add project` within a week, and the
+first one is enough to find out whether the studio is worth 99.000 ₫. The
+limit is on the **project**, not the account, because the accounts are what
+the app is for, and on **adding**: `canAddProject` (`FREE_PROJECTS`, a
+worktree not counted — it is a checkout filed inside its project) is checked
+by `addProject` in `studio.tsx`, the one door every `Add project` goes
+through, which opens the Pro dialog instead of the folder picker, and again
+by `IPC.addFolder` in main. A workspace that already holds more — from before
+the limit, or a manifest copied off a Pro machine — keeps every project
+working: locking somebody out of a folder they were in the middle of is a
+refusal of their own files, not a sale.
 
-**No prompt goes past 100K tokens**, where every token of the request is
-charged at a higher rate. `freeAiEnv` sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to
-`FREE_AI_MAX_PROMPT` (100K, also the least the CLI accepts), so a long chat
-compacts at the CLI's own threshold; the server refuses anything longer anyway,
-as `prompt is too long: N tokens > 100000 maximum` — Anthropic's own wording,
-which the CLI matches and answers by compacting. Measured against the real CLI:
-it read both numbers out of the refusal, and a single message too long to
-compact is reported as such rather than retried.
+**A custom API profile** is a `ClaudeProfile` with `api` set: its own
+`CLAUDE_CONFIG_DIR` like any account (its own history and settings) and no
+login. Its key is never on the profile list, which the renderer owns and
+`claude-profiles.json` holds whole: it crosses once, on
+`IPC.saveClaudeApiProfile`, is sealed by `Host.seal` (Electron's
+`safeStorage`, the keychain's key) into the setting `claudeApi.token.<id>`,
+and is read back only by main. Every `claude` reaches its profile through
+`accountEnv(configDir)`, so `listProfiles` in `ipc.ts` hands the endpoints to
+`claude-api.ts` by directory each time the list is read, and `accountEnv`
+adds them — `ANTHROPIC_BASE_URL`, the key as `ANTHROPIC_AUTH_TOKEN` (a
+`Bearer`, which is what these endpoints document), `ANTHROPIC_API_KEY` blanked
+so a shell's own is not sent to a stranger, and the model for `opus`/`sonnet`
+and the fast one for `haiku`. The endpoint is hashed into a session's
+`signatureOf`, so a new key is a new process. `claude auth status` has
+nothing to say about such a profile; main answers its row itself
+(`method: "custom_api"`, the endpoint's host as the organisation), and the
+plan meter is skipped. The form fills the base URL from a short list of
+providers and leaves the models to the provider's own guide: model names move
+faster than this repository would.
 
-Every place that starts a `claude` on a profile asks `accountEnv` (in
-`main/free-ai.ts`) by directory rather than building `{ CLAUDE_CONFIG_DIR }`
-itself, which is how the free directory brings its server with it. The usage
-meter is not drawn for a free chat — there is no claude.ai plan behind it — and
-a free turn sent while signed out is refused with a sentence rather than left to
-the CLI's "Please run /login", which names the wrong login.
+**No trial, removed 2026-10-28.** Every install used to start with thirty
+days of Pro, counted from `pro.trialStartedAt`, with the days left on the
+account menu's row and a line under the Accounts foot. It was taken out the
+day it shipped: Free is already the whole product for anybody on Anthropic's
+own accounts, so the trial only lent out the custom API, and at 99.000 ₫ the
+way to try it is to buy it. A `pro.trialStartedAt` an older build wrote stays
+in the manifest and nothing reads it; a profile added during that trial stays
+listed and, the custom API being free, runs. Where a device stands is shown
+by one pill at the right of the title bar (`PlanBadge`): `Upgrade`, in Pro's
+gradient with a glint, on Free; a quiet `Pro` outline once licensed. It
+opens the Pro dialog.
 
-The `Gateway` profile that came before this — a URL and a token typed into
-Settings per profile — was never shipped and is not here: a server of the
-app's own, reached by whoever is signed in, is the thing it was a stand-in for.
+**A licence is per device, and a key carries it** (2026-10-28, replacing the
+Google account). A purchase is one, three or five devices (`PRO_PLANS`,
+99.000 / 199.000 / 299.000 ₫, the same list on both sides and compared by
+`vsclaude-cloud/test/license.test.ts`). It makes a **licence key** —
+`VEY-XXXX-XXXX-XXXX-XXXX`, random, in Crockford's alphabet so it survives
+being read out of an email — with that many seats, puts the device it was
+bought on onto it, and mails it to the buyer. Another device is the key
+pasted under `Have a key?`; a seat comes back by `Deactivate this device` in
+the same dialog, which is how somebody changes laptops. The paste field was
+taken out once, when Pro followed a Google account, and is back because a key
+is now the only way Pro reaches a second machine.
 
-### Signing in
+**What a device keeps is an activation, checked here and never phoned
+home.** `VEY2.<payload>.<signature>` — `{ email, seats, device, issuedAt }`,
+base64url, Ed25519-signed by the server with the private key whose public
+half ships in the app (`LICENSE_PUBLIC_KEY`; verified in `main/license.ts`
+with Node's `crypto`) — and checked against **this device's id** as well as
+the signature, so an activation copied off another machine is nothing here.
+The id is `pro.device`, a UUID of its own: telemetry's `installId` would have
+made a purchase and the anonymous usage counts joinable. Kept in the
+manifest's settings as `pro.activation` and `pro.key` (the dialog shows the
+key, to copy to another device). Offline every time, because a licence that
+stops working when a server is down is a licence somebody paid for and does
+not have. **The launch checks in** — `POST /api/license/activate` with the
+key held, idempotent for a device already on it — and that is the one way a
+licence ends: a refund is `revoked_at` on the server's row, which answers 410,
+and the device forgets it. Offline or any other failure keeps what is held.
 
-Google will not run its sign-in in an embedded browser, and no OAuth client
-can name `app://studio` as a redirect. So signing in happens in the user's own
-browser, on **the free AI's server**:
-`main/google-sign-in.ts` draws a 24-byte nonce, opens `<server>/signin/<nonce>`,
-and asks `GET <server>/api/signin/<nonce>` every second and a half — through
-`net.fetch` (`host.fetch`), Chromium's network stack, so the asking goes the way
-the browser's page went: through the same system proxy and VPN, to the same
-Cloudflare location. With Node's `fetch` it did not, and the answer arrived
-late, after the page had long said "You're signed in". The page's
-button is a link to Google's own sign-in, with the nonce as OAuth `state`;
-Google sends the browser back to `/signin/callback`, where the server exchanges
-the code with **its own OAuth client's secret**, writes the user to `users`
-and leaves a session token it signed itself in D1 (`sign_ins`, five minutes at
-most), which it hands out once. The callback URL has to be among the OAuth
-client's **authorized redirect URIs** — the server's own, and
-`http://localhost:3000/signin/callback` for one on this machine
-(`VEYSTUDIO_AI_URL`).
+**The purchase is a page in the browser.** Each device plan's button asks
+main (`buyLicense(seats, email)`) for the server's page (`POST
+/api/license/checkout` with this device's id and the email the key goes to),
+opens it in the browser, and the window re-asks `GET /api/license?device=`
+every five seconds for half an hour, and on every focus after (`claim` in
+`lib/license.ts`). The SePay webhook, on the transfer, marks the order paid
+and grants the key (`grantLicense`); `GET /api/license` grants it too for a
+paid order that has none, so a webhook that failed half-way heals on the
+app's next ask. An activation that comes back and does not verify is said
+out loud in the dialog — that is somebody who has paid. A build with no
+server has no buttons and no key field. The dialog draws Free beside the
+three plans, the middle one flagged, with a seven-day refund promised on
+every plan — handled by hand, by reply to the key's mail.
 
-The studio's own session needs none of this after the first time: the
-renderer keeps the ninety-day session token in `app://studio`'s
-`localStorage`, so a relaunch is still signed in, and the page is only reached
-after a sign-out. Who is signed in is read off the token's own claims
-(`lib/session.ts`); main turns it into the hour-long access tokens the free AI
-sends. The link goes **without `prompt: select_account`**, so somebody
-signed in to Google with one account who has consented before is sent straight
-back — one click. `Use a different account` under it is the picker, asked for
-on purpose.
+**Until main has answered where things stand, the gate is open**: a refusal
+for a frame is worse than a folder picker opened for nothing — main refuses
+the add regardless.
 
-**It was Firebase Authentication**, the page running Firebase's popup and the
-renderer exchanging the Google token with Firebase's SDK. It was replaced so
-that who somebody is lives beside what they paid, in the server's D1, rather
-than in a second service with its own console, its own uids and its own
-domains list to keep in step. The cost is that the server now holds an OAuth
-client secret and a signing secret, and a session cannot be revoked one token
-at a time: deleting the user's row is what ends their sessions, at their next
-renewal.
-
-**It was a server of the app's own on `localhost`**, one per attempt, on a
-random port, which the page posted back to — with a Host check against DNS
-rebinding and the nonce as its path. That is removed: it opened a port on the
-user's machine for every sign-in, and the page was inside the app, so changing
-a word of it was a release. The cost is that the token now waits on the
-server for the second or so between the callback and the studio's next ask,
-and that a build with no server cannot sign in at all — which, with sign-in
-being for the free AI and its credits, is a build with nothing to sign in for.
-Taking the answer is one `DELETE ... RETURNING`, so two collectors cannot both
-get it; the five-minute expiry is what bounds a token nobody collected.
-
-### Credits
-
-Studio AI runs on **credits alone**: nothing is free, and somebody with none
-is refused until they buy a pack — the account menu's `Buy credits`, and the
-same line under the composer's `Studio AI` row, whose own line says how many
-are left or that there are none. The point is that the studio is a way to use
-Claude Code **without** a $20 subscription: credits that never expire, paying
-for what is used rather than a fixed month.
-
-**An empty balance is refused in main, not by a `claude` started to hear
-it.** The server refuses at once, but a message went through the CLI first —
-start, bring up the user's MCP servers, send — and that was five or six
-seconds of a spinner ending in the same buy card. `Chats.send` now asks
-`outOfCredits` (`main/free-ai.ts`): a balance last seen at zero is asked of
-the server again, since a purchase may have landed, and only a confirmed zero
-is refused, in the server's own sentence. Anything else goes to the CLI as
-before, so an ordinary message pays no extra round trip; the server stays the
-one that enforces it.
-
-`shared/credits.ts` is the one table of packs, and `credits-dialog.tsx` draws
-it — the copy, not the rules. **The server enforces them**: `vsclaude-cloud`
-learns a user's credits from its payment providers' webhooks (never from the
-client), and charges every request on every model to them at that model's
-price (its README § Credits). Sonnet and Opus ran on credits alone for a while
-beside a free Haiku; holding them back was the plans' idea, and it went with
-them.
-
-**There is no free allowance any more.** Every signed-in user had a daily
-budget (two million Haiku-input equivalents, about $0.20), then credits past
-it. It is withdrawn — Studio AI is something bought, and a free day per Google
-account was also API spend anybody could multiply by making accounts. The
-server's `quota` store, `NITRO_DAILY_BUDGET` and
-`creditCharge` are deleted; `./.data/quota` on the server is left and nothing
-reads it.
-
-**Two ways to pay, chosen in the dialog** (`PaymentMethod`). A **Vietnamese
-bank transfer** by VietQR, through SePay: no card and next to no fee. A
-**card** through Paddle, for anybody outside Vietnam. Paddle alone was the
-first answer, and its fee is why there is a second — about $0.50 a transaction
-plus 5%.
-
-**What a pack costs.** A credit is a Haiku input token, so a million is $0.10
-of Anthropic's price on any model — about 2,630 ₫. The packs are 50.000,
-100.000 and 200.000 ₫ (the top-up denominations people already know) at
-200,000 credits per 1,000 ₫, with 10% and 20% more on the two bigger ones:
-10M, 22M and 48M. That is 1.9× down to 1.6× Anthropic's price. The first table
-was 25.000 / 60.000 / 100.000 ₫ for 1M / 3.3M / 6M, which was 9.5× down to
-6.3× — numbers put in to have numbers — and its bonus badges did not match its
-own figures (the 60k pack was +37% over the small one, badged +10%). The
-smallest pack moved up from 25.000 ₫ because Paddle's $0.50 is fixed and took
-58% of it; at 50.000 ₫ the card side keeps about 16% and the transfer side
-47%. **One table for both ways of paying**: a transfer-only bonus or a
-transfer-only small pack were both considered, and each is a second price for
-the dialog, the arrival card and the webhooks to keep straight, for a
-difference that is mostly that fixed $0.50 — so the transfer is simply the
-better side of one margin. SePay's own charge is monthly (a free tier of fifty
-transfers, then 99.000 ₫ for unlimited), not per transaction. The item ids
-still say `20k` / `60k` / `100k`: they are the names of the Paddle price
-variables, and renaming them is a configuration change on the server, left for
-when Paddle goes live. Lemon Squeezy was tried before Paddle and replaced before anything was
-sold. A buy button asks main (`buyCredits`), which asks the server for the page
-— `/pay/<code>` or Paddle's checkout — and opens it in the browser; the balance
-shown is re-read when the window takes focus back from that tab.
-
-**Four packs, never sold out.** 20.000 ₫ for $10.00 (bank transfer only),
-50.000 ₫ for $25, 100.000 ₫ for $55 and 200.000 ₫ for $120 — the 10% and 20%
-bonuses — each by bank transfer. For a while only the 20.000 ₫ pack was sold
-and the other three were `retired` in the server's `CREDIT_PACKS` (still
-credited for an order opened before, not sold); they are back, and the flag
-stays for the next pack withdrawn. The dialog is the grid of four again.
-
-**The stock, removed.** While one pack was sold it was sold out of a pool: the
-sum of the `upstreams` rows' `credit_usd` (what each key was bought with) less
-every paid transaction's credits, with an unpaid order holding its pack back
-for thirty minutes, `/api/orders` answering 409 short of a whole pack and the
-dialog drawing `Sold out`. It was a count of packs (`pack_stock`) before that,
-then one balance (`credit_pool`). With four packs back the check was taken
-out — `stockLeft`, `packsAffordable`, `unsoldCredits`, `StudioAccount.stock`,
-`stockOf` and every `Sold out` — because a buyer refused for a pack the pool
-did not cover was a sale lost to bookkeeping: keeping usage behind what is sold
-is now done by whoever adds the keys, not by the checkout. `credit_usd` stays
-on the table as a note, read by nothing. What is left of the hold is that a
-second press of Buy reopens the user's own unpaid order for that pack
-(`heldOrder`) rather than opening another.
-
-**Written as dollars, counted as before.** Every balance, pack and charge is
-shown as the dollars of Anthropic's list price it is — `$1.00` for the small
-pack, `$8.63` left, `$0.135` under an Opus reply — and never as a count
-(`formatCredits`, `CREDITS_PER_USD` in `shared/credits.ts`). It was `10M
-credits`, `1.3M credits`, and the figure sat beside token counts on the same
-line, so it was read as one: a 67-token answer on Opus charged `1.3M credits`
-looked like the app miscounting by forty, where `$0.13` beside `33.4k prompt,
-0% cached` says what happened — an uncached prompt on the dearest model. The
-unit underneath did not move: it is still one Haiku input token, ten million
-to the dollar, and D1, the webhooks, `/api/usage` and the server's log line
-all carry the integer, because a dollar figure would lose a Haiku request's
-$0.0003 to rounding and a turn's charge to a cent. Only the formatting knows
-the rate, and the hover under a reply still gives the integer beside the
-dollars for anybody reconciling against the server.
-
-**Priced against the market, not the list price.** Written as dollars, the
-first table said what it had been hiding: 50.000 ₫ bought $1.00 of usage,
-priced off Anthropic's list price at about 26.300 ₫ to the dollar. The packs
-are now $25, $55 and $120 for the same 50.000, 100.000 and 200.000 ₫ —
-2.000 ₫ to the dollar, with the 10% and 20% bonuses kept. That rate is set
-against the gateway the server forwards to, which sells $10.00 of usage for
-15.000 ₫ — 1.500 ₫ to the dollar. It is far below cost against Anthropic's
-own API, where a dollar is about 26.000 ₫: a pack has to be repriced before
-the server is pointed at `api.anthropic.com`. A fourth, $10 for 20.000 ₫, makes
-the four amounts a Vietnamese transfer is made in, and it is **bank transfer
-only** (`bankOnly`): Paddle's fixed $0.50 is about 13.000 ₫ of it and Paddle
-charges no less than 20.276 ₫ in đồng, so the dialog hides it while card is
-chosen and `POST /api/checkout` refuses it. The paragraph below on what a pack
-costs is the earlier table's reasoning, kept for the record.
-
-**Used and left, in numbers.** The dialog's strip shows the credits as used
-and left — a balance alone does not say whether a pack lasted a week or an afternoon. The
-server counts `used` as it charges (`chargeCredits`); an account from before
-the count starts at 0. The account menu's `Buy credits` carries the balance.
-A streamed answer's charge is known only when its body ends, and on Cloudflare
-Workers the first version of that charged almost nothing: a day that had spent
-close to seven million credits read as a hundred and sixty thousand used, and
-the balance in D1 agreed. The route metered each chunk in a `pull` on its way
-to the client and charged when the pull saw the end — but the CLI's SDK closes
-the connection the moment it reads `message_stop`, a chunk before Anthropic's
-body is done, and on workerd a client that has gone is a request torn down:
-the pending read never resolved, `cancel` was never called, and a `waitUntil`
-added at that point changed nothing because nothing ran to call it. Under
-Node the pending read simply finished, which is why the file store never
-missed a turn. The body is now `tee`d — one branch to the client, the other
-read to its end for the usage by a task registered with `event.waitUntil`
-before the response goes out, which workerd keeps running after the client
-has gone. The count also restarted when sign-in moved from Firebase to Google,
-since the uid is the row's key and the old row was not carried over.
-
-**A turn says what it cost in credits.** The usage line under a reply on
-Studio AI ends with the credits it took off the balance — `… · 38 out · 139k
-credits` — where a turn on a login ends without one. The dollar estimate stays
-off the row (§ above: it is the CLI's guess at a bill a subscription already
-covers); credits are the balance the user bought going down, in the unit the
-packs are sold in, which is the figure the meter beside the composer moves by.
-Worked out in main at the end of the turn (`creditsOf` in `shared/credits.ts`,
-a hand-kept copy of the server's `weighted`) and **written on the line**, so a
-chat that moved between a login and credits mid-conversation keeps saying what
-each turn was paid with; per model before summing, as the server charges, so a
-Sonnet turn whose subagent ran on Haiku is two prices and not the busiest one's
-over everything. The app's figure can differ from the balance by a handful of
-credits — the server rounds up per request and the app per turn — and leaves
-out Haiku's long-prompt price, which the server refuses before it is charged.
-
-**An arrival is announced.** Credits landing silently looked like money gone
-nowhere: the payment is made in a browser or on a phone, and the balance only
-changed the next time somebody opened the dialog. So once a checkout opens, the
-window that opened it re-asks every five seconds for half an hour, and a balance
-going up (`creditsArrived`, tested) opens a dialog of its own — a coin dropping
-in, the amount counting up, the new balance — plus a system notification when
-the window is not focused. Only that window: every window re-reads on focus, and
-one purchase celebrated twice is one too many. The payment page celebrates it
-too: `/checkout` after Paddle's `checkout.completed` (it asks
-`/api/checkout/<txn>` until the webhook has credited it, and closes Paddle's
-overlay so the card is not hidden under it), and `/pay/<code>` when the transfer
-arrives (`/api/orders/<code>` says what the pack adds). That card is the same
-celebration in plain CSS and SVG (`vsclaude-cloud/server/utils/arrival-page.ts`).
-
-The id stays `FREE_PROFILE_ID`
-(`vsclaude-free`) and the directory `claude-free`, because both are already on
-users' disks.
-
-### Plans, removed
-
-The free AI was sold as **plans** for a day: `Hobby` free, and `Starter`,
-`Plus` (Sonnet) and `Pro` (Opus) monthly above it — a card subscription renewed
-by Paddle and changed in its portal (`Manage plan`), or 1, 3 or 12 months paid
-up front by transfer, carried over by value on a switch — with credits as a
-top-up beside them. The account menu offered `Upgrade plan` beside `Buy
-credits`, the composer an `Upgrade for Sonnet and Opus` line, and a plan badge
-said which one somebody was on.
-
-They are withdrawn for credits alone. A plan was two things — a bigger day and
-a door to Sonnet and Opus — and credits already priced every model at its own
-cost, so the plan was a second way of paying for the same tokens, with a
-subscription, a portal, prepaid days and a one-plan-at-a-time rule between two
-payment providers to keep straight. Deleted: the plans table and `planName`,
-the plan badge, the dialog's Plans tab and month picker, `managePlan` and its
-channel, the server's plan budgets, `planOf`, subscriptions, prepaid days and
-`POST /api/portal`. The free profile is called `Studio AI`, the name its row already had, rather
-than `Hobby`.
-
-What stays on the server's disk stays: an account's `subscription` and
-`prepaid` keys and the `sub:<id>` links are read by nothing, and an order for a
-plan, if paid now, grants nothing and is left for a human to refund.
+**Credits replaced, then deleted.** For a day credits were hidden behind a
+flag rather than removed, with a bought balance still spendable; that was
+reversed the same day, and the free AI went with them (§ Credits and the free
+AI, removed). The landing page (`vsclaude-cloud/site/`) sells Free beside Pro.
 
 ## Plugins
 
@@ -1624,11 +1445,11 @@ minutes carrying the focused seconds since the last one — flushed on quit, so
 only a crash loses time. Each carries the version, OS and CPU, under a random
 id minted on first launch (`telemetry.installId` in the manifest's settings).
 
-They go to **the free AI's own server**, `POST /api/telemetry` on
+They go to **the studio's own server**, `POST /api/telemetry` on
 `vsclaude-cloud`, one row each in its D1 `app_events` table
 (`server/utils/app-usage.ts`), with the server's clock as `at` and
 Cloudflare's reading of the country — the address itself is not kept. Same
-`freeAiUrl()` as sign-in, so a build without a server sends nothing.
+`serverUrl()` as sign-in, so a build without a server sends nothing.
 
 PostHog was the first version and was taken out the same week: it put the
 counts with a third party for nothing the questions needed — a day's active
@@ -1708,6 +1529,50 @@ does not look hung.
 Removing a feature means deleting it — store, channels, types, tests — not
 hiding it. What it left on disk stays (see The workspace). Kept here so a
 reference to it still lands somewhere; the full argument for each is in git.
+
+### Credits and the free AI, removed
+
+**Studio AI** — the free AI — let anybody signed in to the studio chat on
+Haiku, Sonnet or Opus through this app's own server, with no Claude account of
+their own, paid for out of **credits**: packs of 20.000 to 200.000 ₫ bought by
+VietQR transfer (SePay) or by card (Paddle). The CLI was pointed at the server
+(`ANTHROPIC_BASE_URL`) from a `CLAUDE_CONFIG_DIR` of its own,
+`workspace/claude-free`, whose `apiKeyHelper` printed an hour's token main kept
+renewed; the server forwarded to Anthropic through a failover list of
+providers and charged each request to the balance at its model's price. The
+composer had a `Pay with credits` row and a balance meter, the Accounts foot a
+credits card, the account menu `Buy credits`, a refusal for an empty balance
+was a card to buy more, the way out of a limit offered credits, and every
+turn's usage line said what it took off the balance. It was sold as monthly
+**plans** for a day before that (`Hobby`, `Starter`, `Plus`, `Pro`), withdrawn
+for credits alone.
+
+Deleted on 2026-10-28, in favour of Vey Pro (§ Pro). Credits resold
+Anthropic's API at 1.6× to 1.9× — below cost against Anthropic's own price,
+thin against the reseller the server used — under a payment provider's fees
+and a fleet of keys somebody had to keep topped up, and nobody was buying.
+Worse, it pulled the other way from the studio: the app is for running chats
+on accounts somebody already pays for, and credits were a reason not to add
+one. Deleted with it: `shared/credits.ts`, `shared/free-ai.ts`,
+`main/free-ai.ts`, `lib/credits.ts`, `lib/free-ai.ts`,
+`lib/chat/credits-refusal.ts`, the credits dialog, badge, meter and refusal
+card, `TurnUsage.credits` and `creditsOf`, `FREE_PROFILE_ID` and every branch
+on it, `closeProfile`, the four `free-ai:*` channels, the `buy`/`signIn` ways
+out of a limit, and on the server `/v1/*`, `/api/usage`, `/api/orders`, the
+Paddle checkout and webhook, the providers and their failover. What stayed is
+the server itself, for Pro: `main/studio-server.ts` makes Pro's calls (it
+held the Google sign-in's session too, until that went — § Signing in,
+removed). `accountEnv` moved to `main/claude-profiles.ts`, where it
+is only `CLAUDE_CONFIG_DIR`.
+
+What is on disk stays. `workspace/claude-free` is deleted by nothing; a chat
+whose `profileId` is still `vsclaude-free` resolves to no profile and runs on
+the default login, the way a removed profile's chats do, and its transcript is
+carried there out of `claude-free` because the chat's `startedIn` names that
+directory. A usage line written with `credits` keeps the
+field, and nothing draws it. On the server, `users.credits`, `users.used`, the
+`paddle` rows of `transactions` and the `upstreams` table are left in D1; a
+balance somebody bought is refunded by hand.
 
 ### Tasks, removed
 

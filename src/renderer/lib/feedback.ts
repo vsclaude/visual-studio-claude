@@ -9,6 +9,9 @@ export const FEEDBACK_REPO =
 
 export const ISSUES_URL = `${FEEDBACK_REPO}/issues`
 
+/** The users' community group — a place to talk, not a place to file a bug. */
+export const COMMUNITY_URL = "https://www.facebook.com/groups/2095997741054237"
+
 export type FeedbackKind = "bug" | "feature" | "improvement"
 
 /** What the report is filed from, written at the foot of every issue — the

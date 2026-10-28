@@ -70,6 +70,8 @@ Vey Studio is developed and used day to day on macOS; the Linux and Windows buil
 
 Bugs and requests go to [Issues](https://github.com/veystudioapp/vey-studio-releases/issues). Security reports should not: see [`SECURITY.md`](SECURITY.md). Everyone taking part is held to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+To talk with other users, join the [Facebook community](https://www.facebook.com/groups/2095997741054237).
+
 ## License
 
 [MIT](LICENSE).

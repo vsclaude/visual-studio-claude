@@ -22,6 +22,8 @@ export const nav: Messages["nav"] = {
   systemBar: {
     feedback: "Góp ý",
     feedbackTitle: "Báo lỗi, đề xuất tính năng hoặc góp ý cải thiện",
+    community: "Cộng đồng",
+    communityTitle: "Tham gia cộng đồng Vey Studio trên Facebook",
     memoryFree: "Trống {size}",
     gitUpstream: "{ahead} cần push, {behind} cần pull — {name}",
     gitNoUpstream: "Chưa có upstream — {count} commit chưa push",

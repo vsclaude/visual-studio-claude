@@ -22,6 +22,8 @@ export const nav = {
   systemBar: {
     feedback: "Feedback",
     feedbackTitle: "Report a bug, request a feature or suggest an improvement",
+    community: "Community",
+    communityTitle: "Join the Vey Studio community on Facebook",
     memoryFree: "{size} free",
     gitUpstream: "{ahead} to push, {behind} to pull — {name}",
     gitNoUpstream: "No upstream — {count} commits not pushed",

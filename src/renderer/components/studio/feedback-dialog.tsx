@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   buildLabel,
+  COMMUNITY_URL,
   ISSUES_URL,
   issueUrl,
   useFeedbackDialog,
@@ -139,6 +140,19 @@ export function FeedbackDialog() {
               <ArrowUpRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
             </a>
           ))}
+        </div>
+
+        <div className="flex justify-center px-6">
+          <a
+            href={COMMUNITY_URL}
+            target="_blank"
+            rel="noreferrer"
+            onClick={close}
+            className="flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Join the community on Facebook
+            <ArrowUpRight className="size-3" />
+          </a>
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t bg-muted/30 px-6 py-3 text-xs text-muted-foreground">

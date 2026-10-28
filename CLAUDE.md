@@ -268,7 +268,9 @@ learnings…`, its dialog, `main/learnings.ts`, `shared/learnings.ts` and the
   server and **verified here offline** against `LICENSE_PUBLIC_KEY` in
   `shared/license.ts` **and this device's id** (`pro.device`, not
   telemetry's), kept as `pro.activation` / `pro.key`; the launch checks in,
-  which is how a refunded key ends.
+  which is how a refunded key ends. A licence a **campaign** gave away (a
+  promo code typed into the same field) carries `expiresAt` in the activation
+  and is refused past it, offline (`docs/design.md` § Pro).
   **There is no trial** (an older build's `pro.trialStartedAt` is left
   unread); the title bar's `PlanBadge` says `Free` or `Pro`. The dialog is
   `pro-dialog.tsx`,

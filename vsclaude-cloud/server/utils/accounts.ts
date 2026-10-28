@@ -19,6 +19,12 @@ import type { Order } from "./sepay-billing.ts"
  *   was mailed to. `revoked_at` is a refund: set by hand, and the app drops
  *   the licence the next time it checks in.
  * - `activations` — the devices a key is on, at most its seats.
+ * - `campaigns` — a code given away (a Facebook post, a newsletter), each
+ *   redemption of which is a licence of its own for `seats` devices that ends
+ *   `months` after it is redeemed. Made by hand in D1 (README § Campaigns),
+ *   capped by `max_redemptions` and closed at `ends_at`, either null for none.
+ * - `redemptions` — one per device per campaign, naming the licence it made:
+ *   the same device redeeming twice gets the one it has, ended or not.
  *
  * This is money somebody paid: an order leaves `pending` in one statement
  * guarded on still being `pending`, so a webhook delivered twice pays it once.
@@ -111,20 +117,27 @@ export type License = {
   email: string | null
   seats: number
   revoked: boolean
+  /** ISO; null for a bought one, which never ends. */
+  expiresAt: string | null
+}
+
+/** Whether a licence has run out — a given-away one past its end. */
+export function hasExpired(license: License, now = new Date()): boolean {
+  return license.expiresAt !== null && Date.parse(license.expiresAt) <= +now
 }
 
 /** The key made for an order, or null before one has been. */
 export async function licenseOfOrder(code: string): Promise<License | null> {
   const db = await database()
   const { rows = [] } =
-    await db.sql`SELECT key, email, seats, revoked_at FROM licenses WHERE order_code = ${code}`
+    await db.sql`SELECT key, email, seats, revoked_at, expires_at FROM licenses WHERE order_code = ${code}`
   return licenseOf(rows[0])
 }
 
 export async function getLicense(key: string): Promise<License | null> {
   const db = await database()
   const { rows = [] } =
-    await db.sql`SELECT key, email, seats, revoked_at FROM licenses WHERE key = ${key}`
+    await db.sql`SELECT key, email, seats, revoked_at, expires_at FROM licenses WHERE key = ${key}`
   return licenseOf(rows[0])
 }
 
@@ -192,9 +205,75 @@ function licenseOf(row: Record<string, unknown> | undefined): License | null {
     email: text(row.email),
     seats: Number(row.seats),
     revoked: row.revoked_at !== null && row.revoked_at !== undefined,
+    expiresAt: text(row.expires_at),
   }
 }
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value ? value : null
+}
+
+export type Campaign = {
+  code: string
+  months: number
+  seats: number
+  maxRedemptions: number | null
+  endsAt: string | null
+}
+
+/** A campaign's code as somebody typed it: upper-cased, spaces gone. */
+export function campaignCodeOf(input: unknown): string | null {
+  if (typeof input !== "string") return null
+  const code = input.toUpperCase().replace(/\s/g, "")
+  return /^[A-Z0-9_-]{3,32}$/.test(code) ? code : null
+}
+
+export async function getCampaign(code: string): Promise<Campaign | null> {
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT code, months, seats, max_redemptions, ends_at FROM campaigns WHERE code = ${code}`
+  const row = rows[0]
+  if (!row) return null
+  return {
+    code: String(row.code),
+    months: Number(row.months),
+    seats: Number(row.seats),
+    maxRedemptions:
+      row.max_redemptions === null || row.max_redemptions === undefined
+        ? null
+        : Number(row.max_redemptions),
+    endsAt: text(row.ends_at),
+  }
+}
+
+/** `months` calendar months after `from`, as ISO. */
+export function monthsAfter(from: Date, months: number): string {
+  const end = new Date(from)
+  end.setUTCMonth(end.getUTCMonth() + months)
+  return end.toISOString()
+}
+
+/**
+ * The licence a campaign gave this device — made now, if it has none and the
+ * campaign has room: the redemption and the licence in one transaction, the
+ * redemption only while under the cap, so two devices redeeming at once
+ * cannot both take the last one. Null when the campaign is full.
+ */
+export async function redeem(
+  campaign: Campaign,
+  device: string,
+  key: string,
+  now = new Date()
+): Promise<License | null> {
+  const at = now.toISOString()
+  const expiresAt = monthsAfter(now, campaign.months)
+  await atomically(
+    statement`INSERT INTO redemptions (campaign, device, license, redeemed_at) SELECT ${campaign.code}, ${device}, ${key}, ${at} WHERE ${campaign.maxRedemptions} IS NULL OR (SELECT COUNT(*) FROM redemptions WHERE campaign = ${campaign.code}) < ${campaign.maxRedemptions} ON CONFLICT (campaign, device) DO NOTHING`,
+    statement`INSERT INTO licenses (key, email, seats, order_code, issued_at, expires_at, campaign) SELECT ${key}, NULL, ${campaign.seats}, NULL, ${at}, ${expiresAt}, ${campaign.code} WHERE EXISTS (SELECT 1 FROM redemptions WHERE campaign = ${campaign.code} AND device = ${device} AND license = ${key})`
+  )
+  const db = await database()
+  const { rows = [] } =
+    await db.sql`SELECT license FROM redemptions WHERE campaign = ${campaign.code} AND device = ${device}`
+  const held = rows[0]?.license
+  return typeof held === "string" ? getLicense(held) : null
 }

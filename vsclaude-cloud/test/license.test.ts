@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 
 import { verifyActivation } from "../../src/main/license.ts"
 import { PRO_PLANS as APP_PLANS } from "../../src/shared/license.ts"
+import { campaignCodeOf, monthsAfter } from "../server/utils/accounts.ts"
 import { PRO_PLANS } from "../server/utils/billing.ts"
 import {
   newLicenseKey,
@@ -32,6 +33,7 @@ const payload = {
   seats: 3,
   device: DEVICE,
   issuedAt: "2026-10-28T00:00:00.000Z",
+  expiresAt: null,
 }
 
 describe("an activation the server signs", () => {
@@ -57,6 +59,26 @@ describe("an activation the server signs", () => {
       .toString("base64")
     const activation = await signActivation(payload, String(privatePem))
     expect(verifyActivation(activation, DEVICE, other)).toBeNull()
+  })
+  test("one that ends verifies until it does, and not after", async () => {
+    const ending = { ...payload, expiresAt: "2027-04-28T00:00:00.000Z" }
+    const activation = await signActivation(ending, String(privatePem))
+    expect(
+      verifyActivation(
+        activation,
+        DEVICE,
+        publicRaw,
+        new Date("2027-04-27T23:59:00.000Z")
+      )
+    ).toEqual(ending)
+    expect(
+      verifyActivation(
+        activation,
+        DEVICE,
+        publicRaw,
+        new Date("2027-04-28T00:00:00.000Z")
+      )
+    ).toBeNull()
   })
   test("a payload edited after signing is refused", async () => {
     const activation = await signActivation(payload, String(privatePem))
@@ -95,6 +117,23 @@ describe("licence keys", () => {
     expect(normalizeLicenseKey("VEY-AB12")).toBeNull()
     expect(normalizeLicenseKey("VEY1.abc.def")).toBeNull()
     expect(normalizeLicenseKey(42)).toBeNull()
+  })
+})
+
+describe("campaigns", () => {
+  test("a code as typed: any case, spaces gone", () => {
+    expect(campaignCodeOf(" veygift 6m ")).toBe("VEYGIFT6M")
+    expect(campaignCodeOf("TET-2027")).toBe("TET-2027")
+  })
+  test("anything else is not one", () => {
+    expect(campaignCodeOf("ab")).toBeNull()
+    expect(campaignCodeOf("gift!")).toBeNull()
+    expect(campaignCodeOf(6)).toBeNull()
+  })
+  test("six months on is the same day six months on", () => {
+    expect(monthsAfter(new Date("2026-10-28T09:00:00.000Z"), 6)).toBe(
+      "2027-04-28T09:00:00.000Z"
+    )
   })
 })
 

@@ -69,8 +69,11 @@ export async function deviceId(store: LicenseStore): Promise<string> {
 
 /**
  * The payload an activation carries, if its signature is the server's **and**
- * it is for `device` — null for one that is malformed, signed by something
- * else, tampered with, or copied here from another machine.
+ * it is for `device` **and** it has not ended — null for one that is
+ * malformed, signed by something else, tampered with, copied here from another
+ * machine, or a campaign's licence past its `expiresAt`. The end is read off
+ * this machine's clock: offline is the whole point, and the launch's check-in
+ * is a 410 from the server's clock for one wound back.
  *
  * The raw 32-byte public key is wrapped in the SPKI prefix Node wants rather
  * than shipped as PEM: one base64 constant in `shared/license.ts` is easier
@@ -79,10 +82,13 @@ export async function deviceId(store: LicenseStore): Promise<string> {
 export function verifyActivation(
   activation: string,
   device: string,
-  publicKey: string = LICENSE_PUBLIC_KEY
+  publicKey: string = LICENSE_PUBLIC_KEY,
+  now: Date = new Date()
 ): ActivationPayload | null {
   const parsed = parseActivation(activation)
   if (!parsed || parsed.payload.device !== device) return null
+  const { expiresAt } = parsed.payload
+  if (expiresAt && Date.parse(expiresAt) <= +now) return null
   try {
     const ok = verify(
       null,

@@ -75,7 +75,11 @@ export function PlanBadge({ className }: { className?: string }) {
     <button
       type="button"
       onClick={show}
-      title={t("nav.plan.proTitle", { count: status.seats })}
+      title={
+        status.expiresAt
+          ? t("nav.plan.proUntil", { date: dayOf(status.expiresAt) })
+          : t("nav.plan.proTitle", { count: status.seats })
+      }
       className={cn(
         "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap text-violet-600 outline -outline-offset-1 outline-violet-500/40 transition-colors hover:bg-violet-500/10 focus-visible:ring-2 focus-visible:ring-ring/50 dark:text-violet-300",
         className
@@ -85,6 +89,15 @@ export function PlanBadge({ className }: { className?: string }) {
       {t("nav.plan.pro")}
     </button>
   )
+}
+
+/** A licence's end as a day, in this machine's locale and time zone. */
+function dayOf(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
 }
 
 /** The email a key was last sent to, so a second purchase or a restart does
@@ -283,7 +296,9 @@ function Plans() {
   )
 }
 
-/** A key bought on another device, or mailed to the buyer, pasted in. */
+/** A key bought on another device, or mailed to the buyer, pasted in — or
+ * a campaign's promo code, which the server turns into a key of this device's
+ * own that ends (`vsclaude-cloud` README § Campaigns). */
 function KeyField() {
   const t = useT()
   const busy = usePro((state) => state.busy)
@@ -305,7 +320,7 @@ function KeyField() {
           id="pro-key"
           value={key}
           onChange={(event) => setKey(event.target.value)}
-          placeholder="VEY-XXXX-XXXX-XXXX-XXXX"
+          placeholder={t("projects.pro.keyOrCode")}
           spellCheck={false}
           autoComplete="off"
           className="font-mono text-xs uppercase placeholder:font-sans placeholder:normal-case"
@@ -326,7 +341,12 @@ function KeyField() {
 function Licensed({
   status,
 }: {
-  status: { email: string; seats: number; key: string | null }
+  status: {
+    email: string
+    seats: number
+    key: string | null
+    expiresAt: string | null
+  }
 }) {
   const t = useT()
   const busy = usePro((state) => state.busy)
@@ -346,6 +366,11 @@ function Licensed({
             })
           : t("projects.pro.statusLicensedNoEmail", { count: status.seats })}
       </p>
+      {status.expiresAt && (
+        <p className="-mt-2 text-center text-xs text-muted-foreground">
+          {t("projects.pro.until", { date: dayOf(status.expiresAt) })}
+        </p>
+      )}
 
       {status.key && (
         <div className="flex flex-col gap-1.5">

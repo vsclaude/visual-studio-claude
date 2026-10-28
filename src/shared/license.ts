@@ -26,8 +26,9 @@
  * **What this device keeps is an activation, checked here.** `VEY2.<payload>.
  * <signature>`: the email, the seats and **this device's id**, signed by the
  * server with an Ed25519 key whose public half is `LICENSE_PUBLIC_KEY` below.
- * Verified in main (`main/license.ts`, Node's `crypto`) against the signature
- * and the device; this file only knows the shape. Offline every time: a
+ * Verified in main (`main/license.ts`, Node's `crypto`) against the signature,
+ * the device and, for a licence a campaign gave away, its end (`expiresAt`);
+ * this file only knows the shape. Offline every time: a
  * licence that stops working when a server is down is a licence somebody paid
  * for and does not have. The app checks in at launch, which is how a refunded
  * key ends — the one thing a server is asked for on a licence already held.
@@ -91,6 +92,9 @@ export type ActivationPayload = {
   device: string
   /** ISO. */
   issuedAt: string
+  /** ISO, when the licence ends — a campaign's give-away (`vsclaude-cloud`
+   * README § Campaigns). Null, or absent, for one bought, which does not. */
+  expiresAt?: string | null
 }
 
 /** The parts of an activation — the bytes that were signed, and the
@@ -137,7 +141,11 @@ function isPayload(value: unknown): value is ActivationPayload {
     typeof record.seats === "number" &&
     typeof record.device === "string" &&
     typeof record.issuedAt === "string" &&
-    !Number.isNaN(Date.parse(record.issuedAt))
+    !Number.isNaN(Date.parse(record.issuedAt)) &&
+    (record.expiresAt === undefined ||
+      record.expiresAt === null ||
+      (typeof record.expiresAt === "string" &&
+        !Number.isNaN(Date.parse(record.expiresAt))))
   )
 }
 
@@ -161,9 +169,16 @@ export function toBase64Url(text: string): string {
  * Where this device stands, as the dialog and the gate read it. `key` is the
  * licence key it was activated with, shown so it can be copied to another
  * device — null for one claimed by its purchase before the key was kept.
+ * `expiresAt` is when a given-away licence ends, null for one bought.
  */
 export type ProStatus =
-  | { kind: "licensed"; email: string; seats: number; key: string | null }
+  | {
+      kind: "licensed"
+      email: string
+      seats: number
+      key: string | null
+      expiresAt: string | null
+    }
   | { kind: "free" }
 
 /** `activation` is the verified payload of the stored one, or null. */
@@ -177,6 +192,7 @@ export function proStatusOf(
         email: activation.email,
         seats: activation.seats,
         key,
+        expiresAt: activation.expiresAt ?? null,
       }
     : { kind: "free" }
 }

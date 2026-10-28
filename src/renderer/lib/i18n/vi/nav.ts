@@ -14,6 +14,7 @@ export const nav: Messages["nav"] = {
     pro: "Pro",
     proTitle: "Vey Pro · {count} thiết bị",
     proTitle_one: "Vey Pro · 1 thiết bị",
+    proUntil: "Vey Pro · tới hết {date}",
   },
   systemBar: {
     feedback: "Góp ý",

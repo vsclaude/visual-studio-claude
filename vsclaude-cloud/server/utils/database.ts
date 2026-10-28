@@ -9,7 +9,9 @@ import { useDatabase } from "nitro/database"
  * Three tables hold the money and what it bought, described where they are
  * read (`accounts.ts`): `transactions`, one row per purchase; `licenses`, one
  * Vey Pro key per paid order, with how many devices it is for; and
- * `activations`, the devices each key is on. `app_events` is the studio's
+ * `activations`, the devices each key is on. Two more hold what was given
+ * away: `campaigns`, a code anybody may redeem for a licence that ends, and
+ * `redemptions`, the device each redemption was for. `app_events` is the studio's
  * anonymous usage counts, one row per event (`app-usage.ts`).
  *
  * **There is no sign-in any more** (README § Sign-in, removed): `users` —
@@ -28,9 +30,11 @@ import { useDatabase } from "nitro/database"
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS transactions (provider TEXT NOT NULL CHECK (provider IN ('paddle', 'sepay')), id TEXT NOT NULL, uid TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'refunded')), item TEXT, amount INTEGER, currency TEXT, credits INTEGER, paid_by INTEGER, short_amount INTEGER NOT NULL DEFAULT 0, short_by INTEGER, created_at TEXT NOT NULL, paid_at TEXT, PRIMARY KEY (provider, id))`,
   `CREATE INDEX IF NOT EXISTS transactions_uid ON transactions (uid)`,
-  `CREATE TABLE IF NOT EXISTS licenses (key TEXT PRIMARY KEY, email TEXT, seats INTEGER NOT NULL, order_code TEXT UNIQUE, issued_at TEXT NOT NULL, revoked_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS licenses (key TEXT PRIMARY KEY, email TEXT, seats INTEGER NOT NULL, order_code TEXT UNIQUE, issued_at TEXT NOT NULL, revoked_at TEXT, expires_at TEXT, campaign TEXT)`,
   `CREATE TABLE IF NOT EXISTS activations (license TEXT NOT NULL, device TEXT NOT NULL, activated_at TEXT NOT NULL, PRIMARY KEY (license, device))`,
   `CREATE INDEX IF NOT EXISTS activations_device ON activations (device)`,
+  `CREATE TABLE IF NOT EXISTS campaigns (code TEXT PRIMARY KEY, months INTEGER NOT NULL, seats INTEGER NOT NULL DEFAULT 1, max_redemptions INTEGER, ends_at TEXT, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS redemptions (campaign TEXT NOT NULL, device TEXT NOT NULL, license TEXT NOT NULL, redeemed_at TEXT NOT NULL, PRIMARY KEY (campaign, device))`,
   `CREATE TABLE IF NOT EXISTS app_events (install_id TEXT NOT NULL, event TEXT NOT NULL CHECK (event IN ('app_opened', 'heartbeat')), at TEXT NOT NULL, active_seconds INTEGER, version TEXT, os TEXT, arch TEXT, country TEXT)`,
   `CREATE INDEX IF NOT EXISTS app_events_at ON app_events (at)`,
   `CREATE INDEX IF NOT EXISTS app_events_install ON app_events (install_id, at)`,
@@ -41,10 +45,12 @@ const SCHEMA = [
  * currency a Paddle charge was in, and when a purchase was paid — a transfer
  * can land hours after its order was opened, and a day's takings are counted
  * by the day the money came (a row paid before it has none); and the buyer's
- * email and the device an order activates, when sign-in went. `users` is no
+ * email and the device an order activates, when sign-in went. `licenses`
+ * gained when a given-away one ends, and its campaign. `users` is no
  * longer made at all: a database made now has none. */
 const ADDED_COLUMNS: Record<string, string[]> = {
   transactions: ["currency TEXT", "paid_at TEXT", "email TEXT", "device TEXT"],
+  licenses: ["expires_at TEXT", "campaign TEXT"],
 }
 
 /**

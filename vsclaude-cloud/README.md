@@ -18,7 +18,7 @@ there.
 | `GET /`, `/vi/`, `/docs/…`     | The home page and the user's guide: static, built from `site/` (VitePress) into `public/`.                     |
 | `POST /api/license/checkout`   | `{ seats, email, device }` → `{ url }`: a bank-transfer order for Vey Pro and its `/pay` page.                 |
 | `GET /api/license?device=`     | The licence a purchase on that device bought, `{ key, activation }`, once paid; 404 before; 410 if refunded.   |
-| `POST /api/license/activate`   | `{ key, device }` → `{ key, activation }`: a key put on a device; 409 with every seat taken.                   |
+| `POST /api/license/activate`   | `{ key, device }` → `{ key, activation }`: a key — or a campaign's code — put on a device; 409 seats full.     |
 | `POST /api/license/deactivate` | `{ key, device }` → `204`: the device taken off the key, its seat freed.                                       |
 | `GET /pay/<code>`              | The VietQR page a purchase opens.                                                                              |
 | `GET /api/orders/<code>`       | Whether an order is paid, for `/pay` to poll. No token.                                                        |
@@ -60,7 +60,7 @@ prices, and `test/license.test.ts` compares them).
   a device already on the key.
 - `POST /api/license/deactivate` `{ key, device }` frees a device's seat.
 - The **activation** is `VEY2.<payload>.<signature>`: `{ email, seats,
-device, issuedAt }` as JSON, base64url, and an Ed25519 signature over those
+device, issuedAt, expiresAt }` as JSON (`expiresAt` null for one bought), base64url, and an Ed25519 signature over those
   bytes with `NITRO_LICENSE_PRIVATE_KEY` (PKCS#8 PEM). The app verifies it
   offline against the public half it ships **and** its own device id. Signing
   is WebCrypto (`crypto.subtle`), not `node:crypto`, which Cloudflare's
@@ -71,6 +71,37 @@ device, issuedAt }` as JSON, base64url, and an Ed25519 signature over those
 **Refunds** (7 days, promised on the page): refund the transfer by hand, then
 `UPDATE licenses SET revoked_at = '<now>' WHERE order_code = 'VSC…'` in D1. A
 revoked key answers 410, and every device on it drops Pro at its next launch.
+
+### Campaigns
+
+A **campaign** gives Pro away for a while — a code posted somewhere, typed
+into the app's `Have a key or a promo code?` field. Each device that redeems
+it gets a licence of its own (a `licenses` row with `campaign` and
+`expires_at`, no `order_code`), for `seats` devices, ending `months` after
+**that device** redeemed it; its key comes back like a bought one, so it can
+be deactivated and pasted on another machine, keeping its end. A device
+redeems a campaign once (`redemptions`). Past `expires_at` the app drops to
+Free on its own, offline, and `activate` answers 410 for it.
+
+There is no admin page: a campaign is a row made in D1 —
+
+```sql
+INSERT INTO campaigns (code, months, seats, max_redemptions, ends_at, created_at)
+VALUES ('VEYGIFT6M', 6, 1, 500, '2026-12-31T16:59:59Z', datetime('now'));
+```
+
+`code` is upper-case letters, digits, `-` and `_` (3–32; typed in any case);
+`max_redemptions` and `ends_at` (when the code stops being redeemable, not
+when its licences end) may be `NULL` for none. Closing one early is
+`UPDATE campaigns SET ends_at = datetime('now') WHERE code = '…'`; licences
+already given keep running. How many it has given:
+`SELECT COUNT(*) FROM redemptions WHERE campaign = 'VEYGIFT6M'`.
+
+The device id is the app's own random one, so somebody who wipes the app's
+settings is a new device and can redeem again — `max_redemptions` is the cap
+that holds.
+
+### The signing key
 
 Generating the pair, once: the app repo's `license-private-key.local.pem`
 (gitignored) is the private half; its raw public key is

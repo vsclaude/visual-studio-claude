@@ -14,6 +14,7 @@ export const nav = {
     pro: "Pro",
     proTitle: "Vey Pro · {count} devices",
     proTitle_one: "Vey Pro · 1 device",
+    proUntil: "Vey Pro · until {date}",
   },
   systemBar: {
     feedback: "Feedback",

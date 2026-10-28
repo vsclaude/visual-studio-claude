@@ -226,8 +226,11 @@ export const projects = {
     emailNote:
       "This device turns Pro on by itself. The key is mailed here, for your other devices.",
     emailNeeded: "Enter the email the licence key should be sent to.",
-    haveKey: "Have a key?",
-    haveKeyNote: "From your licence email — to turn Pro on for this device.",
+    haveKey: "Have a key or a promo code?",
+    haveKeyNote:
+      "From your licence email, or a Vey Studio promotion — to turn Pro on for this device.",
+    keyOrCode: "VEY-XXXX-XXXX-XXXX-XXXX or a promo code",
+    until: "Pro until {date} — after that, this device goes back to Free.",
     activate: "Activate",
     statusLicensed: "Licensed to {email} · {count} devices",
     statusLicensed_one: "Licensed to {email} · 1 device",

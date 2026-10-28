@@ -917,6 +917,20 @@ covers a tab of another project, a popped-out chat and `Continue with …`.
 The cost is somebody upgraded from a build before the limit with several
 projects, who now has one; that was judged the smaller harm.
 
+**A licence can end** (2026-10-28): Pro given away for a while — a campaign
+code, six months from the day a device redeems it. A purchase stays for good;
+this is the second kind beside it, not a subscription. The code is typed into
+the same field a key is (`Have a key or a promo code?`), and the server makes
+the device a licence key of its own (`vsclaude-cloud` README § Campaigns), so
+everything after — the check-in, `Deactivate this device`, the key pasted on
+another machine — is a bought key's path unchanged. The end rides in the
+signed activation (`expiresAt`), and `verifyActivation` refuses one past it
+**offline**, off this machine's clock: a licence that needs the server to stop
+would be one a laptop kept by never going online, and the launch's check-in
+(410 from the server's clock) is what catches a clock wound back. Past its
+end the device is simply Free, its projects locked as above; the dialog and
+the title bar's badge say the day it ends.
+
 **A custom API profile** is a `ClaudeProfile` with `api` set: its own
 `CLAUDE_CONFIG_DIR` like any account (its own history and settings) and no
 login. Its key is never on the profile list, which the renderer owns and

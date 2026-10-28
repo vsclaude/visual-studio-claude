@@ -19,8 +19,8 @@ import type { Order } from "./sepay-billing.ts"
  * mistake. Its seats (one, three or five) are on the row.
  *
  * **The activation** — `VEY2.<payload>.<signature>`, what the app keeps once
- * a key is on it. The payload is who bought it, how many seats, and the
- * device it is for; the signature Ed25519 over those payload bytes, base64url,
+ * a key is on it. The payload is who bought it, how many seats, the device
+ * it is for and when it ends (null for bought, which is for good); the signature Ed25519 over those payload bytes, base64url,
  * by `NITRO_LICENSE_PRIVATE_KEY`. The app checks it offline against the
  * public half (`LICENSE_PUBLIC_KEY` in its `src/shared/license.ts`) **and**
  * against its own device id, so an activation copied to another machine is
@@ -43,6 +43,9 @@ export type ActivationPayload = {
   device: string
   /** ISO. */
   issuedAt: string
+  /** ISO, when the licence ends — a campaign's; null for one bought, which
+   * does not. The app goes back to Free past it, offline. */
+  expiresAt: string | null
 }
 
 const ACTIVATION_PREFIX = "VEY2"
@@ -74,6 +77,7 @@ export function activationFor(
       seats: license.seats,
       device,
       issuedAt: new Date().toISOString(),
+      expiresAt: license.expiresAt,
     },
     licensePrivateKey()
   )

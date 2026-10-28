@@ -99,13 +99,57 @@ section("where a device stands")
     "an activation is licensed, with its seats and key",
     licensed.kind === "licensed" && licensed.seats === 3 && licensed.key === KEY
   )
+  check(
+    "a bought one never ends",
+    licensed.kind === "licensed" && licensed.expiresAt === null
+  )
   check("no activation is free", proStatusOf(null, null).kind === "free")
+}
+
+section("a licence that ends")
+{
+  const ending = signActivation(
+    { ...payload, expiresAt: "2027-04-28T00:00:00.000Z" },
+    privatePem
+  )
+  const before = new Date("2027-04-27T12:00:00.000Z")
+  const after = new Date("2027-04-28T00:00:01.000Z")
+  check(
+    "verifies until its end",
+    verifyActivation(ending, DEVICE, publicRaw, before)?.expiresAt ===
+      "2027-04-28T00:00:00.000Z"
+  )
+  check(
+    "and is nothing after it",
+    verifyActivation(ending, DEVICE, publicRaw, after) === null
+  )
+  const status = proStatusOf(
+    verifyActivation(ending, DEVICE, publicRaw, before),
+    KEY
+  )
+  check(
+    "says when it ends",
+    status.kind === "licensed" &&
+      status.expiresAt === "2027-04-28T00:00:00.000Z"
+  )
+  check(
+    "an end that is not a date is not an activation",
+    parseActivation(
+      signActivation({ ...payload, expiresAt: "soon" }, privatePem)
+    ) === null
+  )
 }
 
 section("the gate")
 {
   const free = { kind: "free" as const }
-  const licensed = { kind: "licensed" as const, email: "", seats: 1, key: null }
+  const licensed = {
+    kind: "licensed" as const,
+    email: "",
+    seats: 1,
+    key: null,
+    expiresAt: null,
+  }
   check("Free adds its first project", canAddProject(free, []))
   check("and not a second", !canAddProject(free, [{}]))
   check(

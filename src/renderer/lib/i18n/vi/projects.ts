@@ -227,8 +227,11 @@ export const projects: Messages["projects"] = {
     emailNote:
       "Máy này tự bật Pro. Khoá được gửi về email này, để dùng cho các máy khác.",
     emailNeeded: "Nhập email để nhận khoá licence.",
-    haveKey: "Đã có khoá?",
-    haveKeyNote: "Lấy từ email licence — để bật Pro cho máy này.",
+    haveKey: "Đã có khoá hoặc mã khuyến mãi?",
+    haveKeyNote:
+      "Lấy từ email licence, hoặc từ chương trình khuyến mãi của Vey Studio — để bật Pro cho máy này.",
+    keyOrCode: "VEY-XXXX-XXXX-XXXX-XXXX hoặc mã khuyến mãi",
+    until: "Pro tới hết {date} — sau đó máy này quay về Free.",
     activate: "Kích hoạt",
     statusLicensed: "Đã cấp phép cho {email} · {count} thiết bị",
     statusLicensed_one: "Đã cấp phép cho {email} · 1 thiết bị",

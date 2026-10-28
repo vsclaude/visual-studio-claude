@@ -125,7 +125,9 @@
         }
       ],
       "artifactName": "Vey-Studio-${version}-${arch}.${ext}",
-      "notarize": false
+      "hardenedRuntime": true,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist"
     },
     "dmg": {
       "title": "${productName} ${version}",

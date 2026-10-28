@@ -82,14 +82,21 @@ jobs:
           bun scripts/dmg-background.mjs
 
       - name: Build installers
-        # Unsigned on every platform: signing macOS needs an Apple Developer
-        # membership and Windows a code-signing certificate, and neither is a
-        # secret this repository holds. CSC_IDENTITY_AUTO_DISCOVERY is what
-        # stops electron-builder failing on the macOS runner when it finds no
-        # identity in the keychain. See README for what unsigned costs the
-        # person installing it.
+        # macOS is signed with the Developer ID in MAC_CSC_LINK (a base64
+        # .p12, which electron-builder imports into a throwaway keychain) and
+        # notarized with an Apple ID and an app-specific password — not an
+        # App Store Connect API key, which this team has no access to. Without
+        # the secrets it falls back to unsigned, so a fork can still run this.
+        # The certificate is scoped to the macOS job by hand: CSC_LINK is also
+        # what electron-builder signs Windows with, and a Developer ID is no
+        # Authenticode certificate. Windows and Linux stay unsigned.
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          CSC_LINK: ${{ matrix.name == 'macos' && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.name == 'macos' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.name == 'macos' && secrets.MAC_CSC_LINK != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx electron-builder ${{ matrix.target }} --publish never
 
       - uses: actions/upload-artifact@v4

@@ -29,6 +29,7 @@ export const projects: Messages["projects"] = {
     needs_one: "{name} — {count} chat cần bạn",
     running: "{name} — {count} đang chạy",
     answered: "{name} — {count} đã trả lời",
+    locked: "{name} — bị khoá ở bản Free. Vey Pro mở mọi dự án",
   },
   chatList: {
     chatName: "Tên chat",
@@ -241,7 +242,7 @@ export const projects: Messages["projects"] = {
     deactivate: "Huỷ kích hoạt máy này",
     deactivateNote: "Chuyển sang máy mới? Trả lại suất của máy này trước.",
     deactivateConfirm:
-      "Máy này sẽ quay về Free và suất của nó được trả lại cho máy khác. Bạn có thể kích hoạt lại bằng chính khoá này.",
+      "Máy này sẽ quay về Free và suất của nó được trả lại cho máy khác. Mọi dự án trừ dự án bạn thêm đầu tiên sẽ bị khoá cho tới lúc đó — không có gì bị xoá. Bạn có thể kích hoạt lại bằng chính khoá này.",
     waiting:
       "Đang chờ thanh toán của bạn — cửa sổ này sẽ báo ngay khi tiền về.",
     bankNote:

@@ -53,7 +53,7 @@ import { PluginNotices } from "./plugin-notices"
 import { NothingOpen } from "./nothing-open"
 import { OnboardingTour } from "./onboarding-tour"
 import { PlanBadge, ProDialog } from "./pro-dialog"
-import { usePro, watchPro } from "@/lib/license"
+import { useLockedFolders, usePro, watchPro } from "@/lib/license"
 import { canAddProject } from "@shared/license"
 import { FeedbackDialog } from "./feedback-dialog"
 import { WhatsNewDialog } from "./whats-new-dialog"
@@ -367,6 +367,17 @@ function Workbench() {
   useEffect(() => {
     reconcileScope()
   }, [activeFolderId, allProjectTabs])
+  // A project Free has locked is not one to be in: a deactivation or a
+  // refund moves the column to the one Free runs (`lockedFolderIds`).
+  const locked = useLockedFolders()
+  useEffect(() => {
+    const { folders } = useStudio.getState()
+    const shown =
+      folders.find((folder) => folder.id === activeFolderId) ?? folders[0]
+    if (!shown || !locked.has(shown.id)) return
+    const open = folders.find((folder) => !locked.has(folder.id))
+    if (open) useProjects.getState().setActive(open.id)
+  }, [locked, activeFolderId])
 
   /*
    * And whenever the strip has tabs while the pane has none to draw.

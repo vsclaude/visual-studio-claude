@@ -4,7 +4,8 @@
  * Free is **every account Anthropic signs in** — claude.ai plans, Console,
  * SSO, as many as somebody has — `Continue with …` between them, and custom
  * API endpoints (`main/claude-api.ts`) — in **one project**. Pro is **every
- * project after it** (`canAddProject`). It was the second account first, then
+ * project after it** (`canAddProject`; on Free the rest are locked,
+ * `lockedFolderIds`). It was the second account first, then
  * the custom API; the first gated the reason anybody installs this app and the
  * second sold to too few (`docs/design.md` § Pro has all three).
  * Bought once, by bank transfer, never a subscription.
@@ -189,12 +190,7 @@ export function isPro(status: ProStatus): boolean {
  * inside it, and does not count. */
 export const FREE_PROJECTS = 1
 
-/**
- * Whether one more project may be added. **On adding only**: a workspace that
- * already has more — from before this gate, or a manifest copied off a Pro
- * machine — keeps every one of them working, since locking somebody out of a
- * folder they were working in is a refusal of their own files.
- */
+/** Whether one more project may be added. */
 export function canAddProject(
   status: ProStatus,
   folders: readonly { worktreeOf?: string }[]
@@ -202,3 +198,50 @@ export function canAddProject(
   if (isPro(status)) return true
   return folders.filter((folder) => !folder.worktreeOf).length < FREE_PROJECTS
 }
+
+/**
+ * The folders Free does not run: every project but the **first one added**
+ * (`addedAt`, the manifest's order breaking a tie), with its worktrees. Empty
+ * on Pro.
+ *
+ * It was a gate on adding alone, and that made a one-device key every device's
+ * — activate, add twenty projects, deactivate, paste the key on the next
+ * machine, and the first keeps all twenty; a refund kept them too. So a
+ * device back on Free **locks** what is past its one project rather than
+ * removing it: nothing is deleted, the rail still draws it, and Pro again
+ * opens it. Not the rail's order: dragging another project to the top would
+ * make Free every project in turn. A worktree whose project has left the
+ * workspace counts as a project of its own, the way the rail draws it
+ * (`projectsIn`).
+ */
+export function lockedFolderIds(
+  status: ProStatus,
+  folders: readonly { id: string; addedAt?: string; worktreeOf?: string }[]
+): Set<string> {
+  const locked = new Set<string>()
+  if (isPro(status)) return locked
+  const ids = new Set(folders.map((folder) => folder.id))
+  const projectOf = (folder: { id: string; worktreeOf?: string }) =>
+    folder.worktreeOf && ids.has(folder.worktreeOf)
+      ? folder.worktreeOf
+      : folder.id
+  // A stable sort, so the manifest's order decides between two without a
+  // date; a record missing one sorts last.
+  const added = (folder: { addedAt?: string }) =>
+    Date.parse(folder.addedAt ?? "") || Number.POSITIVE_INFINITY
+  const open = new Set(
+    folders
+      .filter((folder) => projectOf(folder) === folder.id)
+      .sort((a, b) => added(a) - added(b))
+      .slice(0, FREE_PROJECTS)
+      .map((folder) => folder.id)
+  )
+  for (const folder of folders) {
+    if (!open.has(projectOf(folder))) locked.add(folder.id)
+  }
+  return locked
+}
+
+/** What a turn in a locked project is refused with (`lockedFolderIds`). */
+export const LOCKED_PROJECT =
+  "This project is locked on Free, which runs one project. Vey Pro opens every project again — nothing in this one was deleted."

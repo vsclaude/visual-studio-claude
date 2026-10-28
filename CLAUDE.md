@@ -252,8 +252,10 @@ learnings…`, its dialog, `main/learnings.ts`, `shared/learnings.ts` and the
 
 - **`license.ts`** — **Vey Pro**, the one thing sold: Free is every account
   Anthropic signs in (and `Continue with …`) in **one project** — Pro adds the
-  rest (`canAddProject`, on adding only, worktrees not counted; checked by
-  `addProject` in `studio.tsx` and `IPC.addFolder`). The **custom API** is
+  rest (`canAddProject`, worktrees not counted; checked by `addProject` in
+  `studio.tsx` and `IPC.addFolder`). On Free every project but the first one
+  added (`addedAt`) is **locked**, not removed (`lockedFolderIds`: faded in the rail, a
+  turn in one refused by main's `ChatSource.refusal`). The **custom API** is
   free — a profile that is an Anthropic-compatible endpoint, not a login
   (`claude-api.ts`: its key sealed by `Host.seal` under
   `claudeApi.token.<id>`, never on the profile list; `accountEnv` adds the

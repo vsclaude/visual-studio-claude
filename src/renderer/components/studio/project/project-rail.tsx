@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from "react"
-import { FolderX, Plus } from "lucide-react"
+import { FolderX, Lock, Plus } from "lucide-react"
 
 import {
   ContextMenu,
@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { useT, type Translate } from "@/lib/i18n"
 import { useProjects } from "@/lib/projects"
+import { useLockedFolders, usePro } from "@/lib/license"
 import { useProjectIcon } from "@/lib/project-icon"
 import { checkoutsOf, projectOf, projectsIn } from "@/lib/project-checkouts"
 import { useStudio } from "@/lib/store"
@@ -44,6 +45,11 @@ import { ProjectMenuItems } from "./project-actions"
  * position, and the project they work in most belongs at the top whatever
  * order they were added in. The menu's `Move up` / `Move down` are the same
  * move for somebody not holding a mouse.
+ *
+ * **On Free, every project but the first one added is locked**
+ * (`lockedFolderIds`): drawn faded with a lock, its click the Pro dialog
+ * rather than the project, and still dragged, moved and removed like any
+ * other.
  */
 export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
   const folders = useStudio((state) => state.folders)
@@ -55,6 +61,7 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
   const sending = useChats((state) => state.sending)
   const asks = useChats((state) => state.asks)
   const unread = useChats((state) => state.unread)
+  const locked = useLockedFolders()
   const t = useT()
 
   const showing = sidebar && view === "projects"
@@ -128,6 +135,7 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
           key={folder.id}
           folder={folder}
           active={!ungrouped && active?.id === folder.id}
+          locked={locked.has(folder.id)}
           // Its worktrees' chats too: a question waiting in one of them is
           // the project's to answer, and the worktree has no icon of its own.
           badge={railBadgeOf(
@@ -138,7 +146,9 @@ export function ProjectRail({ onAddFolder }: { onAddFolder: () => void }) {
             asks,
             unread
           )}
-          onClick={() => pick(folder.id)}
+          onClick={() =>
+            locked.has(folder.id) ? usePro.getState().show() : pick(folder.id)
+          }
           drag={{
             dragging: dragging === folder.id,
             mark:
@@ -209,12 +219,14 @@ type SlotDrag = {
 function ProjectIcon({
   folder,
   active,
+  locked,
   badge,
   onClick,
   drag,
 }: {
   folder: WorkspaceFolder
   active: boolean
+  locked: boolean
   badge: RailBadge
   onClick: () => void
   drag: SlotDrag
@@ -227,8 +239,13 @@ function ProjectIcon({
       <ContextMenuTrigger
         render={
           <RailSlot
-            label={badgeTitle(t, folder.name, badge)}
+            label={
+              locked
+                ? t("projects.rail.locked", { name: folder.name })
+                : badgeTitle(t, folder.name, badge)
+            }
             active={active}
+            locked={locked}
             badge={badge}
             onClick={onClick}
             drag={drag}
@@ -305,6 +322,7 @@ function UngroupedIcon({
 function RailSlot({
   label,
   active,
+  locked = false,
   badge,
   onClick,
   drag,
@@ -313,6 +331,7 @@ function RailSlot({
 }: {
   label: string
   active: boolean
+  locked?: boolean
   badge: RailBadge
   onClick: () => void
   /** Absent for `Ungrouped`, which is not one of the projects and so has no
@@ -363,12 +382,25 @@ function RailSlot({
         // it up.
         className={cn(
           "size-8 overflow-hidden rounded-full p-0 transition-opacity",
-          active ? "opacity-100" : "opacity-75 hover:opacity-100"
+          locked
+            ? "opacity-35 grayscale hover:opacity-60"
+            : active
+              ? "opacity-100"
+              : "opacity-75 hover:opacity-100"
         )}
       >
         {children}
       </IconButton>
-      <Badge badge={badge} />
+      {locked ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-1.5 -bottom-0.5 flex size-3.5 items-center justify-center rounded-full bg-background text-muted-foreground"
+        >
+          <Lock className="size-2.5" />
+        </span>
+      ) : (
+        <Badge badge={badge} />
+      )}
     </div>
   )
 }

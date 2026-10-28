@@ -45,7 +45,11 @@ import {
   deviceId,
   proStatus,
 } from "./license"
-import { canAddProject } from "../shared/license"
+import {
+  canAddProject,
+  LOCKED_PROJECT,
+  lockedFolderIds,
+} from "../shared/license"
 import * as files from "./files"
 import { MAX_INDEXED_FILES } from "./files"
 import {
@@ -321,6 +325,11 @@ export function createIpc(host: Host): {
       // through that is easier to be sure of than two.
       folderDir: (folderId) =>
         store.resolveFolderDir(folderId).catch(() => null),
+      refusal: async (folderId) => {
+        const { folders } = await store.getWorkspace()
+        const locked = lockedFolderIds(await proStatus(store), folders)
+        return locked.has(folderId) ? LOCKED_PROJECT : null
+      },
       // Asked per turn rather than held — Settings can add, rename or delete a
       // profile between two messages in the same chat.
       claudeProfiles: chatProfiles,

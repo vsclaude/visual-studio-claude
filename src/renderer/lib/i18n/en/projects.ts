@@ -28,6 +28,7 @@ export const projects = {
     needs_one: "{name} — {count} needs you",
     running: "{name} — {count} running",
     answered: "{name} — {count} answered",
+    locked: "{name} — locked on Free. Vey Pro opens every project",
   },
   chatList: {
     chatName: "Chat name",
@@ -240,7 +241,7 @@ export const projects = {
     deactivate: "Deactivate this device",
     deactivateNote: "Moving to a new machine? Free this device's seat first.",
     deactivateConfirm:
-      "This device goes back to Free and its seat is freed for another. You can activate it again with the same key.",
+      "This device goes back to Free and its seat is freed for another. Every project but the first one you added is locked until then — nothing in them is deleted. You can activate it again with the same key.",
     waiting:
       "Waiting for your payment — this window will say the moment it lands.",
     bankNote:

@@ -900,10 +900,22 @@ the app is for, and on **adding**: `canAddProject` (`FREE_PROJECTS`, a
 worktree not counted — it is a checkout filed inside its project) is checked
 by `addProject` in `studio.tsx`, the one door every `Add project` goes
 through, which opens the Pro dialog instead of the folder picker, and again
-by `IPC.addFolder` in main. A workspace that already holds more — from before
-the limit, or a manifest copied off a Pro machine — keeps every project
-working: locking somebody out of a folder they were in the middle of is a
-refusal of their own files, not a sale.
+by `IPC.addFolder` in main.
+
+**Past the first, a Free device's projects are locked, not kept working**
+(2026-10-28, the same day). The gate was on adding alone, and a workspace
+that already held more kept every project — which, once Pro went per device,
+made a one-device key every device's: activate, add twenty projects,
+deactivate, paste the key on the next machine, and the first keeps all
+twenty; a refund kept them too. So `lockedFolderIds` locks every project but
+the **first one added** (`addedAt`), with its worktrees — not the rail's
+order, which a drag changes and would make Free every project in turn. Nothing is deleted or
+hidden: the rail draws it faded with a lock and its click opens the Pro
+dialog; the column moves off one that becomes locked (`studio.tsx`); and main
+refuses a turn in one (`ChatSource.refusal`, `LOCKED_PROJECT`), which is what
+covers a tab of another project, a popped-out chat and `Continue with …`.
+The cost is somebody upgraded from a build before the limit with several
+projects, who now has one; that was judged the smaller harm.
 
 **A custom API profile** is a `ClaudeProfile` with `api` set: its own
 `CLAUDE_CONFIG_DIR` like any account (its own history and settings) and no

@@ -203,6 +203,9 @@ export type ChatSource = {
   /** The directory a project names, or null when it has left the workspace —
    * what a chat runs in. */
   folderDir: (folderId: string) => Promise<string | null>
+  /** Why a project may not run a turn now, or null — Free's locked projects
+   * (`lockedFolderIds`). Absent is never. */
+  refusal?: (folderId: string) => Promise<string | null>
   /** The workspace's `CLAUDE_CONFIG_DIR` profiles, for resolving a chat's
    * `options.profileId` at send time — see `ClaudeProfile`. */
   claudeProfiles: () => Promise<ClaudeProfile[]>
@@ -881,6 +884,15 @@ export class Chats {
       this.endTurn(id, "That project is no longer in the workspace.")
       return
     }
+    // Here rather than in the renderer: a popped-out window, a tab of another
+    // project and `Continue with …` all end up in this one call.
+    const refused =
+      chat.folderId && (await this.source.refusal?.(chat.folderId))
+    if (refused) {
+      this.setBusy(id, false)
+      this.endTurn(id, refused)
+      return
+    }
 
     // Read at send time rather than held: the toolbar writes to the record, and
     // a message takes whatever it said when it was sent. Through `chatOptions`,
@@ -958,6 +970,10 @@ export class Chats {
 
     const record = (await this.source.chats()).find((chat) => chat.id === id)
     if (!record) throw new Error("That chat no longer exists.")
+    // Before anything is cut: an edit is a turn, and the rewind runs one.
+    const refused =
+      record.folderId && (await this.source.refusal?.(record.folderId))
+    if (refused) throw new Error(refused)
 
     const profiles = await this.source.claudeProfiles()
     const copies = await transcriptsOf(id, [

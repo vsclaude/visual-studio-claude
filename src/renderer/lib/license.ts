@@ -1,11 +1,14 @@
+import { useMemo } from "react"
 import { create } from "zustand"
 
 import {
   isPro,
+  lockedFolderIds,
   type LicenseResult,
   type ProStatus,
   type PurchaseResult,
 } from "@shared/license"
+import { useStudio } from "./store"
 import { watchStudioServer } from "./studio-server"
 
 /**
@@ -157,6 +160,19 @@ function settle(
 export function useIsPro(): boolean {
   const status = usePro((state) => state.status)
   return status === null || isPro(status)
+}
+
+const NONE = new Set<string>()
+
+/** The folders Free has locked (`lockedFolderIds`) — none before main has
+ * answered, as `useIsPro` reads it. */
+export function useLockedFolders(): Set<string> {
+  const status = usePro((state) => state.status)
+  const folders = useStudio((state) => state.folders)
+  return useMemo(
+    () => (status ? lockedFolderIds(status, folders) : NONE),
+    [status, folders]
+  )
 }
 
 let watching = false

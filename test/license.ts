@@ -16,6 +16,7 @@ import {
 } from "../src/main/license"
 import {
   canAddProject,
+  lockedFolderIds,
   parseActivation,
   proStatusOf,
   PRO_PLANS,
@@ -112,6 +113,35 @@ section("the gate")
     canAddProject(free, [{ worktreeOf: "p" }])
   )
   check("Pro adds any number", canAddProject(licensed, [{}, {}, {}]))
+
+  const folders = [
+    { id: "b", addedAt: "2026-02-01T00:00:00Z" },
+    { id: "a", addedAt: "2026-01-01T00:00:00Z" },
+    { id: "a-wt", addedAt: "2026-03-01T00:00:00Z", worktreeOf: "a" },
+    { id: "b-wt", addedAt: "2026-03-01T00:00:00Z", worktreeOf: "b" },
+    { id: "c", addedAt: "2026-04-01T00:00:00Z" },
+  ]
+  check(
+    "Free locks every project but the first added, rail order aside",
+    [...lockedFolderIds(free, folders)].sort().join() === "b,b-wt,c"
+  )
+  check(
+    "the manifest's order breaks a tie, and no date sorts last",
+    [...lockedFolderIds(free, [{ id: "x" }, { id: "y" }])].join() === "y" &&
+      [
+        ...lockedFolderIds(free, [
+          { id: "x" },
+          { id: "y", addedAt: "2026-01-01T00:00:00Z" },
+        ]),
+      ].join() === "x"
+  )
+  check(
+    "an orphaned worktree counts as a project",
+    [
+      ...lockedFolderIds(free, [{ id: "x", worktreeOf: "gone" }, { id: "y" }]),
+    ].join() === "y"
+  )
+  check("Pro locks nothing", lockedFolderIds(licensed, folders).size === 0)
 }
 
 section("the plans")

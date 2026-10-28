@@ -81,19 +81,41 @@ jobs:
           bun scripts/app-icon.mjs
           bun scripts/dmg-background.mjs
 
-      - name: Build installers
-        # macOS is signed with the Developer ID in MAC_CSC_LINK (a base64
-        # .p12, which electron-builder imports into a throwaway keychain) and
-        # notarized with an Apple ID and an app-specific password — not an
-        # App Store Connect API key, which this team has no access to. Without
-        # the secrets it falls back to unsigned, so a fork can still run this.
-        # The certificate is scoped to the macOS job by hand: CSC_LINK is also
-        # what electron-builder signs Windows with, and a Developer ID is no
-        # Authenticode certificate. Windows and Linux stay unsigned.
+      # The Developer ID goes into a keychain of our own rather than through
+      # CSC_LINK: electron-builder's throwaway keychain failed on the runner
+      # with `SecKeychainUnlock: The user name or passphrase you entered is
+      # not correct` at set-key-partition-list. Without the secret the job
+      # builds unsigned, so a fork can still run this.
+      - name: Import the Developer ID certificate
+        if: matrix.name == 'macos'
         env:
-          CSC_LINK: ${{ matrix.name == 'macos' && secrets.MAC_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.name == 'macos' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.name == 'macos' && secrets.MAC_CSC_LINK != '' }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: |
+          [ -n "$MAC_CSC_LINK" ] || exit 0
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(openssl rand -hex 24)
+          echo "$MAC_CSC_LINK" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$MAC_CSC_KEY_PASSWORD" -f pkcs12 -A -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" \
+            $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$keychain"
+          echo "MAC_SIGNING=true" >> "$GITHUB_ENV"
+
+      - name: Build installers
+        # Signed by finding the identity imported above, and notarized with
+        # an Apple ID and an app-specific password — not an App Store Connect
+        # API key, which this team has no access to. Windows and Linux stay
+        # unsigned.
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.MAC_SIGNING == 'true' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

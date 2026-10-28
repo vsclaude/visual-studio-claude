@@ -38,13 +38,6 @@ export type WorkspaceFolder = {
    * whose project has left the workspace is a project again.
    */
   worktreeOf?: string
-  /**
-   * The project the app made itself, under its own data directory — the place
-   * a chat about nothing in particular runs, since every chat needs a `cwd`
-   * (`Store.getWorkspace`). It cannot be removed: it would only be made again
-   * on the next read.
-   */
-  builtIn?: true
 }
 
 /**

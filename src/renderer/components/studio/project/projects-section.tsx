@@ -148,18 +148,16 @@ function Header({
   children,
 }: {
   title: string
-  caption: string | null
+  caption: string
   children?: ReactNode
 }) {
   return (
     <div className="flex shrink-0 items-center gap-2 border-b py-2 pr-2 pl-3">
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-[0.8125rem] font-semibold">{title}</h2>
-        {caption && (
-          <p className="truncate text-[0.6875rem] text-muted-foreground">
-            {caption}
-          </p>
-        )}
+        <p className="truncate text-[0.6875rem] text-muted-foreground">
+          {caption}
+        </p>
       </div>
       {children}
     </div>
@@ -184,14 +182,7 @@ function ProjectHeader({
   return (
     <Header
       title={project.name}
-      caption={
-        // None for the default project: the app's own directory says nothing
-        // to somebody who never chose it, and `Copy path` and `Reveal` are
-        // still on the menu.
-        folder.builtIn
-          ? null
-          : [tildePath(folder.path), branch].filter(Boolean).join(" · ")
-      }
+      caption={[tildePath(folder.path), branch].filter(Boolean).join(" · ")}
     >
       <Button
         size="xs"

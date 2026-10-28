@@ -129,14 +129,10 @@ export function ProjectMenuItems({
         <SquareTerminal className="text-muted-foreground" />
         {t("projects.actions.newTerminalHere")}
       </Item>
-      {/* The default project is no repository, so there is nothing to cut a
-          worktree from. */}
-      {!folder.builtIn && (
-        <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
-          <GitBranchPlus className="text-muted-foreground" />
-          {t("projects.actions.newWorktree")}
-        </Item>
-      )}
+      <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
+        <GitBranchPlus className="text-muted-foreground" />
+        {t("projects.actions.newWorktree")}
+      </Item>
       {!checkout && (
         <>
           <Item onClick={() => dialogs.set({ renaming: folder })}>
@@ -193,19 +189,14 @@ export function ProjectMenuItems({
             <ImageOff className="text-muted-foreground" />
             {t("projects.actions.resetIcon")}
           </Item>
-          {/* Main refuses it too — see `builtIn`. */}
-          {!folder.builtIn && (
-            <>
-              <Separator />
-              <Item
-                variant="destructive"
-                onClick={() => dialogs.set({ removing: folder })}
-              >
-                <Trash2 />
-                {t("projects.actions.removeProject")}
-              </Item>
-            </>
-          )}
+          <Separator />
+          <Item
+            variant="destructive"
+            onClick={() => dialogs.set({ removing: folder })}
+          >
+            <Trash2 />
+            {t("projects.actions.removeProject")}
+          </Item>
         </>
       )}
     </>

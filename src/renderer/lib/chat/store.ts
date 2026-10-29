@@ -1164,12 +1164,14 @@ export const useChats = create<ChatState>((set, get) => ({
               id: `s${Date.now()}-${Math.random()}`,
               role: "assistant",
               text: event.text,
+              ...(event.parent ? { parent: event.parent } : {}),
             }
           : event.type === "thinking"
             ? {
                 id: `s${Date.now()}-${Math.random()}`,
                 role: "thinking",
                 text: event.text,
+                ...(event.parent ? { parent: event.parent } : {}),
               }
             : event.type === "tool"
               ? {
@@ -1183,6 +1185,8 @@ export const useChats = create<ChatState>((set, get) => ({
                   input: event.input,
                   stat: event.stat,
                   change: event.change,
+                  // Which `Agent` row it is drawn under — see `parent`.
+                  ...(event.parent ? { parent: event.parent } : {}),
                 }
               : event.type === "usage"
                 ? {

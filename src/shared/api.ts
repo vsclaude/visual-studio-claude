@@ -709,14 +709,20 @@ export type TurnUsage = {
  * the answer.
  */
 export type AssistantEvent =
-  /** One assistant message, as markdown. A turn can produce several. */
-  | { type: "text"; text: string }
+  /** One assistant message, as markdown. A turn can produce several.
+   *
+   * `parent` here and on the two below is the same field as on the line they
+   * become, and carried for the reason `input` is: left off the event, a
+   * subagent's lines were the main turn's own until the chat was read back off
+   * disk — drawn beside the `Agent` rows instead of under them. */
+  | { type: "text"; text: string; parent?: string }
   /** The model's reasoning on the way to one of those. */
-  | { type: "thinking"; text: string }
+  | { type: "thinking"; text: string; parent?: string }
   /** A tool the assistant called, drawn as a line rather than in full: the
    * arguments are usually a SQL statement or a request name. */
   | {
       type: "tool"
+      parent?: string
       name: string
       summary: string
       toolId?: string

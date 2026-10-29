@@ -37,11 +37,6 @@ export const transcript: Messages["transcript"] = {
     callChange:
       "Những gì lệnh gọi này đã thay đổi. Diff của chính tệp nằm trong Thay đổi.",
   },
-  agents: {
-    title: "Các subagent đang chạy trong chat này",
-    running: "{count} agent đang chạy",
-    running_one: "{count} agent đang chạy",
-  },
   find: {
     placeholder: "Tìm trong chat này",
     count: "{at} / {total}",

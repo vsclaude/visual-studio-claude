@@ -249,10 +249,23 @@ did not follow the theme, and it was fan art of somebody else's character), then
 three `primary` dots, which said "loading" in every app's words rather than this
 one's.
 
-The **spinner** (`ui/spinner.tsx`) is the same glyph at row size: faint, with
-one light running down the V and on through the S, in `currentColor` so a filled
-button paints it in its own text colour. It replaced a 3×3 shuffling grid, and
-the last lucide `Loader2`s on buttons went with it.
+The **spinner** (`ui/spinner.tsx`) is **not** the glyph: it is a comet, a ring
+fading from nothing through the logo's violet and pink to a round amber head —
+the logo's colours without its shape (on a filled primary button, the button's
+text colour fading the same way). For a while it was the lettermark at row
+size, a light running down the V and through the S. That put the logo on every
+wait in the studio — 22 of them, a commit button and a blame card as much as a
+chat — and on four at once for one working chat: its row, its tab, its
+project's icon and the pane. A mark that is everywhere stops being the app
+speaking and becomes the busiest thing on screen, so the lettermark is kept for
+the two waits that _are_ the app — the launch screen and the turn above.
+
+What replaced it was chosen off a sheet of candidates drawn on the rows they
+would sit on: a plain ring in the text's colour, first with a fixed arc and
+then a stretching one, was too plain to look finished; macOS-style bars,
+orbiting dots and a gradient arc lost to the comet beside them. Before the
+glyph it was a 3×3 shuffling grid, and before that lucide's `Loader2`, whose
+eight ticks blur at 12px.
 
 ### A new project from a template, removed
 
@@ -349,10 +362,14 @@ the composer is live mid-answer; the CLI queues what is sent. `Stop` is an
 - **Busy is main's to say**, from `session_state_changed` — which only arrives
   with `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS` set. Without it a turn that
   starts background subagents looks idle while they work. Subagents' heartbeat
-  (`task_*`) is kept as a set and drawn as a `3 agents running` chip above the
-  composer (`chat-agents.tsx`), its list in a popover — not under `Working…`,
-  where the rows pushed the turn's last line up. The tool is
-  both `Task` and `Agent` depending on the CLI (`AGENT_TOOLS`).
+  (`task_*`) is kept as a set and keeps `Working…` up while any is out. It is
+  drawn nowhere else: a `3 agents running` chip above the composer was deleted,
+  because each agent's row in the transcript already spins and counts its own
+  calls — a subagent's lines (`parent`) are drawn beneath the `Agent` row that
+  ran them once it is opened. `parent` rides on the pushed `text` / `thinking` /
+  `tool` events too: without it a running turn drew every subagent's calls as
+  the main loop's until the chat was read back off disk. The tool is both
+  `Task` and `Agent` depending on the CLI (`AGENT_TOOLS`).
 - Model and effort move under a running session; cwd, profile and switched-off
   MCP tools cannot, so a change closes the session (`signatureOf`).
 - A session idle for `IDLE_MS` is closed quietly; the next message resumes it.

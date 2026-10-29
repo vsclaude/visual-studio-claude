@@ -36,11 +36,6 @@ export const transcript = {
     running: "Running",
     callChange: "What this call changed. The file's own diff is in Changes.",
   },
-  agents: {
-    title: "Subagents running in this chat",
-    running: "{count} agents running",
-    running_one: "{count} agent running",
-  },
   find: {
     placeholder: "Find in this chat",
     count: "{at} of {total}",

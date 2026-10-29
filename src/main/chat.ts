@@ -2155,6 +2155,7 @@ export class Chats {
           ? {
               chatId: id,
               type: "tool",
+              parent: message.parent,
               name: message.name,
               summary: message.summary,
               toolId: message.toolId,
@@ -2169,7 +2170,12 @@ export class Chats {
             : message.role === "ask"
               ? { chatId: id, type: "decision", text: message.text }
               : message.role === "thinking"
-                ? { chatId: id, type: "thinking", text: message.text }
+                ? {
+                    chatId: id,
+                    type: "thinking",
+                    text: message.text,
+                    parent: message.parent,
+                  }
                 : message.role === "usage"
                   ? { chatId: id, type: "usage", usage: message.usage }
                   : message.role === "compact"
@@ -2199,7 +2205,12 @@ export class Chats {
                             resetsAt: message.resetsAt,
                             text: message.text,
                           }
-                        : { chatId: id, type: "text", text: message.text }
+                        : {
+                            chatId: id,
+                            type: "text",
+                            text: message.text,
+                            parent: message.parent,
+                          }
       )
     }
 

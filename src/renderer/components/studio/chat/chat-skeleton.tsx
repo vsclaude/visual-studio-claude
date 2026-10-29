@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react"
 import type { TurnUsage } from "@shared/api"
 
-import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "@/components/ui/spinner"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { elapsed } from "@/lib/chat/since"
 import { usageDetail, usageLine } from "@/lib/chat/usage"
+
+import { VS_S, VS_SLANT, VS_V, VS_VIEWBOX } from "../vs-glyph"
 
 /**
  * What the chat pane shows while a turn is being sent: the loader, and how long
@@ -18,8 +19,9 @@ import { usageDetail, usageLine } from "@/lib/chat/usage"
  * stock spinner, then three dots — `docs/design.md` § The chat's loading
  * indicator has why.
  *
- * Which subagents are running is not said here — that is `ChatAgents`, above
- * the composer, so the loader stays one line however wide a turn fans out.
+ * Which subagents are running is not said here — each one's row in the
+ * transcript spins and counts its calls, so the loader stays one line however
+ * wide a turn fans out.
  */
 export function ChatSkeleton({
   startedAt,

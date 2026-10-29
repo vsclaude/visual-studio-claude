@@ -1,7 +1,7 @@
 /*
- * The studio's own motion: the launch screen's, and the two loaders drawn out
- * of the VS lettermark — the spinner, and the chat's `Working…` with its
- * shimmer (`chat-skeleton.tsx`). That indicator was an SVG choreographed in
+ * The studio's own motion: the launch screen's, the spinner, and the chat's
+ * `Working…` — the VS lettermark writing itself, with its shimmer
+ * (`chat-skeleton.tsx`). That indicator was an SVG choreographed in
  * five keyframe blocks, then a spritesheet, then a GIF, briefly a stock
  * spinner, then three dots.
  *
@@ -59,11 +59,9 @@
   --animate-trace-s: trace-s 2.4s var(--ease-out-quint) infinite;
   --animate-shimmer: shimmer 2.4s ease-in-out infinite;
 
-  /* `.spinner`, below: one light running the V and then the S, on one clock.
-     Linear, because a runner that slows at each end reads as two loaders
-     taking turns rather than one stroke being written. */
-  --animate-run-v: run-v 1.1s linear infinite;
-  --animate-run-s: run-s 1.1s linear infinite;
+  /* `.spinner` below: linear, because a comet that eases reads as one being
+     wound up and let go rather than one travelling. */
+  --animate-spinner: spin 0.85s linear infinite;
 
   /* The setup screen's illustrations (`claude-setup.tsx`): the chips beside a
      page's picture drifting a few pixels, slow enough to read as weightless
@@ -152,38 +150,11 @@
 }
 
 /*
- * The lettermark's strokes carry `pathLength="100"`, so every offset here is a
- * percentage of its own stroke whatever its real length. A dash of `d` with a
- * gap of 200 is one dash and nothing after it: an offset of `d` parks it just
- * before the stroke starts, and `-100` just past its end.
- *
- * The V and the S overlap by a tenth of the cycle, so the light is leaving the
- * V's right arm as it enters the S's top — the order the glyph is written in.
- */
-@keyframes run-v {
-  0% {
-    stroke-dashoffset: 34;
-  }
-  55%,
-  100% {
-    stroke-dashoffset: -100;
-  }
-}
-
-@keyframes run-s {
-  0%,
-  45% {
-    stroke-dashoffset: 34;
-  }
-  100% {
-    stroke-dashoffset: -100;
-  }
-}
-
-/*
  * The chat's trace: drawn on (offset 100 → 0), held whole, then wiped from the
  * start (0 → -100) — so the ink leaves the way it arrived instead of fading,
- * and the next stroke begins on an empty glyph.
+ * and the next stroke begins on an empty glyph. The lettermark's strokes carry
+ * `pathLength="100"`, so every offset here is a percentage of its own stroke
+ * whatever its real length.
  */
 @keyframes trace-v {
   0% {
@@ -215,54 +186,67 @@
 }
 
 /*
- * The studio's spinner (`ui/spinner.tsx`): the VS lettermark faint, and a
- * light running along it — down the V, up its right arm, and on through the S.
- * Everywhere but the chat's `Working…`, which writes the whole glyph
- * (`.vs-trace`). It replaced a 3×3 shuffling grid, which replaced an arc, which
- * replaced lucide's `Loader2`, whose eight ticks smeared into a grey blot at the
- * 12px most rows draw it at. The glyph holds there: at that size its stroke is
- * still two pixels, and it is the one shape in the studio a user already reads
- * as this app.
+ * The studio's spinner (`ui/spinner.tsx`): a comet — a ring whose colour runs
+ * from nothing through the logo's violet and pink to a round amber head. It
+ * was the VS lettermark with a light running along it, and with a working
+ * chat marked on its row, its tab, its project's icon and in the pane at once,
+ * the logo was the busiest thing on screen and said nothing the first copy had
+ * not. So the glyph is kept for the two places that are the app speaking —
+ * the launch screen and the chat's `Working…` (`.vs-trace`) — and a wait
+ * anywhere else carries the logo's colours without its shape. A plain ring in
+ * the text's colour came between, with a fixed arc and then a stretching one;
+ * both were too plain to look finished. Bars, orbiting dots and a gradient
+ * arc lost beside the comet on the same rows. `docs/design.md` § The chat's
+ * loading indicator.
  *
- * Painted in the brand colour, not the text's: a loader is the one mark on a
- * row that is the app speaking rather than the content, and `color` set here
- * (unlayered) outranks the `text-muted-foreground` its callers carried over
- * from the icon. On a filled primary button that would be the button's own
- * colour, so there it takes the button's text instead.
+ * A conic gradient under a radial mask rather than an SVG stroke, because a
+ * stroke cannot fade along its own length. The ring's width and the head are
+ * fractions of the box, so one rule holds from the 12px a row draws to a
+ * dialog's 16px: 1.7px of ring at the smallest, which is as thin as it reads.
+ * It turns with `transform`, which composes with a caller's `translate-*` (the
+ * `translate` property) rather than replacing it, and keeps turning under
+ * reduced motion for the reason given there.
  *
- * It animates `stroke-dashoffset`, which repaints rather than composites — the
- * same exception the shimmer below makes, for the same reason: what repaints
- * is a 12px box. `scale` is the icon's own inset: lucide draws in three
- * quarters of the box, and a spinner swapped in at the same class should not
- * grow. It is the `scale` property, not a transform, so it composes with a
- * caller's `translate-*` instead of being replaced by it.
+ * On a filled primary button the violet would vanish into the fill, so there
+ * it is the button's own text colour, fading the same way.
  */
 .spinner {
-  color: var(--primary);
+  --spinner-ink: conic-gradient(
+    from 90deg,
+    transparent 0deg,
+    #8b5cf6 140deg,
+    #c76bc4 250deg,
+    #fcc63a 356deg,
+    transparent 357deg
+  );
+  --spinner-head: #fcc63a;
+  position: relative;
   display: inline-block;
-  scale: 0.9;
-  overflow: visible;
+  border-radius: 50%;
+  background: var(--spinner-ink);
+  mask: radial-gradient(farthest-side, transparent 72%, #000 calc(72% + 0.5px));
+  animation: var(--animate-spinner);
 }
 
-.spinner-track {
-  opacity: 0.28;
-}
-
-.spinner-run {
-  stroke-dasharray: 34 200;
-  stroke-dashoffset: 34;
-}
-
-.spinner-run-v {
-  animation: var(--animate-run-v);
-}
-
-.spinner-run-s {
-  animation: var(--animate-run-s);
+.spinner::after {
+  content: "";
+  position: absolute;
+  top: 43%;
+  right: 0;
+  width: 14%;
+  height: 14%;
+  border-radius: 50%;
+  background: var(--spinner-head);
 }
 
 .bg-primary .spinner {
-  color: var(--primary-foreground);
+  --spinner-ink: conic-gradient(
+    from 90deg,
+    transparent 0deg,
+    currentColor 356deg,
+    transparent 357deg
+  );
+  --spinner-head: currentColor;
 }
 
 /*
@@ -392,8 +376,8 @@
  * screen saying the launch has not stalled, and a spinner that does not spin
  * is not a calmer app, it is one that looks hung. Both are opacity in place,
  * which is the kind of motion this setting is least aimed at. `.spinner` keeps
- * running for the same reason — a light along a still glyph is no movement of
- * the page, and a still glyph is exactly the hung app. The chat's trace
+ * turning for the same reason — a 12px comet turning in place is no movement
+ * of the page, and a still one is exactly the hung app. The chat's trace
  * follows the same argument and drops its writing for that same breathing, the
  * whole glyph drawn; the shimmer is pure decoration beside it and stops.
  */

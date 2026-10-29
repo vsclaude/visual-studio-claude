@@ -16,6 +16,8 @@ export const chat = {
     contextWindow: "Context window: {label} before auto-compacting",
     noBreakdown: "No breakdown was reported.",
     thisApp: "this app",
+    videoCommand:
+      "Make a motion video in this chat with Remotion — the studio renders it.",
     askingCommands: "Asking claude what it can run…",
     noCommand: "No command matches that.",
   },

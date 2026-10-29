@@ -20,6 +20,7 @@ import {
   type ChatAnswer,
   type ChatOptions,
 } from "../shared/api"
+import { VIDEO_FORMATS, VIDEOS_DIR, type VideoFormat } from "../shared/video"
 import type { PluginFile, PluginSource } from "../shared/plugins"
 import { pathFilterOf } from "../shared/search"
 import { agentCommands } from "./agent-commands"
@@ -104,6 +105,14 @@ import { PLUGIN_DATA_DIR, PLUGINS_DIR, Store, WORKSPACE_DIR } from "./store"
 import { installedShells } from "./shells"
 import { TerminalManager } from "./terminal"
 import { TsServers } from "./tsserver"
+import { VideoEngine } from "./video-engine"
+import {
+  createVideo,
+  listVideos,
+  readVideo,
+  restoreHelpers,
+  setVideoChat,
+} from "./videos"
 import {
   checkForUpdate,
   downloadUpdate,
@@ -221,6 +230,8 @@ export function createIpc(host: Host): {
   allChats: Chats
   terminals: TerminalManager
   tsServers: TsServers
+  /** Killed on quit: a render nobody is waiting for. */
+  videoEngine: VideoEngine
   /** Both kinds of `fs.watch` — the tree's and the `Changes` list's. */
   watchers: { closeAll: () => void }
   noteFilePath: (fileName: string) => string
@@ -319,6 +330,10 @@ export function createIpc(host: Host): {
    * pressed by the person who reads its answer. See the top of
    * `one-turn-agent.ts`.
    */
+  /** Where `/video` keeps what it makes — see `videos.ts`. Here because the
+   * chats need it too: a chat that made a video works in its folder. */
+  const videosRoot = path.join(dataDir(), VIDEOS_DIR)
+
   const allChats = new Chats(
     {
       // Null rather than a throw for a folder that has left the workspace: the
@@ -331,6 +346,11 @@ export function createIpc(host: Host): {
         const locked = lockedFolderIds(await proStatus(store), folders)
         return locked.has(folderId) ? LOCKED_PROJECT : null
       },
+      // Read per message, like the profiles: `/video` adds one mid-chat.
+      extraDirs: async (chatId) =>
+        (await listVideos(videosRoot))
+          .filter((video) => video.chatId === chatId)
+          .map((video) => video.dir),
       // Asked per turn rather than held — Settings can add, rename or delete a
       // profile between two messages in the same chat.
       claudeProfiles: chatProfiles,
@@ -819,8 +839,16 @@ export function createIpc(host: Host): {
 
   handle(
     IPC.sendChat,
-    (_event, id: string, prompt: string, images?: ChatImage[]) =>
-      allChats.send(id, prompt, images ?? [])
+    (
+      _event,
+      id: string,
+      prompt: string,
+      images?: ChatImage[],
+      shown?: unknown
+    ) =>
+      allChats.send(id, prompt, images ?? [], {
+        shown: typeof shown === "string" ? shown : undefined,
+      })
   )
 
   handle(
@@ -1650,6 +1678,95 @@ export function createIpc(host: Host): {
     await host.trash(await installedPluginDir(pluginRoots, id))
   })
 
+  /*
+   * Videos from a prompt. The engine is installed on demand and renders out of
+   * process — see `video-engine.ts`; a video's folder is named by the renderer
+   * and checked here, as every path is.
+   */
+  const videoEngine = new VideoEngine({
+    dir: path.join(dataDir(), WORKSPACE_DIR, "video-engine"),
+    worker: path.join(__dirname, "video-worker.cjs"),
+    node: process.execPath,
+  })
+
+  /** A video's folder, refused unless it is one: a direct child of
+   * `videosRoot` with its record. `removeVideo` trashes what this answers, so
+   * "somewhere under the data directory" is not enough. */
+  async function videoAt(dir: unknown): Promise<string> {
+    if (typeof dir !== "string" || !path.isAbsolute(dir)) {
+      throw new Error("Not a video folder.")
+    }
+    const target = path.resolve(dir)
+    if (path.dirname(target) !== videosRoot || !(await readVideo(target))) {
+      throw new Error(`${path.basename(target)} is not a video folder.`)
+    }
+    return target
+  }
+
+  handle(IPC.videoEngineStatus, () => videoEngine.status())
+
+  handle(IPC.installVideoEngine, () =>
+    videoEngine.install((progress) => send(IPC.videoProgress, progress))
+  )
+
+  handle(IPC.listVideos, () => listVideos(videosRoot))
+
+  handle(
+    IPC.createVideo,
+    async (
+      _event,
+      folderId: unknown,
+      request: { prompt?: unknown; format?: unknown; seconds?: unknown }
+    ) => {
+      const folder = (await fileRoots()).find(
+        (root) => root.folderId === folderId
+      )
+      if (!folder) throw new Error("That project is not in the workspace.")
+      if (typeof request?.prompt !== "string" || !request.prompt.trim()) {
+        throw new Error("Say what the video should be.")
+      }
+      const format =
+        typeof request.format === "string" && request.format in VIDEO_FORMATS
+          ? (request.format as VideoFormat)
+          : "landscape"
+      const seconds =
+        typeof request.seconds === "number" && Number.isFinite(request.seconds)
+          ? request.seconds
+          : 10
+      return createVideo(videosRoot, folder.folderId, {
+        prompt: request.prompt,
+        format,
+        seconds,
+      })
+    }
+  )
+
+  handle(IPC.setVideoChat, async (_event, dir: unknown, chatId: unknown) => {
+    if (typeof chatId !== "string") throw new Error("Not a chat id.")
+    await setVideoChat(await videoAt(dir), chatId)
+  })
+
+  handle(IPC.renderVideo, async (_event, dir: unknown) => {
+    const target = await videoAt(dir)
+    if ((await videoEngine.status()).state !== "installed") {
+      throw new Error("The video engine is not installed.")
+    }
+    await restoreHelpers(target)
+    return videoEngine.render(target, (progress) =>
+      send(IPC.videoProgress, progress)
+    )
+  })
+
+  handle(IPC.cancelVideoRender, async (_event, dir: unknown) => {
+    videoEngine.cancel(await videoAt(dir))
+  })
+
+  handle(IPC.removeVideo, async (_event, dir: unknown) => {
+    const target = await videoAt(dir)
+    videoEngine.cancel(target)
+    await host.trash(target)
+  })
+
   handle(IPC.systemUsage, () => systemUsage(host.appShare))
 
   handle(IPC.checkForUpdate, () =>
@@ -1720,12 +1837,15 @@ export function createIpc(host: Host): {
     watchers,
     /** For the `note-file://` handler, which is not an IPC call and so cannot
      * reach the store any other way — see `serveNoteFiles`. */
+    videoEngine,
     noteFilePath: (fileName: string) => store.noteFilePath(fileName),
-    /** For the `media-file://` handler: `inWorkspace`'s gate, as a yes or
-     * no — see `serveMediaFiles`. */
+    /** For the `media-file://` handler: `inWorkspace`'s gate plus the
+     * videos' own folder, as a yes or no — see `serveMediaFiles`. */
     mediaFileAllowed: async (target: string) =>
       files.insideAny(
-        (await fileRoots()).map((root) => root.path),
+        // The videos `/video` made are played from where they live, which is
+        // the app's own data rather than any project.
+        [...(await fileRoots()).map((root) => root.path), videosRoot],
         target
       ),
     /** For the `vsc-plugin://` handler, the same way — see `servePlugins`. */

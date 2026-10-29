@@ -103,6 +103,9 @@ const rest = {
     // The agent daemon: a separate process (see src/main/daemon.ts), so it
     // gets its own bundle rather than living inside main.cjs.
     daemon: "src/main/daemon.ts",
+    // The video render worker (see src/main/video-engine.ts): run as plain
+    // Node, out of process, so it needs a file of its own too.
+    "video-worker": "src/main/video-worker.ts",
   },
 }
 

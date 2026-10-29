@@ -6,6 +6,7 @@ import { onboarding } from "./onboarding"
 import { projects } from "./projects"
 import { settings } from "./settings"
 import { transcript } from "./transcript"
+import { video } from "./video"
 
 /**
  * The English dictionary, which is the shape every other one must match: a
@@ -21,6 +22,7 @@ export const en = {
   transcript,
   files,
   onboarding,
+  video,
 }
 
 type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> }

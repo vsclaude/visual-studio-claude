@@ -17,6 +17,8 @@ export const chat: Messages["chat"] = {
     contextWindow: "Cửa sổ ngữ cảnh: {label} trước khi tự động thu gọn",
     noBreakdown: "Không có số liệu chi tiết.",
     thisApp: "app này",
+    videoCommand:
+      "Làm video motion bằng Remotion ngay trong chat này — studio sẽ render.",
     askingCommands: "Đang hỏi claude những lệnh nó chạy được…",
     noCommand: "Không có lệnh nào khớp.",
   },

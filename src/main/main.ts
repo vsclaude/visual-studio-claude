@@ -142,6 +142,7 @@ const {
   terminals,
   allChats,
   tsServers,
+  videoEngine,
   watchers,
   noteFilePath,
   mediaFileAllowed,
@@ -330,6 +331,7 @@ app.on("before-quit", (event) => {
     // Child processes with nothing to flush: a TypeScript server holds a
     // project in memory and no state worth writing.
     tsServers.stopAll()
+    videoEngine.killAll()
     // Same kind of thing, and free: file handles the OS would drop anyway, but
     // a watcher with a debounce pending is a callback into a window that is on
     // its way out.

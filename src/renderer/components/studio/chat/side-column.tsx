@@ -32,13 +32,17 @@ function remember(width: number): void {
  */
 export function SideColumn({
   label,
+  minWidth = 0,
   children,
 }: {
   label: string
+  /** The narrowest it opens at — the video column, whose player is nothing at
+   * the outline's 240px. Dragging can still take it down to `MIN_WIDTH`. */
+  minWidth?: number
   children: ReactNode
 }) {
   const t = useT()
-  const [width, setWidth] = useState(remembered)
+  const [width, setWidth] = useState(() => Math.max(remembered, minWidth))
   const [dragging, setDragging] = useState(false)
   const column = useRef<HTMLElement>(null)
   const drag = useRef<{ x: number; width: number } | null>(null)

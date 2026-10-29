@@ -178,6 +178,24 @@ imports may reach `electron`.
   may call — **per chat**, `ChatOptions.disabledTools`, handed over as
   `disallowedTools`.
 
+- **`videos.ts` + `video-engine.ts` + `video-worker.ts`** — **`/video
+<idea>`** in a chat: it becomes `~/.veystudio/videos/<uuid>/` (not in the
+  project — the chat is handed the folder as `additionalDirectories`, via
+  `ChatSource.extraDirs`, which is in `signatureOf`), that chat writes the
+  Remotion code (its bubble shows `/video …`: `shown` on `sendChat`), and this app renders it whenever the chat goes
+  quiet with `src/` newer than the render (`lib/video/store.ts`), shown in a
+  column beside the transcript (`chat/chat-video.tsx`). No rail button, no
+  dialog. Remotion is **not bundled** — installed on
+  first use into `workspace/video-engine/` with the user's `npm` — and renders
+  in a worker (own esbuild entry, `asarUnpack`ed, Electron as Node) with the
+  composition's imports aliased to the engine's copies. Sound: effects
+  computed in the scaffold's `src/sound.ts`; background music **composed** by
+  its `src/music.ts` (ten styles, a seed, sections; played by **Tone.js** once, in
+  `calculateMetadata`), whose `bar(n)` /
+  `kick(frame)` the animation is cut to — nothing fetched, no recordings
+  (Openverse was tried and removed).
+  `docs/design.md` § Videos from a prompt. (`test/video.ts`)
+
 - **`plan-usage.ts`** — how much of the claude.ai plan's five-hour and
   seven-day windows an account has used, for the composer's usage meter
   (`chat/chat-plan-usage.tsx`). Asked the way the MCP listing is — a

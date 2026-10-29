@@ -2,7 +2,9 @@ import { useEffect, useState } from "react"
 
 import type { AgentCommand } from "@shared/api"
 
-import { visibleCommands } from "./command-text"
+import { t } from "@/lib/i18n"
+
+import { APP_COMMANDS, visibleCommands } from "./command-text"
 
 /**
  * The slash commands the user's own `claude` has, for the composer's `/` menu.
@@ -111,7 +113,10 @@ export function useAgentCommands(
     }
   }, [key, folderId, wanted])
 
-  const commands = held.get(key) ?? NONE
+  // This app's own ahead of the CLI's — only once the CLI has answered, so the
+  // menu's loading line still means what it says.
+  const listed = held.get(key)
+  const commands = listed ? [...appCommands(), ...listed] : NONE
   const error = failure?.key === key ? failure.message : null
 
   return {
@@ -121,4 +126,14 @@ export function useAgentCommands(
     loading: wanted && !held.has(key) && !error,
     error,
   }
+}
+
+/** `APP_COMMANDS` in the shape the menu draws, in the window's language. */
+function appCommands(): AgentCommand[] {
+  return APP_COMMANDS.map((command) => ({
+    name: command.name,
+    description: t(command.description),
+    argumentHint: command.hint,
+    aliases: [],
+  }))
 }

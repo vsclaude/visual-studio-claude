@@ -9,8 +9,23 @@ export const FEEDBACK_REPO =
 
 export const ISSUES_URL = `${FEEDBACK_REPO}/issues`
 
-/** The users' community group — a place to talk, not a place to file a bug. */
-export const COMMUNITY_URL = "https://www.facebook.com/groups/2095997741054237"
+export type CommunityKind = "facebook" | "x" | "telegram" | "discord"
+
+export type Community = { kind: CommunityKind; name: string; url: string }
+
+/**
+ * Where the users talk — a place to talk, not a place to file a bug. A list
+ * because Facebook is only the first: X, Telegram and Discord are to follow,
+ * each one line here (and its mark in `community-icon.tsx`). The system bar's
+ * `Community` opens a menu of them.
+ */
+export const COMMUNITIES: Community[] = [
+  {
+    kind: "facebook",
+    name: "Facebook",
+    url: "https://www.facebook.com/groups/2095997741054237",
+  },
+]
 
 export type FeedbackKind = "bug" | "feature" | "improvement"
 

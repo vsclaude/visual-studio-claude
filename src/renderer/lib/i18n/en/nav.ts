@@ -20,7 +20,7 @@ export const nav = {
     feedback: "Feedback",
     feedbackTitle: "Report a bug, request a feature or suggest an improvement",
     community: "Community",
-    communityTitle: "Join the Vey Studio community on Facebook",
+    communityTitle: "Join the Vey Studio community",
     ports: "Ports",
     portsTitle: "See which ports are in use, and stop what holds one",
     memoryFree: "{size} free",

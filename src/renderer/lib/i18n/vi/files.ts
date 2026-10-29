@@ -14,6 +14,7 @@ export const files: Messages["files"] = {
   },
   viewers: {
     image: "Xem trước ảnh",
+    video: "Trình phát video",
     text: "Trình soạn thảo văn bản",
     markdown: "Xem trước Markdown",
     html: "Xem trước HTML",
@@ -212,6 +213,11 @@ export const files: Messages["files"] = {
     showAll: "Hiện tất cả dòng không đổi",
     askAboutLines: "Hỏi về {count} dòng",
     askAboutLines_one: "Hỏi về {count} dòng",
+  },
+  video: {
+    couldNotPlay: "Không thể phát video này",
+    couldNotPlayDetail:
+      "Có thể codec của nó không được trình phát hỗ trợ. Mở trong Finder để xem bằng ứng dụng khác.",
   },
   image: {
     couldNotOpen: "Không thể mở ảnh này",

@@ -102,8 +102,20 @@ export function parseCommand(
  * `rename` is here because this app already owns what a chat is called: it is in
  * the tab and in the project's list, and the CLI renaming its own session
  * transcript would leave the two disagreeing.
+ *
+ * `video` is this app's own and not the CLI's at all: it scaffolds a Remotion
+ * project in the chat's project and sends the idea with the rules the studio's
+ * renderer needs — `docs/design.md` § Videos from a prompt. It is the one
+ * listed in the menu by this app (`APP_COMMANDS`), since the CLI has never heard
+ * of it.
  */
-export const LOCAL_COMMANDS = ["clear", "rename"] as const
+export const LOCAL_COMMANDS = ["clear", "rename", "video"] as const
+
+/** The local commands the CLI does not list, for the menu to offer anyway. The
+ * description is an i18n key, put in words by the hook that builds the menu. */
+export const APP_COMMANDS = [
+  { name: "video", description: "chat.composer.videoCommand", hint: "<idea>" },
+] as const
 
 export type LocalCommand = (typeof LOCAL_COMMANDS)[number]
 

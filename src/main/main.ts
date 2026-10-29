@@ -9,6 +9,7 @@ import {
   APP_ORIGIN,
   registerAppScheme,
   serveApp,
+  serveMediaFiles,
   serveNoteFiles,
   servePlugins,
 } from "./protocol"
@@ -141,8 +142,10 @@ const {
   terminals,
   allChats,
   tsServers,
+  videoEngine,
   watchers,
   noteFilePath,
+  mediaFileAllowed,
   pluginFilePath,
   telemetry,
 } = registerIpc(
@@ -288,6 +291,7 @@ void app.whenReady().then(() => {
   // Both builds: a note's pictures are served the same way whether the renderer
   // came from Vite or from `app://`.
   serveNoteFiles(noteFilePath)
+  serveMediaFiles(mediaFileAllowed)
   servePlugins(pluginFilePath)
   // Before the window, so the menu bar is never Electron's default one.
   installMenu(() => mainWindow)
@@ -327,6 +331,7 @@ app.on("before-quit", (event) => {
     // Child processes with nothing to flush: a TypeScript server holds a
     // project in memory and no state worth writing.
     tsServers.stopAll()
+    videoEngine.killAll()
     // Same kind of thing, and free: file handles the OS would drop anyway, but
     // a watcher with a debounce pending is a callback into a window that is on
     // its way out.

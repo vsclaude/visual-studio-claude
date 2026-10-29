@@ -16,6 +16,7 @@ import {
   type TerminalOutput,
   type UpdateProgress,
 } from "../shared/api"
+import type { VideoProgress } from "../shared/video"
 
 /**
  * Subscribes to a main-process event, handing the listener only the payload.
@@ -188,8 +189,8 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.setChatOptions, id, options),
   answerChatAsk: (askId, answer) =>
     ipcRenderer.invoke(IPC.answerChatAsk, askId, answer),
-  sendChat: (id, prompt, images) =>
-    ipcRenderer.invoke(IPC.sendChat, id, prompt, images),
+  sendChat: (id, prompt, images, shown) =>
+    ipcRenderer.invoke(IPC.sendChat, id, prompt, images, shown),
   editChat: (id, at, prompt, restore) =>
     ipcRenderer.invoke(IPC.editChat, id, at, prompt, restore),
   stopChat: (id) => ipcRenderer.invoke(IPC.stopChat, id),
@@ -234,6 +235,19 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.writePluginData, id, data),
   installPlugin: (source) => ipcRenderer.invoke(IPC.installPlugin, source),
   removePlugin: (id) => ipcRenderer.invoke(IPC.removePlugin, id),
+
+  videoEngineStatus: () => ipcRenderer.invoke(IPC.videoEngineStatus),
+  installVideoEngine: () => ipcRenderer.invoke(IPC.installVideoEngine),
+  listVideos: () => ipcRenderer.invoke(IPC.listVideos),
+  createVideo: (folderId, request) =>
+    ipcRenderer.invoke(IPC.createVideo, folderId, request),
+  setVideoChat: (dir, chatId) =>
+    ipcRenderer.invoke(IPC.setVideoChat, dir, chatId),
+  renderVideo: (dir) => ipcRenderer.invoke(IPC.renderVideo, dir),
+  cancelVideoRender: (dir) => ipcRenderer.invoke(IPC.cancelVideoRender, dir),
+  removeVideo: (dir) => ipcRenderer.invoke(IPC.removeVideo, dir),
+  onVideoProgress: (listener) =>
+    subscribe<VideoProgress>(IPC.videoProgress, listener),
 }
 
 contextBridge.exposeInMainWorld("desktop", api)

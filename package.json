@@ -99,7 +99,8 @@
       "dist-renderer/**/*"
     ],
     "asarUnpack": [
-      "dist-electron/daemon.cjs"
+      "dist-electron/daemon.cjs",
+      "dist-electron/video-worker.cjs"
     ],
     "extraResources": [
       "install.sh",

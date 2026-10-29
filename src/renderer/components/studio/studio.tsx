@@ -39,6 +39,7 @@ import { useChats } from "@/lib/chat/store"
 import { badgeCount } from "@/lib/chat/unread"
 import { Dock } from "./dock"
 import { NavRail } from "./nav-rail"
+import { useVideos } from "@/lib/video/store"
 import { ProjectDialogs } from "./project/project-actions"
 import { WorkspaceSidebar } from "./workspace-sidebar"
 import { ChatPane } from "./chat/chat-pane"
@@ -123,6 +124,8 @@ export function Studio() {
   // A chat's turn runs in the main process and outlives the
   // pane being switched away from, so its lines are subscribed to here.
   useEffect(() => useChats.getState().listen(), [])
+  // After the chats': a chat's `/video` is rendered when that chat goes quiet.
+  useEffect(() => useVideos.getState().listen(), [])
 
   // The dock icon's red number. Here rather than in main because `unread` is
   // this window's — main knows a chat went quiet but not whether anybody has

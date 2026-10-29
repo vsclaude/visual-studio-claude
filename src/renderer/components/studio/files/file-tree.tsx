@@ -43,6 +43,7 @@ import {
   ExternalLink,
   File,
   FileCode,
+  Film,
   Image,
   Link,
   Link2,
@@ -73,6 +74,7 @@ import {
 import { iconFor } from "@/lib/files/icons"
 import {
   isImage,
+  isVideo,
   VIEWER_LABELS,
   viewersFor,
   type Viewer,
@@ -875,13 +877,15 @@ function ViewerIcon({ viewer }: { viewer: Viewer }) {
   const Icon =
     viewer === "image"
       ? Image
-      : viewer === "markdown"
-        ? BookOpen
-        : viewer === "html"
-          ? Globe
-          : viewer === "blocks"
-            ? NotebookPen
-            : FileCode
+      : viewer === "video"
+        ? Film
+        : viewer === "markdown"
+          ? BookOpen
+          : viewer === "html"
+            ? Globe
+            : viewer === "blocks"
+              ? NotebookPen
+              : FileCode
   return <Icon className="text-muted-foreground" />
 }
 
@@ -1146,7 +1150,9 @@ function Row({
       : Folder
     : isImage(entry.path)
       ? Image
-      : File
+      : isVideo(entry.path)
+        ? Film
+        : File
   // A vendored file-type icon where there is one, and the Lucide glyph above
   // otherwise — so a coloured icon reads as "a kind of file the studio knows"
   // rather than as decoration. Folders keep the glyph either way: they are the

@@ -325,7 +325,13 @@ type ChatState = {
    * `localCommand` for why only two commands are this app's and everything else
    * goes to the CLI verbatim.
    */
-  send: (id: string, prompt: string, images?: ChatImage[]) => Promise<void>
+  send: (
+    id: string,
+    prompt: string,
+    images?: ChatImage[],
+    /** The line drawn and kept in place of `prompt` — see `sendChat`. */
+    shown?: string
+  ) => Promise<void>
   /**
    * Message `at` — counted among the chat's user lines — said again as
    * `prompt`, with everything after it gone, here and in the CLI's session,
@@ -693,7 +699,7 @@ export const useChats = create<ChatState>((set, get) => ({
     })
   },
 
-  async send(id, prompt, images = []) {
+  async send(id, prompt, images = [], shown) {
     const text = prompt.trim()
     if (!text) return
 
@@ -713,6 +719,14 @@ export const useChats = create<ChatState>((set, get) => ({
       // A bare `/rename` renames nothing rather than blanking the title, which
       // is `rename`'s own rule for an empty name.
       get().rename(id, local.argument)
+      return
+    }
+    if (local?.name === "video") {
+      // Imported here rather than at the top: the video store reads this one,
+      // and this is the only place the dependency runs the other way.
+      const { useVideos } = await import("@/lib/video/store")
+      const failure = await useVideos.getState().start(id, local.argument)
+      if (failure) console.error("Could not start that video:", failure)
       return
     }
 
@@ -745,7 +759,7 @@ export const useChats = create<ChatState>((set, get) => ({
           {
             id: lineId,
             role: "user",
-            text,
+            text: shown ?? text,
             ...(files.length > 0 && { images: files }),
           },
         ],
@@ -769,7 +783,7 @@ export const useChats = create<ChatState>((set, get) => ({
        */
       if (!(await get().save(id))) throw new Error("Could not start that chat.")
 
-      await window.desktop.sendChat(id, text, kept)
+      await window.desktop.sendChat(id, text, kept, shown)
     } catch (error) {
       // This line only, not the chat's other marks: a message that could not be
       // sent is not waiting behind anything, and the ones queued before it still

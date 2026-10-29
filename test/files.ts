@@ -30,8 +30,10 @@ import { iconNameFor } from "../src/renderer/lib/files/icon-names"
 import {
   defaultViewer,
   isImage,
+  isVideo,
   viewersFor,
 } from "../src/renderer/lib/files/viewers"
+import { mediaFilePathOf, mediaFileUrl } from "../src/shared/media-files"
 import {
   isInside,
   movedPath,
@@ -211,6 +213,34 @@ async function main() {
   check(
     "a text file has the editor and its diff",
     viewersFor("/w/a.ts").join() === "text,diff"
+  )
+
+  check("a render is a video", isVideo("/w/out/video.mp4"))
+  check("so is a screen recording", isVideo("/w/Recording.MOV"))
+  check(
+    "a video plays and does nothing else",
+    viewersFor("/w/out/video.mp4").join() === "video",
+    "its bytes as text is nothing to read"
+  )
+  check(
+    "a codec Chromium may not decode is not offered",
+    !isVideo("/w/clip.mkv")
+  )
+
+  const awkward = "/Users/me/my videos/ünï #1?.mp4"
+  check(
+    "a media URL gives back the path it was built from",
+    mediaFilePathOf(mediaFileUrl(awkward, 3)) === awkward,
+    "spaces, `#`, `?` and accents all survive the URL parser"
+  )
+  check(
+    "a revision is a different URL",
+    mediaFileUrl(awkward, 1) !== mediaFileUrl(awkward, 2),
+    "or Chromium plays the last render from its cache"
+  )
+  check(
+    "a URL of another scheme names no file",
+    mediaFilePathOf("note-file://workspace/a.mp4") === null
   )
 
   check(

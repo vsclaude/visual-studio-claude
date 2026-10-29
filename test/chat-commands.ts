@@ -102,12 +102,17 @@ check("prose is not a command", parseCommand("fix the tests") === null)
 check("a path is not a command", parseCommand("src/main/git.ts") === null)
 check("a bare slash names nothing", parseCommand("/") === null)
 
-section("only two commands are this app's")
+section("only three commands are this app's")
 
 check("clear", localCommand("/clear")?.name === "clear")
 check(
   "rename, with its argument",
   localCommand("/rename API")?.argument === "API"
+)
+check(
+  "video, with the idea as its argument",
+  localCommand("/video a 5s logo reveal")?.argument === "a 5s logo reveal",
+  "the CLI has no /video — sent, it would be prose about a command"
 )
 
 // Everything else goes to the CLI verbatim — that is the whole policy, and a

@@ -119,7 +119,10 @@ imports may reach `electron`.
   keeps an absolute path from the renderer inside the roots the workspace was
   pointed at. Deleting is `shell.trashItem`, never `unlink`. `fileRoots` in
   `ipc.ts` is main's one list of roots, feeding the gate, the watchers, the
-  palette's walk and the tsservers at once.
+  palette's walk and the tsservers at once. A **video** is not read through
+  it at all: `media-file://` (`serveMediaFiles`, `shared/media-files.ts`)
+  streams it to the Explorer's player behind the same gate
+  (`docs/design.md` § Playing a video).
 - **`git.ts`** — `workingTree` for the tree's colours, `changes()` for the
   Changes tab (`git status` with the ignored dropped, plus a `git diff
 --numstat` per side of the index), `fileAtHead` for the diff's left side,
@@ -174,6 +177,24 @@ imports may reach `electron`.
   see `docs/design.md`. What it does still say about MCP is which _tools_ a chat
   may call — **per chat**, `ChatOptions.disabledTools`, handed over as
   `disallowedTools`.
+
+- **`videos.ts` + `video-engine.ts` + `video-worker.ts`** — **`/video
+<idea>`** in a chat: it becomes `~/.veystudio/videos/<uuid>/` (not in the
+  project — the chat is handed the folder as `additionalDirectories`, via
+  `ChatSource.extraDirs`, which is in `signatureOf`), that chat writes the
+  Remotion code (its bubble shows `/video …`: `shown` on `sendChat`), and this app renders it whenever the chat goes
+  quiet with `src/` newer than the render (`lib/video/store.ts`), shown in a
+  column beside the transcript (`chat/chat-video.tsx`). No rail button, no
+  dialog. Remotion is **not bundled** — installed on
+  first use into `workspace/video-engine/` with the user's `npm` — and renders
+  in a worker (own esbuild entry, `asarUnpack`ed, Electron as Node) with the
+  composition's imports aliased to the engine's copies. Sound: effects
+  computed in the scaffold's `src/sound.ts`; background music **composed** by
+  its `src/music.ts` (ten styles, a seed, sections; played by **Tone.js** once, in
+  `calculateMetadata`), whose `bar(n)` /
+  `kick(frame)` the animation is cut to — nothing fetched, no recordings
+  (Openverse was tried and removed).
+  `docs/design.md` § Videos from a prompt. (`test/video.ts`)
 
 - **`plan-usage.ts`** — how much of the claude.ai plan's five-hour and
   seven-day windows an account has used, for the composer's usage meter

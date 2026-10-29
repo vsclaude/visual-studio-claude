@@ -1165,6 +1165,133 @@ something is switched off, since that is a property of the next message.
 - A **`needs-auth`** claude.ai connector links to its settings page; any other
   points at `/mcp` in a terminal.
 
+## Videos from a prompt
+
+**`/video <idea>` in a chat**: the video is made in that conversation and
+watched in a column beside it (`chat/chat-video.tsx`), where the outline and the
+media go. Asked for outright (2026-10-29). A lighter version was offered first
+— a chat that learnt to show a render card — and turned down in favour of the
+app rendering, because only then is there a real progress bar. The first cut was
+a rail button and a dialog with its own form; that was turned down too ("not a
+new section"), for the shape of a chat with an artifact beside it.
+
+**Two halves, one loop.** Only a model can turn "the logo flies in on a purple
+gradient" into code, so **the chat writes the animation**; only this app can
+show how far a render has got and keep the engine out of the project, so **the
+app renders it**. The hand-off is the chat going quiet: when a chat that owns a
+video (`Video.chatId`) leaves `sending`, `lib/video/store.ts` re-reads the list
+and renders any of its videos whose `src/` is newer than its render
+(`needsRender`, `editedAt` against `renderedAt`). So **a change is just the next
+message** — nothing to press — and a turn that only talked about the video does
+not re-render it. A failed render is handed back by `Ask Claude to fix it`, with
+the bundler's own error.
+
+- **It is the chat somebody is already in**, in whatever mode it is in. Not a
+  hidden turn: that is the helper this file refuses (§ Committing has the
+  argument). `video` is the third of `LOCAL_COMMANDS`, and the only one this app
+  adds to the `/` menu itself (`APP_COMMANDS`), since the CLI has never heard of
+  it. There is no form: the size and length are the idea's to say ("a 5s
+  reel"), and the scaffold's 1080×1920 at ten seconds is only the fallback the
+  message names. The messages are `firstVideoMessage` / `renderFailedMessage`
+  in `shared/video.ts` (`test/video.ts`); both carry the rules — stay in the
+  folder, only the engine's imports, everything off `useCurrentFrame()`, do not
+  render — the second because a compacted chat may no longer have the first.
+- **Simple sound is computed.** Remotion plays and mixes audio but makes
+  none, and a video has no audio files and no network — so an effect (a
+  whoosh, a ding) is samples turned into a WAV data URL, which the renderer
+  accepts as an `Html5Audio` `src` (`Audio` is that component's deprecated
+  name in the pinned release). Every new video is scaffolded with `src/sound.ts`
+  — `wav`, `synth`, `tone`, seeded `noise`, `mix` (`test/video.ts` runs it) —
+  because a WAV header written from memory is the part that fails silently.
+  **Deterministic, never `Math.random()`**: frames render in several tabs, and
+  a sound that differed between them is several assets.
+- **Background music is composed in code and played by Tone.js**, in time
+  with the animation. The scaffold's `src/music.ts` is two halves. The
+  **composing** is its own and needs no audio: `music({ style, bpm, key,
+scale, seed, sections, chords })`, ten styles (`house`, `pop`, `chill`,
+  `cinematic`, `ambient`, `trap`, `synthwave`, `funk`, `dnb`, `corporate`),
+  each a bank of drum grooves, bass lines, chord comps and lead sounds the
+  **seed** picks from, eight progressions per mode, a melody of a two-bar
+  motif and its answer, and **sections** at an energy (`low` / `mid` /
+  `high` / `build` / `break`) with a fill at the end of each and a crash or
+  an impact at the start of the next. So `sections[i].from`, `bar(n)`,
+  `beat(n)`, `kick`, `snare`, `crash` and `pulse` are arithmetic, the same
+  in every render tab. The **playing** is Tone.js (`tone`, an engine
+  package): MembraneSynth kicks, MetalSynth hats, filtered-saw plucks,
+  FM electric piano and bells, fat-saw pads, a chorus, a convolution reverb
+  on a seeded tail, an echo, the
+  kick ducking the rest, a compressor and a limiter, rendered in an
+  `OfflineContext` into a stereo 22 kHz WAV data URL. **Once**, from
+  `Root.tsx`'s `calculateMetadata`, which hands it to every frame as Main's
+  `music` prop — Remotion resolves those props in `selectComposition` and
+  passes the result to each tab — because Tone's noise and reverb are random,
+  and a song played in each tab would be several different assets. It was a
+  hand-written synthesiser before (2026-10-29, the same day): one pattern per
+  style at first, then banks and sections, then Tone for the sound — its
+  instruments and effects are what the hand-written one would have had to
+  grow into. Still synthesised, not recorded. A video from before the helper
+  gets it on its next render (`restoreHelpers`), never over one the chat has
+  changed — its own older `music.ts` keeps working.
+- **Music from a library, removed.** For a day music was a real recording:
+  the chat named it in `audio.json`, the app searched **Openverse** (no key,
+  a licence on every result; CC0 and CC BY only) and downloaded it into the
+  video's `public/` with a credit to paste under the post; then the worker
+  measured the downloaded track's beat with the engine's ffmpeg so the
+  animation could be timed to it. It was dropped for the composed song on
+  request: a track the chat cannot hear is one it can only be timed to by
+  measurement, which guesses (a half tempo, the downbeat on three), while a
+  song it composes is on the beat by construction — and with nothing fetched
+  there is no network at render, no licence to check and no credit to post.
+  Deleted with it: `main/audio-library.ts`, `shared/beats.ts`, the `audio` and
+  `beats` stages, the column's credits block and `@remotion/media-utils`. What
+  is on disk stays: an older video's `audio.json`, `public/music.mp3` and
+  `public/credits.json` are read by nothing; `staticFile` still reads its
+  `public/`.
+- **The column opens itself** when the chat starts a video or a render begins
+  — opened, never toggled, so one somebody shut stays shut until the next of
+  those. Its header button exists only for a chat that has a video.
+- **A video is a folder of the app's own**, `~/.veystudio/videos/<uuid>/`: a
+  `video.json` (its project, title, prompt, the chat), a Remotion `src/`
+  scaffolded to render a placeholder before the chat writes a line, and
+  `out/video.mp4`. Named by a UUID rather than off the title: nothing reads
+  the name but this app, and two videos asked for in the same words need no
+  numbering rule. It was `videos/<slug>/` inside the project at first, and
+  moved out on request: a video is the chat's work rather than the
+  repository's, and a folder appearing in somebody's checkout is a diff they
+  never asked for. The cost is that the chat's cwd is still its project, so
+  **a chat that made a video is handed its folder as `additionalDirectories`**
+  (`ChatSource.extraDirs`, in `signatureOf`) — the CLI then treats it as a
+  working directory and `Edits` writes there. That is one session reopened, and
+  its prefix rewritten once, when `/video` is first used in a chat; every other
+  chat is handed nothing and keeps its cache. The player is let into the folder
+  by `mediaFileAllowed` beside the projects. Named by its folder everywhere
+  (`Video.dir`); `videoAt` in `ipc.ts` refuses anything but a direct child of
+  it with a record, since Delete trashes what it answers.
+- **The bubble says what was typed.** The CLI is sent the idea with the rules
+  under it; the transcript keeps `/video <idea>` — `shown` on `sendChat`, the
+  line `Chats.send` writes in place of the prompt. A bubble's Edit edits that
+  line, so an edited `/video` goes to the CLI as written, without the rules.
+- **The engine is not in the bundle.** Remotion is ~200MB of packages and a
+  ~90MB headless Chrome per platform, for a feature most installs never open.
+  So it is installed on first use into `workspace/video-engine/` with the
+  user's own `npm` (found through the login shell, like `claude`; none is a
+  plain error asking for Node.js), then `ensureBrowser` fetches the browser.
+  Versions are pinned (`ENGINE_PACKAGES`), so what the chat is told it may
+  import is exactly what is there.
+- **Rendered out of process.** `video-worker.ts` is its own esbuild entry, run
+  as the Electron binary in Node mode (the daemon's trick), speaking NDJSON on
+  stdout (`WorkerMessage`). Webpack and minutes of frames in main would stall
+  every IPC call. It requires Remotion from the engine folder at run time, so
+  nothing of it is compiled in. Every package a composition may import is
+  **aliased to the engine's copy**: a project with its own `react` in
+  `node_modules` — any React app — otherwise hands the composition that one and
+  Remotion the other, and the first hook throws. A render is written beside the
+  output and moved over it, so the player never opens half a file and the last
+  good render survives a failed one.
+- **Licence.** Remotion's licence binds whoever renders: free for individuals
+  and companies of up to three people, a company licence above that. Shipping
+  the button does not change that for a user, open source or not.
+
 ## Explorer
 
 The files of **the project being worked in**, one tree with no root row
@@ -1351,6 +1478,31 @@ chat. The arithmetic — pointer to picture pixels, the crop, the ratio — is
   with unsaved steps asks; closing the tab does not keep them.
 - **Not on the `Changes` tab**, which is reading what changed in a picture
   rather than changing it.
+
+### Playing a video
+
+An `.mp4`, `.m4v`, `.mov`, `.webm` or `.ogv` opens as a player
+(`file-video.tsx`). It is for a chat that **made** one — asked to build a
+Remotion composition and render it, say: the render lands in the folder and is
+watched where it was written, without leaving for Finder. There is no "make a
+video" button and none is wanted: the chat is the way to ask for one, and a
+button that ran a turn on its own would be the helper `CLAUDE.md` refuses.
+
+- **Streamed, not read.** A picture comes over the bridge as a data URL; a
+  render can be hundreds of megabytes and a player wants the bytes around
+  wherever it is dragged to. So it is `media-file://`, served by
+  `serveMediaFiles` in `main/protocol.ts` with `Range` passed through, the
+  `note-file://` bargain applied to the workspace's own folders.
+- **The same gate as every `files:*` call** (`insideAny` over `fileRoots`, read
+  per request), and only `VIDEO_EXTENSIONS` (`shared/media-files.ts`, one list
+  for both sides) — so the scheme plays videos and is not a way to read a
+  repository's `.env` by URL.
+- **Only what Chromium plays as it is.** `.mkv` and `.avi` are often a codec it
+  cannot decode, and a player offered for a file it will refuse is an error box
+  with a play button.
+- **A render written again plays the new one**: the watcher's re-read bumps
+  `videoRevisions`, which goes into the URL's query, past Chromium's media
+  cache. A hidden tab's player is paused — the panes are hidden, not unmounted.
 
 ### Hover and go-to-definition
 

@@ -7,6 +7,12 @@
  */
 
 import type { PluginInfo, PluginInstall, PluginSource } from "./plugins"
+import type {
+  Video,
+  VideoEngineStatus,
+  VideoFormat,
+  VideoProgress,
+} from "./video"
 import type { LicenseResult, ProStatus, PurchaseResult } from "./license"
 
 /**
@@ -2786,8 +2792,18 @@ export type DesktopApi = {
   /**
    * Sends one message. `images` are the pictures pasted or dropped into it,
    * each standing where its `[Image #n]` is in `prompt`.
+   *
+   * `shown` is what the transcript keeps instead of `prompt`, for a message
+   * this app expanded from what was typed — `/video <idea>` goes to the CLI as
+   * the idea with the renderer's rules under it, and is drawn as the line
+   * somebody actually wrote.
    */
-  sendChat: (id: string, prompt: string, images?: ChatImage[]) => Promise<void>
+  sendChat: (
+    id: string,
+    prompt: string,
+    images?: ChatImage[],
+    shown?: string
+  ) => Promise<void>
   /**
    * Sends message `at` again as `prompt`, with every line after it gone — the
    * bubble's Edit. `at` counts the chat's user lines, from 0; the message's
@@ -2978,6 +2994,35 @@ export type DesktopApi = {
   installPlugin: (source: PluginSource) => Promise<PluginInstall | null>
   /** Moves an installed plugin to the trash. A built-in one is refused. */
   removePlugin: (id: string) => Promise<void>
+
+  /*
+   * Videos from a prompt — `docs/design.md` § Videos from a prompt. A video is
+   * named by its folder (`Video.dir`), which main checks is inside the
+   * workspace's folders like every other path the renderer sends.
+   */
+  /** Whether Remotion is installed in `workspace/video-engine/`. */
+  videoEngineStatus: () => Promise<VideoEngineStatus>
+  /** Installs it — npm packages, then the browser — reporting through
+   * `onVideoProgress` with a null `dir`. Throws with the reason, such as no
+   * npm on this machine. */
+  installVideoEngine: () => Promise<void>
+  /** Every video `/video` has made, newest first. */
+  listVideos: () => Promise<Video[]>
+  /** Scaffolds `~/.veystudio/videos/<uuid>/` for a project. The chat that
+   * writes it is the renderer's to say, and `setVideoChat` records it. */
+  createVideo: (
+    folderId: string,
+    request: { prompt: string; format: VideoFormat; seconds: number }
+  ) => Promise<Video>
+  setVideoChat: (dir: string, chatId: string) => Promise<void>
+  /** Renders a video's composition to its `out/video.mp4`, answering with the
+   * path; progress through `onVideoProgress`. A failure throws with the
+   * bundler's or the renderer's own message, for the chat to be shown. */
+  renderVideo: (dir: string) => Promise<string>
+  cancelVideoRender: (dir: string) => Promise<void>
+  /** Moves a video's folder to the trash. */
+  removeVideo: (dir: string) => Promise<void>
+  onVideoProgress: (listener: (event: VideoProgress) => void) => () => void
 }
 
 /**
@@ -3178,4 +3223,13 @@ export const IPC = {
   writePluginData: "plugins:write-data",
   installPlugin: "plugins:install",
   removePlugin: "plugins:remove",
+  videoEngineStatus: "video:engine-status",
+  installVideoEngine: "video:install-engine",
+  listVideos: "video:list",
+  createVideo: "video:create",
+  setVideoChat: "video:set-chat",
+  renderVideo: "video:render",
+  cancelVideoRender: "video:cancel",
+  removeVideo: "video:remove",
+  videoProgress: "video:progress",
 } as const

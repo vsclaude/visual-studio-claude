@@ -7,6 +7,7 @@ import { onboarding } from "./onboarding"
 import { projects } from "./projects"
 import { settings } from "./settings"
 import { transcript } from "./transcript"
+import { video } from "./video"
 
 /** Typed as the English shape, so a key missing here fails `typecheck`. */
 export const vi: Messages = {
@@ -18,4 +19,5 @@ export const vi: Messages = {
   transcript,
   files,
   onboarding,
+  video,
 }

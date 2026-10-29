@@ -36,6 +36,7 @@ import { encodableTypeOf } from "@shared/image-files"
 import { FileImage } from "./file-image"
 import { FileImageEditor } from "./file-image-editor"
 import { FileImageDiff } from "./file-image-diff"
+import { FileVideo } from "./file-video"
 import { FileHtml } from "./file-html"
 import { FileMarkdown } from "./file-markdown"
 import { FileBlocks } from "./file-blocks"
@@ -362,6 +363,8 @@ export function FilePane({
           />
         ) : viewer === "image" ? (
           <FileImage image={image ?? { kind: "loading" }} alt={path} />
+        ) : viewer === "video" ? (
+          <FileVideo path={path} visible={visible} />
         ) : (
           <Body
             path={path}

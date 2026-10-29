@@ -206,6 +206,10 @@ export type ChatSource = {
   /** Why a project may not run a turn now, or null — Free's locked projects
    * (`lockedFolderIds`). Absent is never. */
   refusal?: (folderId: string) => Promise<string | null>
+  /** Directories outside its project a chat's turns may also work in — the
+   * folders of the videos it made with `/video`, which live under the app's
+   * own data rather than in the project. Absent is none. */
+  extraDirs?: (chatId: string) => Promise<string[]>
   /** The workspace's `CLAUDE_CONFIG_DIR` profiles, for resolving a chat's
    * `options.profileId` at send time — see `ClaudeProfile`. */
   claudeProfiles: () => Promise<ClaudeProfile[]>
@@ -854,8 +858,9 @@ export class Chats {
     prompt: string,
     images: ChatImage[] = [],
     /** Said to the CLI without a line of its own — the turn `setOptions`
-     * carries on, which nobody typed. */
-    { quiet = false }: { quiet?: boolean } = {}
+     * carries on, which nobody typed. `shown` is the line's text in place of
+     * `prompt`: what was typed, for a message this app expanded (`/video`). */
+    { quiet = false, shown }: { quiet?: boolean; shown?: string } = {}
   ): Promise<void> {
     const chats = await this.source.chats()
     const chat = chats.find((entry) => entry.id === id)
@@ -909,7 +914,7 @@ export class Chats {
       await this.append(id, {
         id: lineId(),
         role: "user",
-        text: prompt,
+        text: shown ?? prompt,
         ...(files.length > 0 && { images: files }),
       })
     }
@@ -1145,7 +1150,12 @@ export class Chats {
       : null
     const configDir = profileConfigDir ? expandHome(profileConfigDir) : null
 
-    const signature = signatureOf(cwd, configDir, disabledTools)
+    // Sorted, so the same folders found in another order are the same
+    // signature. Empty for every chat that has not made a video, which is what
+    // keeps this out of the cached prefix of every other chat.
+    const addDirs = [...((await this.source.extraDirs?.(id)) ?? [])].sort()
+
+    const signature = signatureOf(cwd, configDir, disabledTools, addDirs)
 
     const live = this.live.get(id)
     if (live) {
@@ -1246,6 +1256,7 @@ export class Chats {
       options,
       configDir,
       disabledTools,
+      addDirs,
       resume,
       // Headed here rather than inside `open`, so the retry paths there resend
       // the exact message that failed instead of deciding the head twice.
@@ -1482,6 +1493,8 @@ export class Chats {
     /** The chat's switched-off MCP tools — see `AgentSessionOptions.
      * disallowedTools`. */
     disabledTools: string[],
+    /** `ChatSource.extraDirs`, as `additionalDirectories`. */
+    addDirs: string[],
     resume: boolean,
     /** The message the session is being opened for, queued by
      * `startAgentSession` before it waits for the CLI. */
@@ -1537,6 +1550,9 @@ export class Chats {
         // Not a mode's business and not read per call: the same list for every
         // turn of this session, which is what keeps it inside the cached prefix.
         disallowedTools: disabledTools,
+        // A video's folder, for a chat that made one: the CLI treats it as a
+        // working directory, so `Edits` writes there as it does in the project.
+        addDirs,
         permissionMode: "manual",
         // The same sentence for every mode. What the mode is goes at the head of
         // each message instead: this one is part of the cached prefix, and one
@@ -1738,6 +1754,7 @@ export class Chats {
         options,
         configDir,
         disabledTools,
+        addDirs,
         true,
         message
       )
@@ -1770,6 +1787,7 @@ export class Chats {
         options,
         configDir,
         disabledTools,
+        addDirs,
         false,
         message
       )
@@ -2441,7 +2459,8 @@ export function said(ask: ChatAsk, answer: ChatAnswer): string {
 function signatureOf(
   cwd: string,
   configDir: string | null,
-  disabledTools: string[]
+  disabledTools: string[],
+  addDirs: string[]
 ): string {
   // A custom API profile's endpoint goes in too, hashed — it is in the
   // process's environment, so a new key or model is a new process; and only
@@ -2450,7 +2469,13 @@ function signatureOf(
   const api = Object.keys(endpoint).length
     ? createHash("sha256").update(JSON.stringify(endpoint)).digest("hex")
     : ""
-  return [cwd, configDir ?? "", disabledTools.join("\n"), api].join("\0")
+  return [
+    cwd,
+    configDir ?? "",
+    disabledTools.join("\n"),
+    api,
+    addDirs.join("\n"),
+  ].join("\0")
 }
 
 /**

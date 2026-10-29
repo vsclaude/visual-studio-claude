@@ -10,6 +10,7 @@ import {
 import {
   Archive,
   ArrowDown,
+  Clapperboard,
   Images,
   ListTree,
   PictureInPicture2,
@@ -42,12 +43,14 @@ import { currentEntry, outlineOf } from "@/lib/chat/outline"
 import { quoteOf } from "@/lib/chat/reply"
 import { hitAt, hitsIn } from "@/lib/chat/search"
 import { useWorkspaceSearch } from "@/lib/workspace-search"
+import { useVideos } from "@/lib/video/store"
 import { placeOf, useChats } from "@/lib/chat/store"
 import { chatLine, totalOf, usageDetail } from "@/lib/chat/usage"
 import { IconButton } from "../icon-button"
 import { AskCard } from "./chat-ask"
 import { ChatFind } from "./chat-find"
 import { ChatMediaColumn } from "./chat-media"
+import { ChatVideoColumn, useChatVideos } from "./chat-video"
 import { ChatOutline } from "./chat-outline"
 import { ReplyToSelection } from "./chat-reply"
 import { ChatComposer, type ChatComposerHandle } from "./chat-composer"
@@ -209,7 +212,10 @@ const awayFromBottom = (element: HTMLElement) =>
  * conversation wants it in the next. Module level because the pane remounts
  * per chat (see `key` above); in memory and per run, like `places`.
  */
-let sideShown: "outline" | "media" | null = null
+let sideShown: SideColumnKind | null = null
+
+/** The video column too, for a chat that has made one with `/video`. */
+type SideColumnKind = "outline" | "media" | "video"
 
 /** When a position written down now stops being re-applied. Its own function
  * because both writers of `restore` want the same window, and because reading
@@ -642,12 +648,31 @@ function Conversation({
    * changes, and only while the column is open: nobody is looking otherwise.
    */
   const [side, setSide] = useState(sideShown)
-  const toggleSide = (column: "outline" | "media") => {
+  const toggleSide = (column: SideColumnKind) => {
     sideShown = side === column ? null : column
     setSide(sideShown)
   }
   const outlineOpen = side === "outline"
   const toggleOutline = () => toggleSide("outline")
+
+  /*
+   * The video column opens itself when there is something to watch for: a
+   * video this chat has just started, or a render of one beginning. Opened, not
+   * toggled — a column somebody shut stays shut until the next of those.
+   */
+  const videos = useChatVideos(chatId)
+  const rendering = useVideos((state) =>
+    videos.some((video) => state.jobs[video.dir]?.phase === "rendering")
+  )
+  const videoCount = useRef(videos.length)
+  useEffect(() => {
+    const grew = videos.length > videoCount.current
+    videoCount.current = videos.length
+    if (grew || rendering) {
+      sideShown = "video"
+      setSide("video")
+    }
+  }, [videos.length, rendering])
   const media = useMemo(() => mediaOf(lines), [lines])
   const outline = useMemo(() => outlineOf(lines), [lines])
   const [outlineAt, setOutlineAt] = useState(-1)
@@ -871,6 +896,16 @@ function Conversation({
         >
           <Images className="size-3.5" />
         </IconButton>
+        {videos.length > 0 && (
+          <IconButton
+            label={side === "video" ? t("video.hide") : t("video.show")}
+            side="bottom"
+            onClick={() => toggleSide("video")}
+            className={cn("size-6", side === "video" && "bg-accent")}
+          >
+            <Clapperboard className="size-3.5" />
+          </IconButton>
+        )}
         <IconButton
           label={t("transcript.pane.find")}
           side="bottom"
@@ -1143,6 +1178,12 @@ function Conversation({
               if (block) goToEntry(block)
             }}
             onClose={() => toggleSide("media")}
+          />
+        )}
+        {side === "video" && videos.length > 0 && (
+          <ChatVideoColumn
+            chatId={chatId}
+            onClose={() => toggleSide("video")}
           />
         )}
       </div>

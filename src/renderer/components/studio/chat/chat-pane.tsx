@@ -10,6 +10,7 @@ import {
 import {
   Archive,
   ArrowDown,
+  Globe,
   Images,
   ListTree,
   PictureInPicture2,
@@ -22,6 +23,7 @@ import {
   type ChatPlace,
   type ChatOptions,
 } from "@shared/api"
+import { useBrowser } from "@/lib/browser/store"
 import { useT, type Translate } from "@/lib/i18n"
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
@@ -46,6 +48,7 @@ import { placeOf, useChats } from "@/lib/chat/store"
 import { chatLine, totalOf, usageDetail } from "@/lib/chat/usage"
 import { IconButton } from "../icon-button"
 import { AskCard } from "./chat-ask"
+import { ChatBrowsers } from "./chat-browser"
 import { ChatFind } from "./chat-find"
 import { ChatMediaColumn } from "./chat-media"
 import { ChatOutline } from "./chat-outline"
@@ -113,39 +116,47 @@ export function ChatPane({
   }
 
   return (
-    <Conversation
-      /*
-       * One instance per chat rather than one reused across the strip.
-       *
-       * Everything below that is not in the store is this instance's — the find
-       * bar, the scroll box, the refs — and a switch used to carry all of it
-       * into the next conversation. Two of those leaks were patched where they
-       * were found, each by naming the chat the state belonged to: the find bar
-       * reads itself back through `find?.chatId === chatId`, and the composer
-       * carries `key={chatId}` so one chat's half-written message could not sit
-       * under another's. This is that fix for the whole pane instead of a third
-       * one: nothing survives the switch, so nothing can be about the wrong
-       * chat.
-       *
-       * The one piece of state that *should* survive is already module-level
-       * for its own reasons — `places`, where each chat was left reading — so
-       * remounting does not cost the reader their place. The transcript is
-       * re-rendered on a switch either way (see `RESTORE_MS`).
-       */
-      key={shown.id}
-      chatId={shown.id}
-      title={shown.title}
-      // The chat's own place rather than the workbench's: a chat tab can be on
-      // screen for a moment before the context has followed it, and the caption
-      // saying what this turn may do has to be about *this* chat.
-      place={placeOf(shown)}
-      // Through `chatOptions` on both sides of the contract: main builds the
-      // turn's argument list out of the same reading, and a toolbar showing
-      // `Edits` over a turn that ran as a plan is the one disagreement worth
-      // ruling out.
-      options={chatOptions(shown.options)}
-      popped={popped}
-    />
+    <div className="relative flex h-full min-h-0">
+      <div className="min-w-0 flex-1">
+        <Conversation
+          /*
+           * One instance per chat rather than one reused across the strip.
+           *
+           * Everything below that is not in the store is this instance's — the find
+           * bar, the scroll box, the refs — and a switch used to carry all of it
+           * into the next conversation. Two of those leaks were patched where they
+           * were found, each by naming the chat the state belonged to: the find bar
+           * reads itself back through `find?.chatId === chatId`, and the composer
+           * carries `key={chatId}` so one chat's half-written message could not sit
+           * under another's. This is that fix for the whole pane instead of a third
+           * one: nothing survives the switch, so nothing can be about the wrong
+           * chat.
+           *
+           * The one piece of state that *should* survive is already module-level
+           * for its own reasons — `places`, where each chat was left reading — so
+           * remounting does not cost the reader their place. The transcript is
+           * re-rendered on a switch either way (see `RESTORE_MS`).
+           */
+          key={shown.id}
+          chatId={shown.id}
+          title={shown.title}
+          // The chat's own place rather than the workbench's: a chat tab can be on
+          // screen for a moment before the context has followed it, and the caption
+          // saying what this turn may do has to be about *this* chat.
+          place={placeOf(shown)}
+          // Through `chatOptions` on both sides of the contract: main builds the
+          // turn's argument list out of the same reading, and a toolbar showing
+          // `Edits` over a turn that ran as a plan is the one disagreement worth
+          // ruling out.
+          options={chatOptions(shown.options)}
+          popped={popped}
+        />
+      </div>
+      {/* Beside the conversation and outside it: `Conversation` remounts per
+        chat, and each chat's page has to outlive that. Not in a popped-out
+        window, which has no `webviewTag` — see `guardWebviews` in main. */}
+      {!popped && <ChatBrowsers chatId={shown.id} />}
+    </div>
   )
 }
 
@@ -337,6 +348,7 @@ function Conversation({
     if (!delivery || delivery.chatId !== chatId) return
     const taken = useComposerBus.getState().take(chatId)
     if (!taken) return
+    if (taken.images?.length) composer.current?.insertImages(taken.images)
     // Empty for `reveal`, which only came to show the field.
     if (taken.text) composer.current?.insertText(taken.text)
     composer.current?.focus()
@@ -645,6 +657,9 @@ function Conversation({
    * off where the entries are drawn, on scroll and whenever the transcript
    * changes, and only while the column is open: nobody is looking otherwise.
    */
+  const browserShown = useBrowser((state) => state.shown.includes(chatId))
+  const toggleBrowser = useBrowser((state) => state.toggle)
+
   const [side, setSide] = useState(sideShown)
   const toggleSide = (column: "outline" | "media") => {
     sideShown = side === column ? null : column
@@ -884,6 +899,20 @@ function Conversation({
           >
             <Search className="size-3.5" />
           </IconButton>
+          {!popped && (
+            <IconButton
+              label={
+                browserShown
+                  ? t("transcript.pane.hideBrowser")
+                  : t("transcript.pane.showBrowser")
+              }
+              side="bottom"
+              onClick={() => toggleBrowser(chatId)}
+              className={cn("size-6", browserShown && "bg-accent")}
+            >
+              <Globe className="size-3.5" />
+            </IconButton>
+          )}
           {/* The same chat in a window of its own, for the corner of another
             editor's screen — see `openChatWindow`. Not shown inside that
             window, which has no studio to pop out of. */}

@@ -35,6 +35,7 @@ import { useStudio, RAIL_WIDTH, type Pane } from "@/lib/store"
 import { useProjects } from "@/lib/projects"
 import { useWorkspaceSearch } from "@/lib/workspace-search"
 import { useClaudeProfiles } from "@/lib/chat/claude-profiles"
+import { useBrowser } from "@/lib/browser/store"
 import { useChats } from "@/lib/chat/store"
 import { badgeCount } from "@/lib/chat/unread"
 import { Dock } from "./dock"
@@ -124,6 +125,9 @@ export function Studio() {
   // A chat's turn runs in the main process and outlives the
   // pane being switched away from, so its lines are subscribed to here.
   useEffect(() => useChats.getState().listen(), [])
+  // A chat's browser opened by its own `claude` — the studio's window only,
+  // since a popped-out chat has no browser panel.
+  useEffect(() => useBrowser.getState().listen(), [])
 
   // The dock icon's red number. Here rather than in main because `unread` is
   // this window's — main knows a chat went quiet but not whether anybody has

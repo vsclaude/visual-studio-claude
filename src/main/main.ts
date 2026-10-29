@@ -3,6 +3,7 @@ import path from "node:path"
 
 import { BrowserWindow, app, shell } from "electron"
 
+import { BROWSER_PARTITION } from "./electron-browser"
 import { registerIpc } from "./electron-ipc"
 import { installMenu } from "./menu"
 import {
@@ -133,6 +134,41 @@ function keepInside(window: BrowserWindow): void {
   })
 }
 
+/**
+ * The `<webview>`s a window may hold: the chat's browser panel, and only as a
+ * plain web page.
+ *
+ * `webviewTag` lets the renderer attach a guest with whatever it writes on the
+ * tag, so what the guest is allowed is decided here instead — no preload, no
+ * Node, sandboxed, isolated, in the browser's own partition (`BROWSER_PARTITION`)
+ * — and anything that is not a web address is refused before it loads. A page
+ * that opens a window (`target=_blank`, `window.open`) opens it in the same tab
+ * until the tab has attached to its chat, and in a new tab after
+ * (`onPopup` in `electron-browser.ts`).
+ */
+function guardWebviews(window: BrowserWindow): void {
+  window.webContents.on("will-attach-webview", (event, prefs, params) => {
+    delete prefs.preload
+    prefs.nodeIntegration = false
+    prefs.nodeIntegrationInSubFrames = false
+    prefs.contextIsolation = true
+    prefs.sandbox = true
+    prefs.webSecurity = true
+    params.partition = BROWSER_PARTITION
+    const src = params.src || "about:blank"
+    if (src !== "about:blank" && !/^https?:/i.test(src)) event.preventDefault()
+  })
+  window.webContents.on("did-attach-webview", (_event, guest) => {
+    guest.setWindowOpenHandler(({ url }) => {
+      if (/^https?:/i.test(url)) void guest.loadURL(url)
+      return { action: "deny" }
+    })
+    guest.on("will-navigate", (event) => {
+      if (!/^(https?|about):/i.test(event.url)) event.preventDefault()
+    })
+  })
+}
+
 // Privileges have to be declared before the app is ready, so this runs at
 // module scope rather than inside `whenReady`.
 registerAppScheme()
@@ -241,8 +277,12 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // The chat's browser panel — locked down by `guardWebviews`.
+      webviewTag: true,
     },
   })
+
+  guardWebviews(mainWindow)
 
   // Showing the window only once it has painted avoids a blank frame while the
   // studio's WASM payload loads.

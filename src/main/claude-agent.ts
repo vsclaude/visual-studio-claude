@@ -1,11 +1,14 @@
 import {
   query,
+  type McpServerConfig,
   type Options,
   type SDKMessage,
   type SDKRateLimitInfo,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk"
 import { randomUUID, type UUID } from "node:crypto"
+
+export type { McpServerConfig }
 
 import type {
   AssistantMessage,
@@ -153,6 +156,14 @@ export type AgentSessionOptions = {
    * `signatureOf` in `chat.ts`.
    */
   disallowedTools?: string[]
+  /**
+   * MCP servers this app serves the session itself, in this process — the
+   * chat's browser (`browser-hub.ts`). SDK servers only: their config on the
+   * CLI's command line is a name and a type, with the tools reached over the
+   * control channel, so there is nothing in it for another process to read.
+   * Added to what the CLI finds for itself, not in place of it.
+   */
+  mcpServers?: Record<string, McpServerConfig>
   /**
    * How much the turn may do without being asked.
    *
@@ -728,10 +739,14 @@ export async function startAgentSession(
       // callback reachable at all — see `permits`. `disallowedTools` is the one
       // exception and is not a mode's business either; it is the chat's
       // switched-off MCP tools, the same on every turn until somebody flips a
-      // switch. There is no `--mcp-config`: this app configures no MCP
-      // server of its own, so a turn gets what the CLI finds for itself here.
+      // switch. The one MCP server this app adds is its own, in-process (see
+      // `mcpServers`); everything else a turn gets is what the CLI finds for
+      // itself here.
       ...(session.disallowedTools?.length
         ? { disallowedTools: session.disallowedTools }
+        : {}),
+      ...(session.mcpServers && Object.keys(session.mcpServers).length
+        ? { mcpServers: session.mcpServers }
         : {}),
       ...permissionArgs(session.permissionMode),
       ...(session.addDirs?.length

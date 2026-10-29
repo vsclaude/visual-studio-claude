@@ -1,5 +1,7 @@
 import { create } from "zustand"
 
+import type { ChatImage } from "@shared/api"
+
 import { useProjects } from "../projects"
 import { useChats } from "./store"
 
@@ -20,6 +22,9 @@ import { useChats } from "./store"
 export type Delivery = {
   chatId: string
   text: string
+  /** Pictures to hold for the message, ahead of the text — the browser's
+   * annotated screenshot. */
+  images?: ChatImage[]
 }
 
 type BusState = {
@@ -36,6 +41,11 @@ type BusState = {
    * it in the message twice.
    */
   reveal: () => void
+  /**
+   * A delivery to one chat in particular, rather than the selected one: the
+   * chat's browser hands its annotated screenshot to the chat it belongs to.
+   */
+  deliverTo: (delivery: Delivery) => void
   /** The delivery for this chat, taken — the pane calls it once it has typed
    * the contents in. Null when there is nothing for this chat. */
   take: (chatId: string) => Delivery | null
@@ -76,6 +86,11 @@ export const useComposerBus = create<BusState>((set, get) => {
 
     reveal() {
       address("")
+    },
+
+    deliverTo(delivery) {
+      useChats.getState().select(delivery.chatId)
+      set({ pending: delivery })
     },
 
     take(chatId) {

@@ -17,6 +17,12 @@ import {
 } from "electron"
 
 import { IPC } from "../shared/api"
+import {
+  browserCookieSites,
+  clearBrowserCookies,
+  guestPage,
+  setBrowserCookies,
+} from "./electron-browser"
 import type { Host } from "./host"
 import { createIpc } from "./ipc"
 import { clampPercent, kilobytes } from "./system-usage"
@@ -251,6 +257,21 @@ export function registerIpc(
 
     setBadgeCount(count) {
       app.setBadgeCount(Math.max(0, Math.floor(count)))
+    },
+    browserPage(caller, webContentsId) {
+      const sender = (caller as IpcMainInvokeEvent | undefined)?.sender
+      return sender ? guestPage(sender, webContentsId) : null
+    },
+    setBrowserCookies,
+    browserCookieSites,
+    clearBrowserCookies,
+    async appIcon(appPath) {
+      try {
+        const icon = await app.getFileIcon(appPath, { size: "normal" })
+        return icon.isEmpty() ? null : icon.toDataURL()
+      } catch {
+        return null
+      }
     },
     openExternal(url) {
       void shell.openExternal(url)

@@ -8,6 +8,15 @@
 
 import type { PluginInfo, PluginInstall, PluginSource } from "./plugins"
 import type { LicenseResult, ProStatus, PurchaseResult } from "./license"
+import type {
+  BrowserActivity,
+  BrowserCapture,
+  BrowserCommand,
+  CookieImport,
+  CookieSite,
+  CookieSource,
+  PickedElement,
+} from "./browser"
 
 /**
  * One folder the workspace has been pointed at — a repository on this machine,
@@ -2851,6 +2860,71 @@ export type DesktopApi = {
   onRevealChat: (listener: (chatId: string) => void) => () => void
 
   /**
+   * One tab of a chat's browser panel has a page: its `<webview>`'s guest
+   * `webContents` id, which main checks belongs to the calling window before
+   * the chat's browser tools may drive it. False when it does not. See
+   * `docs/design.md` § The chat's browser.
+   */
+  browserAttach: (
+    chatId: string,
+    tabId: string,
+    webContentsId: number
+  ) => Promise<boolean>
+  /** That tab's page is going — the tab closed or the window reloading. */
+  browserDetach: (
+    chatId: string,
+    tabId: string,
+    webContentsId: number
+  ) => Promise<void>
+  /** What a tab shows, as a PNG at full resolution — the annotation
+   * toolbar's base. Null for a tab with no page. */
+  browserCapture: (
+    chatId: string,
+    tabId: string
+  ) => Promise<BrowserCapture | null>
+  /** The element at a point of a tab's viewport, for `Select element`. */
+  browserInspect: (
+    chatId: string,
+    tabId: string,
+    x: number,
+    y: number
+  ) => Promise<PickedElement | null>
+  /** Somebody picked a tab: the one the tools act on from now. */
+  browserFocus: (chatId: string, tabId: string) => Promise<void>
+  /** A tool needs the panel open, or a tab made, shown or closed — see
+   * `BrowserCommand`. Returns an unsubscribe. */
+  onBrowserCommand: (listener: (command: BrowserCommand) => void) => () => void
+  /** What a chat's `claude` is doing to its page, for the panel to say.
+   * Returns an unsubscribe. */
+  onBrowserActivity: (
+    listener: (activity: BrowserActivity) => void
+  ) => () => void
+  /** Asks for an exported cookie file and sets what is in it in the chat
+   * browser's profile, which every chat shares (`main/browser-cookies.ts`).
+   * `keep` false imports them as session cookies, gone when the app quits. */
+  browserImportCookies: (keep: boolean) => Promise<CookieImport>
+  /** The sites the chat browser itself has cookies for — `Clear cookies…`. */
+  browserOwnCookieSites: () => Promise<CookieSite[]>
+  /** Removes those sites' cookies from the chat browser; null for every site,
+   * which clears its storage too. Answers how many cookies went. */
+  browserClearCookies: (sites: string[] | null) => Promise<number>
+  /** The browser profiles on this machine whose cookies can be imported
+   * (`main/browser-import.ts`). Reads no cookie. */
+  browserCookieSources: () => Promise<CookieSource[]>
+  /** One profile's sites and how many cookies each — off the hosts alone, so
+   * nothing is decrypted and the keychain is not asked yet. */
+  browserCookieSites: (
+    sourceId: string
+  ) => Promise<{ sites: CookieSite[]; error: string | null }>
+  /** The picked sites' cookies, decrypted — this is where macOS asks for the
+   * keychain — and set in the chat browser's profile. */
+  browserImportFrom: (
+    sourceId: string,
+    sites: string[],
+    keep: boolean
+  ) => Promise<CookieImport>
+
+  /**
    * One drawing's scene, as the text of its `.excalidraw` file — Excalidraw's
    * own format, so a scene can be opened at excalidraw.com or in the editor's
    * desktop app without this studio.
@@ -3193,6 +3267,19 @@ export const IPC = {
   stopChat: "chats:stop",
   chatEvent: "chats:event",
   revealChat: "chats:reveal",
+  browserAttach: "browser:attach",
+  browserDetach: "browser:detach",
+  browserFocus: "browser:focus",
+  browserCapture: "browser:capture",
+  browserInspect: "browser:inspect",
+  browserCommand: "browser:command",
+  browserActivity: "browser:activity",
+  browserImportCookies: "browser:import-cookies",
+  browserCookieSources: "browser:cookie-sources",
+  browserCookieSites: "browser:cookie-sites",
+  browserImportFrom: "browser:import-from",
+  browserOwnCookieSites: "browser:own-cookie-sites",
+  browserClearCookies: "browser:clear-cookies",
   readDrawing: "drawings:read",
   writeDrawing: "drawings:write",
   writeDrawingSvg: "drawings:write-svg",

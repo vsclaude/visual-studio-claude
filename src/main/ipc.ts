@@ -35,6 +35,14 @@ import {
 import { claudeVersions } from "./claude-version"
 import { claudeBinary } from "./claude-bin"
 import { dataDir, migrateChatFiles, migrateLegacyDataDir } from "./data-dir"
+import {
+  BROWSER_SERVER,
+  type CookieImport,
+  type CookieSource,
+} from "../shared/browser"
+import { cookiesIn, MAX_COOKIE_FILE_BYTES, keptAs } from "./browser-cookies"
+import { cookieSites, cookieSources, sourceCookies } from "./browser-import"
+import { BrowserHub, browserServer } from "./browser-hub"
 import { Chats } from "./chat"
 import { findFavicon, MAX_FAVICON_BYTES } from "./favicon"
 import { openServerPage, serverCall, serverUrl } from "./studio-server"
@@ -288,6 +296,13 @@ export function createIpc(host: Host): {
     exit: (event) => send(IPC.terminalExit, event),
   })
 
+  /** Each chat's browser page, for the tools its session is given — see
+   * `main/browser-hub.ts`. */
+  const browsers = new BrowserHub(
+    (command) => send(IPC.browserCommand, command),
+    (activity) => send(IPC.browserActivity, activity)
+  )
+
   /**
    * A picked `profileId` as a `CLAUDE_CONFIG_DIR`, for a one-turn agent.
    *
@@ -341,6 +356,11 @@ export function createIpc(host: Host): {
       deleteChat: (id) => store.deleteChat(id),
       writeImage: (fileName, bytes) => store.writeNoteFile(fileName, bytes),
       readImage: (fileName) => store.readNoteFile(fileName),
+      // A server instance per session rather than one shared: the chat is the
+      // closure, so a call can only reach the page beside its own chat.
+      mcpServers: (chatId) => ({
+        [BROWSER_SERVER]: browserServer(browsers, chatId),
+      }),
     },
     (event) => {
       send(IPC.chatEvent, event)
@@ -670,6 +690,163 @@ export function createIpc(host: Host): {
   handle(IPC.setBadgeCount, (_event, count: number) => {
     host.setBadgeCount(count)
   })
+
+  // A chat's browser tab saying it has a page, and that it is going. The
+  // page is looked up by the caller rather than trusted by id: only a
+  // `<webview>` of the window asking may be handed to a chat's tools.
+  handle(
+    IPC.browserAttach,
+    (caller, chatId: unknown, tabId: unknown, webContentsId: unknown) => {
+      if (
+        typeof chatId !== "string" ||
+        typeof tabId !== "string" ||
+        typeof webContentsId !== "number"
+      ) {
+        return false
+      }
+      const page = host.browserPage(caller, webContentsId)
+      if (!page) return false
+      browsers.attach(chatId, tabId, page)
+      return true
+    }
+  )
+  handle(
+    IPC.browserDetach,
+    (_event, chatId: unknown, tabId: unknown, webContentsId: unknown) => {
+      if (
+        typeof chatId !== "string" ||
+        typeof tabId !== "string" ||
+        typeof webContentsId !== "number"
+      ) {
+        return
+      }
+      browsers.detach(chatId, tabId, webContentsId)
+    }
+  )
+  handle(IPC.browserFocus, (_event, chatId: unknown, tabId: unknown) => {
+    if (typeof chatId !== "string" || typeof tabId !== "string") return
+    browsers.focus(chatId, tabId)
+  })
+
+  // The annotation toolbar's two reads of a tab: what it shows, and what is
+  // under the pointer.
+  handle(
+    IPC.browserCapture,
+    async (_event, chatId: unknown, tabId: unknown) => {
+      const page = browsers.page(String(chatId), String(tabId))
+      return page ? page.capture().catch(() => null) : null
+    }
+  )
+  handle(
+    IPC.browserInspect,
+    async (_event, chatId: unknown, tabId: unknown, x: unknown, y: unknown) => {
+      const page = browsers.page(String(chatId), String(tabId))
+      if (!page || typeof x !== "number" || typeof y !== "number") return null
+      return page.inspect(x, y).catch(() => null)
+    }
+  )
+
+  // The picker and the read here, not in the renderer: the file is the
+  // user's, and what reaches Chromium is only what `cookiesIn` made of it.
+  handle(
+    IPC.browserImportCookies,
+    async (_event, keep: unknown): Promise<CookieImport> => {
+      const [file] = await host.pickFiles({
+        title: "Import cookies",
+        single: true,
+        filters: [{ name: "Cookies", extensions: ["json", "txt"] }],
+      })
+      if (!file)
+        return { imported: 0, skipped: 0, error: null, cancelled: true }
+      try {
+        if ((await stat(file)).size > MAX_COOKIE_FILE_BYTES) {
+          throw new Error("That file is too large to be a cookie export.")
+        }
+        const { cookies, expired, skipped } = cookiesIn(
+          await readFile(file, "utf8")
+        )
+        const { set, failed } = await host.setBrowserCookies(
+          keptAs(cookies, keep !== false)
+        )
+        return {
+          imported: set,
+          expired,
+          skipped: skipped + failed,
+          error: null,
+        }
+      } catch (error) {
+        return { imported: 0, skipped: 0, error: messageOf(error) }
+      }
+    }
+  )
+
+  // The chat browser's own cookies — `Clear cookies…`.
+  handle(IPC.browserOwnCookieSites, () =>
+    host.browserCookieSites().catch(() => [])
+  )
+  // Every site only when asked for by name — `null` — so a malformed call
+  // clears nothing rather than everything.
+  handle(IPC.browserClearCookies, (_event, sites: unknown) =>
+    host.clearBrowserCookies(
+      sites === null
+        ? null
+        : Array.isArray(sites)
+          ? sites.filter((site): site is string => typeof site === "string")
+          : []
+    )
+  )
+
+  // Straight out of a browser on this machine — `main/browser-import.ts`.
+  handle(IPC.browserCookieSources, async (): Promise<CookieSource[]> => {
+    const sources = await cookieSources(homedir()).catch(() => [])
+    return Promise.all(
+      sources.map(async (source) => ({
+        ...source,
+        icon: source.app ? await host.appIcon(source.app) : null,
+      }))
+    )
+  })
+  handle(IPC.browserCookieSites, async (_event, sourceId: unknown) => {
+    try {
+      return {
+        sites: await cookieSites(homedir(), String(sourceId)),
+        error: null,
+      }
+    } catch (error) {
+      return { sites: [], error: messageOf(error) }
+    }
+  })
+  handle(
+    IPC.browserImportFrom,
+    async (
+      _event,
+      sourceId: unknown,
+      sites: unknown,
+      keep: unknown
+    ): Promise<CookieImport> => {
+      if (!Array.isArray(sites)) {
+        return { imported: 0, skipped: 0, error: "No sites picked." }
+      }
+      try {
+        const { cookies, expired, skipped } = await sourceCookies(
+          homedir(),
+          String(sourceId),
+          sites.filter((site): site is string => typeof site === "string")
+        )
+        const { set, failed } = await host.setBrowserCookies(
+          keptAs(cookies, keep !== false)
+        )
+        return {
+          imported: set,
+          expired,
+          skipped: skipped + failed,
+          error: null,
+        }
+      } catch (error) {
+        return { imported: 0, skipped: 0, error: messageOf(error) }
+      }
+    }
+  )
 
   handle(IPC.studioServerAvailable, () => serverUrl() !== null)
 
@@ -1767,4 +1944,9 @@ function hostOf(url: string): string | null {
   } catch {
     return null
   }
+}
+
+/** What a failure says, for a result the renderer shows as it is. */
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }

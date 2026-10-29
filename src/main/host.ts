@@ -1,3 +1,7 @@
+import type { CookieSite } from "../shared/browser"
+import type { ImportedCookie } from "./browser-cookies"
+import type { BrowserPage } from "./browser-hub"
+
 /**
  * Everything `ipc.ts` needs from Electron itself — a native dialog, a window to
  * pin, a badge on the dock icon — and nothing that reads or writes the
@@ -62,6 +66,23 @@ export type Host = {
   openChatWindow: (chatId: string) => void
   setAlwaysOnTop: (caller: unknown, on: boolean) => void
   isAlwaysOnTop: (caller: unknown) => boolean
+
+  /** A `<webview>` the calling window owns, as a page the browser tools can
+   * drive — null for an id that is not one of its guests. See
+   * `main/electron-browser.ts`. */
+  browserPage: (caller: unknown, webContentsId: number) => BrowserPage | null
+  /** The chat browser's own cookies, by site, and their removal — see
+   * `clearBrowserCookies` in `electron-browser.ts`. Null is every site. */
+  browserCookieSites: () => Promise<CookieSite[]>
+  clearBrowserCookies: (sites: string[] | null) => Promise<number>
+  /** An app's icon as a PNG data URL — a browser's, in the cookie dialog —
+   * or null where there is none to get. */
+  appIcon: (appPath: string) => Promise<string | null>
+  /** Cookies into the chat browser's profile, one at a time — see
+   * `setBrowserCookies` in `electron-browser.ts`. */
+  setBrowserCookies: (
+    cookies: ImportedCookie[]
+  ) => Promise<{ set: number; failed: number }>
 
   /** Opens a URL in the user's browser. Only for a URL this app built itself —
    * the free AI server's sign-in page — since the caller is not reviewing it. */

@@ -176,11 +176,51 @@ imports may reach `electron`.
   it over the SDK's control channel (`mcpServerStatus()`) in a project's own
   directory, for the composer's MCP dialog (`chat/chat-mcp.tsx` — there is
   no Settings › MCP any more), plus `removeMcpServer`, which
-  runs the CLI's own `claude mcp remove`. **This app serves no MCP server of its
-  own**: the three that served the Database, API and Notes panels are deleted —
-  see `docs/design.md`. What it does still say about MCP is which _tools_ a chat
-  may call — **per chat**, `ChatOptions.disabledTools`, handed over as
-  `disallowedTools`.
+  runs the CLI's own `claude mcp remove`. **This app serves one MCP server of
+  its own** — the chat's browser, in-process (`browser-hub.ts` below); the
+  three that served the Database, API and Notes panels are deleted — see
+  `docs/design.md`. What it does still say about the user's MCP is which
+  _tools_ a chat may call — **per chat**, `ChatOptions.disabledTools`, handed
+  over as `disallowedTools`.
+
+- **`browser-hub.ts` + `electron-browser.ts`** — **the chat's browser**: a
+  `<webview>` beside the conversation (`chat/chat-browser.tsx`,
+  `lib/browser/store.ts`), **tabbed per chat**, that the chat's `claude`
+  drives through nine tools, `mcp__vey_browser__*` (`tabs`, `navigate`,
+  `back`, `snapshot`, `screenshot`, `scroll`, `click`, `type`, `press_key`) —
+  always on **the shown tab**. The tools are an SDK in-process
+  server (`createSdkMcpServer`), **one instance per session** with the chat as
+  its closure, handed over as `mcpServers` through `ChatSource.mcpServers` —
+  identical every turn, so the cached prefix holds. `BrowserHub` maps a chat to
+  its tabs: the renderer owns them and attaches each guest's `webContents` id
+  (`IPC.browserAttach`, checked by `host.browserPage` to be a `<webview>` of
+  the calling window) and says which is picked (`browserFocus`); main asks
+  for one made, shown or closed through `browser:command` (`BrowserCommand`)
+  and waits for the attach. A popup is a new tab (`onPopup`). `electron-browser.ts` is the only
+  half that imports `electron` — reading through `executeJavaScript` (refs
+  written onto elements as `data-vey-ref`), acting through `sendInputEvent`.
+  `guardWebviews` in `main.ts` locks every guest down (no preload, sandboxed,
+  `persist:vey-browser`, `http(s)` only). `Plan`/`Read only` get the five that
+  look (`BROWSER_READ_ACTIONS` in `shared/browser.ts`); `Edits` all nine.
+  **`Import cookies…`** is a dialog (`chat/cookie-import-dialog.tsx`): a
+  browser profile on this machine — **`browser-import.ts`**, Chromium's family
+  and Firefox through `node:sqlite` on a copy of the database, sites listed
+  off the hosts alone and only the ticked ones decrypted (the macOS keychain
+  prompt); never Chromium on Windows (App-Bound Encryption) — or an exported
+  file, **`browser-cookies.ts`** (Cookie-Editor JSON, Playwright
+  `storageState`, `cookies.txt`). Both set through `host.setBrowserCookies`.
+  **`Clear cookies…`** (`chat/cookie-clear-dialog.tsx`) is its reverse, by
+  site, through `host.clearBrowserCookies` — `null` alone is every site, and
+  its storage with it.
+  **Annotating** (`chat/browser-annotate.tsx`, `lib/browser/annotate.ts`): a
+  toolbar over a tab — pick element (`browserInspect`), draw, shapes, text —
+  whose `Add to chat` paints the marks over `browserCapture` and hands the
+  picture and a note of the picked elements to that chat's composer
+  (`composer-bus.ts`'s `deliverTo`), unsent.
+  **The page lives in `ChatPane`, not in `Conversation`**, which remounts per
+  chat. `docs/design.md` § The chat's browser (`test/browser.ts`,
+  `test/browser-cookies.ts`, `test/browser-import.ts`,
+  `test/browser-annotate.ts`).
 
 - **`plan-usage.ts`** — how much of the claude.ai plan's five-hour and
   seven-day windows an account has used, for the composer's usage meter
@@ -288,8 +328,9 @@ learnings…`, its dialog, `main/learnings.ts`, `shared/learnings.ts` and the
   private key is `license-private-key.local.pem`, gitignored.
   `docs/design.md` § Pro. (`test/license.ts`, `test/claude-api.ts`)
 
-- **There is no `Preview` tab** in the dock any more, and so no `webviewTag`
-  (`docs/design.md` § Preview, removed). `saveTextFile` and
+- **There is no `Preview` tab** in the dock any more (`docs/design.md`
+  § Preview, removed); `webviewTag` is back on the studio's window for the
+  chat's browser alone. `saveTextFile` and
   `createProjectDirectory` are the two writes outside the roots — a save
   dialog names the destination — for a chat's export and a new project's
   empty folder.
@@ -408,10 +449,11 @@ board's `startChat` — and no longer does.
 No MCP config is passed, so whatever the user's own `claude` is configured with —
 `~/.claude.json`, a repository's `.mcp.json`, enabled plugins, claude.ai
 connectors — reaches a turn the way it would running plain `claude` in that
-directory, minus whatever that chat's MCP dialog has switched off. The cost is that
-`Plan` and `Read only` cannot refuse a server _by name_, since this app
-configures none and so has no name for one; an unlisted tool is still refused by
-`deciding`.
+directory, minus whatever that chat's MCP dialog has switched off, plus the
+chat's browser, which is this app's own in-process server (`mcpServers`). The
+cost is that `Plan` and `Read only` cannot refuse a user's server _by name_,
+since this app configures none and so has no name for one; an unlisted tool is
+still refused by `deciding`.
 
 A switched-off tool is a **wire** name (`mcp__claude_ai_ClickUp__clickup_search`),
 not the name the listing shows: the CLI normalises a server's configured name

@@ -565,6 +565,139 @@ since elsewhere it is CodeMirror's.
 Selecting a run of the transcript shows `Reply`, which types it into the
 composer as a `>` quote, unsent (`quoteOf`, tested).
 
+### The chat's browser
+
+A page beside the conversation that the chat's `claude` drives and the user
+watches: the globe in the chat's header, or the first browser tool a turn
+calls, opens it (`chat/chat-browser.tsx`, `lib/browser/store.ts`). **Tabs**, per
+chat, in a strip over the page (`+`, a close per tab, a middle click), each
+with a bar of its own (back, forward, reload, an address field that searches
+what is not a URL — `browserUrlOf`, tested); a resize handle on the panel's
+left edge. Closing the last tab closes the panel. While a tool is moving it,
+the page is ringed and says what `claude` is doing, so the pointer is never
+mistaken for the user's.
+
+**It reverses `Preview, removed`** (§ Removed), and the difference is the
+argument: that was a `<webview>` of a dev server for somebody to read, which is
+what their own browser is for. This is the one thing their browser cannot be —
+a page the conversation can act on and they can see it act on. The tools that
+already exist for that (a Playwright MCP) open a window of their own, out of
+sight of the chat that is driving it.
+
+- **The tools are an in-process MCP server** (`main/browser-hub.ts`,
+  `createSdkMcpServer`): `tabs`, `navigate`, `back`, `snapshot`, `screenshot`,
+  `scroll`, `click`, `type`, `press_key`, wire names `mcp__vey_browser__*`. It
+  is the first server this app serves since the three that went with the
+  Database, API and Notes panels, and it is unlike them in the way that
+  mattered: an SDK server's config on the CLI's command line is a name and a
+  type, the calls come back over the control channel, and there is no port and
+  no secret for another process to find. One instance per session, with the
+  chat as its closure — a call can only reach that chat's page.
+- **What the CLI is handed stays identical**: the nine definitions are the
+  same on every turn of every chat, so they sit in the cached prefix like the
+  CLI's own tools. Which mode may call which is `permits`: `Plan` and
+  `Read only` get the six that look (`BROWSER_READ_ACTIONS` — `navigate` is a
+  `WebFetch` somebody can watch), `Edits` gets all nine without asking, `Ask`
+  asks about each like the plain CLI.
+- **The tools act on the shown tab**, and only that one: what `claude` drives
+  and what the user is looking at are never two different pages. `tabs`
+  lists, opens, shows and closes them by their number in the list. The tabs
+  are the renderer's — a tab is a `<webview>`, and only it can make one — so
+  `BrowserHub` keeps each chat's attached pages in the strip's order and which
+  is shown, learns of a pick through `browserFocus`, and asks for a tab made,
+  shown or closed through `browser:command` (`BrowserCommand`), waiting for
+  the attach that answers. A popup (`target=_blank`, `window.open`) is a new
+  tab of the same chat, made the same way (`onPopup`). When the shown tab's
+  page has gone, the hub moves to another and tells the strip.
+- **The page is driven from main** (`main/electron-browser.ts`). Reading is
+  `executeJavaScript`: every interactive element numbered and the ref written
+  onto it (`data-vey-ref`), so `click e12` finds exactly that element, plus the
+  page's `innerText`. Acting is `sendInputEvent` — a real `mousedown`/`mouseup`
+  at the element's centre, keys with their `char` — so the page sees what it
+  would from a person. No CDP session is kept attached. Shadow roots and frames
+  are not walked.
+- **The `<webview>` lives in `ChatPane`, not in the conversation**, because the
+  conversation remounts per chat and a remounted page is reloaded from nothing.
+  Each chat's page stays mounted for the run once opened; the ones not on screen
+  are laid out at full size and hidden, so a tool can still drive and
+  screenshot one while somebody reads another chat. Closing the panel hides it.
+- **Locked down in main** (`guardWebviews`): `webviewTag` on the studio's window
+  only, and every guest attached with no preload, no Node, sandboxed and
+  isolated, in its own `persist:vey-browser` partition — one profile shared by
+  every chat and kept across launches, so a site signed into once stays signed
+  in, apart from the studio's own session. Only `http`, `https` and
+  `about:blank` load; a popup is a new tab. `browserAttach` is checked
+  against the caller: only a `<webview>` of the asking window can be handed to
+  a chat's tools.
+- **Cookies can be imported** (`Import cookies…` in the panel's `…`,
+  `cookie-import-dialog.tsx`), **straight from a browser on this machine** —
+  pick the browser and its profile by the name the user gave it, then the
+  sites — or from an exported file. Into the one shared profile, set one at a
+  time so what Chromium refuses costs only itself; expired ones are skipped.
+  `Keep me signed in between sessions` off imports them as session cookies,
+  gone when the app quits.
+  - **From a browser** (`main/browser-import.ts`, tested): Chromium's family
+    (Chrome, Brave, Edge, Arc, Vivaldi, Chromium) and Firefox. The profiles
+    come from `Local State` / `profiles.ini`, the site list off the cookie
+    database's **hosts alone**, grouped by site (`siteOf`) — nothing
+    decrypted yet. Only the sites ticked are decrypted, and that is when macOS
+    asks for the keychain (`security find-generic-password`), which the
+    dialog says before it happens. Chromium's values are AES-128-CBC under a
+    PBKDF2 key from that password; from database version 24 each carries its
+    host's SHA-256, which is checked. Read through `node:sqlite` out of a copy
+    of the database, since the browser holds it locked. **Not Chromium on
+    Windows**: Chrome 127 bound its key to Chrome itself (App-Bound
+    Encryption), and nothing else can unwrap it. Safari's store needs Full
+    Disk Access; not read.
+  - **From a file** (`main/browser-cookies.ts`, tested): a JSON array as
+    Cookie-Editor and EditThisCookie export it, Playwright's `storageState`,
+    or `cookies.txt` — for what cannot be read directly.
+    **What an import has to get right, learned off one real profile** (1,905
+    cookies): a third of the cookies without `Secure` were still set by an
+    HTTPS page, and Chromium **binds a cookie to the scheme it was set
+    through** — set through `http://`, the `https://` page never received them
+    and the site stayed signed out. So a cookie goes in through the scheme the
+    browser recorded (`source_scheme`, Firefox's `schemeMap`), and with no
+    record through HTTPS except on this machine (`schemeOf`). A **session**
+    cookie, under `Keep me signed in`, is given Chromium's 400-day ceiling
+    (`keptAs`) — Chrome keeps one alive the same way when it reopens where it
+    left off, and imported as a session cookie it went at the first quit.
+    **Partitioned (CHIPS) cookies are left out**: Electron cannot set one
+    partitioned, and unpartitioned it is a third-party cookie sent from every
+    site. The result says the already-expired apart from what was left out,
+    since one "skipped" number read as a failed import. A sign-in held in
+    `localStorage` or IndexedDB rather than a cookie is not brought over at all.
+    It began as the file alone, on the argument that reading a browser's store
+    is asking for all of it to get one site's sign-in. The site step is the
+    answer to that: the user still says which sites, and only those are
+    decrypted.
+- **Clearing cookies** (`Clear cookies…` in the same menu,
+  `cookie-clear-dialog.tsx`) lists the sites the shared profile has cookies
+  for, grouped as the import groups them, to tick and sign out of. Every site
+  ticked is sent as **all** (`null`), which clears the profile's storage too —
+  a site that keeps its session in `localStorage` is not signed out by its
+  cookies going. Main clears everything only for an explicit `null`; a
+  malformed call clears nothing. It signs every chat's browser out at once,
+  since the profile is theirs together, and the dialog says so.
+- **Annotating a page, into the chat** (`chat/browser-annotate.tsx`,
+  `lib/browser/annotate.ts`, tested): the square-pointer button in a tab's bar
+  puts a toolbar over the page — `Select element`, draw, rectangle / ellipse /
+  arrow, text, colour, stroke, undo, redo, clear, `Add to chat`. A picked
+  element is asked of the page under the pointer (`browserInspect`) and
+  marked with a number. `Add to chat` captures the tab in main
+  (`browserCapture`, the guest alone, without the overlay), paints the marks
+  over it at that scale with the same `paint` the screen uses, and delivers
+  the picture **and** a note — the page's address and each picked element by
+  its number, selector and text — into that chat's composer through
+  `composer-bus.ts`'s `deliverTo`. **Not sent**: the question is the user's
+  to write. Drawn over the `<webview>`, not injected into the page, so a site
+  that is not this app's is never touched; the page is frozen while the
+  toolbar is up, since a mark is drawn where the page was.
+- A tool for a chat with no tab asks the window to open one (`open`) and waits
+  15 s for the attach. A chat that has never been on screen in the
+  studio's window has nowhere to draw one, and the tool says so. A popped-out
+  chat has no browser.
+
 ## The dock
 
 A tab per shell and a `+`, under the pane. **Collapsed, not unmounted** — a pty
@@ -1158,7 +1291,8 @@ event twice. An example of a user's plugin, in plain JavaScript, is
 
 ## MCP: what the user's own `claude` has
 
-**This app serves no MCP server and passes no MCP config.** A turn gets exactly
+**This app passes no MCP config, and serves one server of its own** — the
+chat's browser, in-process (§ The chat's browser). Otherwise a turn gets exactly
 the servers the CLI finds in that directory — `~/.claude.json`, `.mcp.json`,
 plugins, claude.ai connectors. The cost: `Plan` and `Read only` cannot refuse a
 server by name; an unlisted tool is still refused by `deciding`.
@@ -1725,7 +1859,9 @@ A `Run` tab with one command per folder. A second shell does it better.
 ### Preview, removed
 
 A `<webview>` of the project's dev server in the dock. Unused; a page is read in
-the user's own browser.
+the user's own browser. A `<webview>` is back as the chat's browser — one the
+chat's `claude` drives, which is a different thing to have (§ The chat's
+browser).
 
 ### Vertical tabs, removed
 

@@ -31,6 +31,11 @@ import {
   type ChatEvent,
   type ChatOptions,
 } from "../shared/api"
+import {
+  BROWSER_ACTIONS,
+  BROWSER_READ_ACTIONS,
+  browserTool,
+} from "../shared/browser"
 import { contentTypeOf, extensionForType } from "../shared/note-files"
 import { spendRows } from "./chat-digest"
 import { forkPointIn, promptIdIn } from "./chat-fork"
@@ -46,6 +51,7 @@ import {
   type AgentSession,
   type AskDecision,
   type AskRequest,
+  type McpServerConfig,
 } from "./claude-agent"
 import { apiEnvFor } from "./claude-api"
 import { expandHome } from "./shell-env"
@@ -221,6 +227,10 @@ export type ChatSource = {
   /** A note file's bytes, or null when it is gone — for the pictures an edited
    * message is sent with again. */
   readImage: (fileName: string) => Promise<Uint8Array | null>
+  /** The MCP servers this app serves a chat's session itself, in-process —
+   * the chat's browser (`main/browser-hub.ts`). Asked per session, since an
+   * SDK server instance belongs to the process it was handed to. */
+  mcpServers?: (chatId: string) => Record<string, McpServerConfig>
 }
 
 /**
@@ -236,9 +246,9 @@ export type ChatSource = {
  *
  * `ToolSearch` is on the list because a CLI configured to defer tools reaches an
  * MCP tool through it, and being asked to approve a search for a tool is a
- * prompt nobody can answer. No MCP server is named here at all: this app no
- * longer configures one, so it has no name to name — a tool from a server the
- * CLI found on its own is decided by the mode — see `asks` on `PERMISSIONS`.
+ * prompt nobody can answer. The one MCP server named here is this app's own,
+ * the chat's browser; a tool from a server the CLI found on its own is decided
+ * by the mode — see `asks` on `PERMISSIONS`.
  */
 const ALLOWED_TOOLS = [
   "ToolSearch",
@@ -254,6 +264,10 @@ const ALLOWED_TOOLS = [
   "WebFetch",
   "WebSearch",
   ...AGENT_TOOLS,
+  // The chat's own browser, all of it: the page beside the chat is this app's,
+  // shown to the user as it moves, and asking before every click in it would
+  // be Edits refusing the one MCP server it does not have to guess about.
+  ...BROWSER_ACTIONS.map(browserTool),
 ]
 
 /**
@@ -317,6 +331,8 @@ const READ_TOOLS = [
   "WebFetch",
   "WebSearch",
   ...AGENT_TOOLS,
+  // Looking at a page, not acting on it — see `BROWSER_READ_ACTIONS`.
+  ...BROWSER_READ_ACTIONS.map(browserTool),
 ]
 
 /**
@@ -1537,6 +1553,10 @@ export class Chats {
         // Not a mode's business and not read per call: the same list for every
         // turn of this session, which is what keeps it inside the cached prefix.
         disallowedTools: disabledTools,
+        // The servers this app serves in-process — the chat's browser. The same
+        // definitions every turn, so they sit in the cached prefix like the
+        // CLI's own tools.
+        mcpServers: this.source.mcpServers?.(id),
         permissionMode: "manual",
         // The same sentence for every mode. What the mode is goes at the head of
         // each message instead: this one is part of the cached prefix, and one

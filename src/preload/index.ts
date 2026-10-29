@@ -16,6 +16,7 @@ import {
   type TerminalOutput,
   type UpdateProgress,
 } from "../shared/api"
+import type { BrowserActivity, BrowserCommand } from "../shared/browser"
 
 /**
  * Subscribes to a main-process event, handing the listener only the payload.
@@ -196,6 +197,30 @@ const api: DesktopApi = {
   stopChat: (id) => ipcRenderer.invoke(IPC.stopChat, id),
   onChatEvent: (listener) => subscribe<ChatEvent>(IPC.chatEvent, listener),
   onRevealChat: (listener) => subscribe<string>(IPC.revealChat, listener),
+  browserAttach: (chatId, tabId, webContentsId) =>
+    ipcRenderer.invoke(IPC.browserAttach, chatId, tabId, webContentsId),
+  browserDetach: (chatId, tabId, webContentsId) =>
+    ipcRenderer.invoke(IPC.browserDetach, chatId, tabId, webContentsId),
+  browserFocus: (chatId, tabId) =>
+    ipcRenderer.invoke(IPC.browserFocus, chatId, tabId),
+  browserCapture: (chatId, tabId) =>
+    ipcRenderer.invoke(IPC.browserCapture, chatId, tabId),
+  browserInspect: (chatId, tabId, x, y) =>
+    ipcRenderer.invoke(IPC.browserInspect, chatId, tabId, x, y),
+  onBrowserCommand: (listener) =>
+    subscribe<BrowserCommand>(IPC.browserCommand, listener),
+  onBrowserActivity: (listener) =>
+    subscribe<BrowserActivity>(IPC.browserActivity, listener),
+  browserImportCookies: (keep) =>
+    ipcRenderer.invoke(IPC.browserImportCookies, keep),
+  browserOwnCookieSites: () => ipcRenderer.invoke(IPC.browserOwnCookieSites),
+  browserClearCookies: (sites) =>
+    ipcRenderer.invoke(IPC.browserClearCookies, sites),
+  browserCookieSources: () => ipcRenderer.invoke(IPC.browserCookieSources),
+  browserCookieSites: (sourceId) =>
+    ipcRenderer.invoke(IPC.browserCookieSites, sourceId),
+  browserImportFrom: (sourceId, sites, keep) =>
+    ipcRenderer.invoke(IPC.browserImportFrom, sourceId, sites, keep),
   readDrawing: (id) => ipcRenderer.invoke(IPC.readDrawing, id),
   writeDrawing: (id, scene) => ipcRenderer.invoke(IPC.writeDrawing, id, scene),
   writeDrawingSvg: (id, svg) =>

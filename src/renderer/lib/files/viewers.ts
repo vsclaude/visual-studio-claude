@@ -1,5 +1,9 @@
 import type { MessageKey } from "../i18n"
+import { isVideo } from "@shared/media-files"
+
 import { nameOf } from "./paths"
+
+export { isVideo }
 
 /**
  * How a file can be shown, and which way it is shown by default.
@@ -22,7 +26,8 @@ import { nameOf } from "./paths"
  * a menu entry that appears and disappears with the working tree is one nobody
  * can learn. It is never the default: a diff is what somebody asks for.
  */
-export type Viewer = "image" | "text" | "markdown" | "html" | "blocks" | "diff"
+export type Viewer =
+  "image" | "video" | "text" | "markdown" | "html" | "blocks" | "diff"
 
 /**
  * What the studio will draw as a picture.
@@ -103,6 +108,10 @@ export function viewersFor(filePath: string): Viewer[] {
       : ["image"]
   }
 
+  // A video plays, and that is all: its bytes as text is nothing to read, and
+  // the render a chat has just written is what somebody opened it to watch.
+  if (isVideo(filePath)) return ["video"]
+
   // A `.md` opens as the document, not the source. The Explorer is where a
   // project's files are worked on, and a README reached from a tree of source
   // is more often being read than changed — so the rendered view is the one
@@ -124,6 +133,7 @@ export function defaultViewer(filePath: string): Viewer {
 /** What a viewer is called, in the "Open with" menu. */
 export const VIEWER_LABELS: Record<Viewer, MessageKey> = {
   image: "files.viewers.image",
+  video: "files.viewers.video",
   text: "files.viewers.text",
   markdown: "files.viewers.markdown",
   html: "files.viewers.html",

@@ -3,6 +3,11 @@ import { pathToFileURL } from "node:url"
 
 import { net, protocol } from "electron"
 
+import {
+  isVideo,
+  MEDIA_FILE_SCHEME,
+  mediaFilePathOf,
+} from "../shared/media-files"
 import { NOTE_FILE_SCHEME, noteFileNameOf } from "../shared/note-files"
 import { PLUGIN_SCHEME, pluginFileOf, type PluginFile } from "../shared/plugins"
 
@@ -43,6 +48,15 @@ export function registerAppScheme(): void {
      */
     {
       scheme: NOTE_FILE_SCHEME,
+      privileges: { standard: true, secure: true, stream: true },
+    },
+    /*
+     * A video in one of the workspace's folders, for the Explorer's player —
+     * see `serveMediaFiles`. `stream` for `note-file`'s reason, and more so:
+     * a render is the largest file anybody opens in this app.
+     */
+    {
+      scheme: MEDIA_FILE_SCHEME,
       privileges: { standard: true, secure: true, stream: true },
     },
     /*
@@ -114,6 +128,33 @@ export function serveNoteFiles(pathOf: (fileName: string) => string): void {
     } catch {
       return new Response("Forbidden", { status: 403 })
     }
+
+    const range = request.headers.get("range")
+    return net.fetch(
+      pathToFileURL(target).toString(),
+      range ? { headers: { range } } : undefined
+    )
+  })
+}
+
+/**
+ * Serves the Explorer's videos, out of the folders themselves.
+ *
+ * `allowed` is the same gate every `files:*` call goes through, read fresh per
+ * request, so a folder removed from the workspace stops being playable at once;
+ * and only a `VIDEO_EXTENSIONS` file is served, so this is not a second way to
+ * read a repository's `.env` by URL. `Range` is passed along for the reason
+ * `serveNoteFiles` gives: a player that cannot seek.
+ */
+export function serveMediaFiles(
+  allowed: (target: string) => Promise<boolean>
+): void {
+  protocol.handle(MEDIA_FILE_SCHEME, async (request) => {
+    const target = mediaFilePathOf(request.url)
+    if (!target || !path.isAbsolute(target) || !isVideo(target))
+      return new Response("Not found", { status: 404 })
+    if (!(await allowed(target)))
+      return new Response("Forbidden", { status: 403 })
 
     const range = request.headers.get("range")
     return net.fetch(

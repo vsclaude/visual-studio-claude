@@ -185,6 +185,13 @@ type FilesState = {
   /** Images read for the pane, keyed by path — see `ImageDoc`. */
   images: Record<string, ImageDoc>
   /**
+   * How many times each open video has been rewritten on disk this run, for
+   * the player's URL (`mediaFileUrl`). Nothing is read for a video — the
+   * player streams it — so this counter is all the store keeps for one, and
+   * bumping it is what makes a render written again play the new file.
+   */
+  videoRevisions: Record<string, number>
+  /**
    * How a file is being shown, where that is not what its extension implies.
    *
    * Only the paths somebody has actually changed: everything else follows
@@ -430,6 +437,9 @@ export const useFiles = create<FilesState>((set, get) => {
    * re-read, and neither is a picture whose tab has been away and come back.
    */
   async function load(filePath: string, viewer: Viewer): Promise<void> {
+    // The player streams it from main; there is nothing to read ahead.
+    if (viewer === "video") return
+
     if (viewer === "image") {
       if (get().images[filePath] !== undefined) return
       setImage(filePath, { kind: "loading" })
@@ -455,6 +465,16 @@ export const useFiles = create<FilesState>((set, get) => {
    * disk's older version of the same file.
    */
   async function reloadOpen(filePath: string): Promise<void> {
+    if (defaultViewer(filePath) === "video") {
+      set((state) => ({
+        videoRevisions: {
+          ...state.videoRevisions,
+          [filePath]: (state.videoRevisions[filePath] ?? 0) + 1,
+        },
+      }))
+      return
+    }
+
     if (isDirty(get().docs[filePath])) return
 
     if (get().docs[filePath] !== undefined) {
@@ -577,6 +597,7 @@ export const useFiles = create<FilesState>((set, get) => {
     errors: {},
     docs: {},
     images: {},
+    videoRevisions: {},
     views: {},
 
     openIds: [],
@@ -991,9 +1012,15 @@ export const useFiles = create<FilesState>((set, get) => {
             return [
               filePath,
               viewer,
-              viewer === "image"
-                ? await readImage(filePath)
-                : await readDoc(filePath),
+              viewer === "video"
+                ? // Kept unread: a read is what the restore checks a path
+                  // still exists with, and reading a render whole to learn that
+                  // is the cost the player's streaming is there to avoid. One
+                  // that has gone says so in the player.
+                  ({ kind: "video" } as const)
+                : viewer === "image"
+                  ? await readImage(filePath)
+                  : await readDoc(filePath),
             ] as const
           })
         )
@@ -1009,7 +1036,9 @@ export const useFiles = create<FilesState>((set, get) => {
               kept
                 // Everything that is not a picture was read as text — the
                 // markdown preview draws the same `docs` entry the editor does.
-                .filter(([, viewer]) => viewer !== "image")
+                .filter(
+                  ([, viewer]) => viewer !== "image" && viewer !== "video"
+                )
                 .map(([filePath, , result]) => [filePath, result as FileDoc])
             ),
           },

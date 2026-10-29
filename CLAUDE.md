@@ -119,7 +119,10 @@ imports may reach `electron`.
   keeps an absolute path from the renderer inside the roots the workspace was
   pointed at. Deleting is `shell.trashItem`, never `unlink`. `fileRoots` in
   `ipc.ts` is main's one list of roots, feeding the gate, the watchers, the
-  palette's walk and the tsservers at once.
+  palette's walk and the tsservers at once. A **video** is not read through
+  it at all: `media-file://` (`serveMediaFiles`, `shared/media-files.ts`)
+  streams it to the Explorer's player behind the same gate
+  (`docs/design.md` § Playing a video).
 - **`git.ts`** — `workingTree` for the tree's colours, `changes()` for the
   Changes tab (`git status` with the ignored dropped, plus a `git diff
 --numstat` per side of the index), `fileAtHead` for the diff's left side,

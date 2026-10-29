@@ -13,6 +13,7 @@ export const files = {
   },
   viewers: {
     image: "Image preview",
+    video: "Video player",
     text: "Text editor",
     markdown: "Markdown preview",
     html: "HTML preview",
@@ -207,6 +208,11 @@ export const files = {
     showAll: "Show all unchanged lines",
     askAboutLines: "Ask about {count} lines",
     askAboutLines_one: "Ask about {count} line",
+  },
+  video: {
+    couldNotPlay: "Could not play this video",
+    couldNotPlayDetail:
+      "Its codec may be one the player cannot decode. Reveal it in Finder to open it in another app.",
   },
   image: {
     couldNotOpen: "Could not open this image",

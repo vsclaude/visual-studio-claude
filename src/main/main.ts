@@ -9,6 +9,7 @@ import {
   APP_ORIGIN,
   registerAppScheme,
   serveApp,
+  serveMediaFiles,
   serveNoteFiles,
   servePlugins,
 } from "./protocol"
@@ -143,6 +144,7 @@ const {
   tsServers,
   watchers,
   noteFilePath,
+  mediaFileAllowed,
   pluginFilePath,
   telemetry,
 } = registerIpc(
@@ -288,6 +290,7 @@ void app.whenReady().then(() => {
   // Both builds: a note's pictures are served the same way whether the renderer
   // came from Vite or from `app://`.
   serveNoteFiles(noteFilePath)
+  serveMediaFiles(mediaFileAllowed)
   servePlugins(pluginFilePath)
   // Before the window, so the menu bar is never Electron's default one.
   installMenu(() => mainWindow)

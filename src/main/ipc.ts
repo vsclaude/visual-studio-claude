@@ -224,6 +224,7 @@ export function createIpc(host: Host): {
   /** Both kinds of `fs.watch` — the tree's and the `Changes` list's. */
   watchers: { closeAll: () => void }
   noteFilePath: (fileName: string) => string
+  mediaFileAllowed: (target: string) => Promise<boolean>
   pluginFilePath: (id: string, file: PluginFile) => string
   /** Flushed on quit, so the last minutes before it are counted. */
   telemetry: Telemetry
@@ -1720,6 +1721,13 @@ export function createIpc(host: Host): {
     /** For the `note-file://` handler, which is not an IPC call and so cannot
      * reach the store any other way — see `serveNoteFiles`. */
     noteFilePath: (fileName: string) => store.noteFilePath(fileName),
+    /** For the `media-file://` handler: `inWorkspace`'s gate, as a yes or
+     * no — see `serveMediaFiles`. */
+    mediaFileAllowed: async (target: string) =>
+      files.insideAny(
+        (await fileRoots()).map((root) => root.path),
+        target
+      ),
     /** For the `vsc-plugin://` handler, the same way — see `servePlugins`. */
     pluginFilePath: (id: string, file: PluginFile) =>
       pluginFilePath(pluginRootOf(pluginRoots, id), id, file),

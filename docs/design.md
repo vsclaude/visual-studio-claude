@@ -1352,6 +1352,31 @@ chat. The arithmetic — pointer to picture pixels, the crop, the ratio — is
 - **Not on the `Changes` tab**, which is reading what changed in a picture
   rather than changing it.
 
+### Playing a video
+
+An `.mp4`, `.m4v`, `.mov`, `.webm` or `.ogv` opens as a player
+(`file-video.tsx`). It is for a chat that **made** one — asked to build a
+Remotion composition and render it, say: the render lands in the folder and is
+watched where it was written, without leaving for Finder. There is no "make a
+video" button and none is wanted: the chat is the way to ask for one, and a
+button that ran a turn on its own would be the helper `CLAUDE.md` refuses.
+
+- **Streamed, not read.** A picture comes over the bridge as a data URL; a
+  render can be hundreds of megabytes and a player wants the bytes around
+  wherever it is dragged to. So it is `media-file://`, served by
+  `serveMediaFiles` in `main/protocol.ts` with `Range` passed through, the
+  `note-file://` bargain applied to the workspace's own folders.
+- **The same gate as every `files:*` call** (`insideAny` over `fileRoots`, read
+  per request), and only `VIDEO_EXTENSIONS` (`shared/media-files.ts`, one list
+  for both sides) — so the scheme plays videos and is not a way to read a
+  repository's `.env` by URL.
+- **Only what Chromium plays as it is.** `.mkv` and `.avi` are often a codec it
+  cannot decode, and a player offered for a file it will refuse is an error box
+  with a play button.
+- **A render written again plays the new one**: the watcher's re-read bumps
+  `videoRevisions`, which goes into the URL's query, past Chromium's media
+  cache. A hidden tab's player is paused — the panes are hidden, not unmounted.
+
 ### Hover and go-to-definition
 
 A real **`tsserver`** per root, using that root's own `typescript` and nothing

@@ -1,7 +1,7 @@
-import { File, Image } from "lucide-react"
+import { File, Film, Image } from "lucide-react"
 
 import { iconFor } from "@/lib/files/icons"
-import { isImage } from "@/lib/files/viewers"
+import { isImage, isVideo } from "@/lib/files/viewers"
 import { cn } from "@/lib/utils"
 
 /**
@@ -34,5 +34,6 @@ export function FileIcon({
 
   if (url) return <img src={url} alt="" aria-hidden className={classes} />
   if (isImage(filePath)) return <Image aria-hidden className={classes} />
+  if (isVideo(filePath)) return <Film aria-hidden className={classes} />
   return <File aria-hidden className={classes} />
 }

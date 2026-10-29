@@ -30,6 +30,17 @@ type Stored = {
   diffSideBySide: boolean
   diffWhitespace: boolean
   /**
+   * Whether the `Changes` pane shows every changed file's diff in one scroll,
+   * GitHub's "Files changed", rather than the one picked in the list. How
+   * somebody reviews rather than something about a checkout, so one setting.
+   * On by default. Not `changesAll`, its first name: that shipped off, and the
+   * bag is written whole, so a `false` for it was on disk before anyone chose
+   * it — a new key is what lets the default be the default.
+   */
+  changesStacked: boolean
+  /** Whether the Explorer's tree lists dotfiles — the eye in its toolbar. */
+  showHiddenFiles: boolean
+  /**
    * `--model`, `--effort` and the `CLAUDE_CONFIG_DIR` profile the read-only
    * one-turn agent runs on — `draftCommitMessage` in `main/one-turn-agent.ts`.
    *
@@ -123,6 +134,10 @@ function isStored(value: unknown): value is Stored {
       typeof record.diffSideBySide === "boolean") &&
     (record.diffWhitespace === undefined ||
       typeof record.diffWhitespace === "boolean") &&
+    (record.changesStacked === undefined ||
+      typeof record.changesStacked === "boolean") &&
+    (record.showHiddenFiles === undefined ||
+      typeof record.showHiddenFiles === "boolean") &&
     (record.reviewModel === undefined ||
       record.reviewModel === null ||
       typeof record.reviewModel === "string") &&
@@ -177,6 +192,8 @@ type SettingsState = Stored & {
   setTelemetry: (on: boolean) => void
   setDiffSideBySide: (sideBySide: boolean) => void
   setDiffWhitespace: (show: boolean) => void
+  setChangesStacked: (all: boolean) => void
+  setShowHiddenFiles: (show: boolean) => void
   /** Sets the model and its effort together, the way a chat's `ModelMenu`
    * hands them over. */
   setReviewModel: (model: string | null, effort: ChatEffort | null) => void
@@ -229,6 +246,8 @@ export const useSettings = create<SettingsState>((set, get) => {
     const {
       diffSideBySide,
       diffWhitespace,
+      changesStacked,
+      showHiddenFiles,
       reviewModel,
       reviewEffort,
       reviewProfileId,
@@ -251,6 +270,8 @@ export const useSettings = create<SettingsState>((set, get) => {
     remember(SETTINGS_KEY, {
       diffSideBySide,
       diffWhitespace,
+      changesStacked,
+      showHiddenFiles,
       reviewModel,
       reviewEffort,
       reviewProfileId,
@@ -277,6 +298,10 @@ export const useSettings = create<SettingsState>((set, get) => {
     // toolbar is one click away for a pane too narrow to hold them.
     diffSideBySide: true,
     diffWhitespace: false,
+    changesStacked: true,
+    // Shown, as the tree always has: a `.env` or `.github` is often the file
+    // being looked for.
+    showHiddenFiles: true,
     reviewModel: null,
     reviewEffort: null,
     reviewProfileId: null,
@@ -309,6 +334,16 @@ export const useSettings = create<SettingsState>((set, get) => {
 
     setDiffWhitespace(diffWhitespace) {
       set({ diffWhitespace })
+      save()
+    },
+
+    setChangesStacked(changesStacked) {
+      set({ changesStacked })
+      save()
+    },
+
+    setShowHiddenFiles(showHiddenFiles) {
+      set({ showHiddenFiles })
       save()
     },
 

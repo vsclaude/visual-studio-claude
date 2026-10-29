@@ -46,6 +46,7 @@ const api: DesktopApi = {
   reorderFolders: (ids) => ipcRenderer.invoke(IPC.reorderFolders, ids),
 
   pickDirectory: () => ipcRenderer.invoke(IPC.pickDirectory),
+  createProjectDirectory: () => ipcRenderer.invoke(IPC.createProjectDirectory),
   pickFiles: (directory) => ipcRenderer.invoke(IPC.pickFiles, directory),
   // Never leaves this script: `webUtils` only resolves a real path for a
   // `File` from inside the preload's own privileged context.
@@ -220,6 +221,9 @@ const api: DesktopApi = {
     subscribe<TerminalExit>(IPC.terminalExit, listener),
 
   systemUsage: () => ipcRenderer.invoke(IPC.systemUsage),
+  listPorts: () => ipcRenderer.invoke(IPC.listPorts),
+  stopPortProcess: (pid, force) =>
+    ipcRenderer.invoke(IPC.stopPortProcess, pid, force),
 
   checkForUpdate: () => ipcRenderer.invoke(IPC.checkForUpdate),
   installUpdate: (version) => ipcRenderer.invoke(IPC.installUpdate, version),

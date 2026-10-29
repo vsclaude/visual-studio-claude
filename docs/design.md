@@ -249,10 +249,12 @@ did not follow the theme, and it was fan art of somebody else's character), then
 three `primary` dots, which said "loading" in every app's words rather than this
 one's.
 
-The **spinner** (`ui/spinner.tsx`) is **not** the glyph: it is a comet, a ring
-fading from nothing through the logo's violet and pink to a round amber head —
-the logo's colours without its shape (on a filled primary button, the button's
-text colour fading the same way). For a while it was the lettermark at row
+The **spinner** (`ui/spinner.tsx`) is **not** the glyph: it is eight dots,
+four large violet ones at the compass points over four smaller pink ones inside
+them, both sets turning half a turn a second — the outer eased, the inner
+linear, so they slip apart and close up (css-loaders.com's `l12`, which the
+user brought, in the logo's colours; on a filled primary button, the button's
+own text colour). For a while it was the lettermark at row
 size, a light running down the V and through the S. That put the logo on every
 wait in the studio — 22 of them, a commit button and a blame card as much as a
 chat — and on four at once for one working chat: its row, its tab, its
@@ -260,12 +262,14 @@ project's icon and the pane. A mark that is everywhere stops being the app
 speaking and becomes the busiest thing on screen, so the lettermark is kept for
 the two waits that _are_ the app — the launch screen and the turn above.
 
-What replaced it was chosen off a sheet of candidates drawn on the rows they
-would sit on: a plain ring in the text's colour, first with a fixed arc and
-then a stretching one, was too plain to look finished; macOS-style bars,
-orbiting dots and a gradient arc lost to the comet beside them. Before the
-glyph it was a 3×3 shuffling grid, and before that lucide's `Loader2`, whose
-eight ticks blur at 12px.
+What replaced it took four rounds, each judged on sheets of candidates drawn
+on the rows they would sit on: a plain ring in the text's colour, with a fixed
+arc and then a stretching one, was too plain to look finished; a
+violet-to-amber comet beat bars, orbiting dots and a gradient arc, and then did
+not hold up either; a second sheet of rings — a stretching violet arc, a dual
+ring, a glowing dot, segments — lost to the dots. Before the glyph it was a
+3×3 shuffling grid, and before that lucide's `Loader2`, whose eight ticks blur
+at 12px.
 
 ### A new project from a template, removed
 
@@ -1337,6 +1341,21 @@ Inline or side by side, and whitespace, are settings. The diff is the one
 editor **unmounted** rather than hidden, since a live one painted through other
 panes.
 
+**Every file at once** is the other way to read it (`changesStacked`, the `Rows3`
+toggle in the Git tab row; `files/changes-stack.tsx`): GitHub's "Files
+changed", each file a section whose path header sticks to the top while it is
+being read, a row picked in the list scrolled to. Only the diffs near the visible part are built: a diff is a CodeMirror view,
+and keeping each one built once scrolled past put a hundred of them in the page
+for a large change. So the stack is **windowed** — every header stays, and a
+diff is built as it nears the viewport and destroyed as it leaves, a block of
+its measured height left behind so nothing moves; what was read is cached per
+answer from git. The reading position is **held by hand** when a section above
+it changes height (a diff rebuilt on the way back up, side by side's spacers):
+the browser's scroll anchoring cannot anchor inside CodeMirror, whose scrollers
+turn it off and are nested scroll containers besides. Its working side is read **from disk**, not the shared buffer
+— git's patch is about the disk — and a file's `Open` puts it in the single
+view for `Diff | Edit`, a picture's comparison and unsaved edits.
+
 ### The editor
 
 **Every editor is CodeMirror**, set up in `lib/editor.ts` and always behind a
@@ -1344,8 +1363,14 @@ panes.
 `@codemirror/language-data`, plus `.env` and Makefile grammars of our own). One
 copy of `@codemirror/view` is enforced twice — see `CLAUDE.md`.
 `lib/files/documents.ts` lets several views share one path's buffer. `⌘S` saves;
-closing a tab writes rather than asks. The cost of leaving Monaco: `.ts` files
-get no syntax squiggles.
+**closing a tab with unsaved edits asks** — Save / Don't Save / Cancel
+(`files/unsaved-dialog.tsx`, `unsaved` in `lib/files/store.ts`), one dialog for
+every dirty file a `Close all` meets. It used to write rather than ask, on the
+grounds that the edit was deliberate; but × is also how an experiment is thrown
+away, and writing somebody's source because they closed the tab kept edits they
+meant to drop. A preview tab replaced by the next click still writes, since
+nobody closed it. The cost of leaving Monaco: `.ts` files get no syntax
+squiggles.
 
 ### Editing a picture
 

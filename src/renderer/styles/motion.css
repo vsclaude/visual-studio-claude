@@ -59,9 +59,10 @@
   --animate-trace-s: trace-s 2.4s var(--ease-out-quint) infinite;
   --animate-shimmer: shimmer 2.4s ease-in-out infinite;
 
-  /* `.spinner` below: linear, because a comet that eases reads as one being
-     wound up and let go rather than one travelling. */
-  --animate-spinner: spin 0.85s linear infinite;
+  /* `.spinner` below: half a turn a second, which brings its four dots back
+     to where they started. Eased for the outer four; the inner four override
+     the timing to linear, and the two drifting apart and back is the motion. */
+  --animate-spinner: spinner 1s ease infinite;
 
   /* The setup screen's illustrations (`claude-setup.tsx`): the chips beside a
      page's picture drifting a few pixels, slow enough to read as weightless
@@ -149,6 +150,12 @@
   }
 }
 
+@keyframes spinner {
+  to {
+    transform: rotate(0.5turn);
+  }
+}
+
 /*
  * The chat's trace: drawn on (offset 100 → 0), held whole, then wiped from the
  * start (0 → -100) — so the ink leaves the way it arrived instead of fading,
@@ -186,67 +193,65 @@
 }
 
 /*
- * The studio's spinner (`ui/spinner.tsx`): a comet — a ring whose colour runs
- * from nothing through the logo's violet and pink to a round amber head. It
- * was the VS lettermark with a light running along it, and with a working
+ * The studio's spinner (`ui/spinner.tsx`): eight dots, four large violet ones
+ * at the compass points (`::after`) over four smaller pink ones inside them
+ * (`::before`), each set turning half a turn a second — the outer eased, the
+ * inner linear, so they slip apart and close up again. The pattern is
+ * css-loaders.com's `l12`, picked by the user, in the logo's colours.
+ *
+ * It was the VS lettermark with a light running along it, and with a working
  * chat marked on its row, its tab, its project's icon and in the pane at once,
  * the logo was the busiest thing on screen and said nothing the first copy had
  * not. So the glyph is kept for the two places that are the app speaking —
- * the launch screen and the chat's `Working…` (`.vs-trace`) — and a wait
- * anywhere else carries the logo's colours without its shape. A plain ring in
- * the text's colour came between, with a fixed arc and then a stretching one;
- * both were too plain to look finished. Bars, orbiting dots and a gradient
- * arc lost beside the comet on the same rows. `docs/design.md` § The chat's
+ * the launch screen and the chat's `Working…` (`.vs-trace`). Between the two
+ * came a plain ring (too plain), then a violet-to-amber comet, and a sheet of
+ * other rings beside it; this replaced them all. `docs/design.md` § The chat's
  * loading indicator.
  *
- * A conic gradient under a radial mask rather than an SVG stroke, because a
- * stroke cannot fade along its own length. The ring's width and the head are
- * fractions of the box, so one rule holds from the 12px a row draws to a
- * dialog's 16px: 1.7px of ring at the smallest, which is as thin as it reads.
- * It turns with `transform`, which composes with a caller's `translate-*` (the
- * `translate` property) rather than replacing it, and keeps turning under
- * reduced motion for the reason given there.
+ * Every size is a fraction of the box — dots a quarter and a fifth of it, the
+ * inner set inset by 8% — so one rule holds from the 12px a row draws (3px
+ * dots) to a dialog's 24px. Only the pseudo-elements turn, so a caller's
+ * `translate-*` on the box itself is never fought over, and they keep turning
+ * under reduced motion for the reason given there.
  *
  * On a filled primary button the violet would vanish into the fill, so there
- * it is the button's own text colour, fading the same way.
+ * it is the button's own text colour, the inner set at a softer strength.
  */
 .spinner {
-  --spinner-ink: conic-gradient(
-    from 90deg,
-    transparent 0deg,
-    #8b5cf6 140deg,
-    #c76bc4 250deg,
-    #fcc63a 356deg,
-    transparent 357deg
-  );
-  --spinner-head: #fcc63a;
-  position: relative;
-  display: inline-block;
-  border-radius: 50%;
-  background: var(--spinner-ink);
-  mask: radial-gradient(farthest-side, transparent 72%, #000 calc(72% + 0.5px));
+  --spinner-outer: #8b5cf6;
+  --spinner-inner: #c76bc4;
+  display: inline-grid;
+}
+
+.spinner::before,
+.spinner::after {
+  --spinner-dot: no-repeat
+    radial-gradient(farthest-side, var(--spinner-ink) 92%, transparent);
+  content: "";
+  grid-area: 1 / 1;
+  background:
+    var(--spinner-dot) 50% 0,
+    var(--spinner-dot) 50% 100%,
+    var(--spinner-dot) 100% 50%,
+    var(--spinner-dot) 0 50%;
   animation: var(--animate-spinner);
 }
 
 .spinner::after {
-  content: "";
-  position: absolute;
-  top: 43%;
-  right: 0;
-  width: 14%;
-  height: 14%;
-  border-radius: 50%;
-  background: var(--spinner-head);
+  --spinner-ink: var(--spinner-outer);
+  background-size: 24% 24%;
+}
+
+.spinner::before {
+  --spinner-ink: var(--spinner-inner);
+  margin: 8%;
+  background-size: 19% 19%;
+  animation-timing-function: linear;
 }
 
 .bg-primary .spinner {
-  --spinner-ink: conic-gradient(
-    from 90deg,
-    transparent 0deg,
-    currentColor 356deg,
-    transparent 357deg
-  );
-  --spinner-head: currentColor;
+  --spinner-outer: currentColor;
+  --spinner-inner: color-mix(in oklab, currentColor 60%, transparent);
 }
 
 /*
@@ -376,8 +381,8 @@
  * screen saying the launch has not stalled, and a spinner that does not spin
  * is not a calmer app, it is one that looks hung. Both are opacity in place,
  * which is the kind of motion this setting is least aimed at. `.spinner` keeps
- * turning for the same reason — a 12px comet turning in place is no movement
- * of the page, and a still one is exactly the hung app. The chat's trace
+ * turning for the same reason — eight dots turning in a 12px box is no
+ * movement of the page, and still ones are exactly the hung app. The chat's trace
  * follows the same argument and drops its writing for that same breathing, the
  * whole glyph drawn; the shimmer is pure decoration beside it and stops.
  */

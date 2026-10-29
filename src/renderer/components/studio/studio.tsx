@@ -47,6 +47,7 @@ import { ExplorerRail } from "./files/explorer-rail"
 import { ChangesPane } from "./files/changes-pane"
 import { FileWorkspace } from "./files/file-workspace"
 import { AddFolderDialog } from "./add-folder-dialog"
+import { UnsavedDialog } from "./files/unsaved-dialog"
 import { ClaudeSetup, useClaudeSetup } from "./claude-setup"
 import { CommandPalette } from "./command-palette"
 import { PluginNotices } from "./plugin-notices"
@@ -811,6 +812,7 @@ function Workbench() {
           (⌘P) and owns it, so nothing here has to hold a piece of it. */}
       <CommandPalette />
       <PluginNotices />
+      <UnsavedDialog />
 
       {adding && <AddFolderDialog onClose={() => setAdding(false)} />}
       {/* The project menus' confirmations — asked for from the rail and the
@@ -827,14 +829,18 @@ function Workbench() {
 /**
  * The box each column of the workbench is drawn in.
  *
- * The edge is an **outline drawn inward**, not a border, and the difference is
+ * The edge is **drawn over the content**, not a border, and the difference is
  * pixels the panels already count: a border takes 2px out of the box, and the
  * Explorer collapses to exactly `RAIL_WIDTH`, so a bordered card clipped the
- * last pixel of the rail. An outline is painted over the content and takes no
- * room; the rail's own edge line lands under it.
+ * last pixel of the rail. The rail's own edge line lands under it.
+ *
+ * Over it by an `::after` on top of the card's own stack (`isolate`), not an
+ * inward `outline`, which it was: Chromium paints a positioned descendant
+ * after its ancestor's outline, so anything filled and positioned inside a
+ * card — the tab strip, a diff's added rows — wiped the edge where it met it.
  */
 const CARD =
-  "studio-card h-full overflow-hidden rounded-xl bg-background outline -outline-offset-1 outline-border"
+  "studio-card relative isolate h-full overflow-hidden rounded-xl bg-background after:pointer-events-none after:absolute after:inset-0 after:z-[100] after:rounded-[inherit] after:border after:border-border"
 
 /**
  * A resize handle drawn as the canvas between two cards rather than as a

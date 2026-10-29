@@ -29,6 +29,10 @@ export const files: Messages["files"] = {
     git: "Git",
     changes: "Thay đổi",
     commits: "Commit",
+    showHidden: "Hiện file ẩn",
+    hideHidden: "Ẩn file ẩn",
+    showAllChanges: "Hiện tất cả file thay đổi trong một view",
+    showOneChange: "Hiện từng file thay đổi một",
     noFolders: "Chưa có thư mục nào",
     noFoldersDescription: "Trỏ workspace tới một thư mục trên máy này.",
     addFolder: "Thêm thư mục…",
@@ -101,6 +105,18 @@ export const files: Messages["files"] = {
     discardManyDescription:
       "Mọi file đã thay đổi trong thư mục này sẽ trở về commit gần nhất — cả bản đã stage lẫn các chỉnh sửa trên ổ đĩa. File chưa từng được commit sẽ được chuyển vào thùng rác, vì không có gì để trở về.",
     discard: "Hủy thay đổi",
+  },
+  changesStack: {
+    files: "{count} file thay đổi",
+    files_one: "1 file thay đổi",
+    expandAll: "Mở tất cả",
+    collapseAll: "Thu gọn tất cả",
+    oneFile: "Từng file một",
+    open: "Mở riêng file này",
+    image: "Một hình ảnh — mở riêng để so sánh hai bản.",
+    binary: "File nhị phân — không có dòng nào để so sánh.",
+    tooLarge: "Quá lớn để hiện ở đây — hãy mở riêng.",
+    unreadable: "Không đọc được.",
   },
   changesPane: {
     goneTitle: "Project đó không còn nữa",
@@ -241,5 +257,13 @@ export const files: Messages["files"] = {
     deleted: "Đã xóa.",
     fullScreen: "Toàn màn hình",
     exitFullScreen: "Thoát toàn màn hình",
+  },
+  unsaved: {
+    title: "Bạn có muốn lưu các thay đổi trong “{name}” không?",
+    titleMany: "Bạn có muốn lưu các thay đổi trong {count} tệp không?",
+    description: "Các thay đổi sẽ mất nếu bạn không lưu.",
+    save: "Lưu",
+    saveMany: "Lưu tất cả",
+    discard: "Không lưu",
   },
 }

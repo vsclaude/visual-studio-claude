@@ -52,7 +52,12 @@ import { ChatOutline } from "./chat-outline"
 import { ReplyToSelection } from "./chat-reply"
 import { ChatComposer, type ChatComposerHandle } from "./chat-composer"
 import { ChatActivity, DayDivider } from "./chat-activity"
-import { ChatMessage, type MessageEdit, SubagentSteps } from "./chat-message"
+import {
+  ChatFolderContext,
+  ChatMessage,
+  type MessageEdit,
+  SubagentSteps,
+} from "./chat-message"
 import { ChatSkeleton, ChatTranscriptSkeleton, Elapsed } from "./chat-skeleton"
 import { ChatWelcome } from "./chat-welcome"
 
@@ -804,255 +809,259 @@ function Conversation({
     : undefined
 
   return (
-    <div
-      className="relative flex h-full min-h-0 flex-col"
-      onDragEnter={(event) => {
-        if (!carriesFiles(event)) return
-        event.preventDefault()
-        depth.current += 1
-        setDropping(true)
-      }}
-      onDragOver={(event) => {
-        if (!carriesFiles(event)) return
-        // Without this the drop is refused and Chromium navigates the window to
-        // the file instead, which takes the whole studio with it.
-        event.preventDefault()
-        event.dataTransfer.dropEffect = "copy"
-      }}
-      onDragLeave={(event) => {
-        if (!carriesFiles(event)) return
-        depth.current = Math.max(0, depth.current - 1)
-        if (depth.current === 0) setDropping(false)
-      }}
-      onDrop={onDrop}
-    >
-      {/* Over the pane rather than around it: a border on the container would
+    <ChatFolderContext.Provider value={root ?? null}>
+      <div
+        className="relative flex h-full min-h-0 flex-col"
+        onDragEnter={(event) => {
+          if (!carriesFiles(event)) return
+          event.preventDefault()
+          depth.current += 1
+          setDropping(true)
+        }}
+        onDragOver={(event) => {
+          if (!carriesFiles(event)) return
+          // Without this the drop is refused and Chromium navigates the window to
+          // the file instead, which takes the whole studio with it.
+          event.preventDefault()
+          event.dataTransfer.dropEffect = "copy"
+        }}
+        onDragLeave={(event) => {
+          if (!carriesFiles(event)) return
+          depth.current = Math.max(0, depth.current - 1)
+          if (depth.current === 0) setDropping(false)
+        }}
+        onDrop={onDrop}
+      >
+        {/* Over the pane rather than around it: a border on the container would
           move the transcript by a pixel as the pointer came in. */}
-      {dropping && (
-        <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-lg border-2 border-dashed border-ring bg-background/70">
-          <p className="text-xs text-muted-foreground">
-            {t("transcript.pane.drop")}
-          </p>
-        </div>
-      )}
+        {dropping && (
+          <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-lg border-2 border-dashed border-ring bg-background/70">
+            <p className="text-xs text-muted-foreground">
+              {t("transcript.pane.drop")}
+            </p>
+          </div>
+        )}
 
-      {/* The chat's own name over its transcript. The strip above says it too,
+        {/* The chat's own name over its transcript. The strip above says it too,
           truncated to a tab's width; this is where it can be read in full, and
           where `⌘F` has a button for anybody who does not know the key. */}
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <h2
-          className="min-w-0 flex-1 truncate text-sm font-medium"
-          title={title}
-        >
-          {title}
-        </h2>
-        <IconButton
-          label={
-            outlineOpen
-              ? t("transcript.pane.hideContents")
-              : t("transcript.pane.showContents")
-          }
-          side="bottom"
-          onClick={toggleOutline}
-          className={cn("size-6", outlineOpen && "bg-accent")}
-        >
-          <ListTree className="size-3.5" />
-        </IconButton>
-        <IconButton
-          label={
-            side === "media"
-              ? t("transcript.pane.hideMedia")
-              : t("transcript.pane.showMedia")
-          }
-          side="bottom"
-          onClick={() => toggleSide("media")}
-          className={cn("size-6", side === "media" && "bg-accent")}
-        >
-          <Images className="size-3.5" />
-        </IconButton>
-        <IconButton
-          label={t("transcript.pane.find")}
-          side="bottom"
-          onClick={openFind}
-          className="size-6"
-        >
-          <Search className="size-3.5" />
-        </IconButton>
-        {/* The same chat in a window of its own, for the corner of another
-            editor's screen — see `openChatWindow`. Not shown inside that
-            window, which has no studio to pop out of. */}
-        {!popped && !unsaved && (
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
+          <h2
+            className="min-w-0 flex-1 truncate text-sm font-medium"
+            title={title}
+          >
+            {title}
+          </h2>
           <IconButton
-            label={t("transcript.pane.popOut")}
+            label={
+              outlineOpen
+                ? t("transcript.pane.hideContents")
+                : t("transcript.pane.showContents")
+            }
             side="bottom"
-            onClick={() => void window.desktop.openChatWindow(chatId)}
+            onClick={toggleOutline}
+            className={cn("size-6", outlineOpen && "bg-accent")}
+          >
+            <ListTree className="size-3.5" />
+          </IconButton>
+          <IconButton
+            label={
+              side === "media"
+                ? t("transcript.pane.hideMedia")
+                : t("transcript.pane.showMedia")
+            }
+            side="bottom"
+            onClick={() => toggleSide("media")}
+            className={cn("size-6", side === "media" && "bg-accent")}
+          >
+            <Images className="size-3.5" />
+          </IconButton>
+          <IconButton
+            label={t("transcript.pane.find")}
+            side="bottom"
+            onClick={openFind}
             className="size-6"
           >
-            <PictureInPicture2 className="size-3.5" />
+            <Search className="size-3.5" />
           </IconButton>
-        )}
-      </header>
+          {/* The same chat in a window of its own, for the corner of another
+            editor's screen — see `openChatWindow`. Not shown inside that
+            window, which has no studio to pop out of. */}
+          {!popped && !unsaved && (
+            <IconButton
+              label={t("transcript.pane.popOut")}
+              side="bottom"
+              onClick={() => void window.desktop.openChatWindow(chatId)}
+              className="size-6"
+            >
+              <PictureInPicture2 className="size-3.5" />
+            </IconButton>
+          )}
+        </header>
 
-      {/* The transcript beside its table of contents, when that is open. */}
-      <div className="flex min-h-0 flex-1">
-        {/* The transcript and what hangs over it, in a box of their own so the
+        {/* The transcript beside its table of contents, when that is open. */}
+        <div className="flex min-h-0 flex-1">
+          {/* The transcript and what hangs over it, in a box of their own so the
           find bar's `top` is measured from under the header. */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* `⌘F`, hanging over the top-right corner of the transcript the way an
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* `⌘F`, hanging over the top-right corner of the transcript the way an
           editor's does — see `ChatFind` for why it is a bar and not a dialog.
           Keyed by the chat so a bar carried across a switch cannot keep the
           previous conversation's field. */}
-          {finding && (
-            <ChatFind
-              key={chatId}
-              query={finding.query}
-              opened={finding.opened}
-              at={at}
-              total={hits.length}
-              // A new query starts at its first match rather than wherever the last
-              // one had walked to: `at` is an index into a list that has just been
-              // replaced.
-              onQuery={(query) => setFind({ ...finding, query, at: 0 })}
-              onStep={(by) => {
-                if (hits.length === 0) return
-                // Wrapped here rather than counted up, so `at` is always an index
-                // into the list as it stands: `at + by` can go negative, which is
-                // what the `+ hits.length` is for.
-                setFind({
-                  ...finding,
-                  at: (at + by + hits.length) % hits.length,
-                })
-              }}
-              onClose={() => setFind(null)}
-            />
-          )}
-
-          <div
-            ref={box}
-            onScroll={(event) => {
-              const { scrollTop, scrollHeight, clientHeight } =
-                event.currentTarget
-              setAway(awayFromBottom(event.currentTarget))
-              if (restoring()) {
-                lastTop.current = scrollTop
-                return
-              }
-              // Reaching the bottom pins; only scrolling *up* unpins. Content
-              // growing under a still view fires a scroll event too, and treating
-              // that as leaving the bottom is what stopped the pane following a
-              // turn that was still rendering.
-              if (scrollHeight - scrollTop - clientHeight < 8)
-                pinned.current = true
-              else if (scrollTop < lastTop.current - 1) pinned.current = false
-              lastTop.current = scrollTop
-              places.set(chatId, { top: scrollTop, pinned: pinned.current })
-              measureOutline()
-            }}
-            className={cn(
-              "min-h-0 flex-1 overflow-y-auto",
-              empty ? "grid place-items-center px-6" : "px-4 py-4"
+            {finding && (
+              <ChatFind
+                key={chatId}
+                query={finding.query}
+                opened={finding.opened}
+                at={at}
+                total={hits.length}
+                // A new query starts at its first match rather than wherever the last
+                // one had walked to: `at` is an index into a list that has just been
+                // replaced.
+                onQuery={(query) => setFind({ ...finding, query, at: 0 })}
+                onStep={(by) => {
+                  if (hits.length === 0) return
+                  // Wrapped here rather than counted up, so `at` is always an index
+                  // into the list as it stands: `at + by` can go negative, which is
+                  // what the `+ hits.length` is for.
+                  setFind({
+                    ...finding,
+                    at: (at + by + hits.length) % hits.length,
+                  })
+                }}
+                onClose={() => setFind(null)}
+              />
             )}
-          >
-            {reading ? (
-              <div
-                ref={content}
-                className="transcript-gap mx-auto flex w-full max-w-2xl flex-col"
-              >
-                <ChatTranscriptSkeleton />
-              </div>
-            ) : empty ? (
-              // Where this chat is, which is what somebody with three checkouts of
-              // one project open needs before they ask for anything.
-              <div className="w-full max-w-md">
-                <ChatWelcome place={place} />
-              </div>
-            ) : (
-              <div
-                ref={content}
-                className="transcript-gap mx-auto flex w-full max-w-2xl flex-col"
-              >
-                <SubagentSteps value={steps}>
-                  {blocks.map((block, index) => (
-                    /*
-                     * A wrapper per block, for the one thing a block cannot carry
-                     * itself: where it is. The palette's search opens a chat *at* a
-                     * line, and both halves of landing on it — the scroll above and
-                     * the ring below — need a node to find and mark. Drawn for every
-                     * block rather than only the found one, so the transcript's
-                     * layout does not change under a reader when one is.
-                     *
-                     * The day divider sits between two blocks rather than inside
-                     * either, so neither block's position moves when one appears.
-                     */
-                    <Fragment key={block.id}>
-                      {index > 0 && (
-                        <DayDivider before={blocks[index - 1]!} after={block} />
-                      )}
-                      <div
-                        data-block={block.id}
-                        /*
-                         * A match is marked on the **words**, not on the block — see
-                         * `paintFind`, which paints them into the highlight registry.
-                         *
-                         * The ring is what is left of that for the one case the words
-                         * cannot answer: a **fold**. A turn's working is collapsed, so a
-                         * message the model wrote mid-turn has no text on screen to
-                         * paint — and a match that is counted, scrolled to and then
-                         * invisible is worse than one that was never counted. So a fold
-                         * holding a match says so, and says harder when it is the one
-                         * the arrows are on. An open fold gets both, which is the honest
-                         * answer for a container: the ring is where, the highlight is
-                         * what.
-                         */
-                        className={cn(
-                          "rounded-lg",
-                          arrivedSince(block, since) && "animate-rise",
-                          block.kind === "activity" &&
-                            foundBlocks.has(block.id) &&
-                            "ring-1 ring-ring/25 ring-offset-4 ring-offset-background",
-                          block.kind === "activity" &&
-                            block.id === currentBlock &&
-                            "ring-2 ring-ring/70"
-                        )}
-                      >
-                        {block.kind === "activity" ? (
-                          <ChatActivity
-                            of={block}
-                            live={working && index > liveFrom}
-                          />
-                        ) : (
-                          <ChatMessage
-                            of={block.line}
-                            queued={queued?.includes(block.line.id) === true}
-                            reply={
-                              block.line.role === "usage"
-                                ? replyOf(blocks, index)
-                                : null
-                            }
-                            edit={editOf(block.line.id)}
-                            found={hits.some(
-                              (hit) => hit.messageId === block.line.id
-                            )}
-                            stopped={
-                              block.line.id === stoppedLine
-                                ? stopped
-                                : undefined
-                            }
+
+            <div
+              ref={box}
+              onScroll={(event) => {
+                const { scrollTop, scrollHeight, clientHeight } =
+                  event.currentTarget
+                setAway(awayFromBottom(event.currentTarget))
+                if (restoring()) {
+                  lastTop.current = scrollTop
+                  return
+                }
+                // Reaching the bottom pins; only scrolling *up* unpins. Content
+                // growing under a still view fires a scroll event too, and treating
+                // that as leaving the bottom is what stopped the pane following a
+                // turn that was still rendering.
+                if (scrollHeight - scrollTop - clientHeight < 8)
+                  pinned.current = true
+                else if (scrollTop < lastTop.current - 1) pinned.current = false
+                lastTop.current = scrollTop
+                places.set(chatId, { top: scrollTop, pinned: pinned.current })
+                measureOutline()
+              }}
+              className={cn(
+                "min-h-0 flex-1 overflow-y-auto",
+                empty ? "grid place-items-center px-6" : "px-4 py-4"
+              )}
+            >
+              {reading ? (
+                <div
+                  ref={content}
+                  className="transcript-gap mx-auto flex w-full max-w-2xl flex-col"
+                >
+                  <ChatTranscriptSkeleton />
+                </div>
+              ) : empty ? (
+                // Where this chat is, which is what somebody with three checkouts of
+                // one project open needs before they ask for anything.
+                <div className="w-full max-w-md">
+                  <ChatWelcome place={place} />
+                </div>
+              ) : (
+                <div
+                  ref={content}
+                  className="transcript-gap mx-auto flex w-full max-w-2xl flex-col"
+                >
+                  <SubagentSteps value={steps}>
+                    {blocks.map((block, index) => (
+                      /*
+                       * A wrapper per block, for the one thing a block cannot carry
+                       * itself: where it is. The palette's search opens a chat *at* a
+                       * line, and both halves of landing on it — the scroll above and
+                       * the ring below — need a node to find and mark. Drawn for every
+                       * block rather than only the found one, so the transcript's
+                       * layout does not change under a reader when one is.
+                       *
+                       * The day divider sits between two blocks rather than inside
+                       * either, so neither block's position moves when one appears.
+                       */
+                      <Fragment key={block.id}>
+                        {index > 0 && (
+                          <DayDivider
+                            before={blocks[index - 1]!}
+                            after={block}
                           />
                         )}
-                      </div>
-                    </Fragment>
-                  ))}
-                </SubagentSteps>
-                {/* At the end of the transcript rather than over it: it is the turn
+                        <div
+                          data-block={block.id}
+                          /*
+                           * A match is marked on the **words**, not on the block — see
+                           * `paintFind`, which paints them into the highlight registry.
+                           *
+                           * The ring is what is left of that for the one case the words
+                           * cannot answer: a **fold**. A turn's working is collapsed, so a
+                           * message the model wrote mid-turn has no text on screen to
+                           * paint — and a match that is counted, scrolled to and then
+                           * invisible is worse than one that was never counted. So a fold
+                           * holding a match says so, and says harder when it is the one
+                           * the arrows are on. An open fold gets both, which is the honest
+                           * answer for a container: the ring is where, the highlight is
+                           * what.
+                           */
+                          className={cn(
+                            "rounded-lg",
+                            arrivedSince(block, since) && "animate-rise",
+                            block.kind === "activity" &&
+                              foundBlocks.has(block.id) &&
+                              "ring-1 ring-ring/25 ring-offset-4 ring-offset-background",
+                            block.kind === "activity" &&
+                              block.id === currentBlock &&
+                              "ring-2 ring-ring/70"
+                          )}
+                        >
+                          {block.kind === "activity" ? (
+                            <ChatActivity
+                              of={block}
+                              live={working && index > liveFrom}
+                            />
+                          ) : (
+                            <ChatMessage
+                              of={block.line}
+                              queued={queued?.includes(block.line.id) === true}
+                              reply={
+                                block.line.role === "usage"
+                                  ? replyOf(blocks, index)
+                                  : null
+                              }
+                              edit={editOf(block.line.id)}
+                              found={hits.some(
+                                (hit) => hit.messageId === block.line.id
+                              )}
+                              stopped={
+                                block.line.id === stoppedLine
+                                  ? stopped
+                                  : undefined
+                              }
+                            />
+                          )}
+                        </div>
+                      </Fragment>
+                    ))}
+                  </SubagentSteps>
+                  {/* At the end of the transcript rather than over it: it is the turn
                 asking, so it belongs where the turn had got to. */}
-                {ask && (
-                  <AskCard
-                    ask={ask}
-                    onAnswer={(given) => answer(chatId, given)}
-                  />
-                )}
-                {/*
+                  {ask && (
+                    <AskCard
+                      ask={ask}
+                      onAnswer={(given) => answer(chatId, given)}
+                    />
+                  )}
+                  {/*
               Compaction, which is a state and never a percentage.
 
               A clock and no more. One summarisation call has no fraction of
@@ -1066,27 +1075,27 @@ function Conversation({
               Above the turn's own spinner, since compaction happens to the
               conversation rather than as part of the answer.
             */}
-                {compacting && (
-                  <div className="flex items-center gap-2 px-1 text-[0.7rem] text-muted-foreground">
-                    <Archive className="size-3 shrink-0 animate-pulse" />
-                    <span>{t("transcript.pane.compacting")}</span>
-                    <Elapsed startedAt={compacting} />
-                  </div>
-                )}
-                {/* Kept until the next compaction starts: a failure that vanished
+                  {compacting && (
+                    <div className="flex items-center gap-2 px-1 text-[0.7rem] text-muted-foreground">
+                      <Archive className="size-3 shrink-0 animate-pulse" />
+                      <span>{t("transcript.pane.compacting")}</span>
+                      <Elapsed startedAt={compacting} />
+                    </div>
+                  )}
+                  {/* Kept until the next compaction starts: a failure that vanished
                 with the spinner would leave a window that never shrank and no
                 reason on screen for it. */}
-                {!compacting && compactError && (
-                  <div className="flex items-center gap-2 px-1 text-[0.7rem] text-destructive">
-                    <Archive className="size-3 shrink-0" />
-                    <span className="truncate">
-                      {t("transcript.pane.compactFailed", {
-                        error: compactError,
-                      })}
-                    </span>
-                  </div>
-                )}
-                {/* Not while a question is up — the turn is held, not working, and
+                  {!compacting && compactError && (
+                    <div className="flex items-center gap-2 px-1 text-[0.7rem] text-destructive">
+                      <Archive className="size-3 shrink-0" />
+                      <span className="truncate">
+                        {t("transcript.pane.compactFailed", {
+                          error: compactError,
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {/* Not while a question is up — the turn is held, not working, and
                 a spinner under the card would say otherwise.
 
                 A running subagent counts as working even when the chat does
@@ -1095,120 +1104,121 @@ function Conversation({
                 to report its state that is all `sending` has to go on. The
                 agents are what is still out there, so they draw their own
                 spinner. */}
-                {(sending || (agents ?? []).length > 0) && !ask && (
-                  <ChatSkeleton startedAt={startedAt} live={live} />
-                )}
-              </div>
-            )}
-          </div>
-          {/* Back to the newest turn, for somebody who scrolled up to read.
+                  {(sending || (agents ?? []).length > 0) && !ask && (
+                    <ChatSkeleton startedAt={startedAt} live={live} />
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Back to the newest turn, for somebody who scrolled up to read.
               Clicking it pins the view again, so a running turn is followed
               from there on. */}
-          {away && !empty && !reading && (
-            <IconButton
-              label={t("transcript.pane.toBottom")}
-              variant="outline"
-              onClick={toBottom}
-              className="absolute bottom-3 left-1/2 z-10 size-8 -translate-x-1/2 animate-pop rounded-full bg-background shadow-md"
-            >
-              <ArrowDown className="size-4" />
-            </IconButton>
+            {away && !empty && !reading && (
+              <IconButton
+                label={t("transcript.pane.toBottom")}
+                variant="outline"
+                onClick={toBottom}
+                className="absolute bottom-3 left-1/2 z-10 size-8 -translate-x-1/2 animate-pop rounded-full bg-background shadow-md"
+              >
+                <ArrowDown className="size-4" />
+              </IconButton>
+            )}
+          </div>
+          {/* Beside the selection, wherever in the transcript it is — fixed, so
+            it does not matter that it is mounted outside the scroll. */}
+          {!empty && !reading && (
+            <ReplyToSelection
+              within={content}
+              onReply={(text) => {
+                composer.current?.insertText(quoteOf(text))
+                composer.current?.focus()
+              }}
+            />
+          )}
+          {outlineOpen && !empty && !reading && (
+            <ChatOutline
+              entries={outline}
+              current={outlineAt}
+              onPick={goToEntry}
+              onClose={toggleOutline}
+            />
+          )}
+          {side === "media" && !empty && !reading && (
+            <ChatMediaColumn
+              media={media}
+              onPick={(lineId) => {
+                const block = blockOf(blocks, lineId)
+                if (block) goToEntry(block)
+              }}
+              onClose={() => toggleSide("media")}
+            />
           )}
         </div>
-        {/* Beside the selection, wherever in the transcript it is — fixed, so
-            it does not matter that it is mounted outside the scroll. */}
-        {!empty && !reading && (
-          <ReplyToSelection
-            within={content}
-            onReply={(text) => {
-              composer.current?.insertText(quoteOf(text))
-              composer.current?.focus()
-            }}
-          />
-        )}
-        {outlineOpen && !empty && !reading && (
-          <ChatOutline
-            entries={outline}
-            current={outlineAt}
-            onPick={goToEntry}
-            onClose={toggleOutline}
-          />
-        )}
-        {side === "media" && !empty && !reading && (
-          <ChatMediaColumn
-            media={media}
-            onPick={(lineId) => {
-              const block = blockOf(blocks, lineId)
-              if (block) goToEntry(block)
-            }}
-            onClose={() => toggleSide("media")}
-          />
-        )}
-      </div>
 
-      <div className="shrink-0 border-t p-3">
-        <div className="mx-auto w-full max-w-2xl space-y-1.5">
-          <ChatComposer
-            // One field per chat: its draft is that chat's, and a field kept
-            // across a switch is one draft shared by every conversation.
-            key={chatId}
-            ref={composer}
-            initialDraft={seeded ?? ""}
-            initialImages={seededImages}
-            // The field on its way out — switching chats, or this panel being
-            // taken down — hands back what was in it, and that is what makes
-            // coming back to a chat find the sentence you left in it.
-            onLeave={(text, images) => keepDraft(chatId, text, images)}
-            sending={sending}
-            onSend={(text, images) => {
-              // Before the send, so the draft cannot outlive the message: the
-              // field empties itself, and this is what stops a rebuild of it
-              // putting the sent text back.
-              clearDraft(chatId)
-              void send(chatId, text, images)
-            }}
-            onStop={() => stop(chatId)}
-            placeholder={
-              ask
-                ? t("transcript.pane.placeholderAsk")
-                : sending
-                  ? // Said rather than left to be discovered: the field is live
-                    // while a turn runs, and somebody who last used this app a
-                    // version ago has every reason to think it is not.
-                    t("transcript.pane.placeholderQueued")
-                  : placeholderFor(
-                      t,
-                      options.permission,
-                      t("transcript.pane.thisProject")
-                    )
-            }
-            options={options}
-            onOptions={(next) => setOptions(chatId, next)}
-            attachRoot={root}
-            // The id rather than the path, because main resolves it: a command
-            // set is per directory, and which directory a project is in is the
-            // store's to say — see `agentCommands`.
-            folderId={place?.folderId ?? null}
-            contextWindow={contextWindow}
-            answering={answering}
-          />
+        <div className="shrink-0 border-t p-3">
+          <div className="mx-auto w-full max-w-2xl space-y-1.5">
+            <ChatComposer
+              // One field per chat: its draft is that chat's, and a field kept
+              // across a switch is one draft shared by every conversation.
+              key={chatId}
+              ref={composer}
+              initialDraft={seeded ?? ""}
+              initialImages={seededImages}
+              // The field on its way out — switching chats, or this panel being
+              // taken down — hands back what was in it, and that is what makes
+              // coming back to a chat find the sentence you left in it.
+              onLeave={(text, images) => keepDraft(chatId, text, images)}
+              sending={sending}
+              onSend={(text, images) => {
+                // Before the send, so the draft cannot outlive the message: the
+                // field empties itself, and this is what stops a rebuild of it
+                // putting the sent text back.
+                clearDraft(chatId)
+                void send(chatId, text, images)
+              }}
+              onStop={() => stop(chatId)}
+              placeholder={
+                ask
+                  ? t("transcript.pane.placeholderAsk")
+                  : sending
+                    ? // Said rather than left to be discovered: the field is live
+                      // while a turn runs, and somebody who last used this app a
+                      // version ago has every reason to think it is not.
+                      t("transcript.pane.placeholderQueued")
+                    : placeholderFor(
+                        t,
+                        options.permission,
+                        t("transcript.pane.thisProject")
+                      )
+              }
+              options={options}
+              onOptions={(next) => setOptions(chatId, next)}
+              attachRoot={root}
+              // The id rather than the path, because main resolves it: a command
+              // set is per directory, and which directory a project is in is the
+              // store's to say — see `agentCommands`.
+              folderId={place?.folderId ?? null}
+              contextWindow={contextWindow}
+              answering={answering}
+            />
 
-          {/* Under the composer rather than at the end of the transcript: the
+            {/* Under the composer rather than at the end of the transcript: the
               per-turn lines are up there, and what belongs here is the one
               number somebody compares against `/cost` in a terminal — this
               chat, so far. */}
-          {line && (
-            <div className="flex justify-end px-1 text-[0.7rem]">
-              <p
-                title={detail}
-                className="shrink-0 text-muted-foreground/80 tabular-nums"
-              >
-                {line}
-              </p>
-            </div>
-          )}
+            {line && (
+              <div className="flex justify-end px-1 text-[0.7rem]">
+                <p
+                  title={detail}
+                  className="shrink-0 text-muted-foreground/80 tabular-nums"
+                >
+                  {line}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </ChatFolderContext.Provider>
   )
 }

@@ -2097,6 +2097,23 @@ export type SystemUsage = {
 }
 
 /**
+ * A TCP port something on this machine is listening on, and what holds it —
+ * the system bar's `Ports` (`main/ports.ts`).
+ */
+export type ListeningPort = {
+  port: number
+  /** The address bound: `127.0.0.1`, `::1`, `*` for every interface. */
+  address: string
+  pid: number
+  /** The process's short name — `node`, `postgres`. */
+  command: string
+  /** Its whole command line, when it could be read: which `node` it is. */
+  args?: string
+  /** This app itself, which is never offered a Stop. */
+  self: boolean
+}
+
+/**
  * What `window.desktop` exposes. Every *method* is asynchronous because each
  * one crosses the IPC boundary; the handful of plain values are constants
  * captured in the preload.
@@ -2161,6 +2178,12 @@ export type DesktopApi = {
 
   /** Opens a folder picker and resolves with the chosen path, or null. */
   pickDirectory: () => Promise<string | null>
+  /**
+   * Asks for a new folder's name and place in the system's save panel and
+   * makes it, empty. Resolves with its path, or null when cancelled; throws
+   * when something is already there. Adding it is the caller's `addFolder`.
+   */
+  createProjectDirectory: () => Promise<string | null>
 
   /**
    * Files, chosen in the OS picker and handed back as absolute paths.
@@ -2925,6 +2948,14 @@ export type DesktopApi = {
    */
   systemUsage: () => Promise<SystemUsage>
 
+  /** The TCP ports being listened on, by any process this user can see. */
+  listPorts: () => Promise<ListeningPort[]>
+  /**
+   * Stops the process holding a port — SIGTERM, or SIGKILL with `force`.
+   * Refused unless `pid` is listening when asked, and for this app itself.
+   */
+  stopPortProcess: (pid: number, force: boolean) => Promise<void>
+
   /**
    * Whether a newer release exists — asked of the GitHub releases API and
    * answered against this build's own version.
@@ -3068,6 +3099,7 @@ export const IPC = {
   removeFolder: "workspace:remove-folder",
   reorderFolders: "workspace:reorder-folders",
   pickDirectory: "workspace:pick-directory",
+  createProjectDirectory: "workspace:create-directory",
   pickFiles: "workspace:pick-files",
   clipboardImagePath: "files:clipboard-image-path",
   menuCommand: "menu:command",
@@ -3174,6 +3206,8 @@ export const IPC = {
   terminalData: "terminal:data",
   terminalExit: "terminal:exit",
   systemUsage: "system:usage",
+  listPorts: "ports:list",
+  stopPortProcess: "ports:stop",
   checkForUpdate: "update:check",
   installUpdate: "update:install",
   updateProgress: "update:progress",

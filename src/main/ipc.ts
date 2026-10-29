@@ -99,6 +99,7 @@ import { draftCommitMessage } from "./one-turn-agent"
 import type { Host } from "./host"
 import { expandHome, quote, spawnEnvironment } from "./shell-env"
 import { systemUsage } from "./system-usage"
+import { listeningPorts, stopListener } from "./ports"
 import { startTelemetry, type Telemetry } from "./telemetry"
 import { PLUGIN_DATA_DIR, PLUGINS_DIR, Store, WORKSPACE_DIR } from "./store"
 import { installedShells } from "./shells"
@@ -835,6 +836,34 @@ export function createIpc(host: Host): {
   handle(IPC.getWorkspace, () => store.getWorkspace())
 
   handle(IPC.pickDirectory, () => host.pickDirectory())
+
+  /*
+   * `New directory…` in Add a folder. Outside every root, like a chat's
+   * export, and for the same reason it may be: a system panel named the
+   * place. Gated before the panel, so a Free workspace that cannot add it is
+   * not left an empty folder; `recursive` off, so a name already taken is a
+   * refusal rather than somebody's folder added as if it were new.
+   */
+  handle(IPC.createProjectDirectory, async () => {
+    const { folders } = await store.getWorkspace()
+    if (!canAddProject(await proStatus(store), folders)) {
+      throw new Error("More than one project is part of Vey Pro.")
+    }
+    const target = await host.pickNewDirectory({
+      title: "New directory",
+      buttonLabel: "Create",
+    })
+    if (!target) return null
+    try {
+      await mkdir(target)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new Error(`${path.basename(target)} already exists there.`)
+      }
+      throw error
+    }
+    return target
+  })
 
   handle(IPC.pickFiles, (_event, directory?: string) =>
     host.pickFiles({
@@ -1650,6 +1679,11 @@ export function createIpc(host: Host): {
   })
 
   handle(IPC.systemUsage, () => systemUsage(host.appShare))
+
+  handle(IPC.listPorts, () => listeningPorts())
+  handle(IPC.stopPortProcess, (_event, pid: number, force: boolean) =>
+    stopListener(pid, force === true)
+  )
 
   handle(IPC.checkForUpdate, () =>
     checkForUpdate(host.version, process.platform)

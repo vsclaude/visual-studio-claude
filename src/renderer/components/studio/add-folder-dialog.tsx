@@ -1,5 +1,5 @@
-import { useId, useState } from "react"
-import { AlertCircle, Folder, FolderPlus, FolderX } from "lucide-react"
+import { useState, type ReactNode } from "react"
+import { AlertCircle, FolderOpen, FolderPlus, FolderX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,8 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 
 import * as repo from "@/lib/workspace"
@@ -18,7 +16,7 @@ import { useStudio } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { useT } from "@/lib/i18n"
 
-/** The directory's own name, as a starting point for the folder's name. */
+/** The directory's own name, which is what the project is called. */
 function basename(target: string): string {
   return (
     target
@@ -43,55 +41,40 @@ function draggedKind(transfer: DataTransfer): "folder" | "file" {
 }
 
 /**
- * Points the workspace at a folder that already exists on this machine.
+ * Adds a project: a folder already on this machine, or a new empty one.
  *
- * The folder is worked on where it is, not copied: edits made to it elsewhere
- * are edits to the same repository, and their git sees them. That is stated in
- * the dialog because it is the one thing about this that could surprise
- * someone.
+ * Two choices and nothing to fill in. Each goes straight to the system's own
+ * panel and adds what comes back, named after its directory — a name is
+ * changed afterwards from the project's menu, which is where it is changed
+ * for every other project too. The path and name fields this had were a
+ * second, typed way to say what the panel already says.
  *
- * A failure — a path that is not there, a folder already added — is shown here
- * and leaves the dialog open, since the field holding the bad value is the only
- * place it can be corrected.
+ * The folder is worked on where it is, not copied: that is stated because it
+ * is the one thing about this that could surprise someone.
  *
- * The folder is picked from a drop zone — clicked for the system's picker, or
- * a folder dragged in from Finder — and once picked, it is drawn as the folder
- * it is rather than as a path in a field. The field is still there under it,
- * for a path somebody would rather type.
+ * A failure — a folder already added, a name already taken — is shown here and
+ * leaves the dialog open, so the other choice is still one click away.
  */
 export function AddFolderDialog({ onClose }: { onClose: () => void }) {
   const addFolder = useStudio((state) => state.addFolder)
   const t = useT()
 
-  const nameId = useId()
-  const pathId = useId()
-
-  const [path, setPath] = useState("")
-  const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
-  /** What is being dragged over the drop zone, as far as can be told. */
+  const [busy, setBusy] = useState<"browse" | "create" | null>(null)
+  /** What is being dragged over Browse, as far as can be told. */
   const [dragging, setDragging] = useState<"folder" | "file" | null>(null)
 
-  function choose(chosen: string) {
-    setPath(chosen)
-    setName((current) => current || basename(chosen))
-    setError(null)
-  }
-
-  async function browse() {
-    const chosen = await repo.pickDirectory()
-    if (chosen) choose(chosen)
-  }
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!path || adding) return
-
-    setAdding(true)
+  async function add(
+    kind: "browse" | "create",
+    pick: () => Promise<string | null>
+  ) {
+    if (busy) return
+    setBusy(kind)
     setError(null)
     try {
-      await addFolder({ path, name: name.trim() || basename(path) })
+      const chosen = await pick()
+      if (!chosen) return
+      await addFolder({ path: chosen, name: basename(chosen) })
       onClose()
     } catch (failure) {
       const message =
@@ -105,7 +88,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
         )
       )
     } finally {
-      setAdding(false)
+      setBusy(null)
     }
   }
 
@@ -116,28 +99,40 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
         if (!next) onClose()
       }}
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="flex-row items-center gap-3.5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl border bg-gradient-to-b from-card to-muted text-primary shadow-sm ring-1 ring-primary/10">
-            <FolderPlus className="size-5" />
-          </span>
-          <div className="min-w-0 space-y-0.5">
-            <DialogTitle>{t("nav.addFolder.title")}</DialogTitle>
-            <DialogDescription>
-              {t("nav.addFolder.description")}
-            </DialogDescription>
-          </div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("nav.addFolder.title")}</DialogTitle>
+          <DialogDescription>
+            {t("nav.addFolder.description")}
+          </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={(event) => void submit(event)}
-          className="min-w-0 space-y-5"
-        >
+        <div className="grid gap-2">
           {/* A folder dragged in from Finder has a real path, and
               `getPathForFile` gives it — a directory as much as a file. */}
-          <button
-            type="button"
-            onClick={() => void browse()}
+          <Choice
+            icon={
+              dragging === "file" ? (
+                <FolderX className="size-4.5" />
+              ) : (
+                <FolderOpen className="size-4.5" />
+              )
+            }
+            label={
+              dragging === "folder"
+                ? t("nav.addFolder.dropToAdd")
+                : dragging === "file"
+                  ? t("nav.addFolder.onlyFolders")
+                  : t("nav.addFolder.browse")
+            }
+            hint={
+              dragging === "file"
+                ? t("nav.addFolder.dragParent")
+                : t("nav.addFolder.browseHint")
+            }
+            busy={busy === "browse"}
+            disabled={busy !== null}
+            onClick={() => void add("browse", repo.pickDirectory)}
             onDragOver={(event) => {
               event.preventDefault()
               const kind = draggedKind(event.dataTransfer)
@@ -151,8 +146,7 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
               event.preventDefault()
               setDragging(null)
               // Asked again here, where it can be answered for certain: a
-              // file with no MIME type passes `draggedKind`, and would
-              // otherwise be drawn as the folder chosen and only fail on Add.
+              // file with no MIME type passes `draggedKind`.
               const entry = event.dataTransfer.items[0]?.webkitGetAsEntry()
               if (entry && !entry.isDirectory) {
                 setError(t("nav.addFolder.onlyFoldersError"))
@@ -160,136 +154,77 @@ export function AddFolderDialog({ onClose }: { onClose: () => void }) {
               }
               const file = event.dataTransfer.files[0]
               const dropped = file ? window.desktop.getPathForFile(file) : ""
-              if (dropped) choose(dropped)
+              if (dropped) void add("browse", async () => dropped)
             }}
             className={cn(
-              "group relative flex w-full min-w-0 items-center gap-4 rounded-xl border p-4 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              path
-                ? "bg-muted/40 hover:bg-muted/60"
-                : "justify-center border-dashed py-8 hover:border-primary/50 hover:bg-primary/5",
               dragging === "folder" && "border-primary bg-primary/10",
               dragging === "file" &&
-                "cursor-not-allowed border-destructive/60 bg-destructive/5"
+                "cursor-not-allowed border-destructive/60 bg-destructive/5 text-destructive"
             )}
-          >
-            {path ? (
-              <>
-                <span className="grid size-10 shrink-0 animate-pop place-items-center rounded-lg bg-primary/10 text-primary">
-                  <Folder className="size-5 fill-current/20" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block truncate text-sm font-medium"
-                    title={path}
-                  >
-                    {basename(path)}
-                  </span>
-                  <span className="block truncate font-mono text-[0.7rem] text-muted-foreground">
-                    {path}
-                  </span>
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground transition-colors group-hover:text-foreground">
-                  {t("nav.addFolder.change")}
-                </span>
-              </>
-            ) : (
-              <span className="flex flex-col items-center gap-2 text-center">
-                <span
-                  className={cn(
-                    "grid size-11 place-items-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary",
-                    dragging === "folder" && "bg-primary/15 text-primary",
-                    dragging === "file" &&
-                      "bg-destructive/10 text-destructive group-hover:bg-destructive/10 group-hover:text-destructive"
-                  )}
-                >
-                  {dragging === "file" ? (
-                    <FolderX className="size-5" />
-                  ) : (
-                    <FolderPlus className="size-5" />
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "text-sm font-medium",
-                    dragging === "file" && "text-destructive"
-                  )}
-                >
-                  {dragging === "folder"
-                    ? t("nav.addFolder.dropToAdd")
-                    : dragging === "file"
-                      ? t("nav.addFolder.onlyFolders")
-                      : t("nav.addFolder.choose")}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {dragging === "file"
-                    ? t("nav.addFolder.dragParent")
-                    : t("nav.addFolder.orDrag")}
-                </span>
-              </span>
-            )}
-          </button>
+          />
+          <Choice
+            icon={<FolderPlus className="size-4.5" />}
+            label={t("nav.addFolder.newDirectory")}
+            hint={t("nav.addFolder.newDirectoryHint")}
+            busy={busy === "create"}
+            disabled={busy !== null}
+            onClick={() => void add("create", repo.createProjectDirectory)}
+          />
+        </div>
 
-          <div className="grid gap-4">
-            <div>
-              <Label
-                htmlFor={pathId}
-                className="text-xs font-medium text-muted-foreground"
-              >
-                {t("nav.addFolder.path")}
-              </Label>
-              <Input
-                id={pathId}
-                value={path}
-                onChange={(event) => {
-                  const next = event.target.value
-                  setPath(next)
-                  setName((current) => current || basename(next))
-                }}
-                placeholder="~/code/my-app"
-                spellCheck={false}
-                className="mt-1.5 font-mono text-xs"
-              />
-            </div>
-            <div>
-              <Label
-                htmlFor={nameId}
-                className="text-xs font-medium text-muted-foreground"
-              >
-                {t("nav.addFolder.name")}
-              </Label>
-              <Input
-                id={nameId}
-                value={name}
-                placeholder={path ? basename(path) : "my-app"}
-                onChange={(event) => setName(event.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-          </div>
+        {error && (
+          <p className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <AlertCircle className="mt-px size-3.5 shrink-0" />
+            {error}
+          </p>
+        )}
 
-          {error && (
-            <p className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              <AlertCircle className="mt-px size-3.5 shrink-0" />
-              {error}
-            </p>
-          )}
-
-          <DialogFooter className="items-center sm:justify-between">
-            <p className="text-[0.7rem] text-muted-foreground">
-              {t("nav.addFolder.removeNote")}
-            </p>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" disabled={!path || adding}>
-                {adding && <Spinner />}
-                {t("nav.addFolder.add")}
-              </Button>
-            </div>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="items-center sm:justify-between">
+          <p className="text-[0.7rem] text-muted-foreground">
+            {t("nav.addFolder.removeNote")}
+          </p>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** One of the two ways in: an icon, what it does, and a line on what it is. */
+function Choice({
+  icon,
+  label,
+  hint,
+  busy,
+  className,
+  ...button
+}: {
+  icon: ReactNode
+  label: string
+  hint: string
+  busy: boolean
+  className?: string
+} & Omit<React.ComponentProps<"button">, "children">) {
+  return (
+    <button
+      type="button"
+      {...button}
+      className={cn(
+        "group flex w-full min-w-0 items-center gap-3 rounded-lg border p-3 text-left transition-colors outline-none hover:border-primary/40 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60",
+        className
+      )}
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+        {busy ? <Spinner /> : icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {hint}
+        </span>
+      </span>
+    </button>
   )
 }

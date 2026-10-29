@@ -382,6 +382,11 @@ export function AccountsFooter() {
             )}
           />
           {t("projects.accounts.heading")}
+          {/* There when the foot is folded too — which is when the rows
+              cannot say it. */}
+          {accounts.length > 0 && (
+            <span className="tabular-nums opacity-70">({accounts.length})</span>
+          )}
         </button>
         <IconButton
           label={t("projects.accounts.add")}

@@ -28,6 +28,10 @@ export const files = {
     git: "Git",
     changes: "Changes",
     commits: "Commits",
+    showHidden: "Show hidden files",
+    hideHidden: "Hide hidden files",
+    showAllChanges: "Show every changed file in one view",
+    showOneChange: "Show one changed file at a time",
     noFolders: "No folders yet",
     noFoldersDescription: "Point the workspace at a directory on this machine.",
     addFolder: "Add folder…",
@@ -99,6 +103,18 @@ export const files = {
     discardManyDescription:
       "Every changed file in this folder goes back to the last commit — the staged copies and the edits on disk both. Files that were never committed are moved to the trash instead, since there is nothing to go back to.",
     discard: "Discard",
+  },
+  changesStack: {
+    files: "{count} files changed",
+    files_one: "1 file changed",
+    expandAll: "Expand all",
+    collapseAll: "Collapse all",
+    oneFile: "One file at a time",
+    open: "Open this file on its own",
+    image: "A picture — open it on its own to compare the two.",
+    binary: "A binary file — there are no lines to compare.",
+    tooLarge: "Too large to show here — open it on its own.",
+    unreadable: "Could not be read.",
   },
   changesPane: {
     goneTitle: "That project has gone",
@@ -236,5 +252,13 @@ export const files = {
     deleted: "Deleted.",
     fullScreen: "Full screen",
     exitFullScreen: "Exit full screen",
+  },
+  unsaved: {
+    title: "Do you want to save the changes you made to “{name}”?",
+    titleMany: "Do you want to save the changes to {count} files?",
+    description: "Your changes will be lost if you don’t save them.",
+    save: "Save",
+    saveMany: "Save all",
+    discard: "Don’t Save",
   },
 }

@@ -9,8 +9,10 @@ import { markdownToHTML } from "@blocknote/core"
 
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { revealAt } from "@/lib/files/typescript"
 import { useFiles } from "@/lib/files/store"
 import { highlightCodeBlocks } from "@/lib/markdown/highlight"
+import { linkCodeFiles } from "@/lib/markdown/file-links"
 import { headingSlug, linkOf } from "@/lib/markdown/links"
 import { sanitizeHtml } from "@/lib/markdown/sanitize"
 import { markdownRenderer } from "@/lib/markdown/renderer"
@@ -59,6 +61,7 @@ export function MarkdownView({
   baseDir,
   copyButtons = rawHtml,
   viewTables = false,
+  fileBase,
 }: {
   source: string
   className?: string
@@ -81,6 +84,12 @@ export function MarkdownView({
    * Absent for a chat message, which has no directory for one to sit next to.
    */
   baseDir?: string
+  /**
+   * The directory a file named in an inline code span is read from, when such
+   * a span should be a link to it — `ipc.ts:227` in a chat reply, read against
+   * the chat's folder. Absent, a code span is left as code.
+   */
+  fileBase?: string
 }) {
   const host = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
@@ -125,6 +134,7 @@ export function MarkdownView({
         if (baseDir) resolveLocalImages(node, baseDir)
         if (copyButtons) addCopyButtons(node)
         if (viewTables) addTableViews(node)
+        if (fileBase) void linkCodeFiles(node, fileBase, () => alive)
         // A frame later, once the parser is in: the text is on screen plain
         // first and coloured when the grammar arrives, the way a file tab is.
         void highlightCodeBlocks(node, () => alive)
@@ -138,7 +148,7 @@ export function MarkdownView({
     return () => {
       alive = false
     }
-  }, [source, rawHtml, baseDir, copyButtons, viewTables])
+  }, [source, rawHtml, baseDir, copyButtons, viewTables, fileBase])
 
   if (failed)
     return (
@@ -158,9 +168,10 @@ export function MarkdownView({
             setViewing(table.cloneNode(true) as HTMLTableElement)
             return
           }
+          if (openFileLink(event)) return
           followLink(event, baseDir)
         }}
-        className={cn("markdown-prose text-sm", className)}
+        className={cn("markdown-prose", className)}
       />
       {viewing && (
         <TableDialog table={viewing} onClose={() => setViewing(null)} />
@@ -238,6 +249,18 @@ function addTableViews(host: HTMLElement): void {
     button.innerHTML = iconSvg(MAXIMIZE_ICON)
     frame.append(table, button)
   }
+}
+
+/** A click on a file's link in a reply, opened at its line; true when it was one. */
+function openFileLink(event: MouseEvent<HTMLDivElement>): boolean {
+  if (!(event.target instanceof Element)) return false
+  const link = event.target.closest<HTMLAnchorElement>("a.markdown-file-link")
+  if (!link || !event.currentTarget.contains(link)) return false
+  event.preventDefault()
+  const { filePath, fileLine, fileColumn } = link.dataset
+  if (filePath)
+    revealAt(filePath, Number(fileLine ?? 1), Number(fileColumn ?? 1))
+  return true
 }
 
 /** The table behind a click on a View button, or null for any other click. */

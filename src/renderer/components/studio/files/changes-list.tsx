@@ -128,7 +128,9 @@ export function ChangesList({ root }: { root: FileRoot }) {
         nodes={changeTree(rows, root.path)}
         pile={pile}
         root={root}
-        indent={0}
+        // One level in, so a pile's rows sit under its `Changes` / `Staged`
+        // heading rather than level with the heading's own chevron.
+        indent={1}
         shut={shut}
         onFold={(key) =>
           setShut((state) =>

@@ -170,6 +170,24 @@ export function registerIpc(
       return result.canceled ? null : (result.filePaths[0] ?? null)
     },
 
+    async pickNewDirectory({ title, buttonLabel }) {
+      // A save panel rather than the open panel's `New Folder`, which leaves
+      // the folder made and still has to be picked: here the name is typed
+      // once and the folder is made by whoever asked.
+      const window = BrowserWindow.getFocusedWindow()
+      const options = {
+        title,
+        buttonLabel,
+        nameFieldLabel: "Name:",
+        defaultPath: app.getPath("home"),
+        properties: ["createDirectory" as const],
+      }
+      const result = await (window
+        ? dialog.showSaveDialog(window, options)
+        : dialog.showSaveDialog(options))
+      return result.canceled || !result.filePath ? null : result.filePath
+    },
+
     async pickFiles({ title, directory, single, filters }) {
       const result = await showOpenDialog({
         title,

@@ -17,6 +17,13 @@ export type Host = {
     title: string
     buttonLabel: string
   }) => Promise<string | null>
+  /** A native save panel asking for a folder that does not exist yet: where
+   * it goes and what it is called. The path, not created; null when
+   * cancelled. */
+  pickNewDirectory: (options: {
+    title: string
+    buttonLabel: string
+  }) => Promise<string | null>
   /** A native file picker. Empty when cancelled. */
   pickFiles: (options: {
     title: string

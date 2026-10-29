@@ -73,6 +73,15 @@ import { LimitWayOutCard } from "./chat-limit"
  * and the outcome is a column. A single line of
  * `Read /Users/…/worktrees/<uuid>/…/x.tsx` defeats all three.
  */
+/**
+ * The folder a chat runs in — the directory a file named in a reply is read
+ * from. Provided by the pane rather than passed down, since a reply is drawn
+ * from several places (the transcript, a fold, a subagent's steps). Null for a
+ * chat whose folder has left the workspace; a path then resolves against `/`,
+ * so only an absolute one can be a link.
+ */
+export const ChatFolderContext = createContext<string | null>(null)
+
 export function ChatMessage({
   of,
   queued = false,
@@ -185,7 +194,14 @@ function UserMessage({
        matches on — see `find-marks.ts`. On the two roles that are *speech*,
        which are the two the find searches, and at every depth: a message
        inside an open fold is drawn by this same component. */
-    <div data-line={of.id} className="group ml-4">
+    // `-mb-2`: the actions row under the bubble is a row tall even while it is
+    // hidden, so the transcript's gap on top of it left the reply sitting a
+    // gap and a row away from the question it answers.
+    //
+    // On the right and as wide as what was said, up to most of the column: a
+    // one-line question drawn the full width of the transcript read as a
+    // banner, not as one side of a conversation.
+    <div data-line={of.id} className="group -mb-2 ml-auto w-fit max-w-[85%]">
       <div className="rounded-lg rounded-br-sm bg-accent/60 px-2.5 py-1.5 text-chat">
         {/* A mask rather than a gradient laid over the text: the bubble's colour
             is translucent, so nothing painted on top would match it. */}
@@ -279,6 +295,7 @@ function OtherMessage({
   stopped?: Chat
 }) {
   const t = useT()
+  const folder = useContext(ChatFolderContext)
   if (of.role === "ask") {
     // A row like a tool call rather than a bubble, and for the same reason: it
     // is a note about the turn rather than either side speaking. A refusal is
@@ -378,6 +395,7 @@ function OtherMessage({
         className="px-1 text-chat"
         copyButtons
         viewTables
+        fileBase={folder ?? "/"}
       />
     </div>
   )

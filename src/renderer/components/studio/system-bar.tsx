@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import {
   Cpu,
+  EthernetPort,
   FileDiff,
   GitBranch,
   MemoryStick,
@@ -25,6 +26,7 @@ import { useUpdateWatch } from "@/lib/updates"
 import { useT, type Translate } from "@/lib/i18n"
 import { VsGlyph } from "./vs-glyph"
 import { UpdatePill } from "./update-pill"
+import { PortsDialog } from "./ports-dialog"
 
 /**
  * What the machine has left, along the bottom of the window.
@@ -51,6 +53,7 @@ export function SystemBar() {
   // thing that keeps the check running.
   useUpdateWatch()
   const t = useT()
+  const [ports, setPorts] = useState(false)
 
   return (
     // No edge or fill of its own: it sits on the canvas under the cards, which
@@ -90,6 +93,18 @@ export function SystemBar() {
           <FacebookIcon className="size-3 shrink-0 transition-transform group-hover:scale-110" />
           {t("nav.systemBar.community")}
         </a>
+        {/* A tool rather than a way out, but wanted as rarely and at the
+            same moment — when something says a port is already in use. */}
+        <button
+          type="button"
+          className={cn(ACTION, "group font-medium text-foreground/80")}
+          title={t("nav.systemBar.portsTitle")}
+          onClick={() => setPorts(true)}
+        >
+          <EthernetPort className="size-3 shrink-0 text-sky-500 transition-transform group-hover:scale-110" />
+          {t("nav.systemBar.ports")}
+        </button>
+        {ports && <PortsDialog onClose={() => setPorts(false)} />}
         {usage && <Divider />}
         <span className="flex items-center pr-1">
           <UpdatePill />

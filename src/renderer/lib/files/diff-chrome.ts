@@ -375,11 +375,13 @@ function rangeOf(first: number, count: number) {
  * this file is not a component, so a React icon would mean rendering one per
  * gutter cell.
  *
- * Filled triangles, sized for a control rather than a glyph. They were stroked
- * chevrons at 12px for one revision, which resolved into a diamond with something
- * inside it, and a control the reader has to squint at is not one. `fromAbove`
- * points into the run from the hunk above, `fromBelow` out of the run to the hunk
- * below, and `all` is both.
+ * GitHub's own three for this control — octicons' `fold-up`, `fold-down` and
+ * `unfold`: a chevron and the bar it opens from, stroked, on one centre line.
+ * They were filled triangles before, which sat at two heights beside each
+ * other and read as a pair of play buttons; and stroked chevrons alone before
+ * that, which at 12px resolved into a diamond. The bar is what says "lines
+ * hidden here". `fromAbove` points into the run from the hunk above,
+ * `fromBelow` out of it to the hunk below, and `all` is both.
  */
 function arrowIcon(dir: RevealDir): SVGElement {
   const ns = "http://www.w3.org/2000/svg"
@@ -392,12 +394,16 @@ function arrowIcon(dir: RevealDir): SVGElement {
   const path = document.createElementNS(ns, "path")
   const shape =
     dir === "fromAbove"
-      ? "M8 3 13 10H3Z"
+      ? "M3 4h10M4.75 11.25 8 8l3.25 3.25"
       : dir === "fromBelow"
-        ? "M8 13 3 6h10Z"
-        : "M8 2 12.5 7H3.5Z M8 14 3.5 9h9Z"
+        ? "M3 12h10M4.75 4.75 8 8l3.25-3.25"
+        : "M3 8h10M5.25 4.5 8 1.75l2.75 2.75M5.25 11.5 8 14.25l2.75-2.75"
   path.setAttribute("d", shape)
-  path.setAttribute("fill", "currentColor")
+  path.setAttribute("fill", "none")
+  path.setAttribute("stroke", "currentColor")
+  path.setAttribute("stroke-width", "1.5")
+  path.setAttribute("stroke-linecap", "round")
+  path.setAttribute("stroke-linejoin", "round")
 
   svg.append(path)
   return svg
@@ -824,14 +830,12 @@ export function githubDiffTheme(isDark: boolean): Extension {
         bg: "#212934",
         edge: "#253956",
         fg: "#8b949e",
-        icon: "#58a6ff",
         iconHover: "#79c0ff",
       }
     : {
         bg: "#f6f8fa",
         edge: "#d1d9e0",
         fg: "#59636e",
-        icon: "#0969da",
         iconHover: "#0550ae",
       }
 
@@ -1054,10 +1058,12 @@ export function githubDiffTheme(isDark: boolean): Extension {
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: "16px",
+        width: "18px",
         height: DIFF_ROW_HEIGHT,
         borderRadius: "3px",
-        color: hunk.icon,
+        // The strip's own grey until pointed at: in the link blue, two of them
+        // on every hunk were the loudest thing in the diff.
+        color: hunk.fg,
         cursor: "pointer",
       },
       ".cm-diffUnfoldBtn:hover": {

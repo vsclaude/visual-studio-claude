@@ -13,9 +13,11 @@ import { fileRootsOf } from "@/lib/files/roots"
 import { isImage } from "@/lib/files/viewers"
 import { useT } from "@/lib/i18n"
 import { useFiles } from "@/lib/files/store"
+import { useSettings } from "@/lib/settings"
 import { isStudioShortcut } from "@/lib/shortcuts"
 import { useStudio } from "@/lib/store"
 import { SECTION_ACCENT } from "../section-marks"
+import { ChangesStack } from "./changes-stack"
 import { CommitDiff } from "./commit-diff"
 import { FilePane } from "./file-workspace"
 
@@ -57,9 +59,11 @@ export function ChangesPane() {
   const commitFile = useChanges((state) =>
     rootId ? (state.commitFile[rootId] ?? null) : null
   )
-  const count = useChanges((state) =>
-    rootId ? state.byRoot[rootId]?.length : undefined
+  const changes = useChanges((state) =>
+    rootId ? state.byRoot[rootId] : undefined
   )
+  const count = changes?.length
+  const all = useSettings((state) => state.changesStacked)
   /*
    * A file git stopped on opens in the editor rather than as a diff. A diff
    * against `HEAD` of a file full of markers shows the markers as added lines,
@@ -121,6 +125,12 @@ export function ChangesPane() {
 
   if (commitFile) {
     return <CommitDiff folderId={root.folderId} target={commitFile} />
+  }
+
+  // Every file at once (`changesStacked`), switched in the Explorer's Git tab row.
+  // A commit's file above still wins: it was picked after.
+  if (all && changes && changes.length > 0) {
+    return <ChangesStack root={root} changes={changes} />
   }
 
   return path ? (

@@ -173,8 +173,8 @@ export function CommitsList({ root }: { root: FileRoot }) {
   const loading = read !== null && !stale && read.count !== count
 
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 shrink-0 space-y-1.5 border-b bg-background p-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 space-y-1.5 border-b bg-background p-2">
         <div className="flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring">
           <Search
             aria-hidden
@@ -211,54 +211,56 @@ export function CommitsList({ root }: { root: FileRoot }) {
         />
       </div>
 
-      {read === null ? (
-        <Note>{t("files.reading")}</Note>
-      ) : read.commits.length === 0 ? (
-        <Note>
-          {read.query
-            ? t("files.commits.noMatch", { query: read.query })
-            : t("files.commits.noCommits")}
-        </Note>
-      ) : (
-        <div className={cn("transition-opacity", stale && "opacity-60")}>
-          {/* The trigger is the rows and nothing under them, so a menu only
+      <div className="min-h-0 flex-1 overflow-auto pb-3">
+        {read === null ? (
+          <Note>{t("files.reading")}</Note>
+        ) : read.commits.length === 0 ? (
+          <Note>
+            {read.query
+              ? t("files.commits.noMatch", { query: read.query })
+              : t("files.commits.noCommits")}
+          </Note>
+        ) : (
+          <div className={cn("transition-opacity", stale && "opacity-60")}>
+            {/* The trigger is the rows and nothing under them, so a menu only
               ever opens on a commit — each row names itself on the way past. */}
-          <ContextMenu>
-            <ContextMenuTrigger render={<ul className="py-1" />}>
-              {read.commits.map((commit) => (
-                <CommitRow
-                  key={commit.hash}
-                  commit={commit}
-                  root={root}
-                  open={opened.includes(commit.hash)}
-                  files={files[commit.hash]}
-                  unpushed={unpushed.has(commit.hash)}
-                  upstreamName={upstream?.name ?? null}
-                  onToggle={() => toggle(commit.hash)}
-                  onMenu={() => setTarget(commit)}
-                />
-              ))}
-            </ContextMenuTrigger>
-            <CommitMenu commit={target} webUrl={upstream?.webUrl ?? null} />
-          </ContextMenu>
+            <ContextMenu>
+              <ContextMenuTrigger render={<ul className="py-1" />}>
+                {read.commits.map((commit) => (
+                  <CommitRow
+                    key={commit.hash}
+                    commit={commit}
+                    root={root}
+                    open={opened.includes(commit.hash)}
+                    files={files[commit.hash]}
+                    unpushed={unpushed.has(commit.hash)}
+                    upstreamName={upstream?.name ?? null}
+                    onToggle={() => toggle(commit.hash)}
+                    onMenu={() => setTarget(commit)}
+                  />
+                ))}
+              </ContextMenuTrigger>
+              <CommitMenu commit={target} webUrl={upstream?.webUrl ?? null} />
+            </ContextMenu>
 
-          {/* Only while there is something past the last row — the extra
+            {/* Only while there is something past the last row — the extra
                 commit `readCommits` asked for is what says so — so the list
                 ends on its first commit with nothing under it. */}
-          {read.more && !stale && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setPaged({ query, count: count + PAGE })}
-              className="mx-3 mt-1 flex h-7 w-[calc(100%-1.5rem)] items-center justify-center rounded-md text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-60"
-            >
-              {loading
-                ? t("files.reading")
-                : t("files.commits.showMore", { count: PAGE })}
-            </button>
-          )}
-        </div>
-      )}
+            {read.more && !stale && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setPaged({ query, count: count + PAGE })}
+                className="mx-3 mt-1 flex h-7 w-[calc(100%-1.5rem)] items-center justify-center rounded-md text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-60"
+              >
+                {loading
+                  ? t("files.reading")
+                  : t("files.commits.showMore", { count: PAGE })}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -200,7 +200,7 @@ export function TabStrip({
   if (items.length === 0) {
     if (!trailing) return null
     return (
-      <div className="studio-tabs flex h-(--density-tab) shrink-0 items-stretch border-b bg-sidebar">
+      <div className="studio-tabs flex h-(--density-tab) shrink-0 items-stretch border-b">
         <div className="ml-auto flex items-center pr-1">{trailing}</div>
       </div>
     )
@@ -242,7 +242,13 @@ export function TabStrip({
           // The horizontal one is hidden outright — the thumb below stands in
           // for it, which also gives the tabs back the row of height it was
           // taking.
-          className="studio-tabs flex h-(--density-tab) scrollbar-none items-center overflow-x-auto overflow-y-hidden border-b bg-sidebar px-1"
+          //
+          // No fill of its own: the strip is inside the pane's card and the
+          // card's shows through. A fill here hid the card's outline down
+          // both sides of the strip — the wrapper above is positioned, so it
+          // paints over its ancestor's outline — and in the canvas colour it
+          // also read as canvas, leaving the pane a box with square corners.
+          className="studio-tabs flex h-(--density-tab) scrollbar-none items-center overflow-x-auto overflow-y-hidden border-b px-1"
         >
           {/* The trigger covers the tabs only: a right-click on the empty strip
             past the last one belongs to no tab. */}
@@ -308,9 +314,14 @@ export function TabStrip({
                     // ruled row: the full-height dividers and the 2px top
                     // accent met the pane card's rounded corner at an angle.
                     "group relative flex h-full max-w-56 shrink-0 cursor-default items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    // A chip tinted with the palette's primary. The white card
+                    // it replaces was `--background` on `--sidebar`, two
+                    // lightnesses a few points apart — less over an app
+                    // background — and a bar under it as well marked one tab
+                    // twice, right above the strip's own scroll thumb.
                     active
-                      ? "border-border bg-background text-foreground shadow-xs"
-                      : "border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                      ? "border-primary/30 bg-primary/10 font-medium text-foreground"
+                      : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                     dragId === item.id && "opacity-60"
                   )}
                 >

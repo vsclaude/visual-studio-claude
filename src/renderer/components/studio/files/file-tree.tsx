@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import type { DragEvent } from "react"
 import {
   AlertDialog,
@@ -41,6 +41,8 @@ import {
   ClipboardPaste,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
   File,
   FileCode,
   Image,
@@ -54,6 +56,7 @@ import {
   NotebookPen,
   Pencil,
   RotateCw,
+  Rows3,
   Scissors,
   SquareTerminal,
   Trash2,
@@ -82,6 +85,7 @@ import { useProjects } from "@/lib/projects"
 import { shownRootOf } from "@/lib/files/roots"
 import { isInside, parentOf, relativeTo } from "@/lib/files/paths"
 import { useStudio } from "@/lib/store"
+import { useSettings } from "@/lib/settings"
 import { RenameDialog } from "../rename-dialog"
 import { IconButton } from "../icon-button"
 import { RenameRow, useMenuFocusHandoff } from "../rename-row"
@@ -298,10 +302,11 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
             positioned over the right of this row (`explorer-rail.tsx`), and it
             is out of flow, so the room for it has to be left here. */}
         <div className="flex h-9 shrink-0 items-center gap-2 border-b pr-11 pl-1.5">
-          {/* `overflow-hidden` is the safety valve: with one button beside
-              them the two tabs fit the panel's minimum with room to spare,
-              and a sidebar dragged narrower than that clips them rather than
-              pushing Refresh off the end. */}
+          {/* `overflow-hidden` is the safety valve: the two tabs fit the
+              panel's minimum with room to spare, and a sidebar dragged
+              narrower than that clips them rather than pushing the column's
+              collapse button off the end. The actions are in each tab's own
+              row below. */}
           <div
             role="tablist"
             className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden"
@@ -319,35 +324,6 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
               label={t("files.tree.git")}
               count={changed}
             />
-          </div>
-
-          <div className="flex shrink-0 items-center gap-0.5">
-            {/* **Refresh is the only one left**, and the rule it stands for
-                still holds: a row of icons beside two tabs is a row of icons
-                nobody reads, so every action about a *thing* is on a menu over
-                that thing — `New file` and `Collapse all` on the root bar's menu
-                (or a directory row's, which creates in *that* directory),
-                `Add folder` on the empty space under the tree and in the File
-                menu. It is now the **only** one: this header carried three more
-                for a while — the two arrows that walked the comments and a
-                Discard for the whole pile — and they are gone with the
-                comments themselves. Refresh is the one that is about the panel
-                itself, and the filesystems `fs.watch` is quiet on are why it
-                exists at all. */}
-            <IconButton
-              label={t("common.refresh")}
-              disabled={folders.length === 0}
-              // Both halves of what a row shows: what is on disk, and what git
-              // says about it. One button, since "this is out of date" is one
-              // thought — and the changed-file list re-reads off the git half,
-              // so this is its Refresh too.
-              onClick={() => {
-                void refresh()
-                void useGitStatus.getState().refreshAll()
-              }}
-            >
-              <RotateCw />
-            </IconButton>
           </div>
         </div>
 
@@ -376,102 +352,152 @@ export function FileTree({ onAddFolder }: { onAddFolder: () => void }) {
                 onClick={() => setGitView("commits")}
                 label={t("files.tree.commits")}
               />
+              {/* Every changed file's diff in one scroll, or the one picked —
+                  how the pane reads, so it sits with the list that feeds it. */}
+              <span className="ml-auto flex items-center gap-0.5">
+                {gitView === "changes" && shown && (
+                  <ChangesAllToggle rootId={shown.id} />
+                )}
+                <RefreshButton
+                  disabled={folders.length === 0}
+                  onRefresh={() => void refresh()}
+                />
+              </span>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto pb-3">
-              {shown &&
-                (gitView === "commits" ? (
-                  <CommitsList key={shown.folderId} root={shown} />
-                ) : (
-                  <ChangesList root={shown} />
-                ))}
-            </div>
+            {/* `Commits` is its own scroller, under a header that stays put;
+                inside this one, the header's rule stopped at the scrollbar's
+                track rather than at the card's edge. */}
+            {gitView === "commits" ? (
+              <div className="flex min-h-0 flex-1 flex-col">
+                {shown && <CommitsList key={shown.folderId} root={shown} />}
+              </div>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-auto pb-3">
+                {shown && <ChangesList root={shown} />}
+              </div>
+            )}
           </>
         ) : (
-          /* One trigger over the whole tree, rather than one per row: the rows
-             are a recursive component, and a trigger inside a trigger inside a
-             trigger is a menu nobody can predict the target of. Each row says
-             what it is instead, on the way past. */
-          <ContextMenuTrigger
-            render={
-              <div
-                className={cn(
-                  "min-h-0 flex-1 overflow-auto pb-3",
-                  dropDir !== null &&
-                    dropDir === rootPath &&
-                    "bg-primary/5 ring-1 ring-primary/40 ring-inset"
-                )}
-                onContextMenu={(event) => {
-                  // Only the empty space below the last row: a row of its own
-                  // has already set the target by the time this is reached.
-                  if (event.target === event.currentTarget) setMenuTarget(null)
-                }}
-                onDragOver={(event) => {
-                  if (!carriesFiles(event) || rootPath === null) return
-                  // Without this the drop is refused, and Chromium navigates
-                  // the window to the dropped file instead.
-                  event.preventDefault()
-                  event.dataTransfer.dropEffect = "copy"
-                  setDropDir(dropDirOf(event))
-                }}
-                onDragLeave={(event) => {
-                  // Only on leaving the list, not on crossing from row to row.
-                  if (
-                    !event.currentTarget.contains(event.relatedTarget as Node)
-                  ) {
-                    setDropDir(null)
-                  }
-                }}
-                onDrop={onDrop}
+          <>
+            {/* The tree's own row of four, under the tabs as the Git tab's
+                views are: make something at the project's top, show or hide
+                dotfiles, read the disk again. The menus still create inside
+                a folder; these are the ones wanted without aiming at one. */}
+            <div className="flex h-8 shrink-0 items-center justify-end gap-0.5 border-b px-1.5">
+              <IconButton
+                label={t("files.tree.newFile")}
+                disabled={!shown}
+                onClick={() =>
+                  shown && useFiles.getState().beginCreate(shown.path, "file")
+                }
+              >
+                <FilePlus />
+              </IconButton>
+              <IconButton
+                label={t("files.tree.newFolder")}
+                disabled={!shown}
+                onClick={() =>
+                  shown &&
+                  useFiles.getState().beginCreate(shown.path, "directory")
+                }
+              >
+                <FolderPlus />
+              </IconButton>
+              <HiddenFilesToggle />
+              <RefreshButton
+                disabled={folders.length === 0}
+                onRefresh={() => void refresh()}
               />
-            }
-          >
-            <DropTarget.Provider value={dropDir}>
-              <CutPath.Provider value={copied?.cut ? copied.path : null}>
-                {/* No heading over the list, and no row for the root itself. The
+            </div>
+            {/* One trigger over the whole tree, rather than one per row: the
+                rows are a recursive component, and a trigger inside a trigger
+                inside a trigger is a menu nobody can predict the target of.
+                Each row says what it is instead, on the way past. */}
+            <ContextMenuTrigger
+              render={
+                <div
+                  className={cn(
+                    "min-h-0 flex-1 overflow-auto pb-3",
+                    dropDir !== null &&
+                      dropDir === rootPath &&
+                      "bg-primary/5 ring-1 ring-primary/40 ring-inset"
+                  )}
+                  onContextMenu={(event) => {
+                    // Only the empty space below the last row: a row of its own
+                    // has already set the target by the time this is reached.
+                    if (event.target === event.currentTarget)
+                      setMenuTarget(null)
+                  }}
+                  onDragOver={(event) => {
+                    if (!carriesFiles(event) || rootPath === null) return
+                    // Without this the drop is refused, and Chromium navigates
+                    // the window to the dropped file instead.
+                    event.preventDefault()
+                    event.dataTransfer.dropEffect = "copy"
+                    setDropDir(dropDirOf(event))
+                  }}
+                  onDragLeave={(event) => {
+                    // Only on leaving the list, not on crossing from row to row.
+                    if (
+                      !event.currentTarget.contains(event.relatedTarget as Node)
+                    ) {
+                      setDropDir(null)
+                    }
+                  }}
+                  onDrop={onDrop}
+                />
+              }
+            >
+              <DropTarget.Provider value={dropDir}>
+                <CutPath.Provider value={copied?.cut ? copied.path : null}>
+                  {/* No heading over the list, and no row for the root itself. The
                 tree is one project's files, so a row saying which one would be
                 a row every file is indented under for no answer it gives —
                 which project and which branch is the bar above, where it can be
                 read with the list scrolled. */}
-                {shown && folder ? (
-                  <Directory
-                    dir={shown.path}
-                    depth={0}
-                    onMenu={(entry) => setMenuTarget({ kind: "entry", entry })}
-                  />
-                ) : (
-                  /* A workspace pointed at nothing used to draw an empty list and
+                  {shown && folder ? (
+                    <Directory
+                      dir={shown.path}
+                      depth={0}
+                      onMenu={(entry) =>
+                        setMenuTarget({ kind: "entry", entry })
+                      }
+                    />
+                  ) : (
+                    /* A workspace pointed at nothing used to draw an empty list and
                  say nothing, because `Add folder` was a button in the header
                  directly above it. It is not any more, and a blank column whose
                  only way forward is a right-click is a dead end — so the way in
                  is drawn where the files would have been. Only for a workspace
                  with no folders at all: a folder that is merely empty has a
                  root bar above it saying which one it is. */
-                  folders.length === 0 && (
-                    <Empty className="border-0 py-8">
-                      <EmptyHeader>
-                        <EmptyTitle className="text-sm">
-                          {t("files.tree.noFolders")}
-                        </EmptyTitle>
-                        <EmptyDescription>
-                          {t("files.tree.noFoldersDescription")}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                      <EmptyContent>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={onAddFolder}
-                        >
-                          <FolderPlus />
-                          {t("files.tree.addFolder")}
-                        </Button>
-                      </EmptyContent>
-                    </Empty>
-                  )
-                )}
-              </CutPath.Provider>
-            </DropTarget.Provider>
-          </ContextMenuTrigger>
+                    folders.length === 0 && (
+                      <Empty className="border-0 py-8">
+                        <EmptyHeader>
+                          <EmptyTitle className="text-sm">
+                            {t("files.tree.noFolders")}
+                          </EmptyTitle>
+                          <EmptyDescription>
+                            {t("files.tree.noFoldersDescription")}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={onAddFolder}
+                          >
+                            <FolderPlus />
+                            {t("files.tree.addFolder")}
+                          </Button>
+                        </EmptyContent>
+                      </Empty>
+                    )
+                  )}
+                </CutPath.Provider>
+              </DropTarget.Provider>
+            </ContextMenuTrigger>
+          </>
         )}
 
         {renamingFolder && (
@@ -1000,7 +1026,17 @@ function Directory({
   depth: number
   onMenu: (entry: FileEntry) => void
 }) {
-  const entries = useFiles((state) => state.entries[dir])
+  const listed = useFiles((state) => state.entries[dir])
+  const showHidden = useSettings((state) => state.showHiddenFiles)
+  // Dotfiles left out at the drawing, not the listing: the store's entries
+  // are also what the palette and the watchers read.
+  const entries = useMemo(
+    () =>
+      showHidden || !listed
+        ? listed
+        : listed.filter((entry) => !entry.name.startsWith(".")),
+    [listed, showHidden]
+  )
   const error = useFiles((state) => state.errors[dir])
   const loading = useFiles((state) => state.loading.includes(dir))
   const creating = useFiles((state) =>
@@ -1299,5 +1335,75 @@ function Row({
         <Directory dir={entry.path} depth={depth + 1} onMenu={onMenu} />
       )}
     </li>
+  )
+}
+
+/** `Changes`' one-file / every-file switch for the pane (`changesStacked`). */
+function ChangesAllToggle({ rootId }: { rootId: string }) {
+  const t = useT()
+  const all = useSettings((state) => state.changesStacked)
+  return (
+    <IconButton
+      label={
+        all ? t("files.tree.showOneChange") : t("files.tree.showAllChanges")
+      }
+      pressed={all}
+      // `pressed` is only `aria-pressed`; the lit state is drawn, as the
+      // diff's own toggles draw theirs.
+      className={cn(
+        "ml-auto size-6",
+        all && "bg-accent text-accent-foreground"
+      )}
+      onClick={() => {
+        useSettings.getState().setChangesStacked(!all)
+        // Onto the pane, so the switch shows what it switched.
+        useChanges.getState().open(rootId)
+      }}
+    >
+      <Rows3 />
+    </IconButton>
+  )
+}
+
+/**
+ * Both halves of what a row shows read again: what is on disk, and what git
+ * says about it. One button, since "this is out of date" is one thought, and
+ * the filesystems `fs.watch` is quiet on are why it exists at all. In each
+ * tab's own row, where it used to sit once in the header above both.
+ */
+function RefreshButton({
+  disabled,
+  onRefresh,
+}: {
+  disabled: boolean
+  onRefresh: () => void
+}) {
+  const t = useT()
+  return (
+    <IconButton
+      label={t("common.refresh")}
+      disabled={disabled}
+      onClick={() => {
+        onRefresh()
+        void useGitStatus.getState().refreshAll()
+      }}
+    >
+      <RotateCw />
+    </IconButton>
+  )
+}
+
+/** The tree's dotfiles shown or left out (`showHiddenFiles`). */
+function HiddenFilesToggle() {
+  const t = useT()
+  const show = useSettings((state) => state.showHiddenFiles)
+  return (
+    <IconButton
+      label={show ? t("files.tree.hideHidden") : t("files.tree.showHidden")}
+      pressed={!show}
+      onClick={() => useSettings.getState().setShowHiddenFiles(!show)}
+    >
+      {show ? <Eye /> : <EyeOff />}
+    </IconButton>
   )
 }

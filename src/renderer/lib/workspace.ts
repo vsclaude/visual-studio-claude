@@ -57,6 +57,11 @@ export async function pickDirectory(): Promise<string | null> {
   return window.desktop.pickDirectory()
 }
 
+/** Asks for a new folder's name and place, and makes it. Null when cancelled. */
+export async function createProjectDirectory(): Promise<string | null> {
+  return window.desktop.createProjectDirectory()
+}
+
 /** The branch checked out in a folder, or null when it is not a git
  * repository. */
 export async function gitBranch(folderId: string): Promise<string | null> {

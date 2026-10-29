@@ -302,10 +302,26 @@ type FilesState = {
    * file's tab.
    */
   keep: (filePath: string) => void
+  /**
+   * Closes a tab — or, when it has unsaved edits, asks first: the path joins
+   * `unsaved` and the tab stays until `settleUnsaved` answers for it.
+   */
   close: (filePath: string) => void
   closeOthers: (filePath: string) => void
   closeAll: () => void
   reorder: (paths: string[]) => void
+
+  /**
+   * Tabs whose close is waiting on Save / Don't Save / Cancel, in the order
+   * they were closed. Several at once when `Close all` met more than one
+   * dirty file, and answered together, the way an editor's one dialog is.
+   */
+  unsaved: string[]
+  /** Why a Save in that dialog failed, shown in it; null otherwise. */
+  unsavedError: string | null
+  /** The dialog's answer, for every path in `unsaved`. A save that fails
+   * leaves its tab open and still asked about. */
+  settleUnsaved: (choice: "save" | "discard" | "cancel") => Promise<void>
 
   /** What the editor typed. Not written until `save`. */
   setText: (filePath: string, text: string) => void
@@ -483,15 +499,48 @@ export const useFiles = create<FilesState>((set, get) => {
   /**
    * Writes a file if it has unsaved edits, and does nothing otherwise.
    *
-   * Closing a tab flushes rather than prompting. The reason is that the edit
-   * was deliberate, and a
-   * three-button "save / discard / cancel" is a dialog in the way of the common
-   * case — but the file here is somebody's source, so ⌘S is still the way it is
-   * normally written and the dot says when it has not been.
+   * For a tab leaving by a route nobody chose to close it by — a preview tab
+   * replaced by the next single click. Closing one on purpose asks instead
+   * (`close`): writing somebody's source because they pressed ×, which is
+   * what this used to do there, saved edits they meant to throw away.
    */
   function flush(filePath: string) {
     if (!isDirty(get().docs[filePath])) return
     void get().save(filePath)
+  }
+
+  /** Takes a tab out of the strip, now. The one place a close happens. */
+  function closeNow(filePath: string) {
+    const { openIds, selectedId } = get()
+    const index = openIds.indexOf(filePath)
+    if (index === -1) return
+
+    const remaining = openIds.filter((_, position) => position !== index)
+    set({
+      openIds: remaining,
+      selectedId:
+        selectedId === filePath
+          ? (remaining[index] ?? remaining[index - 1] ?? null)
+          : selectedId,
+      // The slot is empty again rather than handed to the neighbour that took
+      // the selection: that tab was opened on its own terms, and the next
+      // single click has to add a preview rather than evict it.
+      previewId: get().previewId === filePath ? null : get().previewId,
+      unsaved: get().unsaved.filter((entry) => entry !== filePath),
+    })
+    rememberTabs()
+  }
+
+  /**
+   * Back to what is on disk, in the store and in the buffer the editors draw —
+   * the registry's, which outlives this tab while a diff of the same file
+   * still holds it (`resetDoc`).
+   */
+  function revert(filePath: string) {
+    const doc = get().docs[filePath]
+    if (doc?.kind !== "text") return
+    setDoc(filePath, { ...doc, text: doc.saved })
+    resetDoc(filePath, doc.saved)
   }
 
   /** Forgets everything read for paths that are no longer in the workspace. */
@@ -582,6 +631,8 @@ export const useFiles = create<FilesState>((set, get) => {
     openIds: [],
     selectedId: null,
     previewId: null,
+    unsaved: [],
+    unsavedError: null,
     renaming: null,
     creating: null,
     index: [],
@@ -791,8 +842,8 @@ export const useFiles = create<FilesState>((set, get) => {
         options?.preview === true
       )
       // The evicted tab's editor unmounts with it, so this is the last moment
-      // its edits can be written — the same bargain `close` makes, and it is
-      // why a preview tab that has been typed into is not a preview any more.
+      // its edits can be written. Rare by construction: a preview tab that has
+      // been typed into is not a preview any more (`setText` keeps it).
       if (replaced !== null) flush(replaced)
 
       set({ selectedId: filePath, openIds, previewId })
@@ -805,45 +856,56 @@ export const useFiles = create<FilesState>((set, get) => {
     },
 
     close(filePath) {
-      const { openIds, selectedId } = get()
-      const index = openIds.indexOf(filePath)
-      if (index === -1) return
-
-      // Before the tab goes: the editor unmounts with it, and an unsaved edit
-      // would have nowhere left to be written from.
-      flush(filePath)
-
-      const remaining = openIds.filter((_, position) => position !== index)
-      set({
-        openIds: remaining,
-        selectedId:
-          selectedId === filePath
-            ? (remaining[index] ?? remaining[index - 1] ?? null)
-            : selectedId,
-        // The slot is empty again rather than handed to the neighbour that took
-        // the selection: that tab was opened on its own terms, and the next
-        // single click has to add a preview rather than evict it.
-        previewId: get().previewId === filePath ? null : get().previewId,
-      })
-      rememberTabs()
+      if (!get().openIds.includes(filePath)) return
+      if (!isDirty(get().docs[filePath])) {
+        closeNow(filePath)
+        return
+      }
+      // Asked rather than closed. Added to what is already waiting, so a
+      // `Close all` that meets three dirty files is one dialog, not three.
+      if (get().unsaved.includes(filePath)) return
+      set({ unsaved: [...get().unsaved, filePath], unsavedError: null })
     },
 
     closeOthers(filePath) {
       for (const openId of get().openIds) {
-        if (openId !== filePath) flush(openId)
+        if (openId !== filePath) get().close(openId)
       }
-      set({
-        openIds: [filePath],
-        selectedId: filePath,
-        previewId: get().previewId === filePath ? filePath : null,
-      })
-      rememberTabs()
+      set({ selectedId: filePath })
     },
 
     closeAll() {
-      for (const openId of get().openIds) flush(openId)
-      set({ openIds: [], selectedId: null, previewId: null })
-      rememberTabs()
+      for (const openId of get().openIds) get().close(openId)
+    },
+
+    async settleUnsaved(choice) {
+      // Only tabs still open: one renamed or pruned away meanwhile has nothing
+      // left to ask about.
+      const waiting = get().unsaved.filter((entry) =>
+        get().openIds.includes(entry)
+      )
+      if (choice === "cancel") {
+        set({ unsaved: [], unsavedError: null })
+        return
+      }
+      if (choice === "discard") {
+        for (const filePath of waiting) {
+          revert(filePath)
+          closeNow(filePath)
+        }
+        set({ unsavedError: null })
+        return
+      }
+
+      let failure: string | null = null
+      for (const filePath of waiting) {
+        const error = await get().save(filePath)
+        if (error) failure ??= error
+        // Typing that landed during the write is still unsaved, so it is
+        // still asked about rather than closed under the caret.
+        else if (!isDirty(get().docs[filePath])) closeNow(filePath)
+      }
+      set({ unsavedError: failure })
     },
 
     reorder(paths) {

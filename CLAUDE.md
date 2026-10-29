@@ -163,6 +163,13 @@ imports may reach `electron`.
   random install id, with the version and OS and **nothing about what is
   worked on**. A dev build reports only to a localhost server; off without
   `serverUrl()`, off by `TELEMETRY_KEY`. `docs/design.md` § Usage counts.
+- **`ports.ts`** — the system bar's `Ports` dialog (`ports-dialog.tsx`): the
+  TCP ports being listened on (`lsof -F` on macOS/Linux, `netstat` +
+  `tasklist` on Windows, each line's command from `ps`) and a Stop for the
+  process holding one — SIGTERM, then a `Force quit` SIGKILL for one still
+  listening. `stopListener` **re-lists before it kills** and refuses any pid
+  not listening at that moment, and this app's own. Free of `electron`
+  (`test/ports.ts`).
 - **`tsserver.ts`** — one per Explorer root, using _that root's own_
   `typescript`, and nothing if it has none.
 - **`mcp-servers.ts`** — which MCP servers the user's own `claude` has, asked of
@@ -282,9 +289,10 @@ learnings…`, its dialog, `main/learnings.ts`, `shared/learnings.ts` and the
   `docs/design.md` § Pro. (`test/license.ts`, `test/claude-api.ts`)
 
 - **There is no `Preview` tab** in the dock any more, and so no `webviewTag`
-  (`docs/design.md` § Preview, removed). `saveTextFile` is the one write
-  outside the roots — a save dialog names the destination — for a chat's
-  export.
+  (`docs/design.md` § Preview, removed). `saveTextFile` and
+  `createProjectDirectory` are the two writes outside the roots — a save
+  dialog names the destination — for a chat's export and a new project's
+  empty folder.
 
 ### `chat.ts` + `claude-agent.ts` — the `claude` a conversation runs on
 
@@ -554,8 +562,10 @@ ClickUp tasks, removed has the argument. What stays on a user's disk stays:
 nothing reads `workspace/clickup-watches.json` or the `clickup.token` key any
 more, and nothing deletes them either.
 
-**There is no `From template`** — `Add project` adds an existing folder and
-nothing else, and no project is the app's to delete: `createProject`,
+**There is no `From template`** — `Add project` is two choices, `Browse…` an
+existing folder or `New directory…`, an **empty** one made where the system's
+save panel says (`IPC.createProjectDirectory`), and no project is the app's to
+delete: `createProject`,
 `trashProject`, `shared/project-templates.ts` and the vendored brand logos are
 gone (`docs/design.md` § A new project from a template, removed). A folder
 record still carrying `template` keeps it; nothing reads it.

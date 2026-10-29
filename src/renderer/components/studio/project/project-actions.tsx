@@ -100,6 +100,10 @@ export function ProjectMenuItems({
   // change, and its way out is `Remove worktree…` rather than a forget that
   // would leave a checkout under the app's data folder nobody can reach.
   const checkout = isCheckout(all, folder)
+  // A worktree is git's, so a folder that is not a repository has none to
+  // offer. Only a branch read as null hides it: one not read yet keeps the
+  // item, and the dialog's own failure says so if it turns out to be wrong.
+  const repository = useStudio.getState().branches[folder.id] !== null
   const folders = projectsIn(all)
   const index = folders.findIndex((entry) => entry.id === folder.id)
   // `to` is an index among the rail's icons, and the manifest's list also
@@ -129,10 +133,12 @@ export function ProjectMenuItems({
         <SquareTerminal className="text-muted-foreground" />
         {t("projects.actions.newTerminalHere")}
       </Item>
-      <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
-        <GitBranchPlus className="text-muted-foreground" />
-        {t("projects.actions.newWorktree")}
-      </Item>
+      {repository && (
+        <Item onClick={() => dialogs.set({ worktreeOf: folder })}>
+          <GitBranchPlus className="text-muted-foreground" />
+          {t("projects.actions.newWorktree")}
+        </Item>
+      )}
       {!checkout && (
         <>
           <Item onClick={() => dialogs.set({ renaming: folder })}>

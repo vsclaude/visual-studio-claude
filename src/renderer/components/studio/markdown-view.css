@@ -32,10 +32,16 @@
    * value so a link looks the same whether it was typed or received.
    */
   --markdown-link: oklch(0.55 0.22 260);
+  /*
+   * Inline code's own colour. A warm hue, because the link is blue and a
+   * `name` in code that reads like a link sends the eye the wrong way.
+   */
+  --markdown-code: oklch(0.5 0.16 25);
 }
 
 .dark .markdown-prose {
   --markdown-link: oklch(0.72 0.17 260);
+  --markdown-code: oklch(0.82 0.11 25);
 }
 
 /* A message is a block in a gap-spaced column, so its own outer margins would
@@ -141,6 +147,34 @@
   background: var(--muted);
   border-radius: 0.25rem;
   padding: 0.1em 0.3em;
+}
+
+/* Only the code in a sentence: a fence's `<code>` is inside a `<pre>` and is
+ * left to the highlighter's colours. The hairline is an inset shadow so the
+ * token keeps its size and the line does not move. */
+.markdown-prose :not(pre) > code {
+  color: var(--markdown-code);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-weight: 500;
+}
+
+/* A code span that names a file (`linkCodeFiles`) is a link, so it takes the
+ * link blue rather than the code's warm colour, and underlines only when
+ * pointed at. The `code` rule above sets its own colour, so the blue has to be
+ * put on the `code` too. */
+.markdown-prose a.markdown-file-link,
+.markdown-prose a.markdown-file-link > code {
+  color: var(--markdown-link);
+}
+
+.markdown-prose a.markdown-file-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.markdown-prose a.markdown-file-link:hover code {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .markdown-prose pre {

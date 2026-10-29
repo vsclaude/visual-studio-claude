@@ -87,6 +87,7 @@ export default function CodeMirrorFileDiff({
   original,
   patch,
   modified,
+  autoHeight = false,
 }: {
   path: string
   /** The working tree's text as the tab read it. Only used if no pane is already
@@ -111,6 +112,12 @@ export default function CodeMirrorFileDiff({
    * commit's file open beside the same path's editor must not be fed its edits.
    */
   modified?: string
+  /**
+   * As tall as the diff rather than as tall as the pane, for the `Changes`
+   * pane's every-file view, where the files scroll together in one column
+   * and a diff with a scroller of its own would trap the wheel.
+   */
+  autoHeight?: boolean
 }) {
   const hostRef = useRef<HTMLDivElement>(null)
   /** Every view this diff is made of — one for inline, two for side by side —
@@ -289,7 +296,11 @@ export default function CodeMirrorFileDiff({
   return (
     <div
       ref={hostRef}
-      className="h-full w-full overflow-hidden [&_.cm-editor]:h-full [&>.cm-mergeView]:h-full"
+      className={
+        autoHeight
+          ? "w-full"
+          : "h-full w-full overflow-hidden [&_.cm-editor]:h-full [&>.cm-mergeView]:h-full"
+      }
     />
   )
 }

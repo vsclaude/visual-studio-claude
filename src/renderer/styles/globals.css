@@ -19,7 +19,7 @@
    * code beside it. `rem`, so Settings › Appearance moves it with the rest.
    */
   --text-chat: 0.8125rem;
-  --text-chat--line-height: 1.5;
+  --text-chat--line-height: 1.6;
   /*
    * A menu's rows — dropdowns, context menus, pickers, the palette — at the
    * chat's size. shadcn ships them at `text-sm`, a size above everything
@@ -596,16 +596,6 @@
 [data-app-background] .studio-card,
 [data-app-background] .studio-surface {
   background-color: color-mix(in oklch, var(--background) 82%, transparent);
-}
-
-/*
- * The tab strip is *inside* a card, so a translucent fill of its own would
- * stack on the card's — 82% over 82% is 97%, and the picture all but vanished
- * there. It lets the card's own fill through instead; its bottom border still
- * says where the strip ends.
- */
-[data-app-background] .studio-tabs {
-  background-color: transparent;
 }
 
 /*

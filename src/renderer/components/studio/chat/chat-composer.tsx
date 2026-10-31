@@ -957,8 +957,10 @@ export function ChatComposer({
 
         {/* Inside the box rather than under it: these are properties of the
             message about to be sent, and a row of controls floating below the
-            border reads as belonging to the pane. */}
-        <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+            border reads as belonging to the pane. A container rather than a
+            wrapping row: in a narrow pane the meters drop their words first,
+            then the chips' labels truncate, and `+` stays on the row. */}
+        <div className="@container flex min-w-0 items-center gap-0.5 px-1.5 pb-1.5">
           {onOptions && (
             <>
               <ModelMenu
@@ -1019,7 +1021,7 @@ export function ChatComposer({
             />
           )}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -1192,7 +1194,7 @@ export function ToolbarButton({
     <button
       type="button"
       className={cn(
-        "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-[0.7rem]",
+        "inline-flex h-6 min-w-0 items-center gap-1 rounded-md px-1.5 text-[0.7rem] whitespace-nowrap",
         "transition-colors hover:bg-accent hover:text-foreground",
         "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
         "[&>svg]:size-3.5 [&>svg]:shrink-0",
@@ -1202,7 +1204,7 @@ export function ToolbarButton({
       {...rest}
     >
       {icon}
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </button>
   )
 }
@@ -1902,7 +1904,7 @@ function WindowMeter({ of }: { of: ChatWindow }) {
               label: windowLabel(of),
             })}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem]",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] whitespace-nowrap",
               "transition-colors hover:bg-accent data-[popup-open]:bg-accent",
               band === "full"
                 ? "text-destructive"
@@ -1924,7 +1926,8 @@ function WindowMeter({ of }: { of: ChatWindow }) {
                 style={{ width: `${remainingOf(of) * 100}%` }}
               />
             </span>
-            {windowLabel(of)}
+            {/* The bar alone in a narrow pane: the words are on its title. */}
+            <span className="@max-xl:hidden">{windowLabel(of)}</span>
           </button>
         }
       />

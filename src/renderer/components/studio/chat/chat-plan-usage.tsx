@@ -90,15 +90,19 @@ export function PlanUsageMeter({
             }
             aria-label={t("chat.planUsage.title")}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] tabular-nums",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[0.7rem] whitespace-nowrap tabular-nums",
               "transition-colors hover:bg-accent data-[popup-open]:bg-accent",
               toneClass(tone)
             )}
           >
             <Gauge className="size-3 shrink-0" />
             {headline ? (
+              // The composer's toolbar is a container: in a narrow pane the
+              // window's name and the bar go, and the percent stays.
               <>
-                {windowShort(headline.id)}
+                <span className="@max-xl:hidden">
+                  {windowShort(headline.id)}
+                </span>
                 <Bar utilization={headline.utilization} />
                 {percent(headline.utilization)}
               </>
@@ -182,7 +186,7 @@ function Bar({ utilization }: { utilization: number }) {
   return (
     <span
       aria-hidden
-      className="h-1 w-6 overflow-hidden rounded-full bg-border"
+      className="h-1 w-6 overflow-hidden rounded-full bg-border @max-xl:hidden"
     >
       <span
         className="block h-full rounded-full bg-current transition-[width]"

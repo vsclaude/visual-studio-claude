@@ -1241,10 +1241,12 @@ function Conversation({
               number somebody compares against `/cost` in a terminal — this
               chat, so far. */}
             {line && (
-              <div className="flex justify-end px-1 text-[0.7rem]">
+              <div className="flex min-w-0 justify-end px-1 text-[0.7rem]">
+                {/* Truncated at its end: under `justify-end`, a line that may
+                  not shrink spills off the left and loses its first words. */}
                 <p
                   title={detail}
-                  className="shrink-0 text-muted-foreground/80 tabular-nums"
+                  className="min-w-0 truncate text-muted-foreground/80 tabular-nums"
                 >
                   {line}
                 </p>

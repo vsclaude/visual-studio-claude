@@ -262,6 +262,15 @@ export type ChatComposerHandle = {
   insertText: (text: string) => void
   /** Puts the caret in the field. */
   focus: () => void
+  /** Driven by `ComposerResizeEdge`, which the pane draws on its own top
+   * border rather than on the box — see there. `start` answers whether a drag
+   * began. */
+  resize: {
+    start: (y: number) => boolean
+    move: (y: number) => void
+    end: () => void
+    reset: () => void
+  }
 }
 
 export function ChatComposer({
@@ -430,12 +439,12 @@ export function ChatComposer({
   const mirror = useRef<HTMLDivElement>(null)
 
   /**
-   * The height dragged by the box's top edge — the edge rather than the
-   * textarea's own corner, because the composer sits at the foot of the pane and
-   * grows upwards. A floor rather than a fixed height: up to `FIELD_GROWS_TO`
-   * the text still grows the field past it, and past that it scrolls. Held here
-   * while dragging and written once on release, since every write is the whole
-   * settings bag.
+   * The height dragged by the pane's border above the composer — an edge
+   * rather than the textarea's own corner, because the composer sits at the
+   * foot of the pane and grows upwards. A floor rather than a fixed height: up
+   * to `FIELD_GROWS_TO` the text still grows the field past it, and past that
+   * it scrolls. Held here while dragging and written once on release, since
+   * every write is the whole settings bag.
    */
   const savedHeight = useSettings((state) => state.composerHeight)
   const setComposerHeight = useSettings((state) => state.setComposerHeight)
@@ -443,16 +452,15 @@ export function ChatComposer({
   const drag = useRef<{ y: number; height: number } | null>(null)
   const height = dragHeight ?? savedHeight
 
-  const onResizeStart = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !field.current) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { y: event.clientY, height: field.current.offsetHeight }
+  const onResizeStart = (y: number) => {
+    if (!field.current) return false
+    drag.current = { y, height: field.current.offsetHeight }
+    return true
   }
-  const onResizeMove = (event: PointerEvent<HTMLDivElement>) => {
+  const onResizeMove = (y: number) => {
     if (!drag.current) return
     const max = Math.max(FIELD_MIN, window.innerHeight * FIELD_MAX_SHARE)
-    const next = drag.current.height + drag.current.y - event.clientY
+    const next = drag.current.height + drag.current.y - y
     setDragHeight(Math.round(Math.min(max, Math.max(FIELD_MIN, next))))
   }
   const onResizeEnd = () => {
@@ -674,6 +682,12 @@ export function ChatComposer({
     insertImages,
     insertText: insertAtCaret,
     focus: () => field.current?.focus(),
+    resize: {
+      start: onResizeStart,
+      move: onResizeMove,
+      end: onResizeEnd,
+      reset: () => setComposerHeight(null),
+    },
   }))
 
   /**
@@ -832,30 +846,6 @@ export function ChatComposer({
           "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50"
         )}
       >
-        {/* Straddling the top border, so it is found by aiming at the edge.
-            A double-click gives the field back to its text. */}
-        <div
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label={t("chat.composer.resize")}
-          title={t("chat.composer.resizeHint")}
-          onPointerDown={onResizeStart}
-          onPointerMove={onResizeMove}
-          onPointerUp={onResizeEnd}
-          onPointerCancel={onResizeEnd}
-          onDoubleClick={() => setComposerHeight(null)}
-          className="group absolute inset-x-3 -top-1.5 z-10 flex h-3 cursor-ns-resize items-center"
-        >
-          {/* The line every resizable edge in the window draws — `Gap`,
-              `SideColumn` — rather than a grip of its own. */}
-          <span
-            className={cn(
-              "h-0.5 w-full rounded-full transition-colors group-hover:bg-ring/60",
-              dragHeight !== null && "bg-ring/60"
-            )}
-          />
-        </div>
-
         {/* The mirror is positioned against the field alone rather than against
             the whole box: `inset-0` used to be the box, and with a toolbar in it
             the tint behind the last line would have been drawn over the
@@ -1111,6 +1101,59 @@ export function ChatComposer({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The drag that sets the composer's height, laid over the border the pane
+ * draws between the transcript and the composer. It used to straddle the box's
+ * own top edge, a 12px band inside the pane's padding that was hard to find;
+ * the pane's border is the line that already reads as the split. The parent
+ * has to be positioned. A double-click gives the field back to its text.
+ */
+export function ComposerResizeEdge({
+  composer,
+}: {
+  composer: RefObject<ChatComposerHandle | null>
+}) {
+  const t = useT()
+  const [dragging, setDragging] = useState(false)
+  const end = () => {
+    if (!dragging) return
+    setDragging(false)
+    composer.current?.resize.end()
+  }
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={t("chat.composer.resize")}
+      title={t("chat.composer.resizeHint")}
+      onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return
+        if (!composer.current?.resize.start(event.clientY)) return
+        event.preventDefault()
+        event.currentTarget.setPointerCapture(event.pointerId)
+        setDragging(true)
+      }}
+      onPointerMove={(event) => {
+        if (dragging) composer.current?.resize.move(event.clientY)
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={() => composer.current?.resize.reset()}
+      className="group absolute inset-x-0 -top-1.5 z-10 flex h-3 cursor-ns-resize items-center"
+    >
+      {/* The line every resizable edge in the window draws — `Gap`,
+          `SideColumn` — rather than a grip of its own. */}
+      <span
+        className={cn(
+          "h-0.5 w-full transition-colors group-hover:bg-ring/60",
+          dragging && "bg-ring/60"
+        )}
+      />
     </div>
   )
 }

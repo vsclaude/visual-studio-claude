@@ -53,7 +53,11 @@ import { ChatFind } from "./chat-find"
 import { ChatMediaColumn } from "./chat-media"
 import { ChatOutline } from "./chat-outline"
 import { ReplyToSelection } from "./chat-reply"
-import { ChatComposer, type ChatComposerHandle } from "./chat-composer"
+import {
+  ChatComposer,
+  ComposerResizeEdge,
+  type ChatComposerHandle,
+} from "./chat-composer"
 import { ChatActivity, DayDivider } from "./chat-activity"
 import {
   ChatFolderContext,
@@ -1184,7 +1188,8 @@ function Conversation({
           )}
         </div>
 
-        <div className="shrink-0 border-t p-3">
+        <div className="relative shrink-0 border-t p-3">
+          <ComposerResizeEdge composer={composer} />
           <div className="mx-auto w-full max-w-2xl space-y-1.5">
             <ChatComposer
               // One field per chat: its draft is that chat's, and a field kept

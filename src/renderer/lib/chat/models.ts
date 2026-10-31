@@ -33,6 +33,46 @@ import { modelLabel } from "./usage"
  * `main/agent-models.ts`. */
 const asked = new Map<string, Promise<AgentModel[]>>()
 const held = new Map<string, AgentModel[]>()
+/** Profiles whose list is being asked again, for the picker's spinner. */
+const reloading = new Set<string>()
+/** Every mounted `useAgentModels`, so a reload redraws all of them — the
+ * composer that asked and any other on the same account. */
+const listeners = new Set<() => void>()
+
+function changed() {
+  for (const listener of listeners) listener()
+}
+
+/**
+ * Asks `claude` again, past both holds — the picker's reload button.
+ *
+ * An empty answer keeps the list already drawn rather than dropping to the
+ * fallback: a reload that timed out is not news that the account lost its
+ * models.
+ */
+export async function reloadAgentModels(
+  profileId: string | null
+): Promise<void> {
+  const key = profileId ?? ""
+  if (reloading.has(key)) return
+  reloading.add(key)
+  changed()
+  try {
+    const answer = await window.desktop.agentModels(profileId, true)
+    if (answer.length > 0 || !held.has(key)) {
+      held.set(key, mergeModels(CHAT_MODEL_FALLBACK, answer))
+    }
+  } catch (error: unknown) {
+    console.error("Could not reload the model list", error)
+  } finally {
+    reloading.delete(key)
+    changed()
+  }
+}
+
+export function isReloadingModels(profileId: string | null): boolean {
+  return reloading.has(profileId ?? "")
+}
 
 /**
  * What the CLI answered, with the preset's own trimmings where a row matches.
@@ -73,6 +113,14 @@ export function useAgentModels(profileId: string | null): AgentModel[] {
   const [, answered] = useState(0)
 
   useEffect(() => {
+    const listener = () => answered((count) => count + 1)
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }, [])
+
+  useEffect(() => {
     if (held.has(key)) return
     let mounted = true
     let asking = asked.get(key)
@@ -82,7 +130,10 @@ export function useAgentModels(profileId: string | null): AgentModel[] {
     }
     void asking
       .then((answer) => {
-        held.set(key, mergeModels(CHAT_MODEL_FALLBACK, answer))
+        // A reload that landed first is the newer answer.
+        if (!held.has(key)) {
+          held.set(key, mergeModels(CHAT_MODEL_FALLBACK, answer))
+        }
         if (mounted) answered((count) => count + 1)
       })
       .catch((error: unknown) => {

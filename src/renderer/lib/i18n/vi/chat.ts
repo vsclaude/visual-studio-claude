@@ -26,6 +26,8 @@ export const chat: Messages["chat"] = {
     model: "Model",
     title: "Model nào trả lời và được suy nghĩ đến đâu",
     new: "MỚI",
+    reload: "Tải lại danh sách model",
+    reloading: "Đang hỏi claude…",
   },
   effort: {
     low: "Thấp",

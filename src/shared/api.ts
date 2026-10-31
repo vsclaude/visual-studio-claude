@@ -2548,8 +2548,14 @@ export type DesktopApi = {
    * Per account: `profileId` is resolved to its `CLAUDE_CONFIG_DIR` in main,
    * because what `default` resolves to is the account's — see
    * `main/agent-models.ts`. Null is the user's own `claude` login.
+   *
+   * `fresh` drops what main holds and asks again — the picker's reload, for a
+   * CLI upgraded or a plan changed while the app was open.
    */
-  agentModels: (profileId: string | null) => Promise<AgentModel[]>
+  agentModels: (
+    profileId: string | null,
+    fresh?: boolean
+  ) => Promise<AgentModel[]>
   /**
    * The slash commands that same `claude` has in a project's directory, for the
    * composer's `/` menu — what pressing `/` in the CLI lists.

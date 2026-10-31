@@ -25,6 +25,8 @@ export const chat = {
     model: "Model",
     title: "Which model answers and how much thinking it gets",
     new: "NEW",
+    reload: "Reload models",
+    reloading: "Asking claude…",
   },
   effort: {
     low: "Low",

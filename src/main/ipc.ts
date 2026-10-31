@@ -408,8 +408,10 @@ export function createIpc(host: Host): {
   // which is why it takes no argument and keeps no state here.
   // The profile resolved here rather than a path trusted from the renderer —
   // the same `configDirOf` the plan usage goes through.
-  handle(IPC.agentModels, async (_event, profileId: string | null) =>
-    agentModels(await configDirOf(profileId ?? null))
+  handle(
+    IPC.agentModels,
+    async (_event, profileId: string | null, fresh?: boolean) =>
+      agentModels(await configDirOf(profileId ?? null), fresh === true)
   )
 
   /*

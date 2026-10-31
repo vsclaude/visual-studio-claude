@@ -25,6 +25,7 @@ import {
   PencilLine,
   Plug,
   Plus,
+  RefreshCw,
   ShieldOff,
   Signal,
   SignalHigh,
@@ -84,6 +85,8 @@ import {
   effortFor,
   orderedModels,
   answeringName,
+  isReloadingModels,
+  reloadAgentModels,
   useAgentModels,
 } from "@/lib/chat/models"
 import { useAgentCommands } from "@/lib/chat/commands"
@@ -961,6 +964,7 @@ export function ChatComposer({
             <>
               <ModelMenu
                 models={models}
+                profileId={options.profileId ?? null}
                 model={options.model}
                 effort={options.effort}
                 answering={answering}
@@ -1230,12 +1234,15 @@ export function ToolbarButton({
  */
 export function ModelMenu({
   models,
+  profileId,
   model,
   effort,
   answering,
   onPick,
 }: {
   models: AgentModel[]
+  /** Whose list `models` is, for the reload row — see `reloadAgentModels`. */
+  profileId: string | null
   model: string | null
   effort: ChatEffort | null
   /** The model the chat's CLI reports answering — see `answeringName`. */
@@ -1260,6 +1267,9 @@ export function ModelMenu({
   // business, and a menu still open after the pick it was asked for reads as a
   // key that did nothing.
   const [open, setOpen] = useState(false)
+  // Read on render: `useAgentModels` in the caller redraws on a reload's start
+  // and end, which is what redraws this.
+  const reloading = isReloadingModels(profileId)
 
   const buttonLabel =
     model === null
@@ -1429,6 +1439,23 @@ export function ModelMenu({
               {t("chat.model.inheritDetail")}
             </span>
           </div>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Main holds the list for the run, so a CLI upgraded or a plan
+            changed mid-run shows here only when asked again. The menu stays
+            open so the new rows land in front of whoever asked for them. */}
+        <DropdownMenuItem
+          closeOnClick={false}
+          disabled={reloading}
+          onClick={() => void reloadAgentModels(profileId)}
+          className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground"
+        >
+          <div className="flex size-4 shrink-0 items-center justify-center">
+            <RefreshCw
+              className={cn("size-3.5", reloading && "animate-spin")}
+            />
+          </div>
+          {t(reloading ? "chat.model.reloading" : "chat.model.reload")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

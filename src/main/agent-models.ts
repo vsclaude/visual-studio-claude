@@ -38,7 +38,8 @@ import { locate, spawnEnvironment } from "./shell-env"
  * menu. The in-flight promise is what is cached rather than the result, so two
  * windows opening their pickers at once share the one process; a failure is not
  * cached at all, so a CLI that was missing when the app launched is found once
- * it is installed.
+ * it is installed. The picker's reload (`fresh`) is the way past the hold for
+ * the two changes it waits on — an upgrade or a plan change mid-run.
  */
 
 /** The in-flight or finished ask, by `CLAUDE_CONFIG_DIR` (`""` for none).
@@ -54,16 +55,19 @@ const asking = new Map<string, Promise<AgentModel[]>>()
  */
 const TIMEOUT_MS = 10_000
 
-export function agentModels(configDir: string | null): Promise<AgentModel[]> {
+export function agentModels(
+  configDir: string | null,
+  fresh = false
+): Promise<AgentModel[]> {
   const key = configDir ?? ""
   const held = asking.get(key)
-  if (held) return held
+  if (held && !fresh) return held
   const pending = ask(configDir).catch((error: unknown) => {
     // Not cached: the next picker to open tries again. Worth a line in the log
     // because the fallback list is silent otherwise — a user seeing three
     // aliases where they expected their own six has nothing else to go on.
     console.error("Could not ask claude which models it has", error)
-    asking.delete(key)
+    if (asking.get(key) === pending) asking.delete(key)
     return []
   })
   asking.set(key, pending)

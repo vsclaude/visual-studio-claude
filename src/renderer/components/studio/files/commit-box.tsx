@@ -213,6 +213,7 @@ function CommitSettingsDialog({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-1.5">
             <ModelMenu
               models={models}
+              profileId={profileId}
               model={model}
               effort={effort}
               onPick={(nextModel, nextEffort) => {

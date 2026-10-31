@@ -165,6 +165,8 @@ export const transcript = {
     undo: "Undo",
     redo: "Redo",
     clear: "Clear",
+    captureFailed:
+      "Could not capture the page. Wait for it to finish loading and try again.",
     addToChat: "Add to chat",
     close: "Close",
   },

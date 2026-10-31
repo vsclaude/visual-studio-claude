@@ -91,35 +91,14 @@ export function isTrivial(mark: Mark): boolean {
   return false
 }
 
-/** The numbers element marks are labelled with, in the order they were
- * picked — what the message's list refers to. */
+/** The numbers element marks are labelled with on the picture, in the order
+ * they were picked — what somebody writing about it can refer to. */
 export function elementNumbers(marks: Mark[]): Map<Mark, number> {
   const numbers = new Map<Mark, number>()
   for (const mark of marks) {
     if (mark.kind === "element") numbers.set(mark, numbers.size + 1)
   }
   return numbers
-}
-
-/**
- * What goes into the composer beside the picture: where it was taken, and
- * each picked element by its number on the picture, with a selector the
- * model can use in the code and the text it shows.
- */
-export function noteOf(url: string, marks: Mark[]): string {
-  const lines = [`Annotated screenshot of ${url || "the browser panel"}.`]
-  const picked = marks.filter(
-    (mark): mark is Extract<Mark, { kind: "element" }> =>
-      mark.kind === "element"
-  )
-  if (picked.length > 0) {
-    lines.push("Selected elements:")
-    picked.forEach((mark, index) => {
-      const text = mark.element.text ? ` — "${mark.element.text}"` : ""
-      lines.push(`${index + 1}. \`${mark.element.selector}\`${text}`)
-    })
-  }
-  return `${lines.join("\n")}\n`
 }
 
 /** Paints marks — every one, then the stroke still being drawn and the

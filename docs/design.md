@@ -625,7 +625,12 @@ sight of the chat that is driving it.
   only, and every guest attached with no preload, no Node, sandboxed and
   isolated, in its own `persist:vey-browser` partition — one profile shared by
   every chat and kept across launches, so a site signed into once stays signed
-  in, apart from the studio's own session. Only `http`, `https` and
+  in, apart from the studio's own session. The partition is set on
+  `will-attach-webview`'s **web preferences**, not its `params`: Electron
+  copies the tag's `partition` into the preferences before the event fires and
+  builds the guest from them, so a `params.partition` is ignored — which for a
+  while left every tab in the studio's default session and every imported
+  cookie in a partition nothing read. Only `http`, `https` and
   `about:blank` load; a popup is a new tab. `browserAttach` is checked
   against the caller: only a `<webview>` of the asking window can be handed to
   a chat's tools.
@@ -687,9 +692,10 @@ sight of the chat that is driving it.
   marked with a number. `Add to chat` captures the tab in main
   (`browserCapture`, the guest alone, without the overlay), paints the marks
   over it at that scale with the same `paint` the screen uses, and delivers
-  the picture **and** a note — the page's address and each picked element by
-  its number, selector and text — into that chat's composer through
-  `composer-bus.ts`'s `deliverTo`. **Not sent**: the question is the user's
+  **the picture alone** — picked elements numbered on it — into that chat's
+  composer through `composer-bus.ts`'s `deliverTo`. It carried a note of the
+  address and each element's selector at first; that was taken off, since
+  what the picture is about is the user's to write. **Not sent**: the question is the user's
   to write. Drawn over the `<webview>`, not injected into the page, so a site
   that is not this app's is never touched; the page is frozen while the
   toolbar is up, since a mark is drawn where the page was.

@@ -37,7 +37,6 @@ import {
   COLORS,
   emptySketch,
   isTrivial,
-  noteOf,
   paint,
   redo,
   textSize,
@@ -63,9 +62,9 @@ const SHAPE_ICONS = { rect: Square, ellipse: Circle, arrow: MoveUpRight }
 /**
  * Drawing over a tab's page, then handing the result to the chat: pick
  * elements, draw, box, point, write — and `Add to chat` puts the page's
- * capture with all of it painted on into the composer as a picture, with the
- * picked elements listed under it by selector. Nothing is sent: the question
- * is the user's to write.
+ * capture with all of it painted on into the composer as a picture, and
+ * nothing else — the picked elements are numbered on it. Nothing is sent: the
+ * question is the user's to write.
  *
  * Over the `<webview>` rather than inside the page, so nothing is injected
  * into a site that is not this app's, and the capture underneath is clean.
@@ -75,12 +74,10 @@ const SHAPE_ICONS = { rect: Square, ellipse: Circle, arrow: MoveUpRight }
 export function BrowserAnnotate({
   chatId,
   tabId,
-  url,
   onClose,
 }: {
   chatId: string
   tabId: string
-  url: string
   onClose: () => void
 }) {
   const t = useT()
@@ -96,6 +93,9 @@ export function BrowserAnnotate({
     null
   )
   const [sending, setSending] = useState(false)
+  /** Why the last `Add to chat` did not — a capture that came back empty is
+   * said, rather than a button that silently does nothing. */
+  const [failed, setFailed] = useState<string | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
 
   // The canvas follows its box, at the screen's own density.
@@ -233,10 +233,14 @@ export function BrowserAnnotate({
   const addToChat = async () => {
     commitText()
     setSending(true)
+    setFailed(null)
     try {
       const capture = await window.desktop.browserCapture(chatId, tabId)
       const box = canvas.current
-      if (!capture || !box) return
+      if (!capture || !box) {
+        setFailed(t("transcript.annotate.captureFailed"))
+        return
+      }
       const image = await loaded(`data:image/png;base64,${capture.data}`)
       const out = document.createElement("canvas")
       const shrink = Math.min(1, MAX_WIDTH / capture.width)
@@ -248,12 +252,15 @@ export function BrowserAnnotate({
       paint(context, sketch.present, out.width / box.clientWidth)
       const data = out.toDataURL("image/png").split(",")[1] ?? ""
       const picture: ChatImage = { mediaType: "image/png", data }
+      // The picture alone: what it is about is the user's to write.
       useComposerBus.getState().deliverTo({
         chatId,
-        text: noteOf(url, sketch.present),
+        text: "",
         images: [picture],
       })
       onClose()
+    } catch (error) {
+      setFailed(error instanceof Error ? error.message : String(error))
     } finally {
       setSending(false)
     }
@@ -325,7 +332,15 @@ export function BrowserAnnotate({
         />
       )}
 
-      <div className="absolute inset-x-0 bottom-4 flex justify-center px-3">
+      <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3">
+        {failed && (
+          <p
+            role="alert"
+            className="max-w-sm animate-pop rounded-lg border bg-popover px-3 py-1.5 text-xs text-destructive shadow-md"
+          >
+            {failed}
+          </p>
+        )}
         <div
           role="toolbar"
           aria-label={t("transcript.annotate.label")}

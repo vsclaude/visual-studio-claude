@@ -166,6 +166,7 @@ export const transcript: Messages["transcript"] = {
     undo: "Hoàn tác",
     redo: "Làm lại",
     clear: "Xóa hết",
+    captureFailed: "Không chụp được trang. Đợi trang tải xong rồi thử lại.",
     addToChat: "Thêm vào chat",
     close: "Đóng",
   },

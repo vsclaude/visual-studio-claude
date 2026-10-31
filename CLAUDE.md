@@ -215,8 +215,8 @@ imports may reach `electron`.
   **Annotating** (`chat/browser-annotate.tsx`, `lib/browser/annotate.ts`): a
   toolbar over a tab — pick element (`browserInspect`), draw, shapes, text —
   whose `Add to chat` paints the marks over `browserCapture` and hands the
-  picture and a note of the picked elements to that chat's composer
-  (`composer-bus.ts`'s `deliverTo`), unsent.
+  picture alone to that chat's composer (`composer-bus.ts`'s `deliverTo`),
+  unsent.
   **The page lives in `ChatPane`, not in `Conversation`**, which remounts per
   chat. `docs/design.md` § The chat's browser (`test/browser.ts`,
   `test/browser-cookies.ts`, `test/browser-import.ts`,

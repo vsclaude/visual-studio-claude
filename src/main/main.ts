@@ -154,7 +154,12 @@ function guardWebviews(window: BrowserWindow): void {
     prefs.contextIsolation = true
     prefs.sandbox = true
     prefs.webSecurity = true
-    params.partition = BROWSER_PARTITION
+    // On `prefs`, not `params`: Electron has already copied the tag's
+    // `partition` into the web preferences by the time this fires, and makes
+    // the guest from them. Set on `params` it changed nothing, every tab ran
+    // in the studio's own default session, and imported cookies sat in a
+    // partition no page used.
+    prefs.partition = BROWSER_PARTITION
     const src = params.src || "about:blank"
     if (src !== "about:blank" && !/^https?:/i.test(src)) event.preventDefault()
   })

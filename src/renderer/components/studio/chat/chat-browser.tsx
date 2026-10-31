@@ -547,9 +547,6 @@ function TabPage({
           <BrowserAnnotate
             chatId={chatId}
             tabId={tab.id}
-            // The bar's text, which follows the page while nobody is typing
-            // in it — the one the picture was taken of.
-            url={address}
             onClose={() => setAnnotating(false)}
           />
         )}

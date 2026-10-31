@@ -463,6 +463,16 @@ export function ChatComposer({
   }
   /** Where the caret has to be put once a pick has re-rendered the value. */
   const pending = useRef<number | null>(null)
+  /**
+   * The draft an insertion wrote that has not rendered yet, so a second
+   * insertion in the same tick goes after the first instead of over it.
+   *
+   * The browser's `Add to chat` inserts a picture and then the note under it,
+   * back to back: both read `draft` as this render had it, the second
+   * `setDraft` won, and the picture's `[Image #n]` vanished — and with it the
+   * picture, which `attachedIn` sends only while its tag is in the text.
+   */
+  const unrendered = useRef<string | null>(null)
   /** Set by Escape and cleared once the caret leaves the query, so a dismissed
    * menu stays dismissed for this word rather than for ever. */
   const dismissed = useRef(false)
@@ -490,6 +500,7 @@ export function ChatComposer({
   }, [index, ignored, commands.commands, commands.loading, commands.error])
 
   useEffect(() => {
+    unrendered.current = null
     const caret = pending.current
     if (caret === null) return
     pending.current = null
@@ -613,7 +624,7 @@ export function ChatComposer({
     insertAtCaret(
       added.map((_, index) => imageTag(images.length + index + 1)).join(" ")
     )
-    setImages([...images, ...added])
+    setImages((current) => [...current, ...added])
   }
 
   /** A screenshot copied rather than saved — `⌃⇧⌘4` — is a picture on the
@@ -633,18 +644,25 @@ export function ChatComposer({
 
   function insertAtCaret(written: string) {
     const element = field.current
-    const caret = element?.selectionStart ?? draft.length
+    // After an insertion still on its way to the screen, the field's own caret
+    // and value are behind; where that insertion left the caret is not.
+    const current = unrendered.current ?? draft
+    const caret =
+      unrendered.current !== null
+        ? (pending.current ?? current.length)
+        : (element?.selectionStart ?? draft.length)
 
     // Spaced off whatever is already there, so a path does not run into the end
     // of a sentence somebody was in the middle of.
-    const before = draft.slice(0, caret)
-    const after = draft.slice(caret)
+    const before = current.slice(0, caret)
+    const after = current.slice(caret)
     const lead = before && !/\s$/.test(before) ? " " : ""
     const tail = after && !/^\s/.test(after) ? " " : ""
     const insertion = `${lead}${written}${tail}`
 
     pending.current = caret + insertion.length
-    setDraft(before + insertion + after)
+    unrendered.current = before + insertion + after
+    setDraft(unrendered.current)
     setMenu(null)
   }
 

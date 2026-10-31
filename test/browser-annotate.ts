@@ -1,7 +1,7 @@
 /**
  * The annotation toolbar's model (`lib/browser/annotate.ts`): undo and redo
  * through every step including `Clear`, what is dropped as a stray click, and
- * the note that goes to the chat beside the picture.
+ * the numbers picked elements carry on the picture.
  *
  *   bun test/browser-annotate.ts
  */
@@ -11,7 +11,6 @@ import {
   elementNumbers,
   emptySketch,
   isTrivial,
-  noteOf,
   redo,
   undo,
   type Mark,
@@ -81,30 +80,14 @@ section("stray strokes")
   check("a real stroke is kept", !isTrivial(pen) && !isTrivial(box))
 }
 
-section("the note")
+section("numbers on the picture")
 {
   const first = element("#login > button.primary", "Sign in")
   const second = element("nav > a:nth-of-type(2)", "")
-  const marks = [pen, first, box, second]
-  const numbers = elementNumbers(marks)
+  const numbers = elementNumbers([pen, first, box, second])
   check(
-    "elements are numbered in the order picked",
+    "elements are numbered in the order picked, drawings are not",
     numbers.get(first) === 1 && numbers.get(second) === 2 && !numbers.has(pen)
-  )
-  const note = noteOf("https://example.com/login", marks)
-  check(
-    "names the page",
-    note.startsWith("Annotated screenshot of https://example.com/login.")
-  )
-  check(
-    "lists each element by its number, selector and text",
-    note.includes('1. `#login > button.primary` — "Sign in"') &&
-      note.includes("2. `nav > a:nth-of-type(2)`\n"),
-    note
-  )
-  check(
-    "a drawing alone has no list",
-    !noteOf("https://x.dev", [pen]).includes("Selected elements")
   )
 }
 

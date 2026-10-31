@@ -14,7 +14,6 @@ import {
   ArrowUp,
   AtSign,
   Slash,
-  Terminal,
   Eye,
   File,
   Folder,
@@ -1983,9 +1982,10 @@ function WindowMeter({ of }: { of: ChatWindow }) {
  * Laid out like `MentionMenu` on purpose — same box, same placement above the
  * composer, same pointer-down rows — because they are one menu in two moods and
  * two shapes would read as two features. What differs is what a row has to say:
- * a command is chosen by what it *does*, so the description is the row rather
- * than a footnote under it, and it is clamped to two lines because a skill's
- * description is written for a model and runs to a paragraph.
+ * a command is chosen by what it *does*, so the description sits beside the
+ * name in a column of its own, the CLI's own `/` layout, and is clamped to two
+ * lines because a skill's description is written for a model and runs to a
+ * paragraph. Stacked under the name, it made three rows fill the menu.
  *
  * The three states below the rows are the reason this menu draws at all while
  * empty. The first `/` of a project waits on a `claude` starting (see
@@ -2009,6 +2009,12 @@ function CommandMenu({
 }) {
   const t = useT()
   const list = useRef<HTMLUListElement>(null)
+  // One name column for every row, as wide as the longest name shown — in `ch`
+  // because the names are monospace — so the descriptions line up the way the
+  // CLI's own menu does. Capped so a plugin's `/plugin:skill` does not push
+  // the descriptions off the side.
+  const longest = Math.max(0, ...items.map((command) => command.name.length))
+  const nameWidth = `${Math.min(longest + 1, 28)}ch`
 
   useEffect(() => {
     list.current
@@ -2020,7 +2026,7 @@ function CommandMenu({
     <ul
       ref={list}
       className={cn(
-        "absolute inset-x-0 bottom-full z-20 mb-1 max-h-64 overflow-y-auto overscroll-contain",
+        "absolute inset-x-0 bottom-full z-20 mb-1 max-h-72 overflow-y-auto overscroll-contain",
         "rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
       )}
     >
@@ -2037,46 +2043,42 @@ function CommandMenu({
             }}
             onPointerEnter={() => onHover(index)}
             className={cn(
-              "w-full rounded-sm px-2 py-1 text-left text-xs",
+              "flex w-full items-start gap-3 rounded-sm px-2 py-0.5 text-left text-xs",
               index === selected && "bg-accent text-accent-foreground"
             )}
           >
-            <span className="flex items-start gap-1.5">
-              <Terminal
-                aria-hidden
-                className="mt-px size-3.5 shrink-0 opacity-70"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline gap-2">
-                  <span className="truncate font-mono font-medium">
-                    /{command.name}
-                  </span>
-                  {/* The argument hint beside the name rather than in the
-                      description, because it is part of what you are about to
-                      type: a command taking `[low|medium|high]` should say so
-                      before it is sent without one. */}
-                  {command.argumentHint && (
-                    <span className="truncate font-mono text-[0.625rem] text-muted-foreground/70">
-                      {command.argumentHint}
-                    </span>
-                  )}
-                  {/* Said on the row rather than discovered afterwards: these
-                      two do not reach the CLI at all, and somebody who knows
-                      what `/clear` does in a terminal is owed the difference. */}
-                  {(LOCAL_COMMANDS as readonly string[]).includes(
-                    command.name
-                  ) && (
-                    <span className="ml-auto shrink-0 text-[0.625rem] text-muted-foreground/70">
-                      {t("chat.composer.thisApp")}
-                    </span>
-                  )}
-                </span>
-                {command.description && (
-                  <span className="mt-0.5 line-clamp-2 block text-[0.7rem] leading-snug text-muted-foreground">
-                    {command.description}
+            <span
+              className="shrink-0 truncate font-mono"
+              style={{ width: nameWidth }}
+              title={`/${command.name}`}
+            >
+              /{command.name}
+            </span>
+            <span className="flex min-w-0 flex-1 items-start gap-2">
+              {/* `line-clamp` and not `truncate` with `block` beside it: a
+                  `block` there overrode the clamp's `-webkit-box`, and a
+                  skill's description — written for a model — ran to five
+                  lines. */}
+              <span className="line-clamp-2 min-w-0 flex-1 text-[0.7rem] leading-snug text-muted-foreground">
+                {/* The argument hint ahead of the description, because it is
+                    part of what you are about to type: a command taking
+                    `[low|medium|high]` should say so before it is sent
+                    without one. */}
+                {command.argumentHint && (
+                  <span className="mr-1.5 font-mono text-muted-foreground/70">
+                    {command.argumentHint}
                   </span>
                 )}
+                {command.description}
               </span>
+              {/* Said on the row rather than discovered afterwards: these two
+                  do not reach the CLI at all, and somebody who knows what
+                  `/clear` does in a terminal is owed the difference. */}
+              {(LOCAL_COMMANDS as readonly string[]).includes(command.name) && (
+                <span className="shrink-0 text-[0.625rem] text-muted-foreground/70">
+                  {t("chat.composer.thisApp")}
+                </span>
+              )}
             </span>
           </button>
         </li>
